@@ -9,7 +9,7 @@ from patch_imports import patch
 
 CORE_EXE_SHA='ad1b5fc61f511b0f77c6ab30ba47443f02a2e89514e273efc1a5983cc47aacd3'
 
-def build(ndk,windows_sdk,core_zip,destination,work):
+def build(ndk,windows_sdk,core_zip,destination,work,expected_exe_sha=None):
     root=Path(__file__).resolve().parent
     work.mkdir(parents=True,exist_ok=True);destination.mkdir(parents=True,exist_ok=True)
     clang=ndk/'toolchains/llvm/prebuilt/linux-x86_64/bin/clang'
@@ -24,7 +24,7 @@ def build(ndk,windows_sdk,core_zip,destination,work):
         root/'host-va-limit.c','-o',work/'host-va-limit')
     with zipfile.ZipFile(core_zip) as archive:
         (work/'kyty-original.exe').write_bytes(archive.read('kyty_emulator.exe'))
-    provenance=patch(work/'kyty-original.exe',work/'kyty_emulator-nova.exe',CORE_EXE_SHA)
+    provenance=patch(work/'kyty-original.exe',work/'kyty_emulator-nova.exe',expected_exe_sha or CORE_EXE_SHA)
     names=['kyty_emulator-nova.exe','novamemory.dll','host-va-limit']
     hashes={name:hashlib.sha256((work/name).read_bytes()).hexdigest() for name in names}
     archive_path=destination/'memory-compat.zip'
