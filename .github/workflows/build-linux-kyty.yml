@@ -1,0 +1,49 @@
+name: Nova PS5 Linux Kyty x86-64 experiment
+on:
+  push:
+    branches: [ps5-linux-core]
+    paths:
+      - '.github/workflows/build-linux-kyty.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  linux-core:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install headless Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang lld ninja-build cmake git glslang-tools python3 pkg-config libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev libxfixes-dev libxi-dev libxrandr-dev libxss-dev libxtst-dev libxkbcommon-dev libasound2-dev libpulse-dev libudev-dev libdbus-1-dev libwayland-dev wayland-protocols
+      - name: Checkout pinned Kyty Linux source
+        uses: actions/checkout@v4
+        with:
+          repository: KytyPS5/KytyPS5
+          ref: df5b9b92be7dfd463b47756b707d6d356a9f0550
+          submodules: recursive
+          path: linux-kyty
+      - name: Configure headless x86-64 emulator
+        run: |
+          cmake -S linux-kyty -B build/linux-kyty -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DKYTY_BUILD_LAUNCHER=OFF
+      - name: Build Linux Kyty
+        run: cmake --build build/linux-kyty --target kyty_emulator --parallel 4
+      - name: Package Linux ELF for DroidDeck/FEX experiments
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          exe="$(find build/linux-kyty -type f -name kyty_emulator -perm /111 | head -n 1)"
+          test -n "$exe"
+          file "$exe" | tee dist/ELF-INFO.txt
+          file "$exe" | grep -q 'ELF 64-bit.*x86-64'
+          cp "$exe" dist/kyty_emulator
+          ldd "$exe" > dist/LINUX-DEPENDENCIES.txt || true
+          sha256sum dist/kyty_emulator > dist/SHA256SUMS.txt
+          printf '%s\n' 'Experimental Linux x86-64 Kyty executable for DroidDeck FEX. NOT an Android APK. No game boot claim.' > dist/README.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NovaPS5-Linux-Kyty-x86_64-${{ github.sha }}
+          path: dist/*
+          retention-days: 14
