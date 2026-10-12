@@ -1,0 +1,9 @@
+name: Nova PS5 Android ARM64
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  awaiting-source-import:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo 'Source import in progress; the verified build workflow will replace this temporary entry.'
