@@ -1,0 +1,55 @@
+name: Nova PS5 native ARM64 feasibility
+on:
+  push:
+    branches: [ps5-native-arm64]
+    paths:
+      - '.github/workflows/native-arm64-feasibility.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  arm64-audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: KytyPS5/KytyPS5
+          ref: df5b9b92be7dfd463b47756b707d6d356a9f0550
+          submodules: recursive
+          path: kyty-upstream
+      - name: Install cross compilation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build clang lld python3
+      - name: Detect native CPU architecture assumptions
+        run: |
+          mkdir -p dist
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('kyty-upstream/src')
+          patterns={
+            'x86_intrinsics':r'(?m)^\s*#\s*include\s*[<"](?:immintrin|xmmintrin|emmintrin|intrin|x86intrin)\.h',
+            'x86_inline_asm':r'\b(?:asm|__asm__)\s*\(',
+            'xbyak_jit':r'\bXbyak\b',
+            'host_x86_guard':r'__x86_64__|_M_X64|__amd64__',
+            'fixed_address_mapping':r'MAP_FIXED|VirtualAlloc2',
+          }
+          lines=['# Kyty ARM64 host portability audit','','This report identifies source-level dependencies, not a working Android port.','']
+          for label,regex in patterns.items():
+            matches=[]
+            for p in root.rglob('*'):
+              if p.suffix not in ('.cpp','.c','.h','.hpp','.inc','.cc'): continue
+              try: data=p.read_text(errors='replace')
+              except OSError: continue
+              if re.search(regex,data): matches.append(str(p.relative_to(root)))
+            lines.extend([f'## {label}: {len(matches)} files','']+['- '+s for s in matches[:100]]+[''])
+          Path('dist/ARM64-PORTABILITY-AUDIT.md').write_text('\n'.join(lines))
+          print('\n'.join(lines[:35]))
+          PY
+      - name: Upload ARM64 portability audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: NovaPS5-native-ARM64-audit-${{ github.sha }}
+          path: dist/ARM64-PORTABILITY-AUDIT.md
