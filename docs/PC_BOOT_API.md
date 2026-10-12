@@ -14,7 +14,9 @@ Changes:
 - Flush the SDK's FreeBSD output buffers through their guest write callbacks,
   including partial writes and stream error flags. Other guest stdio ABIs use
   the supplied guest libc export. Native stdout/stderr use the host CRT.
-  `fflush(NULL)` invokes the host and guest runtimes' flush-all functions.
+  Resolve the SDK's `__stdinp`, `__stdoutp`, and `__stderrp` objects with guest ABI
+  stream layouts and real descriptor callbacks. `fflush(NULL)` also flushes
+  those SDK output streams before invoking the host and guest flush-all functions.
   An unavailable guest implementation returns ENOSYS instead of crashing or
   passing a guest FILE object to the Windows CRT.
 - Reject seeking and truncation on pipe descriptors; report FIFO metadata.
@@ -33,8 +35,9 @@ returns ENOSYS; this patch implements the pipe path used at ccleste startup.
 
 The supplied homebrew has readable, uncompressed SELF segments. Its packaged
 fflush export is a return-only stub, so recognized SDK output buffers need the
-callback adapter. Flush-all behavior for a libc that only supplies such a stub
-is still limited by that libc's implementation. This build does not decrypt encrypted retail packages or
+callback adapter. Flush-all behavior for additional streams managed by a libc
+that only supplies such a stub is still limited by that libc's implementation.
+This build does not decrypt encrypted retail packages or
 SELF files. Use legally obtained executable data that is already decrypted.
 
 PC API validation has no Vulkan/GPU requirement. Actual game boot still needs

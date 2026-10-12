@@ -523,10 +523,10 @@ index 87a9bf9..febbd49 100644
  	(void)GetGpuResources().InvalidateMemory(vaddr, size);
 diff --git a/src/libs/guestStdio.h b/src/libs/guestStdio.h
 new file mode 100644
-index 0000000..e2dfffe
+index 0000000..1e53a47
 --- /dev/null
 +++ b/src/libs/guestStdio.h
-@@ -0,0 +1,81 @@
+@@ -0,0 +1,95 @@
 +#ifndef KYTY_LIBS_GUEST_STDIO_H_
 +#define KYTY_LIBS_GUEST_STDIO_H_
 +
@@ -541,7 +541,7 @@ index 0000000..e2dfffe
 +
 +namespace Libs {
 +
-+// Stable FreeBSD amd64 FILE prefix, shared by the homebrew SDK. This is
++// Stable FreeBSD amd64 FILE layout, shared by the homebrew SDK. This is
 +// deliberately separate from FILE in the host C runtime.
 +struct GuestStdioFile {
 +  uint8_t* position;
@@ -554,12 +554,26 @@ index 0000000..e2dfffe
 +  int (KYTY_STDIO_CALLBACK_ABI *read)(void*, char*, int);
 +  int64_t (KYTY_STDIO_CALLBACK_ABI *seek)(void*, int64_t, int);
 +  int (KYTY_STDIO_CALLBACK_ABI *write)(void*, const char*, int);
++  Buffer unget_buffer;
++  uint8_t* saved_position;
++  int32_t saved_read_space;
++  uint8_t unget_bytes[3], unbuffered_byte;
++  Buffer line_buffer;
++  int32_t block_size;
++  int64_t offset;
++  void* mutex;
++  void* owner;
++  int32_t lock_count, orientation;
++  alignas(8) uint8_t multibyte_state[128];
++  int32_t flags2;
 +};
 +static_assert(offsetof(GuestStdioFile, flags) == 16);
 +static_assert(offsetof(GuestStdioFile, buffer) == 24);
 +static_assert(offsetof(GuestStdioFile, cookie) == 48);
 +static_assert(offsetof(GuestStdioFile, write) == 80);
-+static_assert(sizeof(GuestStdioFile) == 88);
++static_assert(offsetof(GuestStdioFile, mutex) == 152);
++static_assert(offsetof(GuestStdioFile, flags2) == 304);
++static_assert(sizeof(GuestStdioFile) == 312);
 +
 +// Returns -2 only if the pointer is not a recognizable output stream, allowing
 +// another guest libc ABI to use its own export. Real callback failures return
@@ -609,20 +623,111 @@ index 0000000..e2dfffe
 +#undef KYTY_STDIO_CALLBACK_ABI
 +#endif
 diff --git a/src/libs/libC.cpp b/src/libs/libC.cpp
-index 7ed9885..ca9390b 100644
+index 7ed9885..20b4470 100644
 --- a/src/libs/libC.cpp
 +++ b/src/libs/libC.cpp
-@@ -8,6 +8,7 @@
+@@ -6,8 +6,10 @@
+ #include "common/stringUtils.h"
+ #include "graphics/host_gpu/hostMemory.h"
  #include "kernel/pthread.h"
++#include "kernel/fileSystem.h"
  #include "libs/errno.h"
  #include "libs/guestPrintf.h"
 +#include "libs/guestStdio.h"
  #include "libs/libs.h"
  #include "libs/vaContext.h"
  #include "loader/runtimeLinker.h"
-@@ -630,9 +631,37 @@ static KYTY_SYSV_ABI int snprintf(VA_ARGS) {
+@@ -613,6 +615,76 @@ LIB_VERSION("LibcInternal", 1, "LibcInternal", 1, 1);
+ 
+ static uint32_t g_need_flag = 1;
+ 
++static GuestStdioFile g_sdk_files[3] {};
++static GuestStdioFile* g_sdk_stdin = &g_sdk_files[0];
++static GuestStdioFile* g_sdk_stdout = &g_sdk_files[1];
++static GuestStdioFile* g_sdk_stderr = &g_sdk_files[2];
++static uint8_t g_sdk_stdout_buffer[1024] {};
++
++static int KYTY_SYSV_ABI SdkStdioWrite(void* cookie, const char* data, int count) {
++	if (count < 0) { *Posix::GetErrorAddr() = Posix::POSIX_EINVAL; return -1; }
++	const auto* file = static_cast<GuestStdioFile*>(cookie);
++	return static_cast<int>(POSIX_N_CALL(LibKernel::FileSystem::KernelWrite(file->descriptor, data, static_cast<size_t>(count))));
++}
++
++static int KYTY_SYSV_ABI SdkStdioRead(void* cookie, char* data, int count) {
++	if (count < 0) { *Posix::GetErrorAddr() = Posix::POSIX_EINVAL; return -1; }
++	const auto* file = static_cast<GuestStdioFile*>(cookie);
++	if (file->descriptor == 0 && !LibKernel::FileSystem::IsPipeDescriptor(0)) {
++		if (LibKernel::FileSystem::IsStandardDescriptorClosed(0)) {
++			*Posix::GetErrorAddr() = Posix::POSIX_EBADF;
++			return -1;
++		}
++		const auto bytes = std::fread(data, 1, static_cast<size_t>(count), stdin);
++		if (bytes == 0 && std::ferror(stdin)) { *Posix::GetErrorAddr() = Posix::POSIX_EIO; return -1; }
++		return static_cast<int>(bytes);
++	}
++	return static_cast<int>(POSIX_N_CALL(LibKernel::FileSystem::KernelRead(file->descriptor, data, static_cast<size_t>(count))));
++}
++
++static int KYTY_SYSV_ABI SdkStdioClose(void* cookie) {
++	return POSIX_CALL(LibKernel::FileSystem::KernelClose(static_cast<GuestStdioFile*>(cookie)->descriptor));
++}
++
++static int64_t KYTY_SYSV_ABI SdkStdioSeek(void*, int64_t, int) {
++	*Posix::GetErrorAddr() = Posix::POSIX_ESPIPE;
++	return -1;
++}
++
++static void InitializeSdkStdio() {
++	static const bool initialized = [] {
++		for (int i = 0; i < 3; ++i) {
++			auto& file = g_sdk_files[i];
++			file.descriptor = static_cast<int16_t>(i);
++			file.flags = i == 0 ? 4 : i == 1 ? 9 : 10; // read, line buffered output, unbuffered output
++			file.buffer.base = i == 1 ? g_sdk_stdout_buffer : &file.unbuffered_byte;
++			file.buffer.size = i == 1 ? sizeof(g_sdk_stdout_buffer) : 1;
++			file.position = file.buffer.base;
++			file.line_buffer_size = i == 1 ? -file.buffer.size : 0;
++			file.cookie = &file;
++			file.read = SdkStdioRead;
++			file.write = SdkStdioWrite;
++			file.close = SdkStdioClose;
++			file.seek = SdkStdioSeek;
++		}
++		return true;
++	}();
++	(void)initialized;
++}
++
++static int FlushSdkOutput(void* stream) {
++	return FlushBsdOutput(stream,
++	    [](const void* pointer, size_t size, bool write) {
++		uint64_t accessible = 0;
++		return Graphics::HostMemoryQueryRange(reinterpret_cast<uint64_t>(pointer), size,
++		    write ? Graphics::HostMemoryAccess::Write : Graphics::HostMemoryAccess::Read, accessible) && accessible >= size;
++	    },
++	    [](uintptr_t pointer) {
++		uint64_t accessible = 0;
++		return Graphics::HostMemoryQueryRange(pointer, 1, Graphics::HostMemoryAccess::Execute, accessible);
++	    });
++}
++
+ int KYTY_SYSV_ABI vprintf(const char* str, VaList* c) {
+ 	PRINT_NAME();
+ 
+@@ -629,10 +701,36 @@ static KYTY_SYSV_ABI int snprintf(VA_ARGS) {
+ 
  int KYTY_SYSV_ABI fflush(FILE* stream) {
  	PRINT_NAME();
++	if (stream != nullptr && stream != stdout && stream != stderr) {
++		const auto result = FlushSdkOutput(stream);
++		if (result != -2) return result;
++	}
++	int sdk_result = 0;
++	if (stream == nullptr) {
++		for (auto* file: {g_sdk_stdout, g_sdk_stderr}) {
++			if (FlushSdkOutput(file) == -1) sdk_result = -1;
++		}
++	}
  
 -	EXIT_NOT_IMPLEMENTED(stream != stdout);
 -
@@ -640,27 +745,29 @@ index 7ed9885..ca9390b 100644
 +		explicit Guard(bool& value): flag(value) { flag = true; }
 +		~Guard() { flag = false; }
 +	} guard(flushing_guest);
-+	if (stream != nullptr && stream != stdout && stream != stderr) {
-+		const auto result = FlushBsdOutput(stream,
-+		    [](const void* pointer, size_t size, bool write) {
-+			uint64_t accessible = 0;
-+			return Graphics::HostMemoryQueryRange(reinterpret_cast<uint64_t>(pointer), size,
-+			    write ? Graphics::HostMemoryAccess::Write : Graphics::HostMemoryAccess::Read, accessible) && accessible >= size;
-+		    },
-+		    [](uintptr_t pointer) {
-+			uint64_t accessible = 0;
-+			return Graphics::HostMemoryQueryRange(pointer, 1, Graphics::HostMemoryAccess::Execute, accessible);
-+		    });
-+		if (result != -2) return result;
-+	}
 +	if (stream != nullptr && stream != stdout && stream != stderr && address == 0)
 +		*Posix::GetErrorAddr() = Posix::POSIX_ENOSYS;
-+	return FlushGuestStream(stream, stdout, stderr,
++	const auto result = FlushGuestStream(stream, stdout, stderr,
 +	                        [](void* file) { return ::fflush(static_cast<FILE*>(file)); },
 +	                        reinterpret_cast<GuestFlush>(address));
++	return sdk_result == -1 ? -1 : result;
  }
  
  void* KYTY_SYSV_ABI memset(void* s, int c, size_t n) {
+@@ -761,9 +859,13 @@ int KYTY_SYSV_ABI LibcHeapErrorReportForGame(uint64_t msp, uint64_t ptr, uint64_
+ 
+ LIB_DEFINE(InitLibcInternal_1) {
+ 	LibcInternalExt::InitLibcInternalExt_1(s);
++	InitializeSdkStdio();
+ 
+ 	LIB_OBJECT("ZT4ODD2Ts9o", &LibcInternal::g_need_flag);
+ 	LIB_OBJECT("2sWzhYqFH4E", stdout);
++	LIB_OBJECT("bgAcsbcEznc", &g_sdk_stdin);
++	LIB_OBJECT("zqJhBxAKfsc", &g_sdk_stdout);
++	LIB_OBJECT("as8Od-tH1BI", &g_sdk_stderr);
+ 
+ 	LIB_FUNC("GMpvxPFW924", LibcInternal::vprintf);
+ 	LIB_FUNC("MUjC4lbHrK4", LibcInternal::fflush);
 diff --git a/src/libs/libKernel.cpp b/src/libs/libKernel.cpp
 index 5d95b5f..af2ebf7 100644
 --- a/src/libs/libKernel.cpp
@@ -936,10 +1043,10 @@ index 0000000..0d19d7d
 +}
 diff --git a/tests/HomebrewBootApiTests.cpp b/tests/HomebrewBootApiTests.cpp
 new file mode 100644
-index 0000000..a0cfe7f
+index 0000000..64d5e97
 --- /dev/null
 +++ b/tests/HomebrewBootApiTests.cpp
-@@ -0,0 +1,110 @@
+@@ -0,0 +1,120 @@
 +#include "common/emulatorConfig.h"
 +#include "common/logging/log.h"
 +#include "common/subsystems.h"
@@ -1020,6 +1127,16 @@ index 0000000..a0cfe7f
 +  assert(flush(reinterpret_cast<FILE*>(&guest_file)) == 0 && guest_file.position == pending);
 +  std::memset(buffer, 0, sizeof(buffer));
 +  assert(read(ends[0], buffer, sizeof(buffer)) == sizeof(pending) - 1 && std::strcmp(buffer, "guest buffer\n") == 0);
++  const auto* stderr_symbol = symbols.FindByNid("as8Od-tH1BI", Loader::SymbolType::Object);
++  const auto* stdout_symbol = symbols.FindByNid("zqJhBxAKfsc", Loader::SymbolType::Object);
++  const auto* stdin_symbol = symbols.FindByNid("bgAcsbcEznc", Loader::SymbolType::Object);
++  assert(stderr_symbol != nullptr && stdout_symbol != nullptr && stdin_symbol != nullptr);
++  auto* sdk_stderr = *reinterpret_cast<Libs::GuestStdioFile**>(stderr_symbol->vaddr);
++  assert(sdk_stderr != nullptr && sdk_stderr->descriptor == 2 && sdk_stderr->write != nullptr);
++  sdk_stderr->buffer.base[0] = 'G';
++  sdk_stderr->position = sdk_stderr->buffer.base + 1;
++  assert(flush(nullptr) == 0 && sdk_stderr->position == sdk_stderr->buffer.base);
++  assert(read(ends[0], buffer, 1) == 1 && buffer[0] == 'G');
 +  // A duplicated descriptor shares its open-file flags, but not FD_CLOEXEC.
 +  assert(FS::KernelFcntl(2, 4, 4) == OK);
 +  assert(dup2(2, 27) == 27 && (FS::KernelFcntl(27, 3, 0) & 4) != 0);
