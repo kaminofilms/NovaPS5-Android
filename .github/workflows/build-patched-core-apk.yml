@@ -1,0 +1,80 @@
+name: Nova PS5 Android patched Kyty APK
+
+on:
+  push:
+    branches: [ps5-boot-api]
+    paths:
+      - 'build-runtime-apk.py'
+      - 'runtime-compat/**'
+      - '.github/workflows/build-patched-core-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  patched-apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - name: Install build dependencies
+        run: |
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;28.2.13676358' 'cmake;3.22.1'
+          sudo apt-get update
+          sudo apt-get install -y mingw-w64-x86-64-dev
+      - name: Retrieve verified Windows guest-core build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CORE_COMMIT: f4d89ac1fda2908cc0942801de6a89a08d66b702
+        run: |
+          set -euo pipefail
+          RUN_ID="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow build-pc-boot-api.yml --branch ps5-boot-api --limit 40 --json databaseId,headSha,conclusion --jq '.[] | select(.headSha == env.CORE_COMMIT and .conclusion == "success") | .databaseId' | head -n 1)"
+          test -n "$RUN_ID" || { echo 'Verified Kyty build not found'; exit 1; }
+          mkdir -p build/guest-core
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name "Nova-Android-Guest-Core-$CORE_COMMIT" --dir build/guest-core
+          cd build/guest-core
+          sha256sum -c SHA256SUMS.txt
+          python3 - <<'PY'
+          import hashlib,zipfile
+          from pathlib import Path
+          expected='bbd6c0783bd4fa2d76568b30eed2e6a28a313048fbbf84046d70ff74f3db1f83'
+          with zipfile.ZipFile('Nova-Android-Guest-Core.zip') as archive:
+              exe=archive.read('kyty_emulator.exe')
+              dll=archive.read('libwinpthread-1.dll')
+          assert hashlib.sha256(exe).hexdigest()==expected, 'Kyty executable checksum mismatch'
+          with zipfile.ZipFile('kyty-engine.zip','w',zipfile.ZIP_DEFLATED) as out:
+              out.writestr('kyty_emulator.exe',exe)
+              out.writestr('libwinpthread-1.dll',dll)
+          print('Verified rebuilt Kyty core')
+          PY
+      - name: Verify Android build inputs
+        run: |
+          python3 build-runtime-apk.py --sdk "$ANDROID_HOME" --ndk "$ANDROID_HOME/ndk/28.2.13676358" --jdk "$JAVA_HOME" --keystore "$RUNNER_TEMP/novaps5-ci.keystore" --output dist/NovaPs5-0.2.5-patched-arm64.apk --core-zip build/guest-core/kyty-engine.zip --core-exe-sha bbd6c0783bd4fa2d76568b30eed2e6a28a313048fbbf84046d70ff74f3db1f83 --verify-dependencies-only
+      - name: Create temporary CI signing identity
+        run: keytool -genkeypair -storetype PKCS12 -keystore "$RUNNER_TEMP/novaps5-ci.keystore" -storepass android -keypass android -alias novaps5dev -keyalg RSA -keysize 2048 -validity 10000 -dname 'CN=NovaPs5 CI Development'
+      - name: Build patched Android APK
+        run: |
+          python3 build-runtime-apk.py --sdk "$ANDROID_HOME" --ndk "$ANDROID_HOME/ndk/28.2.13676358" --jdk "$JAVA_HOME" --keystore "$RUNNER_TEMP/novaps5-ci.keystore" --output dist/NovaPs5-0.2.5-patched-arm64.apk --core-zip build/guest-core/kyty-engine.zip --core-exe-sha bbd6c0783bd4fa2d76568b30eed2e6a28a313048fbbf84046d70ff74f3db1f83
+      - name: Verify APK
+        run: |
+          python3 tests/verify_runtime_apk.py dist/NovaPs5-0.2.5-patched-arm64.apk --sdk "$ANDROID_HOME" --json-output dist/verification.json
+          sha256sum dist/NovaPs5-0.2.5-patched-arm64.apk > dist/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NovaPs5-0.2.5-patched-arm64-${{ github.sha }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+      - name: Remove temporary signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/novaps5-ci.keystore"
