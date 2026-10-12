@@ -1,0 +1,69 @@
+name: Retain tested core for Nova Android packaging
+
+on:
+  push:
+    branches: [ps5-boot-api]
+    paths: ['.github/workflows/cache-android-guest-core.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  retain:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CORE_RUN_ID: '38301523725'
+      CORE_SOURCE_COMMIT: f8d102ce21dd25f83000686333496b12912d4ee9
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait for the guest core API checks
+        run: gh run watch "$CORE_RUN_ID" --repo "$GITHUB_REPOSITORY" --exit-status --interval 30
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: '38301523725'
+          name: Nova-Android-Guest-Core-f8d102ce21dd25f83000686333496b12912d4ee9
+          path: core-files
+      - name: Verify and retain the APK dependency with checksum pins
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, re, shutil, zipfile
+          from pathlib import Path
+          archive = Path('core-files/Nova-Android-Guest-Core.zip')
+          digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+          expected = Path('core-files/SHA256SUMS.txt').read_text(encoding='utf-8-sig').split()[0]
+          assert digest == expected, 'Guest core archive checksum mismatch'
+          with zipfile.ZipFile(archive) as core:
+              info = json.loads(core.read('build-info.json').decode('utf-8-sig'))
+              assert info['project_commit'] == os.environ['CORE_SOURCE_COMMIT']
+              assert info['api_tests'] == 'passed' and not info['game_boot_verified']
+              executable_digest = hashlib.sha256(core.read('kyty_emulator.exe')).hexdigest()
+          destination = Path('droid-runtime/app/src/main/assets/engine/kyty-windows-df5b9b9.zip')
+          shutil.copyfile(archive, destination)
+          for name in ['build-runtime-apk.py', 'tests/verify_runtime_apk.py',
+                       'droid-runtime/app/src/main/java/com/kaminofilms/novaps5/RuntimeEngine.java']:
+              path = Path(name)
+              content, count = re.subn(r'(CORE_SHA\s*=\s*[\'\"])[0-9a-f]{64}', lambda m: m[1] + digest, path.read_text())
+              assert count == 1, f'Missing or ambiguous archive pin: {name}'
+              if name == 'build-runtime-apk.py':
+                  url = f'https://raw.githubusercontent.com/{os.environ["GITHUB_REPOSITORY"]}/ps5-boot-api/{destination.as_posix()}'
+                  content = re.sub(r"CORE_URL = '[^']+'", f"CORE_URL = '{url}'", content)
+              path.write_text(content)
+          path = Path('runtime-compat/build_compat.py')
+          content, count = re.subn(r'(CORE_EXE_SHA\s*=\s*[\'\"])[0-9a-f]{64}', lambda m: m[1] + executable_digest, path.read_text())
+          assert count == 1, 'Missing executable checksum pin'
+          path.write_text(content)
+          print(json.dumps({'archive_sha256': digest, 'executable_sha256': executable_digest,
+                            'core_source_commit': info['project_commit']}))
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add droid-runtime/app/src/main/assets/engine/kyty-windows-df5b9b9.zip \
+            build-runtime-apk.py tests/verify_runtime_apk.py runtime-compat/build_compat.py \
+            droid-runtime/app/src/main/java/com/kaminofilms/novaps5/RuntimeEngine.java
+          git commit -m 'Pin tested guest API core for the Nova Android APK'
+          git push origin HEAD:ps5-boot-api

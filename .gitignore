@@ -15,3 +15,5 @@ dist/
 *.pup
 firmware/
 games/
+droid-runtime/app/src/main/assets/engine/memory-compat.zip
+droid-runtime/app/src/main/assets/engine/memory-compat.json

@@ -18,9 +18,14 @@ game=${1:?Missing game directory}
 base=/opt/novaps5
 proton=$base/proton/GE-Proton11-7-aarch64/files
 wine=$proton/bin/wine
+kyty=$base/kyty/kyty_emulator-nova.exe
 [ -r "$game/eboot.bin" ] || { echo 'NOVA_ERROR: eboot.bin is not readable'; exit 66; }
 [ -x "$wine" ] || { echo 'NOVA_ERROR: ARM64 Wine/FEX runtime is not installed'; exit 67; }
 [ -r "$proton/lib/wine/aarch64-unix/libarm64ecfex.so" ] || { echo 'NOVA_ERROR: FEX component is missing'; exit 68; }
+[ -r "$kyty" ] && [ -r "$base/kyty/novamemory.dll" ] && [ -x "$base/compat/host-va-limit" ] || { echo 'NOVA_ERROR: Guest memory compatibility is not installed'; exit 70; }
+export NOVA_HOST_VA_LIMIT=$("$base/compat/host-va-limit")
+[[ "$NOVA_HOST_VA_LIMIT" =~ ^0x[0-9a-f]{16}$ ]] || { echo 'NOVA_ERROR: Host address-space probe failed'; exit 70; }
+echo "NOVA_MEMORY: Linux host address-space ceiling $NOVA_HOST_VA_LIMIT"
 export WINEPREFIX=/root/.local/share/novaps5/prefix
 export WINEARCH=win64
 export WINELOADER=$wine
@@ -36,14 +41,14 @@ export WINEDEBUG=-all,err+all
 # Avoid using the Android preload from an x86 game; the runtime supplies ARM64 shims.
 export FEX_HALFBARRIERTSOENABLED=1
 export SDL_VIDEODRIVER=x11
-export WINEDLLOVERRIDES='winemenubuilder.exe=d'
+export WINEDLLOVERRIDES='novamemory=n;winemenubuilder.exe=d'
 mkdir -p "$WINEPREFIX" /root/.local/share/novaps5/logs
 # This is full CPU translation. Kyty remains responsible for the PS5 loader/services/RDNA GPU.
-echo 'NOVA_CORE: full Kyty df5b9b9; ARM64 Wine/Proton with FEX; TSO enabled'
+echo 'NOVA_CORE: Kyty df5b9b9 with homebrew boot APIs; ARM64 Wine/Proton with FEX; TSO enabled'
 echo 'NOVA_TARGET: output 1280x720; vblank 60; gameplay FPS is not guaranteed'
 echo "NOVA_DISPLAY: DISPLAY=${DISPLAY:-missing} VK_DRIVER_FILES=${VK_DRIVER_FILES:-default}"
 step 'Starting Kyty through ARM64 Wine/FEX (first prefix setup can take a few minutes)'
-if timeout --kill-after=10s 180s "$wine" "$base/kyty/kyty_emulator.exe" --help; then
+if timeout --kill-after=10s 180s "$wine" "$kyty" --help; then
     echo 'NOVA_PREFLIGHT: Kyty CLI started through Wine/FEX'
 else
     status=$?
@@ -54,7 +59,7 @@ windows_game="Z:${game//\//\\}"
 cd "$base/kyty"
 echo "NOVA_LAUNCH: $game"
 step 'Kyty loading the selected game (a compositor frame is not proof of game boot)'
-if "$wine" "$base/kyty/kyty_emulator.exe" --game "$windows_game" --screen-width 1280 --screen-height 720 --vblank-frequency 60 --present-mode Fifo --fullscreen --hide-cursor --no-splash --vulkan-validation false --network-connected false; then
+if "$wine" "$kyty" --game "$windows_game" --screen-width 1280 --screen-height 720 --vblank-frequency 60 --present-mode Fifo --fullscreen --hide-cursor --no-splash --vulkan-validation false --network-connected false; then
     exit 0
 else
     status=$?

@@ -129,6 +129,21 @@ def main():
                 rejected = subprocess.run(['bash', '-s', '--', mode, target], input=staged_script, capture_output=True, timeout=5)
                 assert rejected.returncode == 64 and b'NOVA_ERROR: Refusing non-Kyty session' in rejected.stderr
         assert hashlib.sha256(archive.read('assets/engine/kyty-windows-df5b9b9.zip')).hexdigest() == CORE_SHA
+        compatibility=json.loads(archive.read('assets/engine/memory-compat.json'))
+        compatibility_bytes=archive.read('assets/engine/memory-compat.zip')
+        assert hashlib.sha256(compatibility_bytes).hexdigest()==compatibility['archive_sha256']
+        import io
+        with zipfile.ZipFile(io.BytesIO(compatibility_bytes)) as overlay:
+            assert set(overlay.namelist())=={'kyty_emulator-nova.exe','novamemory.dll','host-va-limit'}
+            for name,expected in compatibility['files'].items():
+                assert hashlib.sha256(overlay.read(name)).hexdigest()==expected
+            exe=overlay.read('kyty_emulator-nova.exe')
+            assert b'novamemory.dll\0' in exe and b'NovaVirtualQuery\0' in exe and b'NovaVirtualAlloc2\0' in exe
+            probe=overlay.read('host-va-limit')
+            assert probe[:6]==b'\x7fELF\x02\x01' and struct.unpack_from('<H',probe,18)[0]==183
+            for member in ['kyty_emulator-nova.exe','novamemory.dll']:
+                pe=overlay.read(member); at=struct.unpack_from('<I',pe,60)[0]
+                assert pe[at:at+4]==b'PE\0\0' and struct.unpack_from('<H',pe,at+4)[0]==0x8664
         launcher = archive.read('assets/engine/launch.sh')
         subprocess.run(['bash', '-n'], input=launcher, check=True)
         libraries = []

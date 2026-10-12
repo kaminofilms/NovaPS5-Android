@@ -31,6 +31,12 @@ class DirectLaunch(unittest.TestCase):
             (files / 'lib/wine/aarch64-unix').mkdir(parents=True)
             (files / 'lib/wine/aarch64-unix/libarm64ecfex.so').touch()
             (base / 'kyty').mkdir()
+            (base / 'kyty/kyty_emulator-nova.exe').touch()
+            (base / 'kyty/novamemory.dll').touch()
+            (base / 'compat').mkdir()
+            probe = base / 'compat/host-va-limit'
+            probe.write_text('#!/bin/bash\nprintf "0x0000007fffff0000\\n"\n')
+            probe.chmod(0o755)
             game = root / 'Game folder with spaces'
             game.mkdir()
             if not missing:
@@ -58,7 +64,7 @@ class DirectLaunch(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(len(calls), 2)
         self.assertEqual(calls[0][1:], ['--help'])
-        self.assertTrue(calls[1][0].endswith('/kyty/kyty_emulator.exe'))
+        self.assertTrue(calls[1][0].endswith('/kyty/kyty_emulator-nova.exe'))
         self.assertEqual(calls[1][1:3], ['--game', 'Z:' + game.replace('/', '\\')])
         self.assertIn('NOVA_PREFLIGHT:', result.stdout)
         self.assertIn('NOVA_EXIT: Kyty launch ended with status 0', result.stdout)

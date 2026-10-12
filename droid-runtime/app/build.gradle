@@ -64,8 +64,8 @@ android {
         // file out of its own data directory, and this app's entire job is to exec a rootfs:
         // proot, gamescope, the Steam client and everything it launches all live under files/.
         targetSdkVersion 28
-        versionCode 4
-        versionName "0.2.2-runtime"
+        versionCode 6
+        versionName "0.2.4-bootapi"
         buildConfigField "String", "BUILD_LABEL", "\"${escapedBuildLabel}\""
 
         ndk {

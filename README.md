@@ -1,6 +1,19 @@
-# NovaPs5 0.2.2 — experimental runtime preview
+# NovaPs5 0.2.4 — Android homebrew boot API preview
 
 This APK adds a real launch path for the full KytyPS5 core through ARM64 Wine/FEX. **A PS5 game boot and 60 FPS gameplay have not been verified.** This is a device-test build, not a compatibility release.
+
+## Android boot API update
+
+Version 0.2.4 packages a rebuilt guest core with pipe/pipe2, pipe dup2, descriptor
+redirection, SDK standard stream objects, buffered fflush and debug output. The
+Android host memory bridge also clips cached placeholders at the same 64 GiB
+system-band boundary as Kyty, fixing the mismatch exposed by the supplied phone
+log. Installed cores are verified and upgraded with rollback on publish failure.
+
+The x86-64 Windows ABI core is an internal Wine/FEX dependency of the Android
+APK. No separate PC release is produced. API tests are not a game boot test;
+Android execution and rendering still require device validation. The patch does
+not decrypt encrypted retail games. See [boot API notes](docs/ANDROID_BOOT_API.md).
 
 ## Install and test
 
@@ -10,7 +23,15 @@ The initial configuration uses a 1280×720 output, a 60 Hz presentation limit an
 
 After a launch, **Diagnostics → Export** includes the latest session log. The complete log folder is `Download/NovaPs5/session-.../` (or private `files/logs` if shared storage is unwritable). Runtime logs identify whether Wine/FEX started Kyty, whether Kyty accepted the game, and where initialization failed.
 
-## 0.2.2 direct Kyty session
+## Guest address-space compatibility
+
+The supplied Android logs fail in `ReserveGuestRegions()` before the game loader. Wine advertises a free range starting at `0x1000000000` whose placeholder allocation fails. This preview compiles a narrow Windows bridge for Kyty’s `VirtualQuery` and `VirtualAlloc2` imports. It probes the host Linux VA ceiling, excludes unreachable addresses, and pre-reserves real placeholders before handing them to Kyty. Reservations that fail are subdivided; unusable ranges are excluded. It never commits a failed allocation or overwrites an existing mapping. A 64 KiB gap between split reservations preserves Kyty’s per-reservation ownership invariant. Commits, protections, backing mappings and frees retain their original paths.
+
+The original pinned core executable remains installed. The generated `kyty_emulator-nova.exe` changes only the PE import directory/header and adds an import section; original code/data sections remain unchanged. The bridge DLL and freestanding ARM64 VA probe are built from `runtime-compat/`. The package validates archive/component hashes on upgrade without downloading the full runtime again. Install `mingw-w64-x86-64-dev` on Ubuntu before building, or supply `--windows-sdk /path/to/mingw/sysroot`.
+
+The bridge passed simulated API regression checks and packaging verification. The ARM64 probe ran under QEMU. Full Wine/FEX → Kyty execution on Android is still unverified. The uploaded ccleste title was attempted on desktop Kyty using llvmpipe: memory initialization succeeded, but the software GPU lacks `imageViewMinLod`, fragment shader barycentrics and depth bounds, so no game frame was produced. The Android system Vulkan report also lacks barycentrics, but it is a different driver from the Linux Turnip runtime; its compatibility must be checked in the device session. Do not count a compositor frame as game boot.
+
+## Direct Kyty session
 
 NovaSessionActivity forces `mode=run`, `/opt/novaps5/launch.sh` and the selected game path; it refuses an unrelated running session. Both the installed root script and the APK script refreshed by SessionFiles reject any Steam or desktop route. The inherited loading title/hints now describe Kyty. The user screenshot's old “Steam is loading” text was hardcoded in the platform UI and did not prove that a Steam process started.
 
@@ -37,7 +58,7 @@ The original signing key is retained, so 0.2.1 installs over 0.2.0 and keeps the
 
 ## Build the delivered APK
 
-Requirements: Python 3, Java 17 JDK, Android SDK platform 36/build-tools 36.0.0, Android NDK r28c, Linux x86-64 build host, and the existing development signing key.
+Requirements: Python 3, Java 17 JDK, Android SDK platform 36/build-tools 36.0.0, Android NDK r28c, MinGW Windows headers/import libraries, Linux x86-64 build host, and the existing development signing key.
 
 ```bash
 python3 build-runtime-apk.py \
@@ -45,7 +66,7 @@ python3 build-runtime-apk.py \
   --ndk /absolute/path/android-sdk/ndk/28.2.13676358 \
   --jdk /absolute/path/jdk-17 \
   --keystore /absolute/path/novaps5-development.keystore \
-  --output /absolute/path/NovaPs5-0.2.2-runtime-arm64.apk
+  --output /absolute/path/NovaPs5-0.2.3-runtime-arm64.apk
 ```
 
 The script compiles Nova's Java/native code and combines it with the SHA-256-pinned official DroidDeck 0.1.7 Android platform. Matching upstream source is in `vendor/droiddeck-0.1.7` at commit `d7cadd05d6e69b61b043f083b4bb408ef59967d1`. Compile-only backend ABI declarations are never packaged. Optional `--base-apk`, `--apktool` and `--compress-jar` arguments reuse already downloaded, verified dependencies.
@@ -60,7 +81,7 @@ Signing: alias `novaps5dev`, development password `android`. Preserve the origin
 
 See `docs/VALIDATION.md`, `docs/PORTING.md` and `release.json`. Packaging, checksums, direct-route/failure regression tests, the native inspector and signature were checked. The host x86 Kyty CLI and ARM64 Wine version command ran; the complete Wine/FEX → Kyty → PS5 game path did not run successfully here. The user's latest screenshots show the compatibility session/loading surface and controls with 0 FPS; there is no demonstrated PS5 game frame.
 
-There is no confirmed EverForward compatibility result, measured gameplay FPS, firmware boot, native ARM64 Kyty port or automatic payload decryption. No game files or Sony firmware are included. The complete source is backed up in the private repository https://github.com/kaminofilms/NovaPS5-Android, on main and dev. The initial import was checked against the original Git tree for all 1,779 tracked files.
+There is no confirmed EverForward compatibility result, measured gameplay FPS, firmware boot, native ARM64 Kyty port or automatic payload decryption. No game files or Sony firmware are included. No GitHub repository has been published.
 
 ## Licences and source
 

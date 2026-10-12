@@ -31,24 +31,32 @@ jobs:
           log-accepted-android-sdk-licenses: false
       - name: Install SDK, NDK and CMake
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;28.2.13676358' 'cmake;3.22.1'
+      - name: Install Windows headers for the memory bridge
+        run: sudo apt-get update && sudo apt-get install -y mingw-w64-x86-64-dev
+      - name: Check guest address-space bridge
+        run: |
+          gcc -std=c11 -Wall -Wextra -Werror -I tests tests/test_memory_bridge.c -o "$RUNNER_TEMP/memory-tests"
+          "$RUNNER_TEMP/memory-tests"
       - name: Check portable ELF and SELF parser
         run: |
           g++ -std=c++17 -Wall -Wextra -Werror -I droid-runtime/app/src/main/cpp/novadiag tests/test_self.cpp droid-runtime/app/src/main/cpp/novadiag/probe.cpp -o "$RUNNER_TEMP/novaps5-self-check"
           "$RUNNER_TEMP/novaps5-self-check"
-      - name: Check direct Kyty routing
-        run: python3 tests/test_direct_launch.py
+      - name: Check core import overlay and direct Kyty routing
+        run: |
+          python3 tests/test_core_overlay.py
+          python3 tests/test_direct_launch.py
       - name: Resolve and verify pinned build dependencies
         run: |
-          python3 build-runtime-apk.py --sdk "$ANDROID_HOME" --ndk "$ANDROID_HOME/ndk/28.2.13676358" --jdk "$JAVA_HOME" --keystore "$RUNNER_TEMP/novaps5-ci.keystore" --output dist/NovaPs5-0.2.2-runtime-arm64.apk --verify-dependencies-only
+          python3 build-runtime-apk.py --sdk "$ANDROID_HOME" --ndk "$ANDROID_HOME/ndk/28.2.13676358" --jdk "$JAVA_HOME" --keystore "$RUNNER_TEMP/novaps5-ci.keystore" --output dist/NovaPs5-0.2.4-bootapi-arm64.apk --verify-dependencies-only
       - name: Create temporary CI development identity
         run: keytool -genkeypair -storetype PKCS12 -keystore "$RUNNER_TEMP/novaps5-ci.keystore" -storepass android -keypass android -alias novaps5dev -keyalg RSA -keysize 2048 -validity 10000 -dname 'CN=NovaPs5 CI Development'
       - name: Compile Nova native and Java code and package ARM64 APK
         run: |
-          python3 build-runtime-apk.py --sdk "$ANDROID_HOME" --ndk "$ANDROID_HOME/ndk/28.2.13676358" --jdk "$JAVA_HOME" --keystore "$RUNNER_TEMP/novaps5-ci.keystore" --output dist/NovaPs5-0.2.2-runtime-arm64.apk
+          python3 build-runtime-apk.py --sdk "$ANDROID_HOME" --ndk "$ANDROID_HOME/ndk/28.2.13676358" --jdk "$JAVA_HOME" --keystore "$RUNNER_TEMP/novaps5-ci.keystore" --output dist/NovaPs5-0.2.4-bootapi-arm64.apk
       - name: Verify APK signing, architecture and runtime method access
         run: |
-          python3 tests/verify_runtime_apk.py dist/NovaPs5-0.2.2-runtime-arm64.apk --sdk "$ANDROID_HOME" --json-output dist/verification.json
-          sha256sum dist/NovaPs5-0.2.2-runtime-arm64.apk > dist/SHA256SUMS.txt
+          python3 tests/verify_runtime_apk.py dist/NovaPs5-0.2.4-bootapi-arm64.apk --sdk "$ANDROID_HOME" --json-output dist/verification.json
+          sha256sum dist/NovaPs5-0.2.4-bootapi-arm64.apk > dist/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: NovaPs5-Android-arm64-${{ github.sha }}

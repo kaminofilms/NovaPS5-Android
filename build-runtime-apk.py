@@ -12,6 +12,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 import urllib.request
 import xml.etree.ElementTree as ET
 import zipfile
@@ -92,7 +93,7 @@ def prepare_platform(base, core=None):
     tree.write(path, encoding='utf-8', xml_declaration=True)
     path = base / 'apktool.yml'
     value = path.read_text()
-    for key, setting in [('versionCode', '4'), ('versionName', '0.2.2-runtime'), ('minSdkVersion', '28'), ('targetSdkVersion', '28')]:
+    for key, setting in [('versionCode', '6'), ('versionName', '0.2.4-bootapi'), ('minSdkVersion', '28'), ('targetSdkVersion', '28')]:
         value = re.sub(r'(?m)^(  ' + key + r':).*$', r'\1 ' + setting, value)
     path.write_text(value)
     shutil.copyfile(ROOT / 'android/res/drawable/app_icon.xml', base / 'res/drawable/novaps5_icon.xml')
@@ -167,6 +168,8 @@ def main():
     parser.add_argument('--base-apk', type=Path)
     parser.add_argument('--apktool', type=Path)
     parser.add_argument('--compress-jar', type=Path)
+    parser.add_argument('--windows-sdk', type=Path, default=Path('/usr/x86_64-w64-mingw32'),
+                        help='MinGW Windows headers and import libraries used by the Wine memory bridge')
     parser.add_argument('--build-dir', type=Path, default=ROOT / 'build/runtime')
     parser.add_argument('--verify-dependencies-only', action='store_true')
     args = parser.parse_args()
@@ -185,6 +188,9 @@ def main():
     if args.verify_dependencies_only:
         print('All four build dependencies verified by SHA-256')
         return
+    sys.path.insert(0, str(ROOT / 'runtime-compat'))
+    from build_compat import build as build_compat
+    build_compat(ndk, args.windows_sdk.resolve(), core, APP / 'assets/engine', build / 'memory-compat')
     environment = dict(os.environ, JAVA_HOME=str(jdk))
     def run(*command):
         subprocess.run([str(item) for item in command], check=True, env=environment)
@@ -196,8 +202,7 @@ def main():
     shutil.rmtree(base, ignore_errors=True)
     run(java, '-jar', build / 'apktool.jar', 'd', '-f', build / 'platform.apk', '-o', base)
     prepare_platform(base, core)
-    # Apktool chmods its aapt executable. Hosted runners can have a root-owned
-    # SDK, so use a writable tool copy rather than changing the shared SDK.
+    # Apktool changes the tool mode; use a writable copy on hosted SDK installations.
     aapt = build / 'aapt2'
     shutil.copyfile(bt / 'aapt2', aapt)
     aapt.chmod(0o755)

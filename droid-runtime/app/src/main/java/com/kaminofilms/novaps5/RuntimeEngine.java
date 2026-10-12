@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.util.Locale;
 import java.util.zip.*;
+import org.json.JSONObject;
 import org.apache.commons.compress.archivers.tar.*;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 
@@ -50,13 +51,22 @@ final class RuntimeEngine {
             if(!LinuxRuntimeInstaller.install(context,release,(stage,percent)->observer.update("Linux runtime: "+stage,percent)))throw new IOException("Linux runtime installation failed. The existing runtime was retained; retry on a stable connection.");
         }
         File base=engine();if(!base.isDirectory()&&!base.mkdirs())throw new IOException("Cannot create engine directory");
-        File core=new File(base,"kyty");if(!new File(core,"kyty_emulator.exe").isFile()){
+        String expectedExe=memoryManifest().getJSONObject("core_overlay").getString("input_sha256");
+        File core=new File(base,"kyty"), installedExe=new File(core,"kyty_emulator.exe");
+        if(!installedExe.isFile()||!sha256(installedExe).equals(expectedExe)){
             observer.update("Installing the full Kyty core",-1);File archive=new File(context.getCacheDir(),"novaps5-kyty.zip");
             try(InputStream in=context.getAssets().open("engine/kyty-windows-df5b9b9.zip");OutputStream out=new FileOutputStream(archive)){copy(in,out);}
             if(!sha256(archive).equals(CORE_SHA)){archive.delete();throw new IOException("Packaged Kyty checksum mismatch");}
             File staging=new File(base,"kyty.staging");clear(staging);staging.mkdirs();unzip(archive,staging);
-            if(!new File(staging,"kyty_emulator.exe").isFile())throw new IOException("KyTy archive contains no engine executable");
-            if(!staging.renameTo(core))throw new IOException("Cannot publish installed Kyty engine");archive.delete();
+            File stagedExe=new File(staging,"kyty_emulator.exe");
+            if(!stagedExe.isFile()||!sha256(stagedExe).equals(expectedExe))throw new IOException("Packaged Kyty executable checksum mismatch");
+            File previous=new File(base,"kyty.previous");clear(previous);
+            if(core.exists()&&!core.renameTo(previous))throw new IOException("Cannot retain the previous Kyty engine during upgrade");
+            if(!staging.renameTo(core)){
+                if(previous.exists()&&!previous.renameTo(core))throw new IOException("Cannot publish or restore the Kyty engine; retry installation");
+                throw new IOException("Cannot publish the Kyty upgrade; previous engine restored");
+            }
+            clear(previous);archive.delete();
         }
         File proton=new File(base,"proton");if(!new File(proton,PROTON_DIR+"/files/lib/wine/aarch64-unix/libarm64ecfex.so").isFile()){
             File archive=new File(context.getFilesDir(),"novaps5-proton.download");download(PROTON_URL,archive,observer);
@@ -68,6 +78,7 @@ final class RuntimeEngine {
         for(String asset:new String[]{"launch.sh","session-guard.sh"}){
             File launcher=new File(base,asset);try(InputStream in=context.getAssets().open("engine/"+asset);OutputStream out=new FileOutputStream(launcher)){copy(in,out);}launcher.setExecutable(true,false);
         }
+        installMemoryBridge(observer);
         // The installed root survives APK upgrades. Enforce the direct-only route
         // there as well as in the Activity, before gamescope or any client starts.
         File session=new File(root(),"usr/local/bin/bannerlator-session");
@@ -80,6 +91,36 @@ final class RuntimeEngine {
         }
         BootLog.write(context,"Direct Kyty session guard installed; Steam launch is disabled");
         observer.update("Engine ready for launch",100);
+    }
+    JSONObject memoryManifest()throws Exception {
+        try(InputStream in=context.getAssets().open("engine/memory-compat.json");ByteArrayOutputStream text=new ByteArrayOutputStream()){
+            copy(in,text);return new JSONObject(new String(text.toByteArray(),StandardCharsets.UTF_8));
+        }
+    }
+    void installMemoryBridge(Progress observer)throws Exception {
+        JSONObject manifest=memoryManifest();
+        JSONObject hashes=manifest.getJSONObject("files");
+        String[] names={"kyty_emulator-nova.exe","novamemory.dll","host-va-limit"};
+        File[] destinations={new File(engine(),"kyty/kyty_emulator-nova.exe"),new File(engine(),"kyty/novamemory.dll"),new File(engine(),"compat/host-va-limit")};
+        boolean current=true;
+        for(int i=0;i<names.length;i++)if(!destinations[i].isFile()||!sha256(destinations[i]).equals(hashes.getString(names[i])))current=false;
+        if(!current){
+            observer.update("Installing Wine guest memory compatibility",-1);
+            File archive=new File(context.getCacheDir(),"novaps5-memory-compat.zip");
+            File staging=new File(engine(),"memory-compat.staging");clear(staging);staging.mkdirs();
+            try {
+                try(InputStream in=context.getAssets().open("engine/memory-compat.zip");OutputStream out=new FileOutputStream(archive)){copy(in,out);}
+                if(!sha256(archive).equals(manifest.getString("archive_sha256")))throw new IOException("Memory bridge archive checksum mismatch");
+                unzip(archive,staging);
+                for(String name:names){File file=new File(staging,name);if(!file.isFile()||!sha256(file).equals(hashes.getString(name)))throw new IOException("Memory bridge component checksum mismatch: "+name);}
+                for(int i=0;i<names.length;i++){
+                    destinations[i].getParentFile().mkdirs();
+                    Files.move(new File(staging,names[i]).toPath(),destinations[i].toPath(),java.nio.file.StandardCopyOption.REPLACE_EXISTING,java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+                }
+            } finally {archive.delete();clear(staging);}
+        }
+        if(!destinations[2].setExecutable(true,false))throw new IOException("Cannot execute the host address-space probe");
+        BootLog.write(context,"Wine memory compatibility installed: "+manifest.getString("revision")+"; original Kyty executable retained");
     }
     void launch(String game,String name){
         if(SessionState.INSTANCE.getRunning())throw new IllegalStateException("A runtime session is already active. End that session before launching another game.");
