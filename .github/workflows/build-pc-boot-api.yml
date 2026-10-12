@@ -33,25 +33,20 @@ jobs:
       - name: Apply pinned source overlay
         run: python tools/apply-pc-boot-api-overlay.py pc-kyty
       - uses: ilammy/msvc-dev-cmd@v1
-      - name: Locate glslang tool cache
-        id: vcpkg
+      - name: Install pinned official glslang compiler
         shell: pwsh
         run: |
-          $root = Split-Path (Get-Command vcpkg).Source
-          "root=$root" >> $env:GITHUB_OUTPUT
-          $hash = (Get-FileHash "$root\ports\glslang\vcpkg.json" -Algorithm SHA256).Hash
-          "hash=$hash" >> $env:GITHUB_OUTPUT
-      - uses: actions/cache@v4
-        id: glslang
-        with:
-          path: ${{ steps.vcpkg.outputs.root }}\installed\x64-windows
-          key: nova-glslang-${{ runner.os }}-${{ steps.vcpkg.outputs.hash }}-tools-opt
-      - name: Install glslang
-        shell: pwsh
-        run: |
-          if ('${{ steps.glslang.outputs.cache-hit }}' -ne 'true') { vcpkg install 'glslang[tools,opt]:x64-windows' }
+          $archive = Join-Path $env:RUNNER_TEMP 'glslang-16.6.0-windows.zip'
+          Invoke-WebRequest 'https://github.com/KhronosGroup/glslang/releases/download/16.6.0/glslang-16.6.0-windows-x86_64-release.zip' -OutFile $archive
+          $actual = (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne '82bf434e69b9bb4829de7e2b4bc2c5e7a7861e53d66cf75e5cc70f5f694a8d9b') { throw 'glslang checksum mismatch' }
+          $target = Join-Path $env:RUNNER_TEMP 'glslang-16.6.0'
+          Expand-Archive $archive -DestinationPath $target
+          $tool = Get-ChildItem $target -Recurse -File | Where-Object { $_.Name -in @('glslangValidator.exe', 'glslang.exe') } | Select-Object -First 1
+          if (-not $tool) { throw 'glslang compiler missing from verified archive' }
+          $tool.DirectoryName >> $env:GITHUB_PATH
+          & $tool.FullName --version
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          '${{ steps.vcpkg.outputs.root }}\installed\x64-windows\tools\glslang' >> $env:GITHUB_PATH
       - uses: mozilla-actions/sccache-action@v0.0.11
       - name: Configure full core without Qt launcher
         shell: cmd

@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 8346611..e976115 100644
+index 8346611..213dd35 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -395,6 +395,24 @@ endfunction()
@@ -14,11 +14,11 @@ index 8346611..e976115 100644
 +add_kyty_full_emulator_test(homebrew_boot_api_tests "${KYTY_TESTS_DIR}/HomebrewBootApiTests.cpp")
 +# Assertions are intentional test operations and must run in Release builds.
 +if(KYTY_CLANG_CL)
-+	target_compile_options(guest_pipe_tests PRIVATE /UNDEBUG)
-+	target_compile_options(homebrew_boot_api_tests PRIVATE /UNDEBUG)
++	set_source_files_properties("${KYTY_TESTS_DIR}/GuestPipeTests.cpp" "${KYTY_TESTS_DIR}/HomebrewBootApiTests.cpp"
++		PROPERTIES COMPILE_OPTIONS /UNDEBUG)
 +else()
-+	target_compile_options(guest_pipe_tests PRIVATE -UNDEBUG)
-+	target_compile_options(homebrew_boot_api_tests PRIVATE -UNDEBUG)
++	set_source_files_properties("${KYTY_TESTS_DIR}/GuestPipeTests.cpp" "${KYTY_TESTS_DIR}/HomebrewBootApiTests.cpp"
++		PROPERTIES COMPILE_OPTIONS -UNDEBUG)
 +endif()
 +add_test(NAME guest_pipe COMMAND guest_pipe_tests)
 +add_test(NAME homebrew_boot_api COMMAND homebrew_boot_api_tests)
@@ -28,10 +28,10 @@ index 8346611..e976115 100644
  	"${KYTY_TESTS_DIR}/ScalarProvenanceTests.cpp"
  	"${KYTY_SOURCE_DIR}/graphics/guest_gpu/gpu_format.cpp"
 diff --git a/src/graphics/host_gpu/hostMemory.cpp b/src/graphics/host_gpu/hostMemory.cpp
-index 5ee4fa8..266e5a4 100644
+index 5ee4fa8..7574334 100644
 --- a/src/graphics/host_gpu/hostMemory.cpp
 +++ b/src/graphics/host_gpu/hostMemory.cpp
-@@ -23,6 +23,10 @@ bool IsAccessible(DWORD protect, HostMemoryAccess access) {
+@@ -23,6 +23,14 @@ bool IsAccessible(DWORD protect, HostMemoryAccess access) {
  	if (access == HostMemoryAccess::Mapped) {
  		return (protect & PAGE_GUARD) == 0;
  	}
@@ -39,21 +39,26 @@ index 5ee4fa8..266e5a4 100644
 +		constexpr DWORD writable = PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY;
 +		return (protect & blocked) == 0 && (protect & writable) != 0;
 +	}
++	if (access == HostMemoryAccess::Execute) {
++		constexpr DWORD executable = PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY;
++		return (protect & blocked) == 0 && (protect & executable) != 0;
++	}
  	return (protect & blocked) == 0 && (protect & readable) != 0;
  }
  #endif
-@@ -73,7 +77,8 @@ bool HostMemoryQueryRange(uint64_t addr, uint64_t requested_size, HostMemoryAcce
+@@ -73,7 +81,9 @@ bool HostMemoryQueryRange(uint64_t addr, uint64_t requested_size, HostMemoryAcce
  		if (begin > current) {
  			break;
  		}
 -		const bool allowed = access == HostMemoryAccess::Mapped || permissions[0] == 'r';
 +		const bool allowed = access == HostMemoryAccess::Mapped ||
-+		                     (access == HostMemoryAccess::Write ? permissions[1] == 'w' : permissions[0] == 'r');
++		                     (access == HostMemoryAccess::Write ? permissions[1] == 'w' :
++		                      access == HostMemoryAccess::Execute ? permissions[2] == 'x' : permissions[0] == 'r');
  		if (!allowed) {
  			break;
  		}
 diff --git a/src/graphics/host_gpu/hostMemory.h b/src/graphics/host_gpu/hostMemory.h
-index f5cee61..3e0e6ad 100644
+index f5cee61..f2b33b3 100644
 --- a/src/graphics/host_gpu/hostMemory.h
 +++ b/src/graphics/host_gpu/hostMemory.h
 @@ -5,7 +5,7 @@
@@ -61,7 +66,7 @@ index f5cee61..3e0e6ad 100644
  namespace Libs::Graphics {
  
 -enum class HostMemoryAccess { Read, Mapped };
-+enum class HostMemoryAccess { Read, Write, Mapped };
++enum class HostMemoryAccess { Read, Write, Execute, Mapped };
  
  bool HostMemoryQueryRange(uint64_t addr, uint64_t requested_size, HostMemoryAccess access,
                            uint64_t& accessible_size);
@@ -518,14 +523,75 @@ index 87a9bf9..febbd49 100644
  	(void)GetGpuResources().InvalidateMemory(vaddr, size);
 diff --git a/src/libs/guestStdio.h b/src/libs/guestStdio.h
 new file mode 100644
-index 0000000..d4e15e1
+index 0000000..e2dfffe
 --- /dev/null
 +++ b/src/libs/guestStdio.h
-@@ -0,0 +1,19 @@
+@@ -0,0 +1,81 @@
 +#ifndef KYTY_LIBS_GUEST_STDIO_H_
 +#define KYTY_LIBS_GUEST_STDIO_H_
 +
++#include <cstddef>
++#include <cstdint>
++
++#if defined(__x86_64__) || defined(_M_X64)
++#define KYTY_STDIO_CALLBACK_ABI __attribute__((sysv_abi))
++#else
++#define KYTY_STDIO_CALLBACK_ABI
++#endif
++
 +namespace Libs {
++
++// Stable FreeBSD amd64 FILE prefix, shared by the homebrew SDK. This is
++// deliberately separate from FILE in the host C runtime.
++struct GuestStdioFile {
++  uint8_t* position;
++  int32_t read_space, write_space;
++  int16_t flags, descriptor;
++  struct Buffer { uint8_t* base; int32_t size; } buffer;
++  int32_t line_buffer_size;
++  void* cookie;
++  int (KYTY_STDIO_CALLBACK_ABI *close)(void*);
++  int (KYTY_STDIO_CALLBACK_ABI *read)(void*, char*, int);
++  int64_t (KYTY_STDIO_CALLBACK_ABI *seek)(void*, int64_t, int);
++  int (KYTY_STDIO_CALLBACK_ABI *write)(void*, const char*, int);
++};
++static_assert(offsetof(GuestStdioFile, flags) == 16);
++static_assert(offsetof(GuestStdioFile, buffer) == 24);
++static_assert(offsetof(GuestStdioFile, cookie) == 48);
++static_assert(offsetof(GuestStdioFile, write) == 80);
++static_assert(sizeof(GuestStdioFile) == 88);
++
++// Returns -2 only if the pointer is not a recognizable output stream, allowing
++// another guest libc ABI to use its own export. Real callback failures return
++// EOF and are never turned into success by a fallback implementation.
++template <typename Validate, typename Executable>
++int FlushBsdOutput(void* opaque, Validate validate, Executable executable) {
++  if (!validate(opaque, sizeof(GuestStdioFile), true)) return -2;
++  auto* file = static_cast<GuestStdioFile*>(opaque);
++  constexpr int Write = 8, ReadWrite = 16, Error = 64, String = 512;
++  if ((file->flags & (Write | ReadWrite)) == 0 || (file->flags & String) != 0) return -2;
++  if ((file->flags & Write) == 0) return 0; // update stream currently in read mode
++  const auto base = reinterpret_cast<uintptr_t>(file->buffer.base);
++  const auto position = reinterpret_cast<uintptr_t>(file->position);
++  if (file->buffer.size < 0 || position < base || position - base > static_cast<uint32_t>(file->buffer.size)) return -2;
++  auto remaining = static_cast<size_t>(position - base);
++  if (remaining == 0) return 0;
++  if (file->write == nullptr || !executable(reinterpret_cast<uintptr_t>(file->write)) ||
++      !validate(file->buffer.base, remaining, false)) return -2;
++  auto* current = reinterpret_cast<const char*>(file->buffer.base);
++  file->position = file->buffer.base;
++  file->write_space = (file->flags & 3) != 0 ? 0 : file->buffer.size;
++  while (remaining != 0) {
++    const auto written = file->write(file->cookie, current, static_cast<int>(remaining));
++    if (written <= 0 || static_cast<size_t>(written) > remaining) {
++      file->flags |= Error;
++      return -1;
++    }
++    current += written;
++    remaining -= static_cast<size_t>(written);
++  }
++  return 0;
++}
 +
 +// Never pass an opaque guest FILE to the host CRT. The loaded guest libc owns
 +// both the layout and buffering, including its fflush(NULL) stream registry.
@@ -540,9 +606,10 @@ index 0000000..d4e15e1
 +}
 +
 +} // namespace Libs
++#undef KYTY_STDIO_CALLBACK_ABI
 +#endif
 diff --git a/src/libs/libC.cpp b/src/libs/libC.cpp
-index 7ed9885..76add2a 100644
+index 7ed9885..ca9390b 100644
 --- a/src/libs/libC.cpp
 +++ b/src/libs/libC.cpp
 @@ -8,6 +8,7 @@
@@ -553,7 +620,7 @@ index 7ed9885..76add2a 100644
  #include "libs/libs.h"
  #include "libs/vaContext.h"
  #include "loader/runtimeLinker.h"
-@@ -630,9 +631,24 @@ static KYTY_SYSV_ABI int snprintf(VA_ARGS) {
+@@ -630,9 +631,37 @@ static KYTY_SYSV_ABI int snprintf(VA_ARGS) {
  int KYTY_SYSV_ABI fflush(FILE* stream) {
  	PRINT_NAME();
  
@@ -573,6 +640,19 @@ index 7ed9885..76add2a 100644
 +		explicit Guard(bool& value): flag(value) { flag = true; }
 +		~Guard() { flag = false; }
 +	} guard(flushing_guest);
++	if (stream != nullptr && stream != stdout && stream != stderr) {
++		const auto result = FlushBsdOutput(stream,
++		    [](const void* pointer, size_t size, bool write) {
++			uint64_t accessible = 0;
++			return Graphics::HostMemoryQueryRange(reinterpret_cast<uint64_t>(pointer), size,
++			    write ? Graphics::HostMemoryAccess::Write : Graphics::HostMemoryAccess::Read, accessible) && accessible >= size;
++		    },
++		    [](uintptr_t pointer) {
++			uint64_t accessible = 0;
++			return Graphics::HostMemoryQueryRange(pointer, 1, Graphics::HostMemoryAccess::Execute, accessible);
++		    });
++		if (result != -2) return result;
++	}
 +	if (stream != nullptr && stream != stdout && stream != stderr && address == 0)
 +		*Posix::GetErrorAddr() = Posix::POSIX_ENOSYS;
 +	return FlushGuestStream(stream, stdout, stderr,
@@ -701,10 +781,10 @@ index f79cb50..3787b94 100644
  	static void     DeleteTls(Program* program, int thread_id);
 diff --git a/tests/GuestPipeTests.cpp b/tests/GuestPipeTests.cpp
 new file mode 100644
-index 0000000..599ba2c
+index 0000000..0d19d7d
 --- /dev/null
 +++ b/tests/GuestPipeTests.cpp
-@@ -0,0 +1,113 @@
+@@ -0,0 +1,149 @@
 +#include "kernel/guestPipe.h"
 +#include "libs/guestStdio.h"
 +
@@ -727,6 +807,42 @@ index 0000000..599ba2c
 +int NativeFlush(void* p) { ++native_calls; last_native = p; return 0; }
 +int GuestFlush(void* p) { ++guest_calls; last_guest = p; return 0; }
 +int FailedFlush(void*) { return -1; }
++
++struct Sink { std::string text; int calls = 0; bool fail = false; };
++int __attribute__((sysv_abi)) WriteGuest(void* opaque, const char* data, int count) {
++  auto* sink = static_cast<Sink*>(opaque);
++  ++sink->calls;
++  if (sink->fail) return -1;
++  const auto bytes = std::min(count, 2); // deliberately partial writes
++  sink->text.append(data, static_cast<size_t>(bytes));
++  return bytes;
++}
++
++void CheckBufferedStdio() {
++  Sink sink;
++  uint8_t buffer[] = "buffered stderr";
++  Libs::GuestStdioFile file {};
++  file.flags = 8; file.descriptor = 2;
++  file.buffer = {buffer, sizeof(buffer)};
++  file.position = buffer + sizeof(buffer) - 1;
++  file.cookie = &sink; file.write = WriteGuest;
++  auto validate = [&](const void* pointer, size_t size, bool writable) {
++    return writable ? pointer == &file && size == sizeof(file) : pointer == buffer && size <= sizeof(buffer);
++  };
++  auto executable = [](uintptr_t pointer) { return pointer == reinterpret_cast<uintptr_t>(WriteGuest); };
++  assert(Libs::FlushBsdOutput(&file, validate, executable) == 0);
++  assert(sink.text == "buffered stderr" && sink.calls > 1 && file.position == buffer);
++  assert(file.write_space == sizeof(buffer));
++  file.position = buffer + 1; file.flags = 8 | 1;
++  sink.fail = true;
++  assert(Libs::FlushBsdOutput(&file, validate, executable) == -1 && (file.flags & 64) != 0);
++  assert(file.write_space == 0);
++  assert(Libs::FlushBsdOutput(nullptr, validate, executable) == -2);
++  file.position = reinterpret_cast<uint8_t*>(reinterpret_cast<uintptr_t>(buffer) + sizeof(buffer) + 1);
++  assert(Libs::FlushBsdOutput(&file, validate, executable) == -2);
++  file.position = buffer + 1; file.write = nullptr;
++  assert(Libs::FlushBsdOutput(&file, validate, executable) == -2);
++}
 +
 +void CheckStdio() {
 +  int out = 0, err = 0, opaque_guest = 0;
@@ -815,23 +931,25 @@ index 0000000..599ba2c
 +}
 +
 +int main() {
-+  CheckStdio(); CheckPipe(); CheckBlockingAndAtomicity();
++  CheckStdio(); CheckBufferedStdio(); CheckPipe(); CheckBlockingAndAtomicity();
 +  std::puts("GuestPipeTests: all checks passed");
 +}
 diff --git a/tests/HomebrewBootApiTests.cpp b/tests/HomebrewBootApiTests.cpp
 new file mode 100644
-index 0000000..8692042
+index 0000000..a0cfe7f
 --- /dev/null
 +++ b/tests/HomebrewBootApiTests.cpp
-@@ -0,0 +1,86 @@
+@@ -0,0 +1,110 @@
 +#include "common/emulatorConfig.h"
 +#include "common/logging/log.h"
 +#include "common/subsystems.h"
 +#include "common/threads.h"
 +#include "kernel/fileSystem.h"
 +#include "libs/errno.h"
++#include "libs/guestStdio.h"
 +#include "loader/symbolDatabase.h"
 +
++#include <algorithm>
 +#include <cassert>
 +#include <chrono>
 +#include <cstring>
@@ -845,6 +963,18 @@ index 0000000..8692042
 +
 +using namespace std::chrono_literals;
 +namespace FS = Libs::LibKernel::FileSystem;
++
++namespace {
++int KYTY_SYSV_ABI FlushWrite(void* cookie, const char* buffer, int size) {
++  const auto fd = *static_cast<int*>(cookie);
++  const auto result = FS::KernelWrite(fd, buffer, std::min(size, 2));
++  if (result < 0) {
++    *Libs::Posix::GetErrorAddr() = Libs::LibKernel::KernelToPosix(static_cast<int>(result));
++    return -1;
++  }
++  return static_cast<int>(result);
++}
++}
 +
 +int main() {
 +  Common::InitializeThreads();
@@ -880,6 +1010,16 @@ index 0000000..8692042
 +  assert(write(2, "ccleste boot log\n", 17) == 17);
 +  char buffer[64] {};
 +  assert(read(ends[0], buffer, sizeof(buffer)) == 17 && std::strcmp(buffer, "ccleste boot log\n") == 0);
++  uint8_t pending[] = "guest buffer\n";
++  int stderr_fd = 2;
++  Libs::GuestStdioFile guest_file {};
++  guest_file.flags = 8; guest_file.descriptor = stderr_fd;
++  guest_file.buffer = {pending, sizeof(pending)};
++  guest_file.position = pending + sizeof(pending) - 1;
++  guest_file.cookie = &stderr_fd; guest_file.write = FlushWrite;
++  assert(flush(reinterpret_cast<FILE*>(&guest_file)) == 0 && guest_file.position == pending);
++  std::memset(buffer, 0, sizeof(buffer));
++  assert(read(ends[0], buffer, sizeof(buffer)) == sizeof(pending) - 1 && std::strcmp(buffer, "guest buffer\n") == 0);
 +  // A duplicated descriptor shares its open-file flags, but not FD_CLOEXEC.
 +  assert(FS::KernelFcntl(2, 4, 4) == OK);
 +  assert(dup2(2, 27) == 27 && (FS::KernelFcntl(27, 3, 0) & 4) != 0);

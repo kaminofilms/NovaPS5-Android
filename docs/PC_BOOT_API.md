@@ -11,8 +11,10 @@ Changes:
   nonblocking flags, EOF, EPIPE, descriptor duplication and close behavior.
 - Route descriptor 2 writes through its redirected pipe, and preserve duplicates
   when the original write descriptor closes.
-- Delegate opaque guest `fflush` streams to the supplied guest libc export.
-  Native stdout/stderr use the host CRT. `fflush(NULL)` flushes both runtimes.
+- Flush the SDK's FreeBSD output buffers through their guest write callbacks,
+  including partial writes and stream error flags. Other guest stdio ABIs use
+  the supplied guest libc export. Native stdout/stderr use the host CRT.
+  `fflush(NULL)` invokes the host and guest runtimes' flush-all functions.
   An unavailable guest implementation returns ENOSYS instead of crashing or
   passing a guest FILE object to the Windows CRT.
 - Reject seeking and truncation on pipe descriptors; report FIFO metadata.
@@ -29,8 +31,10 @@ proof that the game renders or is playable. A compositor or emulator splash
 frame is not a game boot. General file/socket `dup2` remains unsupported and
 returns ENOSYS; this patch implements the pipe path used at ccleste startup.
 
-The supplied homebrew has readable, uncompressed SELF segments and a guest libc
-export for fflush. This build does not decrypt encrypted retail packages or
+The supplied homebrew has readable, uncompressed SELF segments. Its packaged
+fflush export is a return-only stub, so recognized SDK output buffers need the
+callback adapter. Flush-all behavior for a libc that only supplies such a stub
+is still limited by that libc's implementation. This build does not decrypt encrypted retail packages or
 SELF files. Use legally obtained executable data that is already decrypted.
 
 PC API validation has no Vulkan/GPU requirement. Actual game boot still needs
