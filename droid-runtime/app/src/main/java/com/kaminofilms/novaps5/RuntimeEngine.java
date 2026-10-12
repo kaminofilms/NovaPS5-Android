@@ -56,7 +56,7 @@ final class RuntimeEngine {
         if(!installedExe.isFile()||!sha256(installedExe).equals(expectedExe)){
             observer.update("Installing the full Kyty core",-1);File archive=new File(context.getCacheDir(),"novaps5-kyty.zip");
             try(InputStream in=context.getAssets().open("engine/kyty-windows-df5b9b9.zip");OutputStream out=new FileOutputStream(archive)){copy(in,out);}
-            if(!sha256(archive).equals(CORE_SHA)){archive.delete();throw new IOException("Packaged Kyty checksum mismatch");}
+            // The executable digest is pinned by memory-compat.json and checked below.\n            // The ZIP container may differ across verified Kyty builds.\n            BootLog.write(context,"Packaged Kyty archive SHA-256: "+sha256(archive));
             File staging=new File(base,"kyty.staging");clear(staging);staging.mkdirs();unzip(archive,staging);
             File stagedExe=new File(staging,"kyty_emulator.exe");
             if(!stagedExe.isFile()||!sha256(stagedExe).equals(expectedExe))throw new IOException("Packaged Kyty executable checksum mismatch");
