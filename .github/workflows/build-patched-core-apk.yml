@@ -5,6 +5,8 @@ on:
     branches: [ps5-boot-api]
     paths:
       - 'build-runtime-apk.py'
+      - 'droid-runtime/app/src/main/java/com/kaminofilms/novaps5/**'
+      - 'droid-runtime/app/src/main/assets/engine/**'
       - 'runtime-compat/**'
       - 'tests/verify_runtime_apk.py'
       - '.github/workflows/build-patched-core-apk.yml'
