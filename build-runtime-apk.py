@@ -196,7 +196,12 @@ def main():
     shutil.rmtree(base, ignore_errors=True)
     run(java, '-jar', build / 'apktool.jar', 'd', '-f', build / 'platform.apk', '-o', base)
     prepare_platform(base, core)
-    run(java, '-jar', build / 'apktool.jar', 'b', base, '--aapt', bt / 'aapt2', '-o', build / 'platform-rebuilt.apk')
+    # Apktool chmods its aapt executable. Hosted runners can have a root-owned
+    # SDK, so use a writable tool copy rather than changing the shared SDK.
+    aapt = build / 'aapt2'
+    shutil.copyfile(bt / 'aapt2', aapt)
+    aapt.chmod(0o755)
+    run(java, '-jar', build / 'apktool.jar', 'b', base, '--aapt', aapt, '-o', build / 'platform-rebuilt.apk')
     for name in ['stubs', 'stub-classes', 'nova-classes', 'dex']:
         shutil.rmtree(build / name, ignore_errors=True)
         (build / name).mkdir()
