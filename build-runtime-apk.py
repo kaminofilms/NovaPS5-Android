@@ -170,6 +170,8 @@ def main():
     parser.add_argument('--jdk', type=Path, default=Path(os.environ.get('JAVA_HOME', '/usr')))
     parser.add_argument('--keystore', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--core-zip', type=Path, help='Verified rebuilt Kyty engine ZIP')
+    parser.add_argument('--core-exe-sha', help='SHA-256 of the rebuilt Kyty executable')
     parser.add_argument('--base-apk', type=Path)
     parser.add_argument('--apktool', type=Path)
     parser.add_argument('--compress-jar', type=Path)
@@ -184,7 +186,15 @@ def main():
     for name, provided in [('platform.apk', args.base_apk), ('apktool.jar', args.apktool), ('commons-compress.jar', args.compress_jar)]:
         fetch(build / name, *PINS[name], provided.resolve() if provided else None)
     core = APP / 'assets/engine/kyty-windows-df5b9b9.zip'
-    if core.is_file():
+    if args.core_zip:
+        if not args.core_exe_sha or not re.fullmatch(r'[0-9a-fA-F]{64}', args.core_exe_sha):
+            raise RuntimeError('--core-zip requires --core-exe-sha (64 hex characters)')
+        core = args.core_zip.resolve()
+        with zipfile.ZipFile(core) as archive:
+            actual = hashlib.sha256(archive.read('kyty_emulator.exe')).hexdigest()
+        if actual != args.core_exe_sha.lower():
+            raise RuntimeError('Rebuilt Kyty executable checksum mismatch')
+    elif core.is_file():
         if sha(core) != CORE_SHA:
             raise RuntimeError('Incorrect pinned Kyty engine archive')
     else:
@@ -195,7 +205,7 @@ def main():
         return
     sys.path.insert(0, str(ROOT / 'runtime-compat'))
     from build_compat import build as build_compat
-    build_compat(ndk, args.windows_sdk.resolve(), core, APP / 'assets/engine', build / 'memory-compat')
+    build_compat(ndk, args.windows_sdk.resolve(), core, APP / 'assets/engine', build / 'memory-compat', expected_exe_sha=args.core_exe_sha)
     environment = dict(os.environ, JAVA_HOME=str(jdk))
     def run(*command):
         subprocess.run([str(item) for item in command], check=True, env=environment)
