@@ -60,7 +60,7 @@ Signing: alias `novaps5dev`, development password `android`. Preserve the origin
 
 See `docs/VALIDATION.md`, `docs/PORTING.md` and `release.json`. Packaging, checksums, direct-route/failure regression tests, the native inspector and signature were checked. The host x86 Kyty CLI and ARM64 Wine version command ran; the complete Wine/FEX → Kyty → PS5 game path did not run successfully here. The user's latest screenshots show the compatibility session/loading surface and controls with 0 FPS; there is no demonstrated PS5 game frame.
 
-There is no confirmed EverForward compatibility result, measured gameplay FPS, firmware boot, native ARM64 Kyty port or automatic payload decryption. No game files or Sony firmware are included. No GitHub repository has been published.
+There is no confirmed EverForward compatibility result, measured gameplay FPS, firmware boot, native ARM64 Kyty port or automatic payload decryption. No game files or Sony firmware are included. The complete source is backed up in the private repository https://github.com/kaminofilms/NovaPS5-Android, on main and dev. The initial import was checked against the original Git tree for all 1,779 tracked files.
 
 ## Licences and source
 

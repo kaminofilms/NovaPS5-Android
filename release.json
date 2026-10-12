@@ -62,5 +62,16 @@
     "runtimeMethodAccess": "All Nova platform method references have legal access; Release constructor public, SessionActivity non-final, protected subclass lifecycle calls verified.",
     "directKytyRoute": "Explicit NovaSessionActivity run/script/game route; installed and APK-refreshed session guards reject Steam/desktop requests; five fake-Wine regression cases passed."
   },
-  "repositoryPublished": false
+  "repositoryPublished": true,
+  "repositoryUrl": "https://github.com/kaminofilms/NovaPS5-Android",
+  "repositoryBranches": [
+    "main",
+    "dev"
+  ],
+  "sourceBackupVerification": {
+    "originalLocalCommit": "bfeae0c9b650e6bfe5cc5251557868a1e4fbfe5e",
+    "originalGitTree": "75c944180856c5a3d0594bdf26ee83ae69f5422d",
+    "trackedFiles": 1779,
+    "githubImportCommit": "6d826501c3e21b2331f137aacd787a856d0769ea"
+  }
 }
