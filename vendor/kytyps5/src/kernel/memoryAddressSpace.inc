@@ -1170,13 +1170,32 @@ private:
 					auto* ptr = VirtualAlloc2(
 					    process, reinterpret_cast<void*>(reserve_start), reserve_end - reserve_start,
 					    MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS, nullptr, 0);
-					if (reinterpret_cast<uint64_t>(ptr) != reserve_start) {
-						EXIT("failed to reserve guest address space at 0x%016" PRIx64
-						     ", size 0x%016" PRIx64 "\n",
-						     reserve_start, reserve_end - reserve_start);
+					if (reinterpret_cast<uint64_t>(ptr) == reserve_start) {
+						AddFreeUnlocked(reserve_start, reserve_end - reserve_start);
+						m_owned.emplace_back(reserve_start, reserve_end - reserve_start);
+					} else {
+						// Wine/FEX may reject a single very large placeholder even when
+						// VirtualQuery reports the range as free. Retry in bounded,
+						// fixed-address chunks; never advertise an unreserved range.
+						constexpr uint64_t ChunkSize = 0x10000000ull; // 256 MiB
+						for (auto chunk_start = reserve_start; chunk_start < reserve_end;) {
+							const auto chunk_size = std::min<uint64_t>(ChunkSize, reserve_end - chunk_start);
+							auto* chunk = VirtualAlloc2(
+							    process, reinterpret_cast<void*>(chunk_start), chunk_size,
+							    MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS, nullptr, 0);
+							if (reinterpret_cast<uint64_t>(chunk) == chunk_start) {
+								AddFreeUnlocked(chunk_start, chunk_size);
+								m_owned.emplace_back(chunk_start, chunk_size);
+							} else {
+								LOGF_COLOR(Log::Color::Red,
+								           "\\t guest placeholder unavailable at 0x%016" PRIx64
+								           ", size 0x%016" PRIx64 ", Win32 error %lu\\n",
+								           chunk_start, chunk_size,
+								           static_cast<unsigned long>(GetLastError()));
+							}
+							chunk_start += chunk_size;
+						}
 					}
-					AddFreeUnlocked(reserve_start, reserve_end - reserve_start);
-					m_owned.emplace_back(reserve_start, reserve_end - reserve_start);
 				}
 
 				if (region_end <= next_addr) {
