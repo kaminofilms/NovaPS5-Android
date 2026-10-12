@@ -82,6 +82,7 @@ def main():
     parser.add_argument('apk', type=Path)
     parser.add_argument('--sdk', type=Path)
     parser.add_argument('--json-output', type=Path)
+    parser.add_argument('--core-exe-sha', help='Expected SHA-256 of rebuilt Kyty executable')
     parser.add_argument('--expect-inaccessible', action='store_true')
     args = parser.parse_args()
     data = args.apk.read_bytes()
@@ -128,7 +129,13 @@ def main():
             for mode, target in [('steam', '/opt/novaps5/launch.sh'), ('run', '/usr/bin/steam')]:
                 rejected = subprocess.run(['bash', '-s', '--', mode, target], input=staged_script, capture_output=True, timeout=5)
                 assert rejected.returncode == 64 and b'NOVA_ERROR: Refusing non-Kyty session' in rejected.stderr
-        assert hashlib.sha256(archive.read('assets/engine/kyty-windows-df5b9b9.zip')).hexdigest() == CORE_SHA
+        engine_bytes = archive.read('assets/engine/kyty-windows-df5b9b9.zip')
+        if args.core_exe_sha:
+            import io
+            with zipfile.ZipFile(io.BytesIO(engine_bytes)) as engine:
+                assert hashlib.sha256(engine.read('kyty_emulator.exe')).hexdigest() == args.core_exe_sha.lower(), 'Rebuilt Kyty executable checksum mismatch'
+        else:
+            assert hashlib.sha256(engine_bytes).hexdigest() == CORE_SHA
         compatibility=json.loads(archive.read('assets/engine/memory-compat.json'))
         compatibility_bytes=archive.read('assets/engine/memory-compat.zip')
         assert hashlib.sha256(compatibility_bytes).hexdigest()==compatibility['archive_sha256']
