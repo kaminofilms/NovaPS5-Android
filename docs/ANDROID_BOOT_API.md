@@ -1,4 +1,4 @@
-# PC Kyty homebrew boot API patch
+# Nova Android homebrew boot API patch
 
 This is a development build for the ccleste PPSA59322 startup failures shown in
 the supplied PC log. It uses the complete KytyPS5 core at
@@ -21,12 +21,10 @@ Changes:
   passing a guest FILE object to the Windows CRT.
 - Reject seeking and truncation on pipe descriptors; report FIFO metadata.
 
-Extract the PC ZIP into a fresh folder and launch the directory containing the
-homebrew's `eboot.bin`, with `sce_module` and `sce_sys` beside it:
-
-```bat
-kyty_emulator.exe --game "C:\path\PPSA59322" --printf-direction Console --no-splash
-```
+The deliverable is the Nova Android APK. The workflow builds the x86-64 Kyty
+core internally because the current Android port executes that core through
+ARM64 Wine/FEX. The resulting executable is packaged into the APK with the
+Wine guest address-space bridge; no separate PC release is produced.
 
 Keep the console output from the first new failure. Passing API tests is not
 proof that the game renders or is playable. A compositor or emulator splash
@@ -40,7 +38,6 @@ that only supplies such a stub is still limited by that libc's implementation.
 This build does not decrypt encrypted retail packages or
 SELF files. Use legally obtained executable data that is already decrypted.
 
-PC API validation has no Vulkan/GPU requirement. Actual game boot still needs
+Host API validation has no Vulkan/GPU requirement. Actual game boot still needs
 the Vulkan capabilities required by the full core. Android Wine/FEX guest
-address-space reservation is a separate blocker and is not solved by this PC
-API patch. No Steam integration is part of this change.
+address-space reservation is a separate blocker and is not solved by the guest API patch alone. No Steam integration is part of this change.

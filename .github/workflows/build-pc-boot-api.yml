@@ -1,4 +1,4 @@
-name: PC Kyty homebrew boot APIs
+name: Nova Android guest core boot APIs
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
       - 'vendor/kytyps5/**'
       - 'patches/pc-boot-api.patch'
       - 'tools/apply-pc-boot-api-overlay.py'
-      - 'docs/PC_BOOT_API.md'
+      - 'docs/ANDROID_BOOT_API.md'
       - '.github/workflows/build-pc-boot-api.yml'
   workflow_dispatch:
 
@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  windows:
+  guest-core:
     runs-on: windows-2022
     timeout-minutes: 60
     steps:
@@ -58,7 +58,7 @@ jobs:
             -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl ^
             -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache ^
             -DKYTY_BUILD_ORIGIN=Source -DKYTY_BUILD_REPOSITORY=${{ github.repository }} ^
-            -DKYTY_RELEASE_TAG=Nova-PC-Boot-${{ github.sha }}
+            -DKYTY_RELEASE_TAG=Nova-Android-Guest-${{ github.sha }}
       - name: Build full emulator and boot API tests
         shell: cmd
         env:
@@ -74,7 +74,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & .\pc-install\kyty_emulator.exe --help
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Copy-Item docs/PC_BOOT_API.md pc-install/README.md
+          Copy-Item docs/ANDROID_BOOT_API.md pc-install/README.md
           @{
             project_commit = '${{ github.sha }}';
             kyty_upstream_commit = 'df5b9b92be7dfd463b47756b707d6d356a9f0550';
@@ -82,31 +82,12 @@ jobs:
             decryption_implemented = $false
           } | ConvertTo-Json | Set-Content pc-install/build-info.json
           New-Item -ItemType Directory -Force dist | Out-Null
-          Compress-Archive -Path pc-install/* -DestinationPath dist/Nova-Kyty-PC-Boot-APIs-Windows-x64.zip
-          $hash = (Get-FileHash dist/Nova-Kyty-PC-Boot-APIs-Windows-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  Nova-Kyty-PC-Boot-APIs-Windows-x64.zip" | Set-Content dist/SHA256SUMS.txt
+          Compress-Archive -Path pc-install/* -DestinationPath dist/Nova-Android-Guest-Core.zip
+          $hash = (Get-FileHash dist/Nova-Android-Guest-Core.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  Nova-Android-Guest-Core.zip" | Set-Content dist/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: Nova-Kyty-PC-Boot-APIs-${{ github.sha }}
+          name: Nova-Android-Guest-Core-${{ github.sha }}
           path: dist/*
           if-no-files-found: error
           retention-days: 30
-
-  development-release:
-    needs: windows
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: Nova-Kyty-PC-Boot-APIs-${{ github.sha }}
-          path: release-files
-      - name: Publish PC test build
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "pc-boot-${{ github.run_number }}" --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "PC Kyty homebrew boot API test ${{ github.run_number }}" \
-            --notes-file docs/PC_BOOT_API.md release-files/*
