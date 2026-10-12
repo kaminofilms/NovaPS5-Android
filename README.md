@@ -17,7 +17,7 @@ not decrypt encrypted retail games. See [boot API notes](docs/ANDROID_BOOT_API.m
 
 ## Install and test
 
-Install the new APK over NovaPs5 0.1.0; the package ID and development signing certificate match. Existing game metadata remains in the same app preferences. Allow file access, select an extracted game folder on internal shared storage, and press **Play game**. The first launch installs about 1.4 GB of downloaded runtime archives and needs at least 6 GB free internally. No Steam account is required. Games on SD cards or cloud document providers are not supported by this first direct-path launch implementation.
+Install the new APK over your existing NovaPs5 installation; the package ID and development signing certificate match. Existing game metadata remains in the same app preferences. Allow file access, select an extracted game folder on internal shared storage, and press **Play game**. The first launch installs about 1.4 GB of downloaded runtime archives and needs at least 6 GB free internally. No Steam account is required. Games on SD cards or cloud document providers are not supported by this first direct-path launch implementation.
 
 The initial configuration uses a 1280×720 output, a 60 Hz presentation limit and conservative FEX memory-ordering settings. These are launch settings, not a measured frame rate. The runtime uses DroidDeck's Linux Vulkan/Turnip path; the home-screen GPU report measures the separate Android system Vulkan driver.
 
@@ -27,7 +27,7 @@ After a launch, **Diagnostics → Export** includes the latest session log. The 
 
 The supplied Android logs fail in `ReserveGuestRegions()` before the game loader. Wine advertises a free range starting at `0x1000000000` whose placeholder allocation fails. This preview compiles a narrow Windows bridge for Kyty’s `VirtualQuery` and `VirtualAlloc2` imports. It probes the host Linux VA ceiling, excludes unreachable addresses, and pre-reserves real placeholders before handing them to Kyty. Reservations that fail are subdivided; unusable ranges are excluded. It never commits a failed allocation or overwrites an existing mapping. A 64 KiB gap between split reservations preserves Kyty’s per-reservation ownership invariant. Commits, protections, backing mappings and frees retain their original paths.
 
-The original pinned core executable remains installed. The generated `kyty_emulator-nova.exe` changes only the PE import directory/header and adds an import section; original code/data sections remain unchanged. The bridge DLL and freestanding ARM64 VA probe are built from `runtime-compat/`. The package validates archive/component hashes on upgrade without downloading the full runtime again. Install `mingw-w64-x86-64-dev` on Ubuntu before building, or supply `--windows-sdk /path/to/mingw/sysroot`.
+The rebuilt guest API core remains installed as kyty_emulator.exe. The generated `kyty_emulator-nova.exe` changes only the PE import directory/header and adds an import section; code/data sections of that rebuilt core remain unchanged by the import overlay. The bridge DLL and freestanding ARM64 VA probe are built from `runtime-compat/`. The package validates archive/component hashes on upgrade without downloading the full runtime again. Install `mingw-w64-x86-64-dev` on Ubuntu before building, or supply `--windows-sdk /path/to/mingw/sysroot`.
 
 The bridge passed simulated API regression checks and packaging verification. The ARM64 probe ran under QEMU. Full Wine/FEX → Kyty execution on Android is still unverified. The uploaded ccleste title was attempted on desktop Kyty using llvmpipe: memory initialization succeeded, but the software GPU lacks `imageViewMinLod`, fragment shader barycentrics and depth bounds, so no game frame was produced. The Android system Vulkan report also lacks barycentrics, but it is a different driver from the Linux Turnip runtime; its compatibility must be checked in the device session. Do not count a compositor frame as game boot.
 
@@ -66,7 +66,7 @@ python3 build-runtime-apk.py \
   --ndk /absolute/path/android-sdk/ndk/28.2.13676358 \
   --jdk /absolute/path/jdk-17 \
   --keystore /absolute/path/novaps5-development.keystore \
-  --output /absolute/path/NovaPs5-0.2.3-runtime-arm64.apk
+  --output /absolute/path/NovaPs5-0.2.4-bootapi-arm64.apk
 ```
 
 The script compiles Nova's Java/native code and combines it with the SHA-256-pinned official DroidDeck 0.1.7 Android platform. Matching upstream source is in `vendor/droiddeck-0.1.7` at commit `d7cadd05d6e69b61b043f083b4bb408ef59967d1`. Compile-only backend ABI declarations are never packaged. Optional `--base-apk`, `--apktool` and `--compress-jar` arguments reuse already downloaded, verified dependencies.
@@ -81,7 +81,7 @@ Signing: alias `novaps5dev`, development password `android`. Preserve the origin
 
 See `docs/VALIDATION.md`, `docs/PORTING.md` and `release.json`. Packaging, checksums, direct-route/failure regression tests, the native inspector and signature were checked. The host x86 Kyty CLI and ARM64 Wine version command ran; the complete Wine/FEX → Kyty → PS5 game path did not run successfully here. The user's latest screenshots show the compatibility session/loading surface and controls with 0 FPS; there is no demonstrated PS5 game frame.
 
-There is no confirmed EverForward compatibility result, measured gameplay FPS, firmware boot, native ARM64 Kyty port or automatic payload decryption. No game files or Sony firmware are included. No GitHub repository has been published.
+There is no confirmed EverForward compatibility result, measured gameplay FPS, firmware boot, native ARM64 Kyty port or automatic payload decryption. No game files or Sony firmware are included. Source and the pinned internal guest core are available in the ps5-boot-api branch of https://github.com/kaminofilms/NovaPS5-Android.
 
 ## Licences and source
 

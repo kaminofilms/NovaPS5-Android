@@ -93,6 +93,11 @@ def prepare_platform(base, core=None):
     tree.write(path, encoding='utf-8', xml_declaration=True)
     path = base / 'apktool.yml'
     value = path.read_text()
+    # Apktool 3 writes the manifest package from resourcesInfo while linking.
+    # Pin it too, so the repack remains an upgrade of Nova rather than DroidDeck.
+    if 'resourcesInfo:\n' not in value:
+        raise RuntimeError('Pinned Apktool resource metadata changed')
+    value = value.replace('resourcesInfo:\n', 'resourcesInfo:\n  packageName: com.kaminofilms.novaps5\n', 1)
     for key, setting in [('versionCode', '6'), ('versionName', '0.2.4-bootapi'), ('minSdkVersion', '28'), ('targetSdkVersion', '28')]:
         value = re.sub(r'(?m)^(  ' + key + r':).*$', r'\1 ' + setting, value)
     path.write_text(value)

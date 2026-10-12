@@ -1,0 +1,20 @@
+{
+  "filename": "NovaPs5-0.2.4-bootapi-arm64.apk",
+  "bytes": 45787034,
+  "sha256": "38b5edbf22081bf43913f77f3f4c1f9b860dbf8ec7b5db10c1003360d85b5b07",
+  "installerConstructorFlags": "0x10001",
+  "platformMethodAccess": "passed",
+  "zipIntegrity": "passed",
+  "arm64Libraries": 19,
+  "inherited4KiBLibraries": [
+    "lib/arm64-v8a/libpulseaudio.so",
+    "lib/arm64-v8a/libpulse.so",
+    "lib/arm64-v8a/libpulsecore-13.0.so",
+    "lib/arm64-v8a/libsndfile.so",
+    "lib/arm64-v8a/libpulsecommon-13.0.so",
+    "lib/arm64-v8a/libltdl.so"
+  ],
+  "ps5GameBootVerified": false,
+  "signingCertificateSha256": "118656f8a3e3f5a2633b8cf49de6494ccb8eefcd30f2df662c6bdbc4f1a7b829",
+  "packageMetadata": "package: name='com.kaminofilms.novaps5' versionCode='6' versionName='0.2.4-bootapi' platformBuildVersionName='14' platformBuildVersionCode='34' compileSdkVersion='34' compileSdkVersionCodename='14'"
+}

@@ -1,7 +1,7 @@
 {
   "app": "NovaPs5",
-  "version": "0.2.2-runtime",
-  "versionCode": 4,
+  "version": "0.2.4-bootapi",
+  "versionCode": 6,
   "package": "com.kaminofilms.novaps5",
   "abi": "arm64-v8a",
   "minApi": 28,
@@ -19,8 +19,8 @@
   "cpuExecution": "Full Windows/x86-64 Kyty under ARM64 Wine/FEX, experimental",
   "upstreamSnapshot": "df5b9b9",
   "upstreamArchiveSha256": "c8be5b425d7e6d4836ca5f1d66dd615f4bb1482539c7d47a3410d05d7dd30c97",
-  "apkSha256": "5aa2aad96813ae4c8b47dff4e0af3526200e7828220d56ee8909810e8a7392b8",
-  "apkSize": 51508991,
+  "apkSha256": "38b5edbf22081bf43913f77f3f4c1f9b860dbf8ec7b5db10c1003360d85b5b07",
+  "apkSize": 45787034,
   "developmentSigningCertificateSha256": "118656f8a3e3f5a2633b8cf49de6494ccb8eefcd30f2df662c6bdbc4f1a7b829",
   "components": {
     "androidPlatform": {
@@ -31,10 +31,12 @@
       "sourceArchiveSha256": "6b4252d7d043c2248732a20414c49f40ef49b27d8852e9b0219dbabb4fc54584"
     },
     "kytyWindows": {
-      "url": "https://github.com/KytyPS5/KytyPS5/releases/download/KytyPS5-2026-10-12-df5b9b9/KytyPS5-2026-10-12-df5b9b9-Windows-x64.zip",
-      "sha256": "6ad0ac0bd56198b3d303ece717968c57e6cfea16acf86cca9b4495ed3536614f",
-      "archiveBytes": 25946448,
-      "packaged": true
+      "url": "https://raw.githubusercontent.com/kaminofilms/NovaPS5-Android/c874c6f46fe59cb49f0425019f3906c281f4562d/droid-runtime/app/src/main/assets/engine/kyty-windows-df5b9b9.zip",
+      "sha256": "d7cc6f357216fdb02f7f3a6fc50c450ffbe7a64c53a55130bebd9888eb0898dc",
+      "archiveBytes": 11065693,
+      "packaged": true,
+      "sourceCommit": "f8d102ce21dd25f83000686333496b12912d4ee9",
+      "standalonePcRelease": false
     },
     "linuxRoot": {
       "url": "https://github.com/The412Banner/winlator-contents/releases/download/linuxfs-r9/linuxfs.tar.zst",
@@ -57,21 +59,38 @@
     "fullKytyLinuxCli": "--help ran on x86 build host",
     "arm64WineVersion": "Wine 11.0 version command ran in userspace interpreter",
     "wineFexKytyEndToEnd": "not verified",
-    "deviceRuntime": "User screenshots show compatibility session and controls with 0 FPS. 0.2.2 direct route, loading labels and boot reporting checked in package; game boot on ARM device remains unverified.",
+    "deviceRuntime": "Android 0.2.4 package verified; corrected reservation boundary passes regression tests. No new device boot test has been performed.",
     "nativeAlignment": "Nova and principal session/compositor libraries 16 KB; inherited PulseAudio-related libraries 4 KB",
     "runtimeMethodAccess": "All Nova platform method references have legal access; Release constructor public, SessionActivity non-final, protected subclass lifecycle calls verified.",
-    "directKytyRoute": "Explicit NovaSessionActivity run/script/game route; installed and APK-refreshed session guards reject Steam/desktop requests; five fake-Wine regression cases passed."
+    "directKytyRoute": "Explicit NovaSessionActivity run/script/game route; installed and APK-refreshed session guards reject Steam/desktop requests; five fake-Wine regression cases passed.",
+    "guestBootApis": "Standalone and full registered-import pipe/stdio tests passed on the internal guest-core build."
   },
   "repositoryPublished": true,
-  "repositoryUrl": "https://github.com/kaminofilms/NovaPS5-Android",
-  "repositoryBranches": [
-    "main",
-    "dev"
-  ],
-  "sourceBackupVerification": {
-    "originalLocalCommit": "bfeae0c9b650e6bfe5cc5251557868a1e4fbfe5e",
-    "originalGitTree": "75c944180856c5a3d0594bdf26ee83ae69f5422d",
-    "trackedFiles": 1779,
-    "githubImportCommit": "6d826501c3e21b2331f137aacd787a856d0769ea"
-  }
+  "guestMemoryCompatibility": {
+    "revision": "nova-memory-2",
+    "archive_sha256": "e03ee865a0a728ec21874ae23570ef49e19eb78160e9ebc317ec8dcd6c556b5a",
+    "files": {
+      "kyty_emulator-nova.exe": "762d93a84b8a538e9c3268710f3f9042e0eda1e7ca95131d24ce4e1e76203ddc",
+      "novamemory.dll": "b1f1523682cbe16bd8ad760b4e384b61bd3cdc7f0064d8d62ec3b1112feae8ee",
+      "host-va-limit": "c65a086adc82ebfdc972d318a1f53cc502ddc07dd9d12c37ee18b61b1008956b"
+    },
+    "core_overlay": {
+      "input_sha256": "ad1b5fc61f511b0f77c6ab30ba47443f02a2e89514e273efc1a5983cc47aacd3",
+      "output_sha256": "762d93a84b8a538e9c3268710f3f9042e0eda1e7ca95131d24ce4e1e76203ddc",
+      "redirected_imports": [
+        "VirtualQuery",
+        "VirtualAlloc2"
+      ],
+      "original_sections_unchanged": true
+    },
+    "android_game_boot_verified": false
+  },
+  "decryptionImplemented": false,
+  "guestBootApiTests": {
+    "run": "https://github.com/kaminofilms/NovaPS5-Android/actions/runs/38301523725",
+    "guest_pipe": "passed",
+    "homebrew_boot_api": "passed"
+  },
+  "repository": "https://github.com/kaminofilms/NovaPS5-Android/tree/ps5-boot-api",
+  "guestApiPatchSha256": "47359956f07d4744db3769b4d02425607b43e60f3e0a131bd68d33e5837e9b2b"
 }
