@@ -6,6 +6,7 @@ on:
     paths:
       - 'build-runtime-apk.py'
       - 'runtime-compat/**'
+      - 'tests/verify_runtime_apk.py'
       - '.github/workflows/build-patched-core-apk.yml'
   workflow_dispatch:
 
@@ -67,7 +68,7 @@ jobs:
           python3 build-runtime-apk.py --sdk "$ANDROID_HOME" --ndk "$ANDROID_HOME/ndk/28.2.13676358" --jdk "$JAVA_HOME" --keystore "$RUNNER_TEMP/novaps5-ci.keystore" --output dist/NovaPs5-0.2.5-patched-arm64.apk --core-zip build/guest-core/kyty-engine.zip --core-exe-sha bbd6c0783bd4fa2d76568b30eed2e6a28a313048fbbf84046d70ff74f3db1f83
       - name: Verify APK
         run: |
-          python3 tests/verify_runtime_apk.py dist/NovaPs5-0.2.5-patched-arm64.apk --sdk "$ANDROID_HOME" --json-output dist/verification.json
+          python3 tests/verify_runtime_apk.py dist/NovaPs5-0.2.5-patched-arm64.apk --sdk "$ANDROID_HOME" --json-output dist/verification.json --core-exe-sha bbd6c0783bd4fa2d76568b30eed2e6a28a313048fbbf84046d70ff74f3db1f83
           sha256sum dist/NovaPs5-0.2.5-patched-arm64.apk > dist/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
