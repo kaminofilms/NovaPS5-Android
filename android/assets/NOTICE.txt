@@ -1,0 +1,9 @@
+NovaPs5 0.1.0-dev — Android development alpha
+
+This APK does not boot or play PS5 games. The full Kyty runtime and RDNA shader
+translator are not linked. Firmware files are retained without installation.
+
+GPL-2.0-only. KytyPS5 source: https://github.com/KytyPS5/KytyPS5
+The controller layout is derived from KytyPS5 snapshot df5b9b9.
+Corresponding NovaPs5 source is supplied alongside this APK.
+See README.md and LICENSE in the source package.

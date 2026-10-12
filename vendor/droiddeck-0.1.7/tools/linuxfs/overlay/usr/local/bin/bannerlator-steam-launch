@@ -1,0 +1,28 @@
+#!/bin/bash
+# Asks the app to start the Steam client, from inside a session (the desktop's menu entries and
+# the per-game launchers bannerlator-desktop-games writes):
+#   bannerlator-steam-launch desktop [appid|steam-url]     Steam's desktop UI, optionally a game
+#   bannerlator-steam-launch bigpicture [appid|steam-url]  Big Picture
+# The client cannot run on the desktop: labwc composites in software and offers no dma-buf, so a
+# game (or the client's own Vulkan window) would die at its first frame. It runs under gamescope,
+# which is a session of its own - so this writes a request into the directory the app watches,
+# and the app ends the desktop session and starts a Steam session in its place.
+set -u
+ui=${1:-desktop}
+target=${2:-}
+case $ui in desktop|bigpicture) ;; *) echo "usage: $0 desktop|bigpicture [appid|steam://url]" >&2; exit 64 ;; esac
+url=
+case $target in
+  "") ;;
+  steam://*) url=$target ;;
+  *[!0-9]*) echo "not an app id or steam:// URL: $target" >&2; exit 64 ;;
+  *) url=steam://rungameid/$target ;;
+esac
+dir=${BL_LAUNCH_DIR:-}
+if [ -z "$dir" ] || [ ! -d "$dir" ]; then
+  echo "bannerlator-steam-launch: not inside a DroidDeck session (BL_LAUNCH_DIR unset)" >&2
+  exit 69
+fi
+# Written whole, then renamed: the app reads it on close, never half-written.
+printf 'ui=%s\nurl=%s\n' "$ui" "$url" > "$dir/steam-launch.tmp" && mv -f "$dir/steam-launch.tmp" "$dir/steam-launch"
+echo "bannerlator-steam-launch: asked the app for Steam ($ui${url:+, $url})"

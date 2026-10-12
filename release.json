@@ -1,0 +1,66 @@
+{
+  "app": "NovaPs5",
+  "version": "0.2.2-runtime",
+  "versionCode": 4,
+  "package": "com.kaminofilms.novaps5",
+  "abi": "arm64-v8a",
+  "minApi": 28,
+  "targetApi": 28,
+  "gameLaunchPathImplemented": true,
+  "ps5GameExecutionVerified": false,
+  "fpsVerified": false,
+  "fullKytyRuntimeIncluded": true,
+  "presentationSettings": {
+    "width": 1280,
+    "height": 720,
+    "vblankHz": 60,
+    "gameplayFpsGuarantee": false
+  },
+  "cpuExecution": "Full Windows/x86-64 Kyty under ARM64 Wine/FEX, experimental",
+  "upstreamSnapshot": "df5b9b9",
+  "upstreamArchiveSha256": "c8be5b425d7e6d4836ca5f1d66dd615f4bb1482539c7d47a3410d05d7dd30c97",
+  "apkSha256": "5aa2aad96813ae4c8b47dff4e0af3526200e7828220d56ee8909810e8a7392b8",
+  "apkSize": 51508991,
+  "developmentSigningCertificateSha256": "118656f8a3e3f5a2633b8cf49de6494ccb8eefcd30f2df662c6bdbc4f1a7b829",
+  "components": {
+    "androidPlatform": {
+      "version": "DroidDeck 0.1.7",
+      "sourceCommit": "d7cadd05d6e69b61b043f083b4bb408ef59967d1",
+      "apkUrl": "https://github.com/The412Banner/DroidDeck/releases/download/0.1.7/DroidDeck-0.1.7.apk",
+      "apkSha256": "d7a578e09521f546f13ab6fb445dee3adc38fd12fd181ed44609796f9414eb55",
+      "sourceArchiveSha256": "6b4252d7d043c2248732a20414c49f40ef49b27d8852e9b0219dbabb4fc54584"
+    },
+    "kytyWindows": {
+      "url": "https://github.com/KytyPS5/KytyPS5/releases/download/KytyPS5-2026-10-12-df5b9b9/KytyPS5-2026-10-12-df5b9b9-Windows-x64.zip",
+      "sha256": "6ad0ac0bd56198b3d303ece717968c57e6cfea16acf86cca9b4495ed3536614f",
+      "archiveBytes": 25946448,
+      "packaged": true
+    },
+    "linuxRoot": {
+      "url": "https://github.com/The412Banner/winlator-contents/releases/download/linuxfs-r9/linuxfs.tar.zst",
+      "sha256": "d3240c1531531615b0dd06b6ad56e92db9015a8641eb18c3a613835ae45992e7",
+      "archiveBytes": 790907606,
+      "packaged": false
+    },
+    "protonArm64": {
+      "version": "GE-Proton11-7-aarch64",
+      "url": "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-7/GE-Proton11-7-aarch64.tar.gz",
+      "sha256": "b77ac906186568c2f3c66674b85c712b145ccf73ff2718a50dd7bf6248b67ba3",
+      "archiveBytes": 645786140,
+      "packaged": false
+    }
+  },
+  "verification": {
+    "apkSignature": "v3 verified, same certificate as 0.1",
+    "elfSelfInspector": "portable C++ cases passed",
+    "protonArchive": "9578 members, 1884 safe relative symlinks, no hardlinks",
+    "fullKytyLinuxCli": "--help ran on x86 build host",
+    "arm64WineVersion": "Wine 11.0 version command ran in userspace interpreter",
+    "wineFexKytyEndToEnd": "not verified",
+    "deviceRuntime": "User screenshots show compatibility session and controls with 0 FPS. 0.2.2 direct route, loading labels and boot reporting checked in package; game boot on ARM device remains unverified.",
+    "nativeAlignment": "Nova and principal session/compositor libraries 16 KB; inherited PulseAudio-related libraries 4 KB",
+    "runtimeMethodAccess": "All Nova platform method references have legal access; Release constructor public, SessionActivity non-final, protected subclass lifecycle calls verified.",
+    "directKytyRoute": "Explicit NovaSessionActivity run/script/game route; installed and APK-refreshed session guards reject Steam/desktop requests; five fake-Wine regression cases passed."
+  },
+  "repositoryPublished": false
+}

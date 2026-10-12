@@ -1,0 +1,24 @@
+{
+  "app": "NovaPs5",
+  "version": "0.1.0-dev",
+  "versionCode": 1,
+  "package": "com.kaminofilms.novaps5",
+  "abi": "arm64-v8a",
+  "targetApi": 36,
+  "minApi": 28,
+  "ps5GameExecution": false,
+  "fullKytyRuntimeIncluded": false,
+  "upstreamSnapshot": "df5b9b9",
+  "upstreamArchiveSha256": "c8be5b425d7e6d4836ca5f1d66dd615f4bb1482539c7d47a3410d05d7dd30c97",
+  "apkSha256": "fe43658f58c860382dae5f29eee8ae391ea64823d0d5fc8b79230b75cccd78d7",
+  "apkSize": 320098,
+  "verification": {
+    "nativeIntegerBlocks": 160,
+    "independentArithmeticCheck": "ARM64 and x86-64 using Unicorn",
+    "apkSignature": "v3 verified",
+    "elfLoadAlignment": 16384,
+    "deviceRuntime": "not verified",
+    "androidEmulatorRuntime": "emulator crashed before app launch"
+  },
+  "repositoryPublished": false
+}
