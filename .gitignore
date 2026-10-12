@@ -1,0 +1,12 @@
+*.keystore
+*.jks
+*.p12
+*.pfx
+.gradle/
+.cxx/
+**/build/
+**/.rsync-tmp/
+firmware/
+games/
+dist/
+local.properties
