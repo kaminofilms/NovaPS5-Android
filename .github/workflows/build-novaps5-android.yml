@@ -1,9 +1,75 @@
 name: Nova PS5 Android ARM64
-on: workflow_dispatch
+
+on:
+  push:
+    branches: [main, dev]
+    tags: ['dev-v*']
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+
 permissions:
   contents: read
+
+concurrency:
+  group: novaps5-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  awaiting-source-import:
+  build:
     runs-on: ubuntu-24.04
+    timeout-minutes: 35
     steps:
-      - run: echo 'Source import in progress; the verified build workflow will replace this temporary entry.'
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install SDK, NDK and CMake
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;28.2.13676358' 'cmake;3.22.1'
+      - name: Check portable ELF and SELF parser
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -I droid-runtime/app/src/main/cpp/novadiag tests/test_self.cpp droid-runtime/app/src/main/cpp/novadiag/probe.cpp -o "$RUNNER_TEMP/novaps5-self-check"
+          "$RUNNER_TEMP/novaps5-self-check"
+      - name: Check direct Kyty routing
+        run: python3 tests/test_direct_launch.py
+      - name: Resolve and verify pinned build dependencies
+        run: |
+          python3 build-runtime-apk.py --sdk "$ANDROID_HOME" --ndk "$ANDROID_HOME/ndk/28.2.13676358" --jdk "$JAVA_HOME" --keystore "$RUNNER_TEMP/novaps5-ci.keystore" --output dist/NovaPs5-0.2.2-runtime-arm64.apk --verify-dependencies-only
+      - name: Create temporary CI development identity
+        run: keytool -genkeypair -storetype PKCS12 -keystore "$RUNNER_TEMP/novaps5-ci.keystore" -storepass android -keypass android -alias novaps5dev -keyalg RSA -keysize 2048 -validity 10000 -dname 'CN=NovaPs5 CI Development'
+      - name: Compile Nova native and Java code and package ARM64 APK
+        run: |
+          python3 build-runtime-apk.py --sdk "$ANDROID_HOME" --ndk "$ANDROID_HOME/ndk/28.2.13676358" --jdk "$JAVA_HOME" --keystore "$RUNNER_TEMP/novaps5-ci.keystore" --output dist/NovaPs5-0.2.2-runtime-arm64.apk
+      - name: Verify APK signing, architecture and runtime method access
+        run: |
+          python3 tests/verify_runtime_apk.py dist/NovaPs5-0.2.2-runtime-arm64.apk --sdk "$ANDROID_HOME" --json-output dist/verification.json
+          sha256sum dist/NovaPs5-0.2.2-runtime-arm64.apk > dist/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NovaPs5-Android-arm64-${{ github.sha }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+      - name: Remove temporary signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/novaps5-ci.keystore"
+
+  development-release:
+    if: startsWith(github.ref, 'refs/tags/dev-v')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: NovaPs5-Android-arm64-${{ github.sha }}
+          path: release-files
+      - name: Publish tagged development build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --prerelease --title "Nova PS5 $RELEASE_TAG" --notes-file docs/CI_RELEASE_NOTES.md release-files/*
