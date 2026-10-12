@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 import zipfile
 
-CORE_SHA = '6ad0ac0bd56198b3d303ece717968c57e6cfea16acf86cca9b4495ed3536614f'
+CORE_SHA = 'd7cc6f357216fdb02f7f3a6fc50c450ffbe7a64c53a55130bebd9888eb0898dc'
 RELEASE = 'Lcom/droiddeck/launcher/runtime/LinuxRuntimeInstaller$Release;'
 CTOR = '<init>(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;J)V'
 

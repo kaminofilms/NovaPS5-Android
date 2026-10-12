@@ -26,7 +26,7 @@ final class RuntimeEngine {
     static final String RUNTIME_SHA="d3240c1531531615b0dd06b6ad56e92db9015a8641eb18c3a613835ae45992e7";
     static final String PROTON_URL="https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-7/GE-Proton11-7-aarch64.tar.gz";
     static final String PROTON_SHA="b77ac906186568c2f3c66674b85c712b145ccf73ff2718a50dd7bf6248b67ba3";
-    static final String CORE_SHA="6ad0ac0bd56198b3d303ece717968c57e6cfea16acf86cca9b4495ed3536614f";
+    static final String CORE_SHA="d7cc6f357216fdb02f7f3a6fc50c450ffbe7a64c53a55130bebd9888eb0898dc";
     static final String PROTON_DIR="GE-Proton11-7-aarch64";
     final Activity context;
     RuntimeEngine(Activity c){context=c;}

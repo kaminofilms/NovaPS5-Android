@@ -7,7 +7,7 @@ import subprocess
 import zipfile
 from patch_imports import patch
 
-CORE_EXE_SHA='758a7f3000aec4017f14b99a4c8ca95ce575393dfecc74f28faf42c38f6d0905'
+CORE_EXE_SHA='ad1b5fc61f511b0f77c6ab30ba47443f02a2e89514e273efc1a5983cc47aacd3'
 
 def build(ndk,windows_sdk,core_zip,destination,work):
     root=Path(__file__).resolve().parent

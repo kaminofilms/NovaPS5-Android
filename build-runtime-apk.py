@@ -30,8 +30,8 @@ PINS = {
         'https://repo.maven.apache.org/maven2/org/apache/commons/commons-compress/1.27.1/commons-compress-1.27.1.jar',
         '293d80f54b536b74095dcd7ea3cf0a29bbfc3402519281332495f4420d370d16'),
 }
-CORE_SHA = '6ad0ac0bd56198b3d303ece717968c57e6cfea16acf86cca9b4495ed3536614f'
-CORE_URL = 'https://github.com/KytyPS5/KytyPS5/releases/download/KytyPS5-2026-10-12-df5b9b9/KytyPS5-2026-10-12-df5b9b9-Windows-x64.zip'
+CORE_SHA = 'd7cc6f357216fdb02f7f3a6fc50c450ffbe7a64c53a55130bebd9888eb0898dc'
+CORE_URL = 'https://raw.githubusercontent.com/kaminofilms/NovaPS5-Android/ps5-boot-api/droid-runtime/app/src/main/assets/engine/kyty-windows-df5b9b9.zip'
 
 
 def sha(path):
