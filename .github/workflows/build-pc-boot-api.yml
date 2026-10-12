@@ -1,0 +1,117 @@
+name: PC Kyty homebrew boot APIs
+
+on:
+  push:
+    branches: [ps5-boot-api]
+    paths:
+      - 'vendor/kytyps5/**'
+      - 'patches/pc-boot-api.patch'
+      - 'tools/apply-pc-boot-api-overlay.py'
+      - 'docs/PC_BOOT_API.md'
+      - '.github/workflows/build-pc-boot-api.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pc-boot-api-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: KytyPS5/KytyPS5
+          ref: df5b9b92be7dfd463b47756b707d6d356a9f0550
+          submodules: recursive
+          path: pc-kyty
+      - name: Apply pinned source overlay
+        run: python tools/apply-pc-boot-api-overlay.py pc-kyty
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Locate glslang tool cache
+        id: vcpkg
+        shell: pwsh
+        run: |
+          $root = Split-Path (Get-Command vcpkg).Source
+          "root=$root" >> $env:GITHUB_OUTPUT
+          $hash = (Get-FileHash "$root\ports\glslang\vcpkg.json" -Algorithm SHA256).Hash
+          "hash=$hash" >> $env:GITHUB_OUTPUT
+      - uses: actions/cache@v4
+        id: glslang
+        with:
+          path: ${{ steps.vcpkg.outputs.root }}\installed\x64-windows
+          key: nova-glslang-${{ runner.os }}-${{ steps.vcpkg.outputs.hash }}-tools-opt
+      - name: Install glslang
+        shell: pwsh
+        run: |
+          if ('${{ steps.glslang.outputs.cache-hit }}' -ne 'true') { vcpkg install 'glslang[tools,opt]:x64-windows' }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          '${{ steps.vcpkg.outputs.root }}\installed\x64-windows\tools\glslang' >> $env:GITHUB_PATH
+      - uses: mozilla-actions/sccache-action@v0.0.11
+      - name: Configure full core without Qt launcher
+        shell: cmd
+        env:
+          SCCACHE_GHA_ENABLED: 'true'
+        run: |
+          cmake -S pc-kyty -B pc-build -G Ninja ^
+            -DCMAKE_BUILD_TYPE=Release -DKYTY_BUILD_LAUNCHER=OFF ^
+            -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl ^
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache ^
+            -DKYTY_BUILD_ORIGIN=Source -DKYTY_BUILD_REPOSITORY=${{ github.repository }} ^
+            -DKYTY_RELEASE_TAG=Nova-PC-Boot-${{ github.sha }}
+      - name: Build full emulator and boot API tests
+        shell: cmd
+        env:
+          SCCACHE_GHA_ENABLED: 'true'
+        run: cmake --build pc-build --target kyty_emulator guest_pipe_tests homebrew_boot_api_tests --parallel 4
+      - name: Test pipe and resolved guest imports
+        shell: cmd
+        run: ctest --test-dir pc-build --output-on-failure -R "^(guest_pipe|homebrew_boot_api)$"
+      - name: Install and verify CLI
+        shell: pwsh
+        run: |
+          cmake --install pc-build --prefix pc-install
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & .\pc-install\kyty_emulator.exe --help
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Copy-Item docs/PC_BOOT_API.md pc-install/README.md
+          @{
+            project_commit = '${{ github.sha }}';
+            kyty_upstream_commit = 'df5b9b92be7dfd463b47756b707d6d356a9f0550';
+            api_tests = 'passed'; game_boot_verified = $false;
+            decryption_implemented = $false
+          } | ConvertTo-Json | Set-Content pc-install/build-info.json
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive -Path pc-install/* -DestinationPath dist/Nova-Kyty-PC-Boot-APIs-Windows-x64.zip
+          $hash = (Get-FileHash dist/Nova-Kyty-PC-Boot-APIs-Windows-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  Nova-Kyty-PC-Boot-APIs-Windows-x64.zip" | Set-Content dist/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Nova-Kyty-PC-Boot-APIs-${{ github.sha }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+
+  development-release:
+    needs: windows
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Nova-Kyty-PC-Boot-APIs-${{ github.sha }}
+          path: release-files
+      - name: Publish PC test build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "pc-boot-${{ github.run_number }}" --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "PC Kyty homebrew boot API test ${{ github.run_number }}" \
+            --notes-file docs/PC_BOOT_API.md release-files/*

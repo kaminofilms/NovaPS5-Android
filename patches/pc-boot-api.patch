@@ -1,0 +1,912 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 8346611..e976115 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -395,6 +395,24 @@ endfunction()
+ 
+ add_kyty_full_emulator_test(shader_cfg_tests "${KYTY_TESTS_DIR}/shaderCfgTests.cpp")
+ 
++add_executable(guest_pipe_tests EXCLUDE_FROM_ALL "${KYTY_TESTS_DIR}/GuestPipeTests.cpp")
++target_include_directories(guest_pipe_tests PRIVATE "${KYTY_SOURCE_DIR}")
++if(NOT WIN32)
++	target_link_libraries(guest_pipe_tests pthread)
++endif()
++add_kyty_full_emulator_test(homebrew_boot_api_tests "${KYTY_TESTS_DIR}/HomebrewBootApiTests.cpp")
++# Assertions are intentional test operations and must run in Release builds.
++if(KYTY_CLANG_CL)
++	target_compile_options(guest_pipe_tests PRIVATE /UNDEBUG)
++	target_compile_options(homebrew_boot_api_tests PRIVATE /UNDEBUG)
++else()
++	target_compile_options(guest_pipe_tests PRIVATE -UNDEBUG)
++	target_compile_options(homebrew_boot_api_tests PRIVATE -UNDEBUG)
++endif()
++add_test(NAME guest_pipe COMMAND guest_pipe_tests)
++add_test(NAME homebrew_boot_api COMMAND homebrew_boot_api_tests)
++set_tests_properties(guest_pipe homebrew_boot_api PROPERTIES TIMEOUT 30)
++
+ add_executable(scalar_provenance_tests EXCLUDE_FROM_ALL
+ 	"${KYTY_TESTS_DIR}/ScalarProvenanceTests.cpp"
+ 	"${KYTY_SOURCE_DIR}/graphics/guest_gpu/gpu_format.cpp"
+diff --git a/src/graphics/host_gpu/hostMemory.cpp b/src/graphics/host_gpu/hostMemory.cpp
+index 5ee4fa8..266e5a4 100644
+--- a/src/graphics/host_gpu/hostMemory.cpp
++++ b/src/graphics/host_gpu/hostMemory.cpp
+@@ -23,6 +23,10 @@ bool IsAccessible(DWORD protect, HostMemoryAccess access) {
+ 	if (access == HostMemoryAccess::Mapped) {
+ 		return (protect & PAGE_GUARD) == 0;
+ 	}
++	if (access == HostMemoryAccess::Write) {
++		constexpr DWORD writable = PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY;
++		return (protect & blocked) == 0 && (protect & writable) != 0;
++	}
+ 	return (protect & blocked) == 0 && (protect & readable) != 0;
+ }
+ #endif
+@@ -73,7 +77,8 @@ bool HostMemoryQueryRange(uint64_t addr, uint64_t requested_size, HostMemoryAcce
+ 		if (begin > current) {
+ 			break;
+ 		}
+-		const bool allowed = access == HostMemoryAccess::Mapped || permissions[0] == 'r';
++		const bool allowed = access == HostMemoryAccess::Mapped ||
++		                     (access == HostMemoryAccess::Write ? permissions[1] == 'w' : permissions[0] == 'r');
+ 		if (!allowed) {
+ 			break;
+ 		}
+diff --git a/src/graphics/host_gpu/hostMemory.h b/src/graphics/host_gpu/hostMemory.h
+index f5cee61..3e0e6ad 100644
+--- a/src/graphics/host_gpu/hostMemory.h
++++ b/src/graphics/host_gpu/hostMemory.h
+@@ -5,7 +5,7 @@
+ 
+ namespace Libs::Graphics {
+ 
+-enum class HostMemoryAccess { Read, Mapped };
++enum class HostMemoryAccess { Read, Write, Mapped };
+ 
+ bool HostMemoryQueryRange(uint64_t addr, uint64_t requested_size, HostMemoryAccess access,
+                           uint64_t& accessible_size);
+diff --git a/src/kernel/fileSystem.cpp b/src/kernel/fileSystem.cpp
+index d0e1090..7e4c8da 100644
+--- a/src/kernel/fileSystem.cpp
++++ b/src/kernel/fileSystem.cpp
+@@ -11,6 +11,8 @@
+ #include "common/stringUtils.h"
+ #include "common/threads.h"
+ #include "kernel/memory.h"
++#include "kernel/guestPipe.h"
++#include "graphics/host_gpu/hostMemory.h"
+ #include "libs/errno.h"
+ #include "libs/libs.h"
+ #include "libs/network.h"
+@@ -35,6 +37,7 @@ constexpr uint64_t DIR_BLOCK_SIZE = 512;
+ enum class SpecialFile {
+ 	None,
+ 	Random,
++	Pipe,
+ };
+ 
+ class MountPoints {
+@@ -75,6 +78,7 @@ struct File {
+ 	Common::Mutex                       mutex;
+ 	std::vector<uint8_t>                dirents;
+ 	uint64_t                            dents_offset;
++	std::shared_ptr<GuestPipe>           pipe;
+ };
+ 
+ class FileDescriptors {
+@@ -89,10 +93,19 @@ public:
+ 	File* GetFile(int d);
+ 	File* GetFile(const std::filesystem::path& real_name);
+ 	void  CloseAll();
++	std::shared_ptr<GuestPipe> GetPipe(int d);
++	int CreatePipeDescriptor(std::shared_ptr<GuestPipe> pipe, bool cloexec);
++	int DupPipe(int oldfd, int newfd);
++	bool ClosePipe(int d);
++	int PipeFcntl(int d, int command, int arg);
++	bool StandardClosed(int d);
+ 
+ private:
+ 	std::vector<File*> m_files;
+ 	Common::Mutex      m_mutex;
++	std::shared_ptr<GuestPipe> m_standard_pipes[3];
++	bool m_standard_closed[3] {};
++	bool m_standard_cloexec[3] {};
+ };
+ 
+ static MountPoints*     g_mount_points = nullptr;
+@@ -241,6 +254,7 @@ File* FileDescriptors::GetFile(const std::filesystem::path& real_name) {
+ 
+ void FileDescriptors::CloseAll() {
+ 	Common::LockGuard lock(m_mutex);
++	for (auto& pipe: m_standard_pipes) pipe.reset();
+ 
+ 	for (auto& f: m_files) {
+ 		if (f != nullptr) {
+@@ -253,6 +267,137 @@ void FileDescriptors::CloseAll() {
+ 	}
+ }
+ 
++std::shared_ptr<GuestPipe> FileDescriptors::GetPipe(int d) {
++	Common::LockGuard lock(m_mutex);
++	if (d < 0) return {};
++	if (d < 3) return m_standard_pipes[d];
++	const auto index = static_cast<size_t>(d - 3);
++	return index < m_files.size() && m_files[index] != nullptr ? m_files[index]->pipe : nullptr;
++}
++
++bool FileDescriptors::StandardClosed(int d) {
++	Common::LockGuard lock(m_mutex);
++	return d >= 0 && d < 3 && m_standard_closed[d];
++}
++
++int FileDescriptors::CreatePipeDescriptor(std::shared_ptr<GuestPipe> pipe, bool cloexec) {
++	const auto fd = CreateDescriptor();
++	Common::LockGuard lock(m_mutex);
++	auto* file = m_files[fd - 3];
++	file->special = SpecialFile::Pipe;
++	file->readable = pipe->Reader();
++	file->writable = !pipe->Reader();
++	file->close_on_exec = cloexec;
++	file->pipe = std::move(pipe);
++	file->opened = true;
++	return fd;
++}
++
++int FileDescriptors::DupPipe(int oldfd, int newfd) {
++	Common::LockGuard lock(m_mutex);
++	if (oldfd < 0 || newfd < 0) return KERNEL_ERROR_EBADF;
++	std::shared_ptr<GuestPipe> pipe;
++	if (oldfd < 3) {
++		if (m_standard_closed[oldfd]) return KERNEL_ERROR_EBADF;
++		pipe = m_standard_pipes[oldfd];
++	} else {
++		const auto index = static_cast<size_t>(oldfd - 3);
++		if (index >= m_files.size() || m_files[index] == nullptr || !m_files[index]->opened)
++			return KERNEL_ERROR_EBADF;
++		pipe = m_files[index]->pipe;
++	}
++	if (oldfd == newfd) return newfd;
++	// This boot path duplicates pipe endpoints; unsupported sources report an
++	// error rather than returning success without changing the descriptor.
++	if (!pipe) return KERNEL_ERROR_ENOSYS;
++	if (newfd >= 65536) return KERNEL_ERROR_EBADF;
++	if (::Libs::Network::Net::IsSocket(newfd)) return KERNEL_ERROR_ENOSYS;
++	if (newfd < 3) {
++		m_standard_pipes[newfd] = std::move(pipe);
++		m_standard_closed[newfd] = false;
++		m_standard_cloexec[newfd] = false;
++	} else {
++		const auto index = static_cast<size_t>(newfd - 3);
++		if (index >= m_files.size()) m_files.resize(index + 1, nullptr);
++		if (m_files[index] != nullptr) {
++			if (m_files[index]->opened && m_files[index]->special == SpecialFile::None)
++				m_files[index]->f.Close();
++			delete m_files[index];
++		}
++		auto* file = new File {};
++		file->special = SpecialFile::Pipe;
++		file->readable = pipe->Reader();
++		file->writable = !pipe->Reader();
++		file->opened = true;
++		file->pipe = std::move(pipe);
++		m_files[index] = file;
++	}
++	return newfd;
++}
++
++bool FileDescriptors::ClosePipe(int d) {
++	Common::LockGuard lock(m_mutex);
++	if (d < 0) return false;
++	if (d < 3) {
++		if (m_standard_closed[d]) return false;
++		m_standard_pipes[d].reset();
++		m_standard_closed[d] = true;
++		return true;
++	}
++	const auto index = static_cast<size_t>(d - 3);
++	if (index >= m_files.size() || m_files[index] == nullptr || !m_files[index]->pipe) return false;
++	delete m_files[index];
++	m_files[index] = nullptr;
++	return true;
++}
++
++int FileDescriptors::PipeFcntl(int d, int command, int arg) {
++	Common::LockGuard lock(m_mutex);
++	std::shared_ptr<GuestPipe> pipe;
++	bool cloexec = false;
++	File* file = nullptr;
++	if (d >= 0 && d < 3) {
++		pipe = m_standard_pipes[d];
++		cloexec = m_standard_cloexec[d];
++	} else if (d >= 3 && static_cast<size_t>(d - 3) < m_files.size()) {
++		file = m_files[d - 3];
++		if (file != nullptr) {
++			pipe = file->pipe;
++			cloexec = file->close_on_exec;
++		}
++	}
++	if (!pipe) return KERNEL_ERROR_EBADF;
++	switch (command) {
++		case 1: return cloexec;
++		case 2:
++			if (file != nullptr) file->close_on_exec = (arg & 1) != 0;
++			else m_standard_cloexec[d] = (arg & 1) != 0;
++			return OK;
++		case 3: return (pipe->Reader() ? 0 : 1) | (pipe->Nonblocking() ? 4 : 0);
++		case 4: pipe->SetNonblocking((arg & 4) != 0); return OK;
++		default: return KERNEL_ERROR_EINVAL;
++	}
++}
++
++bool IsPipeDescriptor(int d) { return g_files != nullptr && g_files->GetPipe(d) != nullptr; }
++bool IsStandardDescriptorClosed(int d) { return g_files != nullptr && g_files->StandardClosed(d); }
++
++int KYTY_SYSV_ABI KernelPipe2(int* ends, int flags) {
++	if (ends == nullptr) return KERNEL_ERROR_EFAULT;
++	uint64_t writable = 0;
++	if (!Graphics::HostMemoryQueryRange(reinterpret_cast<uint64_t>(ends), sizeof(int) * 2,
++	                                    Graphics::HostMemoryAccess::Write, writable) || writable < sizeof(int) * 2)
++		return KERNEL_ERROR_EFAULT;
++	if ((flags & ~(4 | 0x00100000)) != 0) return KERNEL_ERROR_EINVAL;
++	auto pipes = GuestPipe::Create((flags & 4) != 0);
++	ends[0] = g_files->CreatePipeDescriptor(std::move(pipes.first), (flags & 0x00100000) != 0);
++	ends[1] = g_files->CreatePipeDescriptor(std::move(pipes.second), (flags & 0x00100000) != 0);
++	return OK;
++}
++
++int KYTY_SYSV_ABI KernelPipe(int* ends) { return KernelPipe2(ends, 0); }
++int KYTY_SYSV_ABI KernelDup2(int oldfd, int newfd) { return g_files->DupPipe(oldfd, newfd); }
++
+ void MountPoints::Mount(const std::filesystem::path& folder, const std::string& point) {
+ 	Common::LockGuard lock(m_mutex);
+ 
+@@ -556,6 +701,8 @@ int KYTY_SYSV_ABI KernelOpen(const char* path, int flags, uint16_t mode) {
+ 
+ int KYTY_SYSV_ABI KernelClose(int d) {
+ 	PRINT_NAME();
++	if (g_files->ClosePipe(d)) return OK;
++	if (IsStandardDescriptorClosed(d)) return KERNEL_ERROR_EBADF;
+ 
+ 	if (d < DESCRIPTOR_MIN) {
+ 		return KERNEL_ERROR_EPERM;
+@@ -589,6 +736,7 @@ int KYTY_SYSV_ABI KernelClose(int d) {
+ 
+ int KYTY_SYSV_ABI KernelFcntl(int d, int command, int arg) {
+ 	PRINT_NAME();
++	if (IsPipeDescriptor(d)) return g_files->PipeFcntl(d, command, arg);
+ 
+ 	if (d < DESCRIPTOR_MIN) {
+ 		return KERNEL_ERROR_EBADF;
+@@ -610,6 +758,16 @@ int KYTY_SYSV_ABI KernelFcntl(int d, int command, int arg) {
+ 
+ int64_t KYTY_SYSV_ABI KernelRead(int d, void* buf, size_t nbytes) {
+ 	PRINT_NAME();
++	if (auto pipe = g_files->GetPipe(d)) {
++		if (nbytes > INT_MAX) return KERNEL_ERROR_EINVAL;
++		uint64_t writable = 0;
++		if (nbytes != 0 && (!Graphics::HostMemoryQueryRange(reinterpret_cast<uint64_t>(buf), nbytes,
++		                          Graphics::HostMemoryAccess::Write, writable) || writable < nbytes))
++			return KERNEL_ERROR_EFAULT;
++		Memory::InvalidateMemory(reinterpret_cast<uint64_t>(buf), nbytes);
++		const auto result = pipe->Read(buf, nbytes);
++		return result >= 0 ? result : PosixToKernel(static_cast<int>(-result));
++	}
+ 
+ 	if (d < DESCRIPTOR_MIN) {
+ 		return KERNEL_ERROR_EPERM;
+@@ -677,6 +835,14 @@ int64_t KYTY_SYSV_ABI KernelRead(int d, void* buf, size_t nbytes) {
+ 
+ int64_t KYTY_SYSV_ABI KernelWrite(int d, const void* buf, size_t nbytes) {
+ 	PRINT_NAME();
++	if (auto pipe = g_files->GetPipe(d)) {
++		if (nbytes > INT_MAX) return KERNEL_ERROR_EINVAL;
++		if (nbytes != 0 && !Graphics::HostMemoryRangeIsReadable(reinterpret_cast<uint64_t>(buf), nbytes))
++			return KERNEL_ERROR_EFAULT;
++		const auto result = pipe->Write(buf, nbytes);
++		return result >= 0 ? result : PosixToKernel(static_cast<int>(-result));
++	}
++	if (IsStandardDescriptorClosed(d)) return KERNEL_ERROR_EBADF;
+ 
+ 	if (buf == nullptr) {
+ 		return KERNEL_ERROR_EFAULT;
+@@ -742,6 +908,7 @@ int64_t KYTY_SYSV_ABI KernelWrite(int d, const void* buf, size_t nbytes) {
+ 
+ int64_t KYTY_SYSV_ABI KernelPread(int d, void* buf, size_t nbytes, int64_t offset) {
+ 	PRINT_NAME();
++	if (IsPipeDescriptor(d)) return KERNEL_ERROR_ESPIPE;
+ 
+ 	if (d < DESCRIPTOR_MIN) {
+ 		return KERNEL_ERROR_EPERM;
+@@ -831,6 +998,7 @@ static int ValidateIovecs(const KernelIovec* iov, int iovcnt, int64_t offset,
+ 
+ int64_t KYTY_SYSV_ABI KernelPreadv(int d, const KernelIovec* iov, int iovcnt, int64_t offset) {
+ 	PRINT_NAME();
++	if (IsPipeDescriptor(d)) return KERNEL_ERROR_ESPIPE;
+ 
+ 	std::vector<KernelIovec> buffers;
+ 	size_t                   total = 0;
+@@ -905,6 +1073,7 @@ int64_t KYTY_SYSV_ABI KernelPreadv(int d, const KernelIovec* iov, int iovcnt, in
+ 
+ int64_t KYTY_SYSV_ABI KernelPwrite(int d, const void* buf, size_t nbytes, int64_t offset) {
+ 	PRINT_NAME();
++	if (IsPipeDescriptor(d)) return KERNEL_ERROR_ESPIPE;
+ 
+ 	if (d < DESCRIPTOR_MIN) {
+ 		return KERNEL_ERROR_EPERM;
+@@ -958,6 +1127,7 @@ int64_t KYTY_SYSV_ABI KernelPwrite(int d, const void* buf, size_t nbytes, int64_
+ 
+ int64_t KYTY_SYSV_ABI KernelPwritev(int d, const KernelIovec* iov, int iovcnt, int64_t offset) {
+ 	PRINT_NAME();
++	if (IsPipeDescriptor(d)) return KERNEL_ERROR_ESPIPE;
+ 
+ 	std::vector<KernelIovec> buffers;
+ 	size_t                   total = 0;
+@@ -1024,6 +1194,7 @@ int64_t KYTY_SYSV_ABI KernelPwritev(int d, const KernelIovec* iov, int iovcnt, i
+ 
+ int64_t KYTY_SYSV_ABI KernelLseek(int d, int64_t offset, int whence) {
+ 	PRINT_NAME();
++	if (IsPipeDescriptor(d)) return KERNEL_ERROR_ESPIPE;
+ 
+ 	if (d < DESCRIPTOR_MIN) {
+ 		return KERNEL_ERROR_EBADF;
+@@ -1135,6 +1306,15 @@ int KYTY_SYSV_ABI KernelStat(const char* path, FileStat* sb) {
+ 
+ int KYTY_SYSV_ABI KernelFstat(int d, FileStat* sb) {
+ 	PRINT_NAME();
++	if (IsPipeDescriptor(d)) {
++		if (sb == nullptr) return KERNEL_ERROR_EFAULT;
++		FileStat stat {};
++		stat.st_mode = 0010600;
++		stat.st_nlink = 1;
++		stat.st_blksize = GuestPipe::AtomicWrite;
++		*sb = stat;
++		return OK;
++	}
+ 
+ 	if (d < DESCRIPTOR_MIN) {
+ 		return KERNEL_ERROR_EPERM;
+@@ -1199,6 +1379,7 @@ int KYTY_SYSV_ABI KernelFstat(int d, FileStat* sb) {
+ 
+ int KYTY_SYSV_ABI KernelFtruncate(int d, int64_t length) {
+ 	PRINT_NAME();
++	if (IsPipeDescriptor(d)) return KERNEL_ERROR_EINVAL;
+ 
+ 	if (d < DESCRIPTOR_MIN) {
+ 		return KERNEL_ERROR_EBADF;
+diff --git a/src/kernel/fileSystem.h b/src/kernel/fileSystem.h
+index ef62372..d6a643f 100644
+--- a/src/kernel/fileSystem.h
++++ b/src/kernel/fileSystem.h
+@@ -59,6 +59,11 @@ std::filesystem::path GetRealFilename(const std::string& mounted_file_name);
+ 
+ int KYTY_SYSV_ABI     KernelOpen(const char* path, int flags, uint16_t mode);
+ int KYTY_SYSV_ABI     KernelClose(int d);
++int KYTY_SYSV_ABI     KernelPipe(int* ends);
++int KYTY_SYSV_ABI     KernelPipe2(int* ends, int flags);
++int KYTY_SYSV_ABI     KernelDup2(int oldfd, int newfd);
++bool IsPipeDescriptor(int d);
++bool IsStandardDescriptorClosed(int d);
+ int KYTY_SYSV_ABI     KernelFcntl(int d, int command, int arg);
+ int64_t KYTY_SYSV_ABI KernelRead(int d, void* buf, size_t nbytes);
+ int64_t KYTY_SYSV_ABI KernelPread(int d, void* buf, size_t nbytes, int64_t offset);
+diff --git a/src/kernel/guestPipe.h b/src/kernel/guestPipe.h
+new file mode 100644
+index 0000000..4c8767b
+--- /dev/null
++++ b/src/kernel/guestPipe.h
+@@ -0,0 +1,108 @@
++#ifndef KYTY_KERNEL_GUEST_PIPE_H_
++#define KYTY_KERNEL_GUEST_PIPE_H_
++
++#include <algorithm>
++#include <array>
++#include <condition_variable>
++#include <cstdint>
++#include <cstring>
++#include <memory>
++#include <mutex>
++#include <utility>
++
++namespace Libs::LibKernel::FileSystem {
++
++// Guest errno values, independent of the host CRT (FreeBSD EAGAIN is 35).
++class GuestPipe {
++public:
++  static constexpr size_t Capacity = 65536;
++  static constexpr size_t AtomicWrite = 4096;
++  struct State {
++    std::mutex mutex;
++    std::condition_variable changed;
++    std::array<uint8_t, Capacity> data {};
++    size_t head = 0, size = 0;
++    bool reader_open = true, writer_open = true;
++  };
++
++  GuestPipe(std::shared_ptr<State> state, bool reader, bool nonblocking)
++      : m_state(std::move(state)), m_reader(reader), m_nonblocking(nonblocking) {}
++  GuestPipe(const GuestPipe&) = delete;
++  GuestPipe& operator=(const GuestPipe&) = delete;
++  ~GuestPipe() {
++    std::lock_guard lock(m_state->mutex);
++    (m_reader ? m_state->reader_open : m_state->writer_open) = false;
++    m_state->changed.notify_all();
++  }
++
++  bool Reader() const { return m_reader; }
++  bool Nonblocking() const {
++    std::lock_guard lock(m_state->mutex);
++    return m_nonblocking;
++  }
++  void SetNonblocking(bool value) {
++    std::lock_guard lock(m_state->mutex);
++    m_nonblocking = value;
++    m_state->changed.notify_all();
++  }
++
++  int64_t Read(void* buffer, size_t count) {
++    if (!m_reader) return -9;
++    if (count == 0) return 0;
++    std::unique_lock lock(m_state->mutex);
++    while (m_state->size == 0 && m_state->writer_open) {
++      if (m_nonblocking) return -35;
++      m_state->changed.wait(lock);
++    }
++    const auto bytes = std::min(count, m_state->size);
++    auto* out = static_cast<uint8_t*>(buffer);
++    const auto first = std::min(bytes, Capacity - m_state->head);
++    std::memcpy(out, m_state->data.data() + m_state->head, first);
++    std::memcpy(out + first, m_state->data.data(), bytes - first);
++    m_state->head = (m_state->head + bytes) % Capacity;
++    m_state->size -= bytes;
++    m_state->changed.notify_all();
++    return static_cast<int64_t>(bytes);
++  }
++
++  int64_t Write(const void* buffer, size_t count) {
++    if (m_reader) return -9;
++    if (count == 0) return 0;
++    std::unique_lock lock(m_state->mutex);
++    const auto* in = static_cast<const uint8_t*>(buffer);
++    size_t written = 0;
++    while (written < count) {
++      if (!m_state->reader_open) return written ? static_cast<int64_t>(written) : -32;
++      const auto free = Capacity - m_state->size;
++      // PIPE_BUF writes stay together; large writes may make partial progress.
++      if (free == 0 || (count <= AtomicWrite && free < count)) {
++        if (m_nonblocking) return written ? static_cast<int64_t>(written) : -35;
++        m_state->changed.wait(lock);
++        continue;
++      }
++      const auto bytes = std::min(count - written, free);
++      const auto tail = (m_state->head + m_state->size) % Capacity;
++      const auto first = std::min(bytes, Capacity - tail);
++      std::memcpy(m_state->data.data() + tail, in + written, first);
++      std::memcpy(m_state->data.data(), in + written + first, bytes - first);
++      m_state->size += bytes;
++      written += bytes;
++      m_state->changed.notify_all();
++    }
++    return static_cast<int64_t>(written);
++  }
++
++  static auto Create(bool nonblocking) {
++    auto state = std::make_shared<State>();
++    return std::make_pair(std::make_shared<GuestPipe>(state, true, nonblocking),
++                          std::make_shared<GuestPipe>(state, false, nonblocking));
++  }
++
++private:
++  std::shared_ptr<State> m_state;
++  bool m_reader;
++  bool m_nonblocking;
++};
++
++} // namespace Libs::LibKernel::FileSystem
++#endif
+diff --git a/src/kernel/memory.cpp b/src/kernel/memory.cpp
+index 87a9bf9..febbd49 100644
+--- a/src/kernel/memory.cpp
++++ b/src/kernel/memory.cpp
+@@ -915,7 +915,7 @@ void WriteBacking(uint64_t vaddr, const void* data, uint64_t size) noexcept {
+ }
+ 
+ void InvalidateMemory(uint64_t vaddr, uint64_t size) {
+-	if (size == 0) {
++	if (size == 0 || g_gpu_resources == nullptr) {
+ 		return;
+ 	}
+ 	(void)GetGpuResources().InvalidateMemory(vaddr, size);
+diff --git a/src/libs/guestStdio.h b/src/libs/guestStdio.h
+new file mode 100644
+index 0000000..d4e15e1
+--- /dev/null
++++ b/src/libs/guestStdio.h
+@@ -0,0 +1,19 @@
++#ifndef KYTY_LIBS_GUEST_STDIO_H_
++#define KYTY_LIBS_GUEST_STDIO_H_
++
++namespace Libs {
++
++// Never pass an opaque guest FILE to the host CRT. The loaded guest libc owns
++// both the layout and buffering, including its fflush(NULL) stream registry.
++template <typename NativeFlush, typename GuestFlush>
++int FlushGuestStream(void* stream, void* host_stdout, void* host_stderr,
++                     NativeFlush native_flush, GuestFlush guest_flush) {
++  if (stream == host_stdout || stream == host_stderr) return native_flush(stream);
++  if (stream != nullptr) return guest_flush ? guest_flush(stream) : -1;
++  const auto native_result = native_flush(nullptr);
++  const auto guest_result = guest_flush ? guest_flush(nullptr) : 0;
++  return native_result != 0 || guest_result != 0 ? -1 : 0;
++}
++
++} // namespace Libs
++#endif
+diff --git a/src/libs/libC.cpp b/src/libs/libC.cpp
+index 7ed9885..76add2a 100644
+--- a/src/libs/libC.cpp
++++ b/src/libs/libC.cpp
+@@ -8,6 +8,7 @@
+ #include "kernel/pthread.h"
+ #include "libs/errno.h"
+ #include "libs/guestPrintf.h"
++#include "libs/guestStdio.h"
+ #include "libs/libs.h"
+ #include "libs/vaContext.h"
+ #include "loader/runtimeLinker.h"
+@@ -630,9 +631,24 @@ static KYTY_SYSV_ABI int snprintf(VA_ARGS) {
+ int KYTY_SYSV_ABI fflush(FILE* stream) {
+ 	PRINT_NAME();
+ 
+-	EXIT_NOT_IMPLEMENTED(stream != stdout);
+-
+-	return ::fflush(stream);
++	using GuestFlush = int (KYTY_SYSV_ABI *)(void*);
++	const auto address = Common::Singleton<Loader::RuntimeLinker>::Instance()->FindGuestExportByNid(
++	    "MUjC4lbHrK4", Loader::SymbolType::Func);
++	static thread_local bool flushing_guest = false;
++	if (flushing_guest) {
++		*Posix::GetErrorAddr() = Posix::POSIX_ENOSYS;
++		return -1;
++	}
++	struct Guard {
++		bool& flag;
++		explicit Guard(bool& value): flag(value) { flag = true; }
++		~Guard() { flag = false; }
++	} guard(flushing_guest);
++	if (stream != nullptr && stream != stdout && stream != stderr && address == 0)
++		*Posix::GetErrorAddr() = Posix::POSIX_ENOSYS;
++	return FlushGuestStream(stream, stdout, stderr,
++	                        [](void* file) { return ::fflush(static_cast<FILE*>(file)); },
++	                        reinterpret_cast<GuestFlush>(address));
+ }
+ 
+ void* KYTY_SYSV_ABI memset(void* s, int c, size_t n) {
+diff --git a/src/libs/libKernel.cpp b/src/libs/libKernel.cpp
+index 5d95b5f..af2ebf7 100644
+--- a/src/libs/libKernel.cpp
++++ b/src/libs/libKernel.cpp
+@@ -1,3 +1,4 @@
++#include "graphics/host_gpu/hostMemory.h"
+ #include "common/abi.h"
+ #include "common/assert.h"
+ #include "common/common.h"
+@@ -1381,19 +1382,29 @@ static void KYTY_SYSV_ABI KernelRtldSetApplicationHeapAPI(void* api[]) {
+ static int64_t KYTY_SYSV_ABI write(int d, const char* str, int64_t size) {
+ 	// PRINT_NAME();
+ 
+-	EXIT_NOT_IMPLEMENTED(d < 0);
+-
+-	if (Network::Net::IsSocket(d)) {
+-		return Network::Net::Send(d, str, static_cast<uint64_t>(size), 0);
++	if (d < 0) {
++		*Posix::GetErrorAddr() = Posix::POSIX_EBADF;
++		return -1;
+ 	}
+-
+-	if (d > 2) {
+-		return POSIX_N_CALL(FileSystem::KernelWrite(d, str, size));
++	if (size < 0) {
++		*Posix::GetErrorAddr() = Posix::POSIX_EINVAL;
++		return -1;
+ 	}
++	return POSIX_N_CALL(FileSystem::KernelWrite(d, str, static_cast<size_t>(size)));
++}
+ 
+-	int size_int = static_cast<int>(size);
++static int KYTY_SYSV_ABI pipe(int* ends) { return POSIX_CALL(FileSystem::KernelPipe(ends)); }
++static int KYTY_SYSV_ABI pipe2(int* ends, int flags) { return POSIX_CALL(FileSystem::KernelPipe2(ends, flags)); }
++static int KYTY_SYSV_ABI dup2(int oldfd, int newfd) { return POSIX_N_CALL(FileSystem::KernelDup2(oldfd, newfd)); }
+ 
+-	return size_int;
++static int KYTY_SYSV_ABI KernelDebugOutText(int /*channel*/, const char* text) {
++	uint64_t readable = 0;
++	if (!Graphics::HostMemoryQueryReadable(reinterpret_cast<uint64_t>(text), 65536, readable))
++		return KERNEL_ERROR_EFAULT;
++	const auto* end = static_cast<const char*>(std::memchr(text, 0, static_cast<size_t>(readable)));
++	if (end == nullptr) return KERNEL_ERROR_EINVAL;
++	const auto size = static_cast<size_t>(end - text);
++	return std::fwrite(text, 1, size, stderr) == size && std::fflush(stderr) == 0 ? OK : KERNEL_ERROR_EIO;
+ }
+ 
+ static int KYTY_SYSV_ABI open(const char* path, int flags, int mode) {
+@@ -1406,10 +1417,6 @@ static int KYTY_SYSV_ABI close(int d) {
+ 		return -1;
+ 	}
+ 
+-	if (d <= 2) {
+-		return 0;
+-	}
+-
+ 	if (Network::Net::IsSocket(d)) {
+ 		return POSIX_NET_CALL(Network::Net::SocketClose(d));
+ 	}
+@@ -1419,6 +1426,11 @@ static int KYTY_SYSV_ABI close(int d) {
+ 
+ static int64_t KYTY_SYSV_ABI read(int d, void* buf, uint64_t nbytes) {
+ 	// PRINT_NAME();
++	if (FileSystem::IsPipeDescriptor(d)) return POSIX_N_CALL(FileSystem::KernelRead(d, buf, nbytes));
++	if (FileSystem::IsStandardDescriptorClosed(d)) {
++		*Posix::GetErrorAddr() = Posix::POSIX_EBADF;
++		return -1;
++	}
+ 
+ 	if (buf == nullptr) {
+ 		*Posix::GetErrorAddr() = Posix::POSIX_EFAULT;
+@@ -3380,6 +3392,13 @@ LIB_DEFINE(InitLibKernel_1) {
+ 	LIB_FUNC("LwG8g3niqwA", LibKernel::KernelDlsym);
+ 	LIB_FUNC("-ZR+hG7aDHw", LibKernel::KernelSleep);
+ 	LIB_FUNC("6c3rCVE-fTU", LibKernel::open);
++	LIB_FUNC("-Jp7F+pXxNg", LibKernel::pipe);
++	LIB_FUNC("4uLLlUW8qhs", LibKernel::pipe2);
++	LIB_FUNC("wdUufa9g-D8", LibKernel::dup2);
++	LIB_FUNC("19a00XH6ZEk", FileSystem::KernelPipe);
++	LIB_FUNC("CgCxk4scfQY", FileSystem::KernelPipe2);
++	LIB_FUNC("EwUmoueWRb8", FileSystem::KernelDup2);
++	LIB_FUNC("9JYNqN6jAKI", LibKernel::KernelDebugOutText);
+ 	LIB_FUNC("6xVpy0Fdq+I", LibKernel::sigprocmask);
+ 	LIB_FUNC("6Z83sYWFlA8", LibKernel::exit);
+ 	LIB_FUNC("8OnWXlgQlvo", LibKernel::KernelRtldThreadAtexitDecrement);
+diff --git a/src/loader/runtimeLinker.cpp b/src/loader/runtimeLinker.cpp
+index e037689..f267da6 100644
+--- a/src/loader/runtimeLinker.cpp
++++ b/src/loader/runtimeLinker.cpp
+@@ -1470,6 +1470,16 @@ Program* RuntimeLinker::FindProgramById(int32_t id) {
+ 	return nullptr;
+ }
+ 
++uint64_t RuntimeLinker::FindGuestExportByNid(const std::string& nid, SymbolType type) {
++	Common::LockGuard lock(m_mutex);
++	for (const auto* program: m_programs) {
++		if (program->export_symbols != nullptr) {
++			if (const auto* symbol = program->export_symbols->FindByNid(nid, type)) return symbol->vaddr;
++		}
++	}
++	return 0;
++}
++
+ Program* RuntimeLinker::FindProgramByFileName(const std::filesystem::path& elf_name) {
+ 	Common::LockGuard lock(m_mutex);
+ 
+diff --git a/src/loader/runtimeLinker.h b/src/loader/runtimeLinker.h
+index f79cb50..3787b94 100644
+--- a/src/loader/runtimeLinker.h
++++ b/src/loader/runtimeLinker.h
+@@ -177,6 +177,7 @@ public:
+ 	Program*        FindProgramByAddr(uint64_t vaddr);
+ 	Program*        FindProgramById(int32_t id);
+ 	Program*        FindProgramByFileName(const std::filesystem::path& elf_name);
++	uint64_t        FindGuestExportByNid(const std::string& nid, SymbolType type);
+ 
+ 	static uint8_t* TlsGetAddr(Program* program);
+ 	static void     DeleteTls(Program* program, int thread_id);
+diff --git a/tests/GuestPipeTests.cpp b/tests/GuestPipeTests.cpp
+new file mode 100644
+index 0000000..599ba2c
+--- /dev/null
++++ b/tests/GuestPipeTests.cpp
+@@ -0,0 +1,113 @@
++#include "kernel/guestPipe.h"
++#include "libs/guestStdio.h"
++
++#include <atomic>
++#include <cassert>
++#include <chrono>
++#include <future>
++#include <string>
++#include <thread>
++#include <vector>
++#include <cstdio>
++
++using Libs::LibKernel::FileSystem::GuestPipe;
++using namespace std::chrono_literals;
++
++namespace {
++int native_calls = 0, guest_calls = 0;
++void* last_native = nullptr;
++void* last_guest = nullptr;
++int NativeFlush(void* p) { ++native_calls; last_native = p; return 0; }
++int GuestFlush(void* p) { ++guest_calls; last_guest = p; return 0; }
++int FailedFlush(void*) { return -1; }
++
++void CheckStdio() {
++  int out = 0, err = 0, opaque_guest = 0;
++  auto no_guest = static_cast<int (*)(void*)>(nullptr);
++  assert(Libs::FlushGuestStream(&err, &out, &err, NativeFlush, GuestFlush) == 0);
++  assert(native_calls == 1 && last_native == &err && guest_calls == 0);
++  assert(Libs::FlushGuestStream(&opaque_guest, &out, &err, NativeFlush, GuestFlush) == 0);
++  assert(guest_calls == 1 && last_guest == &opaque_guest && native_calls == 1);
++  assert(Libs::FlushGuestStream(nullptr, &out, &err, NativeFlush, GuestFlush) == 0);
++  assert(native_calls == 2 && guest_calls == 2 && last_native == nullptr && last_guest == nullptr);
++  assert(Libs::FlushGuestStream(&opaque_guest, &out, &err, NativeFlush, no_guest) == -1);
++  assert(Libs::FlushGuestStream(nullptr, &out, &err, NativeFlush, FailedFlush) == -1);
++}
++
++void CheckPipe() {
++  auto [reader, writer] = GuestPipe::Create(true);
++  char buffer[32] {};
++  assert(reader->Read(buffer, 1) == -35);
++  assert(writer->Read(buffer, 1) == -9 && reader->Write("x", 1) == -9);
++  assert(reader->Read(nullptr, 0) == 0 && writer->Write(nullptr, 0) == 0);
++  assert(writer->Write("hello", 5) == 5);
++  assert(reader->Read(buffer, sizeof(buffer)) == 5 && std::string(buffer, 5) == "hello");
++  std::vector<char> full(GuestPipe::Capacity, 'x');
++  assert(writer->Write(full.data(), full.size()) == static_cast<int64_t>(full.size()));
++  assert(writer->Write("x", 1) == -35);
++  assert(reader->Read(buffer, 1) == 1);
++  assert(writer->Write("ab", 2) == -35); // small writes cannot partially enter a pipe
++  assert(writer->Write("z", 1) == 1);
++  std::vector<char> drained(full.size());
++  assert(reader->Read(drained.data(), drained.size()) == static_cast<int64_t>(drained.size()));
++  assert(drained.back() == 'z'); // wrapped ring
++  auto duplicate = writer;
++  writer.reset();
++  assert(reader->Read(buffer, 1) == -35); // duplicate keeps write end alive
++  assert(duplicate->Write("tail", 4) == 4);
++  duplicate.reset();
++  assert(reader->Read(buffer, sizeof(buffer)) == 4 && std::string(buffer, 4) == "tail");
++  assert(reader->Read(buffer, 1) == 0);
++  auto [closed_reader, orphan_writer] = GuestPipe::Create(false);
++  closed_reader.reset();
++  assert(orphan_writer->Write("x", 1) == -32);
++}
++
++void CheckBlockingAndAtomicity() {
++  auto [reader, writer] = GuestPipe::Create(false);
++  auto pending = std::async(std::launch::async, [&] {
++    char buf[4] {};
++    return reader->Read(buf, 4);
++  });
++  assert(pending.wait_for(30ms) == std::future_status::timeout);
++  assert(writer->Write("test", 4) == 4);
++  assert(pending.wait_for(2s) == std::future_status::ready && pending.get() == 4);
++  auto eof = std::async(std::launch::async, [&] { char c; return reader->Read(&c, 1); });
++  writer.reset();
++  assert(eof.wait_for(2s) == std::future_status::ready && eof.get() == 0);
++
++  auto [r, w] = GuestPipe::Create(false);
++  std::vector<char> all(2 * 256 * GuestPipe::AtomicWrite);
++  auto drain = std::async(std::launch::async, [&] {
++    size_t offset = 0;
++    while (offset < all.size()) {
++      const auto bytes = r->Read(all.data() + offset, all.size() - offset);
++      assert(bytes > 0);
++      offset += static_cast<size_t>(bytes);
++    }
++  });
++  auto produce = [&](char value) {
++    std::vector<char> block(GuestPipe::AtomicWrite, value);
++    for (int i = 0; i < 256; ++i) assert(w->Write(block.data(), block.size()) == static_cast<int64_t>(block.size()));
++  };
++  std::thread a(produce, 'a'), b(produce, 'b');
++  a.join(); b.join();
++  assert(drain.wait_for(5s) == std::future_status::ready); drain.get();
++  for (size_t i = 0; i < all.size(); i += GuestPipe::AtomicWrite)
++    for (size_t j = i; j < i + GuestPipe::AtomicWrite; ++j) assert(all[j] == all[i]);
++
++  auto [nr, nw] = GuestPipe::Create(true);
++  std::vector<char> big(GuestPipe::Capacity + 1, 'q');
++  assert(nw->Write(big.data(), big.size()) == GuestPipe::Capacity);
++  nw->SetNonblocking(false);
++  auto blocked = std::async(std::launch::async, [&] { return nw->Write("x", 1); });
++  assert(blocked.wait_for(30ms) == std::future_status::timeout);
++  nr.reset();
++  assert(blocked.wait_for(2s) == std::future_status::ready && blocked.get() == -32);
++}
++}
++
++int main() {
++  CheckStdio(); CheckPipe(); CheckBlockingAndAtomicity();
++  std::puts("GuestPipeTests: all checks passed");
++}
+diff --git a/tests/HomebrewBootApiTests.cpp b/tests/HomebrewBootApiTests.cpp
+new file mode 100644
+index 0000000..8692042
+--- /dev/null
++++ b/tests/HomebrewBootApiTests.cpp
+@@ -0,0 +1,86 @@
++#include "common/emulatorConfig.h"
++#include "common/logging/log.h"
++#include "common/subsystems.h"
++#include "common/threads.h"
++#include "kernel/fileSystem.h"
++#include "libs/errno.h"
++#include "loader/symbolDatabase.h"
++
++#include <cassert>
++#include <chrono>
++#include <cstring>
++#include <future>
++#include <cstdio>
++
++namespace Libs {
++void InitLibKernel_1(Loader::SymbolDatabase*);
++namespace LibcInternal { void InitLibcInternal_1(Loader::SymbolDatabase*); }
++}
++
++using namespace std::chrono_literals;
++namespace FS = Libs::LibKernel::FileSystem;
++
++int main() {
++  Common::InitializeThreads();
++  Common::Subsystems subsystems;
++  subsystems.Initialize<Config::Lifecycle>();
++  Config::ConfigOptions options;
++  options.printf_direction = Config::LogDirection::Silent;
++  Config::Load(options);
++  subsystems.Initialize<Log::Lifecycle>();
++  FS::Initialize();
++  Loader::SymbolDatabase symbols;
++  Libs::InitLibKernel_1(&symbols);
++  Libs::LibcInternal::InitLibcInternal_1(&symbols);
++  auto find = [&](const char* nid) {
++    const auto* s = symbols.FindByNid(nid, Loader::SymbolType::Func);
++    assert(s != nullptr);
++    return s->vaddr;
++  };
++  auto pipe = reinterpret_cast<int (KYTY_SYSV_ABI *)(int*)>(find("-Jp7F+pXxNg"));
++  auto dup2 = reinterpret_cast<int (KYTY_SYSV_ABI *)(int, int)>(find("wdUufa9g-D8"));
++  auto close = reinterpret_cast<int (KYTY_SYSV_ABI *)(int)>(find("NNtFaKJbPt0"));
++  auto read = reinterpret_cast<int64_t (KYTY_SYSV_ABI *)(int, void*, uint64_t)>(find("DRuBt2pvICk"));
++  auto write = reinterpret_cast<int64_t (KYTY_SYSV_ABI *)(int, const char*, int64_t)>(find("FxVZqBAA7ks"));
++  auto flush = reinterpret_cast<int (KYTY_SYSV_ABI *)(FILE*)>(find("MUjC4lbHrK4"));
++  auto debug = reinterpret_cast<int (KYTY_SYSV_ABI *)(int, const char*)>(find("9JYNqN6jAKI"));
++  assert(pipe(nullptr) == -1 && *Libs::Posix::GetErrorAddr() == Libs::Posix::POSIX_EFAULT);
++  int ends[2] {-1, -1};
++  assert(pipe(ends) == 0 && ends[0] >= 3 && ends[1] >= 3 && ends[0] != ends[1]);
++  assert(FS::KernelFcntl(ends[1], 2, 1) == OK);
++  assert(dup2(ends[1], 2) == 2 && FS::KernelFcntl(2, 1, 0) == 0);
++  assert(close(ends[1]) == 0);
++  assert(flush(stderr) == 0 && flush(nullptr) == 0);
++  assert(write(2, "ccleste boot log\n", 17) == 17);
++  char buffer[64] {};
++  assert(read(ends[0], buffer, sizeof(buffer)) == 17 && std::strcmp(buffer, "ccleste boot log\n") == 0);
++  // A duplicated descriptor shares its open-file flags, but not FD_CLOEXEC.
++  assert(FS::KernelFcntl(2, 4, 4) == OK);
++  assert(dup2(2, 27) == 27 && (FS::KernelFcntl(27, 3, 0) & 4) != 0);
++  FS::FileStat stat {};
++  assert(FS::KernelFstat(27, &stat) == OK && (stat.st_mode & 0170000) == 0010000);
++  assert(FS::KernelLseek(27, 0, 0) == Libs::LibKernel::KERNEL_ERROR_ESPIPE);
++  assert(FS::KernelPread(27, buffer, 1, 0) == Libs::LibKernel::KERNEL_ERROR_ESPIPE);
++  assert(FS::KernelFtruncate(27, 0) == Libs::LibKernel::KERNEL_ERROR_EINVAL);
++  assert(close(2) == 0 && write(2, "x", 1) == -1);
++  assert(FS::KernelFcntl(ends[0], 4, 4) == OK);
++  assert(read(ends[0], buffer, 1) == -1 && *Libs::Posix::GetErrorAddr() == Libs::Posix::POSIX_EAGAIN);
++  assert(close(27) == 0 && read(ends[0], buffer, 1) == 0);
++  assert(close(ends[0]) == 0 && dup2(ends[0], 2) == -1);
++  assert(pipe(ends) == 0);
++  auto waiting = std::async(std::launch::async, [&] { return FS::KernelRead(ends[0], buffer, sizeof(buffer)); });
++  assert(waiting.wait_for(30ms) == std::future_status::timeout);
++  assert(close(ends[1]) == 0);
++  assert(waiting.wait_for(2s) == std::future_status::ready && waiting.get() == 0);
++  assert(close(ends[0]) == 0);
++  assert(debug(0, "HomebrewBootApiTests: debug output works\n") == OK);
++  assert(debug(0, nullptr) == Libs::LibKernel::KERNEL_ERROR_EFAULT);
++  assert(write(-1, "x", 1) == -1 && *Libs::Posix::GetErrorAddr() == Libs::Posix::POSIX_EBADF);
++  assert(FS::KernelPipe2(ends, 8) == Libs::LibKernel::KERNEL_ERROR_EINVAL);
++  assert(FS::KernelPipe2(ends, 4 | 0x00100000) == OK);
++  assert(FS::KernelFcntl(ends[0], 1, 0) == 1 && (FS::KernelFcntl(ends[1], 3, 0) & 4) != 0);
++  assert(close(ends[0]) == 0 && write(ends[1], "x", 1) == -1 && *Libs::Posix::GetErrorAddr() == Libs::Posix::POSIX_EPIPE);
++  assert(close(ends[1]) == 0);
++  FS::Shutdown();
++  std::puts("HomebrewBootApiTests: all checks passed (no game boot claimed)");
++}
