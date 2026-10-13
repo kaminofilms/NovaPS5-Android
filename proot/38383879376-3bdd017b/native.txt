@@ -1,0 +1,63 @@
+NOVA_LOADER: /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 --inhibit-cache --library-path /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu
+NOVA_LIBC: -rwxr-xr-x 1 runner runner 2129424 Jan  1  1970 /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu/libc.so.6
+--- config dir
+total 20
+drwxr-xr-x 2 runner runner 4096 Oct 13 10:31 .
+drwxr-xr-x 5 runner runner 4096 Oct 13 10:31 ..
+-rw-r--r-- 1 runner runner  134 Oct 13 10:31 Config.json
+-rw-r--r-- 1 runner runner 5097 Oct 13 10:31 ThunksDB.json
+{"DB": {"GL": {"Library": "libGL-guest.so", "Overlay": ["@PREFIX_LIB@/libGL.so", "@PREFIX_LIB@/libGL.so.1", "@PREFIX_LIB@/libGL.so.1.2.0", "@PREFIX_LIB@/libGL.so.1.7.0", "/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu/libGL.so", "/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/lib/x86_64-linux-gnu/libGL.so", "/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu/libGL.so.1", "/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/lib/x86_64-linux-gnu/libGL.so.1", "/home
+--- probe --memory
+NOVA_PROBE: x86-64 Linux process; page_size=4096 pid=2524
+NOVA_MEMORY: guest user VA is 47-bit (Kyty arena window [0xA000000000,0xFC00000000) reachable)
+NOVA_MEMORY: guest map base 0x200000000 size 0x400000000 PASS errno=0 (ok)
+status 0
+--- probe --vulkan
+Linking address 0x7ffff77d2c94 to host invoker 0x7ffff7ee9940
+Linking address 0x7ffff76580f4 to host invoker 0x7ffff7eeb390
+NOVA_ERROR: vkCreateInstance=-9 (no usable ICD reached by the guest loader)
+NOVA_PROBE: x86-64 Linux process; page_size=4096 pid=2527
+NOVA_VULKAN: guest libvulkan.so.1 resolved to /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu/libvulkan.so.1
+NOVA_VULKAN: loader instance version 1.3.275
+status 73
+--- FEX debug log
+D LoadLib: libvulkan -> /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/host/usr/lib/aarch64-linux-gnu/fex-emu/HostThunks/libvulkan-host.so
+D Loaded 1567 syms
+D Thunks: Adding host trampoline for guest function 0x7ffff7529a50 via unpacker 0x7ffff7ee98e0
+D Thunks: Adding host trampoline for guest function 0x7ffff75246c0 via unpacker 0x7ffff7ee9900
+D Thunks: Adding host trampoline for guest function 0x7ffff750d360 via unpacker 0x7ffff7ee9920
+Linking address 0x7ffff77d2c94 to host invoker 0x7ffff7ee9940
+D Thunks: Adding guest trampoline from address 0x7ffff77d2c94 to guest function 0x7ffff7ee9940
+Linking address 0x7ffff76580f4 to host invoker 0x7ffff7eeb390
+D Thunks: Adding guest trampoline from address 0x7ffff76580f4 to guest function 0x7ffff7eeb390
+NOVA_ERROR: vkCreateInstance=-9 (no usable ICD reached by the guest loader)
+NOVA_PROBE: x86-64 Linux process; page_size=4096 pid=2530
+NOVA_VULKAN: guest libvulkan.so.1 resolved to /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu/libvulkan.so.1
+NOVA_VULKAN: loader instance version 1.3.275
+--- strace of FEX file lookups (openat/openat2/statx)
+2534  faccessat(AT_FDCWD, "/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory)
+2534  openat(AT_FDCWD, "/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/fex-config-native/Config.json", O_RDONLY) = 3
+2534  openat(AT_FDCWD, "/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/host/usr/bin//../share/fex-emu/ThunksDB.json", O_RDONLY) = 6
+2534  openat(AT_FDCWD, "/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/fex-config-native/ThunksDB.json", O_RDONLY) = 6
+2534  openat(AT_FDCWD, "/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/host/usr/bin//../share/fex-emu/Config.json", O_RDONLY) = -1 ENOENT (No such file or directory)
+2534  openat(AT_FDCWD, "/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/fex-config-native/Config.json", O_RDONLY) = 6
+2534  faccessat(AT_FDCWD, "/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/host/usr/share/fex-emu/GuestThunks/libvulkan-guest.so", F_OK) = 0
+2534  openat2(5, "home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/nova-probe", {flags=O_RDONLY|O_CLOEXEC, resolve=RESOLVE_IN_ROOT}, 24) = -1 ENOENT (No such file or directory)
+2534  newfstatat(5, "etc/ld.so.preload", {st_mode=S_IFREG|0644, st_size=0, ...}, AT_SYMLINK_NOFOLLOW) = 0
+2534  faccessat2(5, "etc/ld.so.preload", R_OK, 0) = 0
+2534  openat2(5, "etc/ld.so.preload", {flags=O_RDONLY|O_CLOEXEC, resolve=RESOLVE_IN_ROOT}, 24) = 4
+2534  openat2(5, "home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu/glibc-hwcaps/x86-64-v3/libc.so.6", {flags=O_RDONLY|O_CLOEXEC, resolve=RESOLVE_IN_ROOT}, 24) = -1 ENOENT (No such file or directory)
+2534  openat2(5, "home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu/glibc-hwcaps/x86-64-v2/libc.so.6", {flags=O_RDONLY|O_CLOEXEC, resolve=RESOLVE_IN_ROOT}, 24) = -1 ENOENT (No such file or directory)
+2534  openat2(5, "home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu/libc.so.6", {flags=O_RDONLY|O_CLOEXEC, resolve=RESOLVE_IN_ROOT}, 24) = -1 ENOENT (No such file or directory)
+2534  openat2(AT_FDCWD, "/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/host/usr/share/fex-emu/GuestThunks/libvulkan-guest.so", {flags=O_RDONLY|O_CLOEXEC, resolve=0}, 24) = 4
+2534  openat2(5, "home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu/libstdc++.so.6", {flags=O_RDONLY|O_CLOEXEC, resolve=RESOLVE_IN_ROOT}, 24) = -1 ENOENT (No such file or directory)
+2534  openat2(5, "home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu/libm.so.6", {flags=O_RDONLY|O_CLOEXEC, resolve=RESOLVE_IN_ROOT}, 24) = -1 ENOENT (No such file or directory)
+2534  openat2(5, "home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu/libgcc_s.so.1", {flags=O_RDONLY|O_CLOEXEC, resolve=RESOLVE_IN_ROOT}, 24) = -1 ENOENT (No such file or directory)
+2534  openat(AT_FDCWD, "/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/host/usr/lib/aarch64-linux-gnu/fex-emu/HostThunks/libvulkan-host.so", O_RDONLY|O_CLOEXEC) = 4
+2534  openat(AT_FDCWD, "/lib/aarch64-linux-gnu/libvulkan.so.1", O_RDONLY|O_CLOEXEC) = 4
+2534  openat2(5, "home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu/libX11.so.6", {flags=O_RDONLY|O_CLOEXEC, resolve=RESOLVE_IN_ROOT}, 24) = -1 ENOENT (No such file or directory)
+2534  openat2(5, "home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu/libxcb.so.1", {flags=O_RDONLY|O_CLOEXEC, resolve=RESOLVE_IN_ROOT}, 24) = -1 ENOENT (No such file or directory)
+2534  openat2(5, "home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu/libXau.so.6", {flags=O_RDONLY|O_CLOEXEC, resolve=RESOLVE_IN_ROOT}, 24) = -1 ENOENT (No such file or directory)
+2534  openat2(5, "home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu/libXdmcp.so.6", {flags=O_RDONLY|O_CLOEXEC, resolve=RESOLVE_IN_ROOT}, 24) = -1 ENOENT (No such file or directory)
+2534  openat2(5, "home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu/libbsd.so.0", {flags=O_RDONLY|O_CLOEXEC, resolve=RESOLVE_IN_ROOT}, 24) = -1 ENOENT (No such file or directory)
+2534  openat2(5, "home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu/libmd.so.0", {flags=O_RDONLY|O_CLOEXEC, resolve=RESOLVE_IN_ROOT}, 24) = -1 ENOENT (No such file or directory)
