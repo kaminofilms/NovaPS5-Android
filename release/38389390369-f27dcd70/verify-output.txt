@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/home/runner/work/NovaPS5-Android/NovaPS5-Android/tests/verify_runtime_apk.py", line 231, in <module>
+    main()
+  File "/home/runner/work/NovaPS5-Android/NovaPS5-Android/tests/verify_runtime_apk.py", line 110, in main
+    assert (owner, signature) in definitions, 'Unresolved platform method: ' + owner + signature
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unresolved platform method: Lcom/droiddeck/launcher/SessionActivity;dispatchTouchEvent(Landroid/view/MotionEvent;)Z
