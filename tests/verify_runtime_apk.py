@@ -232,7 +232,7 @@ def main():
                 report['packageMetadata'] = line
         assert "name='com.kaminofilms.novaps5'" in badging
         if args.linux_core:
-            assert "versionName='0.4.0-native'" in badging and "versionCode='15'" in badging and "native-code: 'arm64-v8a'" in badging
+            assert "versionName='0.4.1-native'" in badging and "versionCode='16'" in badging and "native-code: 'arm64-v8a'" in badging
         subprocess.run([str(bt / 'zipalign'), '-c', '-P', '16', '4', str(args.apk)], check=True)
     if args.json_output:
         args.json_output.parent.mkdir(parents=True, exist_ok=True)

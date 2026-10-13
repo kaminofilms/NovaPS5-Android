@@ -53,6 +53,7 @@ jobs:
           NOVA_HOST_VA_BITS: '39'
         run: |
           set -uo pipefail
+          mkdir -p build
           git fetch -q --depth 1 origin lab-assets
           git show origin/lab-assets:ccleste-PPSA59322.zip > build/ccleste.zip
           (cd build && unzip -q ccleste.zip)
