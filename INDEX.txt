@@ -37,3 +37,4 @@ runs/native-38415872400-471606c8 native job=failure
 release/38415969151-82a45bc2 core=success apk=failure arm64=skipped
 release/38418738911-0a41f1ff core=success apk=skipped arm64=skipped
 runs/native-38418739297-0a41f1ff native job=failure
+release/38422211543-54c08e7a core=success apk=success arm64=success

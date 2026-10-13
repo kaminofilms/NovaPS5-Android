@@ -1,0 +1,23 @@
+{
+  "filename": "NovaPS5-0.4.0-native-arm64.apk",
+  "bytes": 59779264,
+  "sha256": "1ec5700ccb131ef57623bec9a3551f8456e9d30524dd60d8db1ed96fe1eaa036",
+  "installerConstructorFlags": "0x10001",
+  "platformMethodAccess": "passed",
+  "zipIntegrity": "passed",
+  "arm64Libraries": 19,
+  "inherited4KiBLibraries": [
+    "lib/arm64-v8a/libpulse.so",
+    "lib/arm64-v8a/libltdl.so",
+    "lib/arm64-v8a/libpulseaudio.so",
+    "lib/arm64-v8a/libsndfile.so",
+    "lib/arm64-v8a/libpulsecommon-13.0.so",
+    "lib/arm64-v8a/libpulsecore-13.0.so"
+  ],
+  "ps5GameBootVerified": false,
+  "executionPath": "linux-fex",
+  "linuxCoreSha256": "a00a59a334463d971615b7e7dc9186875084a70fd44cd92e027be6f557155d39",
+  "linuxRuntimeSha256": "7e22fc9f0fe701b4e54217545109b7d54dee7d23100d5f9b3506c43b77b67cdf",
+  "signingCertificateSha256": "21882443635874231d80b57100a172d2f090b25047e6fa068edc29734cda2ae0",
+  "packageMetadata": "package: name='com.kaminofilms.novaps5' versionCode='15' versionName='0.4.0-native' platformBuildVersionName='14' platformBuildVersionCode='34' compileSdkVersion='34' compileSdkVersionCodename='14'"
+}
