@@ -152,7 +152,7 @@ private:
 //   movdqu xmm1, [rsp+0xe0]
 //   add  rsp, 0x108
 //   ret
-constexpr size_t kGateSize = 160;
+constexpr size_t kGateSize = 208; // emitted gate is 192 bytes
 
 void EmitGate(uint8_t* p, const void* host_function) {
 	Emitter e(p);
