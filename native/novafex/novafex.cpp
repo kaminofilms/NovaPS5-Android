@@ -333,9 +333,20 @@ void Watchdog() {
 			std::fprintf(stderr, "NOVA_FEX: no guest progress for %d s, dumping host threads\n", stalled * seconds);
 			DumpAllThreads();
 		}
-		std::fprintf(stderr, "NOVA_FEX: heartbeat gates=%llu (+%llu) guest_calls=%llu\n", (unsigned long long)gates,
-		             (unsigned long long)(gates - last_gates), (unsigned long long)g_total_calls.load());
+		// Orphaned (launcher killed): do not linger and block the next session.
+		if (getppid() == 1) {
+			std::fprintf(stderr, "NOVA_FEX: launcher gone, exiting\n");
+			_exit(0);
+		}
+		static int beat = 0;
+		const bool report = (beat++ % 6) == 0;
+		if (report) {
+			std::fprintf(stderr, "NOVA_FEX: heartbeat gates=%llu guest_calls=%llu threads=%zu\n", (unsigned long long)gates,
+			             (unsigned long long)g_total_calls.load(), g_threads.size());
+		}
 		last_gates = gates;
+		// Per-thread detail only when the guest has stopped making progress.
+		if (stalled < 2) continue;
 		std::lock_guard lock(g_threads_mutex);
 		for (auto* t: g_threads) {
 			const auto in_host = t->in_host.load();

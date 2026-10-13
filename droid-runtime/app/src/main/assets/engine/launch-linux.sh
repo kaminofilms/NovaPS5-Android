@@ -48,10 +48,20 @@ if [[ -x "$native/kyty_emulator" && "${NOVA_ENGINE:-native}" != fex ]]; then
     stage G 'First rendered frame UNVERIFIED'
     echo "NOVA_LAUNCH: native AArch64 Kyty game=$game relaxed_vulkan=$NOVA_RELAXED_VULKAN"
     cd "$native"
+    # The session pins programs to the fastest cluster, which on Snapdragon 8 Elite-class chips is
+    # only two cores. Kyty, the embedded FEX JIT and the game's 30+ threads need all of them.
+    all_cores="0-$(( $(nproc --all) - 1 ))"
+    taskset -cp "$all_cores" $$ >/dev/null 2>&1 && echo "NOVA_CPU: cores $all_cores (was $(cat /proc/self/status | sed -n 's/^Cpus_allowed_list:\s*//p'))" || true
     # Bundled glibc/libstdc++ first (the executable's interpreter is the bundled loader).
     LD_PRELOAD="$native_preload" LD_LIBRARY_PATH="$native:/usr/lib/aarch64-linux-gnu:/lib/aarch64-linux-gnu" \
-        "$native/kyty_emulator" --game "$game" --screen-width 1280 --screen-height 720 --vblank-frequency 60 --present-mode Fifo --fullscreen --hide-cursor --no-splash --vulkan-validation false --network-connected false
-    exit $?
+        "$native/kyty_emulator" --game "$game" --screen-width 1280 --screen-height 720 --vblank-frequency 60 --present-mode Fifo --fullscreen --hide-cursor --no-splash --vulkan-validation false --network-connected false &
+    kyty_pid=$!
+    # Exit game / session stop: guest threads parked in emulated waits can keep Kyty alive after
+    # SIGTERM, which blocks the next launch. Give it a moment, then force it down.
+    trap 'kill -TERM "$kyty_pid" 2>/dev/null; sleep 1; kill -KILL "$kyty_pid" 2>/dev/null; exit 143' TERM INT HUP
+    status=0
+    wait "$kyty_pid" || status=$?
+    exit "$status"
 fi
 # The compositor's ARM64 preload remains on the FEX host. FEX must not forward
 # it into the x86-64 guest; supply guest variables through FEX_ENV explicitly.
