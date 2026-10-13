@@ -1,0 +1,7 @@
+FAILED: [code=1] FEXCore/Source/CMakeFiles/FEXCore_Base.dir/Utils/FileUtils.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/FEXCore/Source/Utils/FileUtils.cpp:61:20: error: use of undeclared identifier 'getdents64'
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/FEXCore/Source/Utils/FileUtils.cpp:154:20: error: use of undeclared identifier 'getdents64'
+FAILED: [code=1] FEXCore/Source/CMakeFiles/JemallocDummy.dir/Utils/AllocatorHooks.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/FEXCore/Source/Utils/AllocatorHooks.cpp:217:10: error: no member named 'valloc' in the global namespace; did you mean simply 'valloc'?
+FAILED: [code=1] Source/Common/CMakeFiles/Common.dir/FEXServerClient.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/FEXCore/include/FEXCore/fextl/functional.h:55:21: error: static assertion failed due to requirement 'noexcept(this->internal = std::move(wrapped_lambda))': This implementation of std::function does not support implementing fextl::move_only_function
