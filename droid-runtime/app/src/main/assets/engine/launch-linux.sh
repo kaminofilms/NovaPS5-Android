@@ -41,7 +41,19 @@ preflight 'C Kyty dynamic dependencies' bash -c 'nova_fex_run "$@"' nova --list 
 preflight 'D Linux Kyty CLI' bash -c 'nova_fex_run "$@"' nova "$core" --help
 step 'Guest memory mapping diagnostic'
 bash -c 'nova_fex_run "$@"' nova "$guest/nova-probe" --memory
-preflight 'Vulkan instance and physical device preflight' bash -c 'nova_fex_run "$@"' nova "$guest/nova-probe" --vulkan
+step 'Vulkan thunk diagnostics'
+echo "NOVA_VULKAN: host ICD=${VK_DRIVER_FILES:-unset}; guest root=$FEX_ROOTFS"
+for thunk in "$FEX_THUNKHOSTLIBS/libvulkan-host.so" "$FEX_THUNKGUESTLIBS/libvulkan-guest.so"; do
+    if [[ -r "$thunk" ]]; then echo "NOVA_VULKAN: thunk present $thunk"; else echo "NOVA_ERROR: Vulkan thunk missing $thunk" >&2; exit 73; fi
+done
+if timeout --kill-after=5s 90s bash -c 'nova_fex_run "$@"' nova "$guest/nova-probe" --vulkan; then
+    echo 'NOVA_STAGE: Vulkan instance and physical device preflight PASS'
+else
+    status=$?
+    echo "NOVA_ERROR: Guest Vulkan preflight failed; inspect FEX Vulkan thunk overlay and ARM64 ICD (vkCreateInstance=-9 means incompatible driver)" >&2
+    echo "NOVA_VULKAN: guest Vulkan failed before Kyty game loader; status=$status" >&2
+    exit 73
+fi
 echo 'NOVA_STAGE: F guest execution and G frame presentation UNVERIFIED'
 cd "$base/linux-kyty"
 echo "NOVA_LAUNCH: Linux Kyty game=$game"
