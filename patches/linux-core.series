@@ -4,3 +4,4 @@ kyty-nova-va39.patch
 kyty-nova-relaxed-vulkan.patch
 kyty-nova-libc-hle.patch
 kyty-nova-posix.patch
+kyty-nova-arm64.patch

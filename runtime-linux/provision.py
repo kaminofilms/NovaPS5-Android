@@ -18,7 +18,7 @@ def fetch(pin,cache):
     else: raise RuntimeError('Checksum mismatch: '+pin['url'])
     return path
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--output',type=Path,required=True);p.add_argument('--core-sha',required=True);p.add_argument('--cache',type=Path,default=ROOT.parent/'build/linux-debs');a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--output',type=Path,required=True);p.add_argument('--core-sha',required=True);p.add_argument('--cache',type=Path,default=ROOT.parent/'build/linux-debs');p.add_argument('--native-dir',type=Path,help='Native AArch64 Kyty package (kyty_emulator, libnovafex.so, bundled glibc) installed as native/');a=p.parse_args()
     a.cache.mkdir(parents=True,exist_ok=True);work=a.cache/'overlay';shutil.rmtree(work,ignore_errors=True)
     host=work/'host';guest=work/'guest';host.mkdir(parents=True);guest.mkdir()
     pins=json.loads((ROOT/'dependencies.json').read_text());allpins=[pins['fex']]+pins['guest']
@@ -62,6 +62,12 @@ def main():
                     str(ROOT.parent/'vendor/droiddeck-0.1.7/app/src/main/cpp/fakeinput_steam.cpp'),'-ldl'],check=True)
     for path,machine in [(guest/'nova-probe',62),(guest/'usr/lib/nova/libfakeinput.so',62),(host/'usr/bin/FEX',183),(host/'usr/bin/FEXServer',183),(host/'usr/share/fex-emu/GuestThunks/libvulkan-guest.so',62),(host/'usr/lib/aarch64-linux-gnu/fex-emu/HostThunks/libvulkan-host.so',183)]:
         data=path.read_bytes();assert data[:6]==b'\x7fELF\x02\x01' and int.from_bytes(data[18:20],'little')==machine,str(path)
+    # Native AArch64 Kyty (embedded FEXCore runs only the game's code). Ships its own glibc and
+    # C++ runtime; the executable's interpreter points at the bundled loader inside the rootfs.
+    if a.native_dir:
+        native=work/'native';shutil.copytree(a.native_dir,native,symlinks=False)
+        data=(native/'kyty_emulator').read_bytes();assert data[:6]==b'\x7fELF\x02\x01' and int.from_bytes(data[18:20],'little')==183,'native core must be AArch64'
+        for path in native.iterdir():path.chmod(0o755)
     (work/'Config.json').write_text(json.dumps({'Config':{'Env':'LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu'}})+'\n')
     (work/'thunks.json').write_text(json.dumps({'ThunksDB':{'Vulkan':1,'asound':1,'WaylandClient':1}})+'\n')
     shutil.copyfile(host/'usr/share/fex-emu/ThunksDB.json',work/'ThunksDB.json')
@@ -75,7 +81,7 @@ def main():
                     if info.isfile():
                         with path.open('rb') as stream:out.addfile(info,stream)
                     else:out.addfile(info)
-    manifest={'revision':'linux-fex-2610-r6','archive_sha256':digest(a.output),'core_sha256':a.core_sha,'files':{p.relative_to(work).as_posix():digest(p) for p in work.rglob('*') if p.is_file() and not p.is_symlink()}}
+    manifest={'revision':'linux-fex-2610-r7-native' if a.native_dir else 'linux-fex-2610-r6','archive_sha256':digest(a.output),'core_sha256':a.core_sha,'files':{p.relative_to(work).as_posix():digest(p) for p in work.rglob('*') if p.is_file() and not p.is_symlink()}}
     a.output.with_suffix('.json').write_text(json.dumps(manifest,indent=2)+'\n')
     print('Linux runtime:',a.output,a.output.stat().st_size,manifest['archive_sha256'])
 if __name__=='__main__':main()

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Nova PS5 0.3.2: Linux x86-64 Kyty through standalone FEX inside DroidDeck.
+# Nova PS5 0.4: native AArch64 Kyty (embedded FEXCore), or Linux x86-64 Kyty through standalone FEX.
 # Every stage prints NOVA_STAGE: <id> <name> PASS|FAIL|DEGRADED|UNVERIFIED.
 set -Eeuo pipefail
 step() { echo "== STEP $(date -u +%H:%M:%S) $*"; }
@@ -18,6 +18,33 @@ game=${1:?Missing selected game directory}
 [[ -x "$core" && -r "$guest/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2" ]] || { echo 'NOVA_ERROR: Linux Kyty or x86-64 glibc loader missing'; exit 68; }
 stage A 'Android runtime files PASS'
 unset WINEPREFIX WINEARCH WINELOADER WINESERVER WINEDLLPATH WINEDLLOVERRIDES LD_LIBRARY_PATH
+# Nova 0.4: native AArch64 Kyty. The emulator runs natively on the phone CPU and talks to the
+# Android/Turnip Vulkan driver directly; an embedded FEXCore translates only the game's x86-64
+# code. NOVA_ENGINE=fex (Download/droiddeck-env) selects the previous whole-emulator FEX path.
+native=$runtime/native
+if [[ -x "$native/kyty_emulator" && "${NOVA_ENGINE:-native}" != fex ]]; then
+    stage B 'Native AArch64 Kyty present PASS'
+    export SDL_VIDEODRIVER=x11 XDG_CONFIG_HOME=/root/.config XDG_DATA_HOME=/root/.local/share
+    mkdir -p /root/.config/kyty /root/.local/share/kyty /root/.cache/kyty
+    echo "NOVA_HOST: uname=$(uname -a) page_size=$(getconf PAGESIZE)"
+    echo "NOVA_DISPLAY: DISPLAY=${DISPLAY:-missing} VK_DRIVER_FILES=${VK_DRIVER_FILES:-unset} VK_ICD_FILENAMES=${VK_ICD_FILENAMES:-unset} preload=${LD_PRELOAD:-}"
+    # Turnip on Adreno lacks fragment-shader barycentrics; continue with the documented
+    # relaxations unless the user overrides it.
+    export NOVA_RELAXED_VULKAN=${NOVA_RELAXED_VULKAN:-1}
+    export NOVA_LIBC_HLE=0
+    if [[ -r "$game/sce_module/libc.prx" ]] && sha256sum "$game/sce_module/libc.prx" | grep -q '^e6ff45d16adf687855cc3b33b0c8a4132b6504360b221e0a34c7e99fb3ba0036 '; then
+        NOVA_LIBC_HLE=1; echo 'NOVA_LAUNCH: open-SDK homebrew libc stub detected; Kyty host C library enabled'
+    fi
+    [[ -n "${FAKE_EVDEV_MEMFD_PATHS:-}" ]] && echo "NOVA_INPUT: gamepad rings $FAKE_EVDEV_MEMFD_PATHS via the ARM64 DroidDeck preload" || echo 'NOVA_INPUT: no DroidDeck gamepad rings'
+    stage F 'PS5 loader UNVERIFIED (see Kyty output below)'
+    stage G 'First rendered frame UNVERIFIED'
+    echo "NOVA_LAUNCH: native AArch64 Kyty game=$game relaxed_vulkan=$NOVA_RELAXED_VULKAN"
+    cd "$native"
+    # Bundled glibc/libstdc++ first (the executable's interpreter is the bundled loader).
+    LD_LIBRARY_PATH="$native:/usr/lib/aarch64-linux-gnu:/lib/aarch64-linux-gnu" \
+        "$native/kyty_emulator" --game "$game" --screen-width 1280 --screen-height 720 --vblank-frequency 60 --present-mode Fifo --fullscreen --hide-cursor --no-splash --vulkan-validation false --network-connected false
+    exit $?
+fi
 # The compositor's ARM64 preload remains on the FEX host. FEX must not forward
 # it into the x86-64 guest; supply guest variables through FEX_ENV explicitly.
 host_preload=${LD_PRELOAD:-}

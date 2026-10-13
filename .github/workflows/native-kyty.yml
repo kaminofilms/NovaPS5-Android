@@ -5,7 +5,7 @@ name: Nova PS5 native ARM64 Kyty (embedded FEXCore)
 on:
   push:
     branches: [native-arm64]
-    paths: ['native/**', 'patches/**', 'tools/lab/**', '.github/workflows/native-kyty.yml']
+    paths: ['native/**', 'patches/**', 'tools/lab/**', 'tools/ci/**', '.github/workflows/native-kyty.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -33,63 +33,15 @@ jobs:
           path: ~/.cache/ccache
           key: native-ccache-${{ env.FEX_COMMIT }}-${{ hashFiles('native/**', 'patches/*') }}
           restore-keys: native-ccache-${{ env.FEX_COMMIT }}-
-      - name: Build libnovafex
+      - name: Build native AArch64 Kyty (libnovafex + Kyty + bundled runtime)
         run: |
           set -euo pipefail
           mkdir -p out
-          export CCACHE_DIR=~/.cache/ccache CCACHE_MAXSIZE=4G
-          git init -q fex && cd fex
-          git remote add origin https://github.com/FEX-Emu/FEX.git
-          git fetch -q --depth 1 origin "$FEX_COMMIT" && git checkout -q FETCH_HEAD
-          git submodule update --init --depth 1 External/fmt External/range-v3 External/rpmalloc \
-            External/unordered_dense External/vixl External/xxhash External/jemalloc_glibc Source/Common/cpp-optparse
-          cp -r "$GITHUB_WORKSPACE/native/novafex" Source/Tools/NovaFex
-          echo 'add_subdirectory(NovaFex/)' >> Source/Tools/CMakeLists.txt
-          cd ..
-          cmake -S fex -B build/fex -G Ninja -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            -DENABLE_LTO=OFF -DBUILD_FEXCONFIG=OFF -DBUILD_TESTING=OFF -DBUILD_THUNKS=OFF \
-            -DENABLE_JEMALLOC_GLIBC_ALLOC=OFF -DENABLE_CCACHE=OFF > out/fex-cmake.txt 2>&1
-          cmake --build build/fex --target novafex novafex_test --parallel 4 > out/fex-build.txt 2>&1 || { tail -80 out/fex-build.txt; exit 1; }
-          mkdir -p novafex-dist/include novafex-dist/lib
-          cp native/novafex/novafex.h novafex-dist/include/
-          cp "$(find build/fex -name libnovafex.so | head -n 1)" novafex-dist/lib/
-          "$(find build/fex -type f -name novafex_test -perm /111 | head -n 1)" > out/novafex-test.txt 2>&1 || true
-          tail -3 out/novafex-test.txt
-      - name: Kyty source with Nova patches
-        run: |
-          set -euo pipefail
-          git init -q kyty && cd kyty
-          git remote add origin https://github.com/KytyPS5/KytyPS5.git
-          git fetch -q --depth 1 origin "$KYTY_COMMIT" && git checkout -q FETCH_HEAD
-          git submodule update --init --recursive --depth 1 -q
-          for p in $(grep -v '^#' "$GITHUB_WORKSPACE/patches/linux-core.series") kyty-nova-arm64.patch; do
-            git apply "$GITHUB_WORKSPACE/patches/$p" || { echo "patch failed: $p"; exit 1; }
-          done
-      - name: Build native ARM64 Kyty
-        run: |
-          set -uo pipefail
-          export CCACHE_DIR=~/.cache/ccache CCACHE_MAXSIZE=4G
-          cmake -S kyty -B build/kyty -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
-            -DKYTY_BUILD_LAUNCHER=OFF -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            -DNOVAFEX_DIR="$PWD/novafex-dist" > out/kyty-cmake.txt 2>&1 || { tail -60 out/kyty-cmake.txt; exit 1; }
-          status=0
-          cmake --build build/kyty --target kyty_emulator --parallel 4 -- -k 0 > out/kyty-build.txt 2>&1 || status=$?
-          grep -E "error:|undefined reference|FAILED:" out/kyty-build.txt | head -300 > out/kyty-errors.txt || true
-          ccache -s >> out/kyty-build.txt
-          echo "build status $status"; head -80 out/kyty-errors.txt
-          exit $status
+          bash tools/ci/build-native-kyty.sh "$PWD" "$PWD/work" "$PWD/dist" 2>&1 | tail -120
+          cp -r dist/logs/. out/
       - name: Package core
         run: |
-          set -euo pipefail
-          mkdir -p dist/native-kyty
-          cp "$(find build/kyty -type f -name kyty_emulator -perm /111 | head -n 1)" dist/native-kyty/
-          cp novafex-dist/lib/libnovafex.so dist/native-kyty/
-          patchelf --set-rpath '$ORIGIN' dist/native-kyty/kyty_emulator
-          ldd dist/native-kyty/kyty_emulator | tee out/ldd.txt
-          file dist/native-kyty/kyty_emulator | tee -a out/ldd.txt
-          sha256sum dist/native-kyty/* | tee out/core-sha256.txt
+          mkdir -p dist/native-kyty && cp dist/native/* dist/native-core.json dist/native-kyty/
       - uses: actions/upload-artifact@v4
         with:
           name: native-kyty-arm64
@@ -106,11 +58,12 @@ jobs:
           (cd build && unzip -q ccleste.zip)
           export VK_DRIVER_FILES="$(find /usr/share/vulkan/icd.d -maxdepth 1 -name 'lvp_icd*.json' -print -quit)"
           mkdir -p out/boot/cwd && cd out/boot/cwd
-          bash "$GITHUB_WORKSPACE/tools/lab/run-kyty-lab.sh" native "$GITHUB_WORKSPACE/dist/native-kyty/kyty_emulator" "$GITHUB_WORKSPACE/build/PPSA59322" "$GITHUB_WORKSPACE/out/boot" 300
+          bash "$GITHUB_WORKSPACE/tools/lab/run-kyty-lab.sh" native "$GITHUB_WORKSPACE/dist/ci/kyty_emulator" "$GITHUB_WORKSPACE/build/PPSA59322" "$GITHUB_WORKSPACE/out/boot" 300
           tail -80 "$GITHUB_WORKSPACE/out/boot/kyty.txt"
       - name: Commit logs to lab-logs
         if: always()
         run: |
+          cp -r dist/logs/. out/ 2>/dev/null || true
           set -euo pipefail
           dest="runs/native-${GITHUB_RUN_ID}-${GITHUB_SHA::8}"
           git init -q logs && cd logs
