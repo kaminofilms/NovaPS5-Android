@@ -1,0 +1,11 @@
+NOVA_FEX: host AVX=1 SVE256=0 AFP=0 RCPC=1
+NOVAFEX_TEST: init                         PASS 
+NOVAFEX_TEST: unhandled signal 11 addr=0x4 pc=0xffad6fc67660
+  pc 0xffad6fc67660 /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/Source/Tools/NovaFex/libnovafex.so+0x77660 (?)
+  lr 0xffad6fc6763c /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/Source/Tools/NovaFex/libnovafex.so+0x7763c (?)
+  frame 0xffad6fc59dfc /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/Source/Tools/NovaFex/libnovafex.so+0x69dfc (?)
+  frame 0xffad6ff8e22c (JIT/anon)
+NOVAFEX_TEST: exit=91
+0x77660 FEXCore::Frontend::Decoder::SetupDecodeInstructionsAtEntry(FEXCore::Core::InternalThreadState*, unsigned long, unsigned long) /home/runner/work/NovaPS5-Android/NovaPS5-Android/fex/FEXCore/Source/Interface/Core/Frontend.cpp:1760 
+0x7763c FEXCore::Frontend::Decoder::SetupDecodeInstructionsAtEntry(FEXCore::Core::InternalThreadState*, unsigned long, unsigned long) /home/runner/work/NovaPS5-Android/NovaPS5-Android/fex/FEXCore/Source/Interface/Core/Frontend.cpp:1756 
+0x69dfc FEXCore::Context::ContextImpl::CompileBlock(FEXCore::Core::CpuStateFrame*, unsigned long, unsigned long) /home/runner/work/NovaPS5-Android/NovaPS5-Android/fex/FEXCore/Source/Interface/Core/Core.cpp:880 

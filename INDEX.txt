@@ -28,3 +28,4 @@ runs/38392157455-45d4c408 x86=success arm64=success
 runs/novafex-38393722880-87d6f402 novafex job=cancelled
 runs/novafex-38393957842-7f0bc2c1 novafex job=failure
 runs/novafex-38407562638-3205906a novafex job=failure
+runs/novafex-38408599719-6c29330e novafex job=failure
