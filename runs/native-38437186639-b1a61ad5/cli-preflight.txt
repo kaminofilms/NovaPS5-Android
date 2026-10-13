@@ -1,0 +1,48 @@
+Release, clang-lld, ver = 0.3.0, git = df5b9b9-dirty, date = 2026.10.13
+kyty_emulator --game <dir|elf|zar> [options]
+
+Options:
+  --game <dir|elf|zar>                 Game directory, ELF, or ZArchive to load.
+  --game-patch <json>                  ETAHen cheat file.
+  --screen-width <num>                 Window width. Default: 1280.
+  --screen-height <num>                Window height. Default: 720.
+  --user-name <name>                   Local user name (1-16 bytes). Default: Kyty.
+  --user-id <num>                      Local user ID. Default: 1000.
+  --mic <name>                        Capture from this microphone; omit for silence.
+  --controller-color <#RRGGBB>        Override the controller lightbar color.
+  --controller-volume <0-100>         DualSense speaker volume. Default: 50.
+  --controller-vibration <0-100>      DualSense vibration intensity. Default: 100.
+  --present-mode <value>               Fifo, Mailbox, or Immediate. Default: Mailbox.
+  --gpu <index>                        Vulkan physical device index. Default: auto.
+  --fullscreen                         Run in borderless desktop fullscreen.
+  --hdr                                Enable HDR10 output when supported.
+  --hide-cursor                        Hide the cursor after 2 s idle. Default: off.
+  --no-splash                          Disable the startup splash screen.
+  --vr                                 Enable the virtual VR headset.
+  --amd-cpu                            Apply AMD CPU instruction patches.
+  --vblank-frequency <num>             Virtual vblank frequency. Default: 60.
+  --console-language <0-29>            Console language. Default: 1 (English US).
+  --vulkan-validation <true|false>     Enable Vulkan validation.
+  --network-connected <true|false>     Use the host local network (default: false).
+  --gpu-assisted-validation <t|f>      Bounds-check shader accesses on the GPU.
+                                       Implies --vulkan-validation; very slow.
+  --shader-validation <true|false>     Enable shader validation.
+  --tessellation                      Draw tessellation patches; skipped by default.
+  --shader-optimization-type <value>   None, Size, or Performance.
+  --shader-log-direction <value>       Silent, Console, or File.
+  --shader-log-folder <path>           Shader log output folder.
+  --command-buffer-dump <true|false>   Enable command buffer dumps.
+  --command-buffer-dump-folder <path>  Command buffer dump folder.
+  --graphics-debug-dump <true|false>   Enable graphics debug dumps.
+  --printf-direction <value>           Silent, Console, or File.
+  --printf-output-file <path>          Guest printf output file.
+  --profile                            Enable the Tracy profiler.
+  --spirv-debug-printf <true|false>    Enable SPIR-V debug printf.
+  --readback-linear-images <true|false> Read back writable linear images on submit.
+  --sync-raw-image-buffers <true|false> Synchronize raw reads of GPU images. Default: false.
+  --trophy-notifications <true|false>   Show trophy unlock toasts and play their sound.
+  --playgo-hack                       Use the supplied PlayGo stub fallback.
+  --skip-notice-screen <true|false>    Skip startup logos and notices in supported games.
+                                      Default: false.
+  --keymap <Control=Input>             DualSense mapping; may be repeated.
+  --rd                                 Enable RenderDoc capture.

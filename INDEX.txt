@@ -58,3 +58,4 @@ release/38433728895-dc0c61ae core=success apk=cancelled arm64=cancelled
 runs/native-38433728529-dc0c61ae native job=cancelled
 release/38434601168-72c1cc34 core=success apk=success arm64=success
 runs/native-38434601182-72c1cc34 native job=success
+runs/native-38437186639-b1a61ad5 native job=success
