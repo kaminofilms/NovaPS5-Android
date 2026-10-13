@@ -73,3 +73,4 @@ release/38445158742-35a823e8 core=success apk=failure arm64=skipped
 release/38446593019-0ece187e core=success apk=success arm64=success
 runs/native-38450264802-0e66e187 native job=success
 release/38450264437-0e66e187 core=success apk=success arm64=success
+runs/novafex-38456225625-434929fb novafex job=failure
