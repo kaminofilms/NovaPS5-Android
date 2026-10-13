@@ -294,6 +294,23 @@ index e2b06883..d2750f37 100644
  			command();
  
  			Common::LockGuard lock(gpu->m_queue_mutex);
+diff --git a/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp b/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp
+index d56b629b..b1a7b913 100644
+--- a/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp
++++ b/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp
+@@ -512,10 +512,8 @@ void PipelineCache::InitializeDriverCache() {
+ 		PipelineCacheLog("Vulkan pipeline cache: disabled (unknown git revision)");
+ 		return;
+ 	}
+-	if (git_hash.ends_with("-dirty")) {
+-		PipelineCacheLog("Vulkan pipeline cache: disabled (dirty build)");
+-		return;
+-	}
++	// Nova builds always apply patches to the pinned source, so every build is "dirty". The cache
++	// file is still keyed by device/driver signature and payload hash, so keep it enabled.
+ 
+ 	m_driver_cache_path     = std::filesystem::path("_PipelineCache") / (title_id + ".bin");
+ 	const auto path         = Common::PathToString(m_driver_cache_path);
 diff --git a/src/graphics/presentation/window/vulkanWindow.cpp b/src/graphics/presentation/window/vulkanWindow.cpp
 index 95005f5a..e4124de6 100644
 --- a/src/graphics/presentation/window/vulkanWindow.cpp

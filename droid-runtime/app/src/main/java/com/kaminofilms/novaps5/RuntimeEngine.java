@@ -161,6 +161,12 @@ final class RuntimeEngine {
         BootLog.write(context,"Ended "+killed+" leftover session processes");
     }
     void start(String game,String name){
+        // Android 12+ "phantom process" monitor silently kills the processes a session is made of
+        // (Kyty dies mid-game with nothing in any log). Only the user can turn it off.
+        String phantom=null;try{phantom=android.provider.Settings.Global.getString(context.getContentResolver(),"settings_enable_monitor_phantom_procs");}catch(Exception ignored){}
+        BootLog.write(context,"Phantom process monitor: "+(phantom==null?"ROM default (on)":phantom));
+        if(phantom==null||!(phantom.equalsIgnoreCase("false")||phantom.equals("0")))
+            android.widget.Toast.makeText(context,"Android may kill the game mid-play. Turn ON Developer options → \"Disable child process restrictions\" to stop it.",android.widget.Toast.LENGTH_LONG).show();
         // Keep the game running while Nova is in the background so it can be resumed; the default
         // policy froze the whole session and it did not come back.
         context.getSharedPreferences("session",0).edit().putString("suspendPolicy.steam","never").apply();
