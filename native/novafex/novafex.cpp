@@ -667,7 +667,9 @@ bool HandleHostFault(int signal, siginfo_t* info, void* ucontext) {
 	auto* uc = static_cast<ucontext_t*>(ucontext);
 	const uint64_t pc = uc->uc_mcontext.pc;
 	// Host code jumped into guest code (a C++ call through a guest function pointer).
-	if (signal == SIGSEGV && reinterpret_cast<uint64_t>(info->si_addr) == pc && IsGuestCode(pc)) {
+	// Any instruction fetch fault is a host jump into guest code: guest mappings are never
+	// host-executable and the emulator does not register every guest module with NovaFex.
+	if (signal == SIGSEGV && reinterpret_cast<uint64_t>(info->si_addr) == pc && pc >= 0x10000) {
 		uc->uc_mcontext.regs[16] = pc;
 		uc->uc_mcontext.pc = reinterpret_cast<uint64_t>(&nova_guest_bridge_entry);
 		uc->uc_mcontext.pstate &= ~(uint64_t {3} << 10); // clear BTYPE: not a branch into the bridge
