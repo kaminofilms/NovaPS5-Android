@@ -3,3 +3,4 @@ pc-boot-api.patch
 kyty-nova-va39.patch
 kyty-nova-relaxed-vulkan.patch
 kyty-nova-libc-hle.patch
+kyty-nova-posix.patch

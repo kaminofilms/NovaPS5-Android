@@ -1,0 +1,131 @@
+diff --git a/src/libs/libKernel.cpp b/src/libs/libKernel.cpp
+index af2ebf70..7f75f2bb 100644
+--- a/src/libs/libKernel.cpp
++++ b/src/libs/libKernel.cpp
+@@ -23,6 +23,8 @@
+ #include "loader/symbolDatabase.h"
+ 
+ #include <algorithm>
++#include <climits>
++#include <condition_variable>
+ #include <array>
+ #include <atomic>
+ #include <bit>
+@@ -2171,7 +2173,117 @@ int KYTY_SYSV_ABI UmtxOp(volatile void* address, int operation, uint64_t value,
+ 	}
+ }
+ 
++
++// Nova: POSIX entry points used by homebrew SDK titles (PS5_PayloadSDK / RADV port).
++namespace NovaPosix {
++static int Fail(int e) { *GetErrorAddr() = e; return -1; }
++static KYTY_SYSV_ABI long sysconf(int name) {
++	switch (name) {
++		case 3: return 1000000;                  // _SC_CLK_TCK (FreeBSD reports 128; sizes only)
++		case 47: return 0x4000;                  // _SC_PAGESIZE
++		case 57: case 58: return 13;             // _SC_NPROCESSORS_CONF / _ONLN (PS5 game cores)
++		case 5: return 1024;                     // _SC_OPEN_MAX
++		default: return Fail(POSIX_EINVAL);
++	}
++}
++static KYTY_SYSV_ABI void* mmap(void* addr, size_t len, int prot, int flags, int fd, int64_t offset) {
++	constexpr int MAP_FIXED_G = 0x10, MAP_ANON_G = 0x1000;
++	if ((flags & MAP_ANON_G) == 0 || fd != -1 || offset != 0) { *GetErrorAddr() = POSIX_ENODEV; return reinterpret_cast<void*>(-1); }
++	void* out = addr;
++	const size_t size = (len + 0x3fff) & ~size_t {0x3fff};
++	const int r = LibKernel::Memory::KernelMapFlexibleMemory(&out, size, prot & 7, flags & MAP_FIXED_G);
++	if (r != OK) { *GetErrorAddr() = LibKernel::KernelToPosix(r); return reinterpret_cast<void*>(-1); }
++	return out;
++}
++static KYTY_SYSV_ABI int ok0() { return 0; }
++static KYTY_SYSV_ABI int uid0() { return 0; }
++static KYTY_SYSV_ABI int enosys() { return Fail(POSIX_ENOSYS); }
++static KYTY_SYSV_ABI int ioctl(int, unsigned long, ...) { return Fail(POSIX_ENOTTY); }
++static KYTY_SYSV_ABI void* null_ptr() { return nullptr; }
++static KYTY_SYSV_ABI const char* dlerror() { return "dynamic loading is not supported"; }
++struct GuestRlimit { int64_t cur, max; };
++static KYTY_SYSV_ABI int getrlimit(int, GuestRlimit* r) { if (r != nullptr) { r->cur = r->max = INT64_MAX; } return 0; }
++static KYTY_SYSV_ABI int getrusage(int, void* r) { if (r != nullptr) std::memset(r, 0, 144); return 0; }
++// FreeBSD sigset_t: 4 x uint32
++static KYTY_SYSV_ABI int sigfillset(uint32_t* set) { if (set != nullptr) { for (int i = 0; i < 4; i++) set[i] = 0xffffffffu; } return 0; }
++static KYTY_SYSV_ABI int sigdelset(uint32_t* set, int signo) { if (set == nullptr || signo <= 0 || signo > 128) return Fail(POSIX_EINVAL); set[(signo - 1) / 32] &= ~(1u << ((signo - 1) % 32)); return 0; }
++static KYTY_SYSV_ABI int pthread_sigmask(int, const void*, void* old) { if (old != nullptr) std::memset(old, 0, 16); return 0; }
++static KYTY_SYSV_ABI int attr_get_int(void*, int* v) { if (v != nullptr) *v = 0; return 0; }
++static KYTY_SYSV_ABI int attr_get_ptr(void*, void** v) { if (v != nullptr) *v = nullptr; return 0; }
++static KYTY_SYSV_ABI int set_name_np(void*, const char*) { return 0; }
++// FreeBSD pthread_barrier_t is a pointer to an opaque object.
++struct Barrier { std::mutex m; std::condition_variable cv; unsigned count = 0, waiting = 0; uint64_t generation = 0; };
++static KYTY_SYSV_ABI int barrier_init(Barrier** b, const void*, unsigned count) {
++	if (b == nullptr || count == 0) return POSIX_EINVAL;
++	*b = new Barrier; (*b)->count = count; return 0;
++}
++static KYTY_SYSV_ABI int barrier_wait(Barrier** b) {
++	if (b == nullptr || *b == nullptr) return POSIX_EINVAL;
++	auto& x = **b; std::unique_lock lock(x.m); const auto gen = x.generation;
++	if (++x.waiting == x.count) { x.waiting = 0; x.generation++; x.cv.notify_all(); return -1; /* PTHREAD_BARRIER_SERIAL_THREAD */ }
++	x.cv.wait(lock, [&] { return gen != x.generation; }); return 0;
++}
++static KYTY_SYSV_ABI int barrier_destroy(Barrier** b) { if (b == nullptr) return POSIX_EINVAL; delete *b; *b = nullptr; return 0; }
++static KYTY_SYSV_ABI int lstat(const char* path, LibKernel::FileSystem::FileStat* sb) { return POSIX_CALL(LibKernel::FileSystem::KernelStat(path, sb)); }
++static KYTY_SYSV_ABI int rename(const char* a, const char* b) { return POSIX_CALL(LibKernel::FileSystem::KernelRename(a, b)); }
++static KYTY_SYSV_ABI int rmdir(const char* a) { return POSIX_CALL(LibKernel::FileSystem::KernelRmdir(a)); }
++static KYTY_SYSV_ABI int getdents(int fd, char* buf, int n) { return POSIX_N_CALL(LibKernel::FileSystem::KernelGetdents(fd, buf, n)); }
++struct GuestPollFd { int fd; int16_t events, revents; };
++static KYTY_SYSV_ABI int poll(GuestPollFd* fds, unsigned n, int timeout) {
++	// Report regular descriptors ready; nothing here can block meaningfully.
++	int ready = 0;
++	for (unsigned i = 0; fds != nullptr && i < n; i++) { fds[i].revents = static_cast<int16_t>(fds[i].events & 0x0005); if (fds[i].revents != 0) ready++; }
++	if (ready == 0 && timeout > 0) std::this_thread::sleep_for(std::chrono::milliseconds(timeout));
++	return ready;
++}
++} // namespace NovaPosix
++
+ LIB_DEFINE(InitLibKernel_1_Posix) {
++	LIB_FUNC("mkawd0NA9ts", NovaPosix::sysconf); // sysconf
++	LIB_FUNC("BPE9s9vQQXo", NovaPosix::mmap); // mmap
++	LIB_FUNC("Jahsnh4KKkg", NovaPosix::ok0); // madvise
++	LIB_FUNC("3k6kx-zOOSQ", NovaPosix::ok0); // sceKernelMlock
++	LIB_FUNC("juWbTNM+8hw", NovaPosix::ok0); // fsync
++	LIB_FUNC("kg4x8Prhfxw", NovaPosix::uid0); // getuid
++	LIB_FUNC("tvpHe5kBO4E", NovaPosix::uid0); // geteuid
++	LIB_FUNC("AfuS23bX6kg", NovaPosix::uid0); // getgid
++	LIB_FUNC("72rYuYoDTWk", NovaPosix::uid0); // getegid
++	LIB_FUNC("Wh7HbV7JFqc", NovaPosix::getrlimit); // getrlimit
++	LIB_FUNC("hHlZQUnlxSM", NovaPosix::getrusage); // getrusage
++	LIB_FUNC("VkTAsrZDcJ0", NovaPosix::sigfillset); // sigfillset
++	LIB_FUNC("Nd-u09VFSCA", NovaPosix::sigdelset); // sigdelset
++	LIB_FUNC("JZKw5+Wrnaw", NovaPosix::pthread_sigmask); // pthread_sigmask
++	LIB_FUNC("e2G+cdEkOmU", NovaPosix::attr_get_int); // pthread_attr_getscope
++	LIB_FUNC("xesmlSI-KCI", NovaPosix::ok0); // pthread_attr_setscope
++	LIB_FUNC("oLjPqUKhzes", NovaPosix::attr_get_int); // pthread_attr_getinheritsched
++	LIB_FUNC("DxmIMUQ-wXY", NovaPosix::attr_get_ptr); // pthread_attr_getstackaddr
++	LIB_FUNC("oxMp8uPqa+U", NovaPosix::set_name_np); // pthread_set_name_np
++	LIB_FUNC("ZsXLFtd2jqQ", NovaPosix::barrier_init); // pthread_barrier_init
++	LIB_FUNC("CawZgCYqXWk", NovaPosix::barrier_wait); // pthread_barrier_wait
++	LIB_FUNC("+Pqub9HZCPo", NovaPosix::barrier_destroy); // pthread_barrier_destroy
++	LIB_FUNC("nnoxZUHK+SA", NovaPosix::enosys); // pthread_getcpuclockid
++	LIB_FUNC("PfccT7qURYE", NovaPosix::ioctl); // ioctl
++	LIB_FUNC("DRGXpDDh8Ng", NovaPosix::lstat); // lstat
++	LIB_FUNC("NN01qLRhiqU", NovaPosix::rename); // rename
++	LIB_FUNC("c7ZnT7V1B98", NovaPosix::rmdir); // rmdir
++	LIB_FUNC("2G6i6hMIUUY", NovaPosix::getdents); // getdents
++	LIB_FUNC("ku7D4q1Y9PI", NovaPosix::poll); // poll
++	LIB_FUNC("UteVS6B1ZrU", NovaPosix::null_ptr); // dlopen
++	LIB_FUNC("biY+kcVB5D4", NovaPosix::null_ptr); // dlsym
++	LIB_FUNC("oiT0vgzmW0M", NovaPosix::ok0); // dlclose
++	LIB_FUNC("ucFJiTO1EUw", NovaPosix::dlerror); // dlerror
++	LIB_FUNC("QuJYZ2KVGGQ", NovaPosix::enosys); // shm_open
++	LIB_FUNC("Jc6E7N+dHz0", NovaPosix::enosys); // system
++	LIB_FUNC("DFmMT80xcNI", NovaPosix::enosys); // sysctl
++	LIB_FUNC("1nTKA7pN1jw", NovaPosix::ok0); // utime
++	LIB_FUNC("GDuV00CHrUg", NovaPosix::ok0); // utimes
++	LIB_FUNC("+0EDo7YzcoU", NovaPosix::ok0); // futimes
++	LIB_FUNC("0Cq8ipKr9n0", NovaPosix::ok0); // sceKernelUtimes
++	LIB_FUNC("n01yNbQO5W4", NovaPosix::ok0); // fchmod
++	LIB_FUNC("fgIsQ10xYVA", NovaPosix::ok0); // sceKernelChmod
++	LIB_FUNC("WlyEA-sLDf0", NovaPosix::enosys); // sceKernelTruncate
++	LIB_FUNC("-YTW+qXc3CQ", NovaPosix::enosys); // sceKernelInternalMemoryGetModuleSegmentInfo
++	LIB_FUNC("UNS2V4S097M", NovaPosix::ok0); // syslog
+ 	LIB_FUNC("k+AXqu2-eBc", getpagesize);
+ 	LIB_FUNC("lLMT9vJAck0", clock_gettime);
+ 	LIB_FUNC("smIj7eqzZE8", clock_getres);
