@@ -1,0 +1,400 @@
+PS5 NID fallback: YQ0navp+YIc -> YQ0navp+YIc[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: MZO7FXyAPU8 -> MZO7FXyAPU8[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: JGMio+21L4c -> JGMio+21L4c[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: z0dtnPxYgtg -> z0dtnPxYgtg[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: fffwELXNVFA -> fffwELXNVFA[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: Vo5V8KAwCmk -> Vo5V8KAwCmk[SystemService_v1][SystemService_v1.1][Func]
+PS5 NID fallback: aZK8lNei-Qw -> aZK8lNei-Qw[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: lLMT9vJAck0 -> lLMT9vJAck0[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: JoBqSQt1yyA -> JoBqSQt1yyA[SystemService_v1][SystemService_v1.1][Func]
+PS5 NID fallback: 1jfXLRVzisc -> 1jfXLRVzisc[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: j3YMu1MVNNo -> j3YMu1MVNNo[UserService_v1][UserService_v1.1][Func]
+PS5 NID fallback: CdWp0oHWGr0 -> CdWp0oHWGr0[UserService_v1][UserService_v1.1][Func]
+PS5 NID fallback: hv1luiJrqQM -> hv1luiJrqQM[Pad_v1][Pad_v1.1][Func]
+PS5 NID fallback: xk0AcarP3V4 -> xk0AcarP3V4[Pad_v1][Pad_v1.1][Func]
+PS5 NID fallback: u1GRHp+oWoY -> u1GRHp+oWoY[Pad_v1][Pad_v1.1][Func]
+PS5 NID fallback: W2G-yoyMF5U -> W2G-yoyMF5U[Pad_v1][Pad_v1.1][Func]
+PS5 NID fallback: fPhymKNvK-A -> fPhymKNvK-A[UserService_v1][UserService_v1.1][Func]
+PS5 NID fallback: 6ncge5+l5Qs -> 6ncge5+l5Qs[Pad_v1][Pad_v1.1][Func]
+PS5 NID fallback: q1cHNfGycLI -> q1cHNfGycLI[Pad_v1][Pad_v1.1][Func]
+PS5 NID fallback: yFVnOdGxvZY -> yFVnOdGxvZY[Pad_v1][Pad_v1.1][Func]
+PS5 NID fallback: RR4novUEENY -> RR4novUEENY[Pad_v1][Pad_v1.1][Func]
+PS5 NID fallback: JfEPXVxhFqA -> JfEPXVxhFqA[AudioOut_v1][AudioOut_v1.1][Func]
+PS5 NID fallback: ekNvsT22rsY -> ekNvsT22rsY[AudioOut_v1][AudioOut_v1.1][Func]
+PS5 NID fallback: OxhIB8LB-PQ -> OxhIB8LB-PQ[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: s1--uE9mBFw -> s1--uE9mBFw[AudioOut_v1][AudioOut_v1.1][Func]
+PS5 NID fallback: QOQtbeDqsT4 -> QOQtbeDqsT4[AudioOut_v1][AudioOut_v1.1][Func]
+PS5 NID fallback: h9CcP3J0oVM -> h9CcP3J0oVM[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 8zsu04XNsZ4 -> 8zsu04XNsZ4[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: H8ya2H00jbI -> H8ya2H00jbI[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: JM4EBvWT9rc -> JM4EBvWT9rc[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: SAd0Z3wKwLA -> SAd0Z3wKwLA[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: aesyjrHVWy4 -> aesyjrHVWy4[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: QxmSHBCuKTk -> QxmSHBCuKTk[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: wuAQt-j+p4o -> wuAQt-j+p4o[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: C6gWCWJKM+U -> C6gWCWJKM+U[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: iz2shAGFIxc -> iz2shAGFIxc[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: lhpd6Wk6ccs -> lhpd6Wk6ccs[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: wuCroIGjt2g -> wuCroIGjt2g[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: FN4gaPmuFV8 -> FN4gaPmuFV8[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: bY-PO6JhzhQ -> bY-PO6JhzhQ[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: VAzswvTOCzI -> VAzswvTOCzI[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: juWbTNM+8hw -> juWbTNM+8hw[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: NN01qLRhiqU -> NN01qLRhiqU[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: RIa6GnWp+iU -> RIa6GnWp+iU[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: AqBioC2vF3I -> AqBioC2vF3I[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: JrwFIMzKNr0 -> JrwFIMzKNr0[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: rtV7-jWC6Yg -> rtV7-jWC6Yg[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: NVadfnzQhHQ -> NVadfnzQhHQ[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: jMB7EFyu30Y -> jMB7EFyu30Y[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: w-BvXF4O6xo -> w-BvXF4O6xo[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: eS+MVq+Lltw -> eS+MVq+Lltw[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: yS8U2TGCe1A -> yS8U2TGCe1A[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: QcteRwbsnV0 -> QcteRwbsnV0[libkernel_v1][libkernel_v1.1][Func]
+Relocate: unresolved non-PLT import patched to stub [21253] [0000000901b8c5b8] <- 0000000200000000, kW3GLb7QfPg[Agc_v1][Agc_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+PS5 NID fallback: h9z6+0hEydk -> h9z6+0hEydk[Graphics5_v1][Graphics5_v1.1][Func]
+PS5 NID fallback: UglJIZjGssM -> UglJIZjGssM[Graphics5Driver_v1][Graphics5Driver_v1.1][Func]
+PS5 NID fallback: XlNp7jzGiPo -> XlNp7jzGiPo[Graphics5Driver_v1][Graphics5Driver_v1.1][Func]
+PS5 NID fallback: MM4IZSEYytQ -> MM4IZSEYytQ[Graphics5Driver_v1][Graphics5Driver_v1.1][Func]
+PS5 NID fallback: L1SBTkC+Cvw -> L1SBTkC+Cvw[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: KdP-nULpuGw -> KdP-nULpuGw[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: QrZZdJ8XsX0 -> QrZZdJ8XsX0[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: hcuQgD53UxM -> hcuQgD53UxM[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: wazw2x2m3DQ -> wazw2x2m3DQ[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: 9yDWMxEFdJU -> 9yDWMxEFdJU[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: AV6ipCNa4Rw -> AV6ipCNa4Rw[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: g7zzzLDYGw0 -> g7zzzLDYGw0[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: kiZSXIWd9vg -> kiZSXIWd9vg[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: HoLVWNanBBc -> HoLVWNanBBc[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: QuJYZ2KVGGQ -> QuJYZ2KVGGQ[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: ih4CD9-gghM -> ih4CD9-gghM[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: mKoTx03HRWA -> mKoTx03HRWA[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: EjllaAqAPZo -> EjllaAqAPZo[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 0TyVk4MSLt0 -> 0TyVk4MSLt0[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: dJcuQVn6-Iw -> dJcuQVn6-Iw[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: RXXqi4CtF8w -> RXXqi4CtF8w[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: mkx2fVhNMsg -> mkx2fVhNMsg[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 2MOy+rUfuhQ -> 2MOy+rUfuhQ[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 27bAgiJmOh0 -> 27bAgiJmOh0[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: Op8TBGY5KHg -> Op8TBGY5KHg[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: cOYia2dE0Ik -> cOYia2dE0Ik[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: n01yNbQO5W4 -> n01yNbQO5W4[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 9eMlfusH4sU -> 9eMlfusH4sU[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: mkawd0NA9ts -> mkawd0NA9ts[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: kg4x8Prhfxw -> kg4x8Prhfxw[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: tvpHe5kBO4E -> tvpHe5kBO4E[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 72rYuYoDTWk -> 72rYuYoDTWk[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: AfuS23bX6kg -> AfuS23bX6kg[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 1nTKA7pN1jw -> 1nTKA7pN1jw[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: BPE9s9vQQXo -> BPE9s9vQQXo[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: UqDGjXA5yUM -> UqDGjXA5yUM[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: c7ZnT7V1B98 -> c7ZnT7V1B98[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: q0F6yS-rCms -> q0F6yS-rCms[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: XGnuIBmEmyk -> XGnuIBmEmyk[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: 3QIPIh-GDjw -> 3QIPIh-GDjw[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: 04AjkP0jO9U -> 04AjkP0jO9U[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: UNS2V4S097M -> UNS2V4S097M[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: qdlHjTa9hQ4 -> qdlHjTa9hQ4[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: 6XG4B33N09g -> 6XG4B33N09g[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 8nY19bKoiZk -> 8nY19bKoiZk[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: Oy6IpwgtYOk -> Oy6IpwgtYOk[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: smbQukfxYJM -> smbQukfxYJM[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: M4YYbSFfJ8g -> M4YYbSFfJ8g[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: CRJcH8CnPSI -> CRJcH8CnPSI[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: DFmMT80xcNI -> DFmMT80xcNI[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: Wh7HbV7JFqc -> Wh7HbV7JFqc[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 7Psx1DlAyE4 -> 7Psx1DlAyE4[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: ytQULN-nhL4 -> ytQULN-nhL4[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 1471ajPzxh0 -> 1471ajPzxh0[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: iGjsr1WAtI0 -> iGjsr1WAtI0[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: EgmLo6EWgso -> EgmLo6EWgso[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: sIlRvQqsN2Y -> sIlRvQqsN2Y[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 5jNubw4vlAA -> 5jNubw4vlAA[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: cVSk9y8URbc -> cVSk9y8URbc[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: vhtcIgZG-Lk -> vhtcIgZG-Lk[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: ucFJiTO1EUw -> ucFJiTO1EUw[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: VkTAsrZDcJ0 -> VkTAsrZDcJ0[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: Nd-u09VFSCA -> Nd-u09VFSCA[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: JZKw5+Wrnaw -> JZKw5+Wrnaw[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: EotR8a3ASf4 -> EotR8a3ASf4[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: oxMp8uPqa+U -> oxMp8uPqa+U[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: nnoxZUHK+SA -> nnoxZUHK+SA[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: ZsXLFtd2jqQ -> ZsXLFtd2jqQ[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: +Pqub9HZCPo -> +Pqub9HZCPo[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: CawZgCYqXWk -> CawZgCYqXWk[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: kHg45qPC6f0 -> kHg45qPC6f0[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: kDZvoVssCgQ -> kDZvoVssCgQ[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: fPxypibz2MY -> fPxypibz2MY[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: Z4QosVuAsA0 -> Z4QosVuAsA0[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: ltCfaGr2JGE -> ltCfaGr2JGE[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: ttHNfU+qDBU -> ttHNfU+qDBU[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: dQHWEsJtoE4 -> dQHWEsJtoE4[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: mDmgMOGVUqg -> mDmgMOGVUqg[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: HF7lK46xzjY -> HF7lK46xzjY[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 7H0iTOciTLo -> 7H0iTOciTLo[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: Io9+nTKXZtA -> Io9+nTKXZtA[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: K-jXhbt2gn4 -> K-jXhbt2gn4[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 2Z+PpY6CaJg -> 2Z+PpY6CaJg[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: +U1R4WtXvoc -> +U1R4WtXvoc[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 7Xl257M4VNI -> 7Xl257M4VNI[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: FJrT5LuUBAU -> FJrT5LuUBAU[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: mqULNdimTn0 -> mqULNdimTn0[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 6BpEZuDT7YI -> 6BpEZuDT7YI[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 0-KXaS70xy4 -> 0-KXaS70xy4[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: WrOLvHU0yQM -> WrOLvHU0yQM[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: aaDMGGkXFxo -> aaDMGGkXFxo[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: kA-TdiOCsaY -> kA-TdiOCsaY[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: dhK16CKwhQg -> dhK16CKwhQg[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: WuMbPBKN1TU -> WuMbPBKN1TU[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: Ls4tzzhimqQ -> Ls4tzzhimqQ[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: m5wN+SwZOR4 -> m5wN+SwZOR4[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: rDMyAf1Jhug -> rDMyAf1Jhug[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: 2WE3BTYVwKM -> 2WE3BTYVwKM[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: Q8pvJimUWis -> Q8pvJimUWis[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: WkYnBHFsmW4 -> WkYnBHFsmW4[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: fGPRa6T+Cu8 -> fGPRa6T+Cu8[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: hsi9drzHR2k -> hsi9drzHR2k[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: Jc6E7N+dHz0 -> Jc6E7N+dHz0[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: dnaeGXbjP6E -> dnaeGXbjP6E[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: jbz9I9vkqkk -> jbz9I9vkqkk[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: -kU6bB4M-+k -> -kU6bB4M-+k[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: CBiu4mCE1DA -> CBiu4mCE1DA[VideoOut_v1][VideoOut_v1.1][Func]
+PS5 NID fallback: pO96TwzOm5E -> pO96TwzOm5E[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: rTXw65xmLIA -> rTXw65xmLIA[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: L-Q3LEjIbgA -> L-Q3LEjIbgA[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: MBuItvba6z8 -> MBuItvba6z8[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: PjS5uASwcV8 -> PjS5uASwcV8[VideoOut_v1][VideoOut_v1.1][Func]
+PS5 NID fallback: rKBUtgRrtbk -> rKBUtgRrtbk[VideoOut_v1][VideoOut_v1.1][Func]
+PS5 NID fallback: Up36PTk687E -> Up36PTk687E[VideoOut_v1][VideoOut_v1.1][Func]
+PS5 NID fallback: Nv8c-Kb+DUM -> Nv8c-Kb+DUM[VideoOut_v1][VideoOut_v1.1][Func]
+PS5 NID fallback: w0hLuNarQxY -> w0hLuNarQxY[VideoOut_v1][VideoOut_v1.1][Func]
+PS5 NID fallback: j6RaAUlaLv0 -> j6RaAUlaLv0[VideoOut_v1][VideoOut_v1.1][Func]
+PS5 NID fallback: SbU3dwp80lQ -> SbU3dwp80lQ[VideoOut_v1][VideoOut_v1.1][Func]
+PS5 NID fallback: U46NwOiJpys -> U46NwOiJpys[VideoOut_v1][VideoOut_v1.1][Func]
+PS5 NID fallback: efhK-YSUYYQ -> efhK-YSUYYQ[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: qjBlw2cVMAM -> qjBlw2cVMAM[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: gNQ1V2vfXDE -> gNQ1V2vfXDE[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: lKEN2IebgJ0 -> lKEN2IebgJ0[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: NesIgTmfF0Q -> NesIgTmfF0Q[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: Av3zjWi64Kw -> Av3zjWi64Kw[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: C0f7TJcbfac -> C0f7TJcbfac[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: cQke9UuBQOk -> cQke9UuBQOk[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 7oxv3PPCumo -> 7oxv3PPCumo[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: vSMAm3cxYTY -> vSMAm3cxYTY[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: fnUEjBCNRVU -> fnUEjBCNRVU[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: QJ5xVfKkni0 -> QJ5xVfKkni0[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: xENtRue8dpI -> xENtRue8dpI[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: nW9JRkciRk4 -> nW9JRkciRk4[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: 5AYcEn7aoro -> 5AYcEn7aoro[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: 34nH7v2xvNQ -> 34nH7v2xvNQ[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: DAbZ-Vfu6lQ -> DAbZ-Vfu6lQ[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: 7SXNu+0KBYQ -> 7SXNu+0KBYQ[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: 7-a7sBHeUQ8 -> 7-a7sBHeUQ8[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: LEbYWl9rBc8 -> LEbYWl9rBc8[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: nJz16JE1txM -> nJz16JE1txM[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: d3dMyWORw8A -> d3dMyWORw8A[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: RBcs3uut1TA -> RBcs3uut1TA[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: bgAcsbcEznc -> bgAcsbcEznc[LibcInternal_v1][LibcInternal_v1.1][Object]
+PS5 NID fallback: -LFO7jhD5CE -> -LFO7jhD5CE[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: 8Q60JLJ6Rv4 -> 8Q60JLJ6Rv4[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: Nz7J62MvgQs -> Nz7J62MvgQs[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: bzbQ5zQ2Y3g -> bzbQ5zQ2Y3g[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: 1QJWxoB6pCo -> 1QJWxoB6pCo[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: PqF+kHW-2WQ -> PqF+kHW-2WQ[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: PtsB1Q9wsFA -> PtsB1Q9wsFA[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: lWGF8NHv880 -> lWGF8NHv880[LibcInternal_v1][LibcInternal_v1.1][Object]
+PS5 NID fallback: srzSVSbKn7M -> srzSVSbKn7M[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: s62MgBhosjU -> s62MgBhosjU[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: -Jp7F+pXxNg -> -Jp7F+pXxNg[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: wdUufa9g-D8 -> wdUufa9g-D8[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: QMFyLoqNxIg -> QMFyLoqNxIg[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: 9JYNqN6jAKI -> 9JYNqN6jAKI[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: CL7VJxznu6g -> CL7VJxznu6g[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: 77pL1FoD4I4 -> 77pL1FoD4I4[LibcInternal_v1][LibcInternal_v1.1][Object]
+PS5 NID fallback: +3PtYiUxl-U -> +3PtYiUxl-U[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: j6OnScWpu7k -> j6OnScWpu7k[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: y9OoA+P5cjk -> y9OoA+P5cjk[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: 1QcrrL9UDRQ -> 1QcrrL9UDRQ[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: VuMMb5CfpEw -> VuMMb5CfpEw[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: AEPvEZkaLsU -> AEPvEZkaLsU[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: 1uf1SQsj5go -> 1uf1SQsj5go[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: Ok8KPy3nFls -> Ok8KPy3nFls[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: zogPrkd46DY -> zogPrkd46DY[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: J3J1T9fjUik -> J3J1T9fjUik[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: U7IhU4VEB-0 -> U7IhU4VEB-0[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: p6DbM0OAHNo -> p6DbM0OAHNo[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: 6A+1YZ79qFk -> 6A+1YZ79qFk[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: qVHpv0PxouI -> qVHpv0PxouI[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: AHxyhN96dy4 -> AHxyhN96dy4[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: 8hygs6D9KBY -> 8hygs6D9KBY[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: wjG0GyCyaP0 -> wjG0GyCyaP0[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: n0kT+8Eeizs -> n0kT+8Eeizs[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: wDmL2EH0CBs -> wDmL2EH0CBs[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: vqtytrxgLMs -> vqtytrxgLMs[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: fGYLBr2COwA -> fGYLBr2COwA[LibcInternal_v1][LibcInternal_v1.1][Object]
+PS5 NID fallback: AEuF3F2f8TA -> AEuF3F2f8TA[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: 6eU9xX9oEdQ -> 6eU9xX9oEdQ[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: chlN6g6UbGo -> chlN6g6UbGo[LibcInternal_v1][LibcInternal_v1.1][Object]
+PS5 NID fallback: fV2xHER+bKE -> fV2xHER+bKE[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: gjbmYpP-XJQ -> gjbmYpP-XJQ[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: UTrpOVLcoOA -> UTrpOVLcoOA[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: D-qDARDb1aM -> D-qDARDb1aM[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: cjmSjRlnMAs -> cjmSjRlnMAs[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: 45E7omS0vvc -> 45E7omS0vvc[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: NDcSfcYZRC8 -> NDcSfcYZRC8[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: LEvm25Sxi7I -> LEvm25Sxi7I[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: 1mecP7RgI2A -> 1mecP7RgI2A[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: GDuV00CHrUg -> GDuV00CHrUg[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: Jahsnh4KKkg -> Jahsnh4KKkg[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: rcrVFJsQWRY -> rcrVFJsQWRY[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 7ZlAakEf0Qg -> 7ZlAakEf0Qg[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: C2kJ-byS5rM -> C2kJ-byS5rM[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: RtLRV-pBTTY -> RtLRV-pBTTY[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 2Q0z6rnBrTE -> 2Q0z6rnBrTE[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 0qOtCR-ZHck -> 0qOtCR-ZHck[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: euKRgm0Vn2M -> euKRgm0Vn2M[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: VUT1ZSrHT0I -> VUT1ZSrHT0I[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: +0EDo7YzcoU -> +0EDo7YzcoU[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: DRGXpDDh8Ng -> DRGXpDDh8Ng[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: bt3CTBKmGyI -> bt3CTBKmGyI[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: E+tyo3lp5Lw -> E+tyo3lp5Lw[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: JarMIy8kKEY -> JarMIy8kKEY[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: qlk9pSLsUmM -> qlk9pSLsUmM[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: e2G+cdEkOmU -> e2G+cdEkOmU[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: oLjPqUKhzes -> oLjPqUKhzes[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: zHchY8ft5pk -> zHchY8ft5pk[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 2G6i6hMIUUY -> 2G6i6hMIUUY[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 3e+4Iv7IJ8U -> 3e+4Iv7IJ8U[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: DxmIMUQ-wXY -> DxmIMUQ-wXY[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: -SrbXpGR1f0 -> -SrbXpGR1f0[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: xesmlSI-KCI -> xesmlSI-KCI[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: -2IRUCO--PM -> -2IRUCO--PM[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: ku7D4q1Y9PI -> ku7D4q1Y9PI[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: wtkt-teR1so -> wtkt-teR1so[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: PfccT7qURYE -> PfccT7qURYE[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: Q3VBxCXhUHs -> Q3VBxCXhUHs[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: 8zTFvBIAIN8 -> 8zTFvBIAIN8[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: L1SBTkC+Cvw -> L1SBTkC+Cvw[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: Z4QosVuAsA0 -> Z4QosVuAsA0[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 7H0iTOciTLo -> 7H0iTOciTLo[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 2Z+PpY6CaJg -> 2Z+PpY6CaJg[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: mqULNdimTn0 -> mqULNdimTn0[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 0-KXaS70xy4 -> 0-KXaS70xy4[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: WrOLvHU0yQM -> WrOLvHU0yQM[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: Ou3iL1abvng -> Ou3iL1abvng[libkernel_v1][libkernel_v1.1][Func]
+--- Relocate program: /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/sce_module/libc.prx ---
+PS5 NID fallback: NhpspxdjEKU -> NhpspxdjEKU[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: hHlZQUnlxSM -> hHlZQUnlxSM[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: yS8U2TGCe1A -> yS8U2TGCe1A[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: c7ZnT7V1B98 -> c7ZnT7V1B98[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: fgIsQ10xYVA -> fgIsQ10xYVA[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: -YTW+qXc3CQ -> -YTW+qXc3CQ[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 3k6kx-zOOSQ -> 3k6kx-zOOSQ[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: WlyEA-sLDf0 -> WlyEA-sLDf0[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 0Cq8ipKr9n0 -> 0Cq8ipKr9n0[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: gQX+4GDQjpM -> gQX+4GDQjpM[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: tIhsqj0qsFE -> tIhsqj0qsFE[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: cVSk9y8URbc -> cVSk9y8URbc[LibcInternal_v1][LibcInternal_v1.1][Func]
+Relocate: unresolved PLT import patched to stub [97] [000000091010fb90] <- 0000000200000022, EHsF2i9FXPM[LibcInternalExt_v1][LibcInternal_v1.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/sce_module/libc.prx
+PS5 NID fallback: al3JzFI9MQ0 -> al3JzFI9MQ0[LibcInternal_v1][LibcInternal_v1.1][Func]
+---
+--- Start module: /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/sce_module/libc.prx
+---
+	api[0] = 0x0000562766d20b40
+	api[1] = 0x0000562766d20b60
+	api[2] = 0x0000000000000000
+	api[3] = 0x0000000000000000
+	api[4] = 0x0000000000000000
+	api[5] = 0x0000000000000000
+	api[6] = 0x0000562766d20b70
+	api[7] = 0x0000000000000000
+	api[8] = 0x0000000000000000
+	api[9] = 0x0000000000000000
+---
+--- Execute: Main
+---
+stack_addr = 7efdf3ee0
+	 argc = 1
+	 argv = 0x00000007efdf3ee8
+	 envp = 0x00000007efdf3ef8
+	 argv[0] = 
+	mutex init: Static0000000901ca58e8, 0
+	mutex init: Static0000000901ca58d0, 0
+	cond init: Static0000000901ca58d8, cond=0x0000000901ca58d8, caller=0x0000562766c80958, 0
+	 in_addr   = 0x0000002000000000
+	 len       = 0x0000000400000000
+	 flags     = 0x00000000
+	 alignment = 0x0000000000010000
+	 out_addr  = 0x0000002000000000
+	mutex init: Static0000000901cac7b0, 0
+	mutex init: Static0000000901ca66b8, 0
+	 search_start = 0x0000000000000000
+	 search_end   = 0x0000000320000000
+	 len          = 0x0000000001000000
+	 alignment    = 0x0000000000010000
+	 memory_type  = 12
+	phys_addr    = 0000000000200000
+	[Ok]
+	 in_addr  = 0x0000002000000000
+	 out_addr = 0x0000002000000000
+	 dmem     = 0x0000000000200000
+	 size     = 0x0000000001000000
+	 mode     = ReadWrite
+	 flags    = 0x00000010
+	 align    = 0x0000000000010000
+	 gpu_mode = NoAccess
+	 shared   = yes
+	 reason   = n/a
+	 [Ok]
+	mutex init: Static0000000901ca6388, 0
+	mutex init: Static0000000901ca6470, 0
+	 in_addr   = 0x0000000400000000
+	 len       = 0x0000000000204000
+	 flags     = 0x00000000
+	 alignment = 0x0000000000010000
+	 out_addr  = 0x0000000400000000
+	 search_start = 0x0000000000000000
+	 search_end   = 0x0000000320000000
+	 len          = 0x0000000000200000
+	 alignment    = 0x0000000000010000
+	 memory_type  = 12
+	phys_addr    = 0000000001200000
+	[Ok]
+	 start = 0x0000000001200000
+	 len   = 0x0000000000200000
+	 start = 0x0000000400000000
+	 len   = 0x0000000000204000
+	 addr = 0x00000007ef8ec000
+	 len  = 0x0000000000004000
+	 prot: ReadWrite -> NoAccess
+	thread create: , id = -1, 0
+	cpu_mask       = 0x7f
+	detach_state   = 0
+	guard_size     = 4096
+	inherit_sched  = 4
+	sched_priority = 700
+	policy         = 1
+	solosched      = 0
+	stack_addr     = 0x00000007ef8f0000
+	stack_size    = 3145728
+[3][00:00:00.307] libkernel::libkernel::PthreadDetach()
+	thread detach: , 0
+[3][00:00:00.307] libkernel::libkernel::PthreadMutexInitNamed()
+	mutex init: Static0000000901ca63e0, 0
+	 user_id = 1000
+	 type    = 0
+	 index   = 0
+	 param   = 0x0000000000000000
+	 handle      = 1
+	 mode        = 2
+	Pthread run begin: , id = 4, os_thread_id = 3123, entry = 0x0000000900b918a0, arg = 0x0000002000000640, stack_addr = 0x00000007ef8f0000, stack_size = 3145728
+	 path = /app0/hui/theme.txt
+	 flags = 00000000
+	 mode = 0040
+	 KernelStat: /app0/assets/
+[3][00:00:00.309] libkernel::libkernel::PthreadGetname()
+--- Build ---
+Source build df5b9b9-dirty
+--- Error ---
+Unhandled host exception: type=1 code=11 pc=0x0000000900b8eec4 access=1 address=0x0000000000000008
+ in /home/runner/work/NovaPS5-Android/NovaPS5-Android/linux-kyty/src/loader/runtimeLinker.cpp:711

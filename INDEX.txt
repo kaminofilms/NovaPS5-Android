@@ -18,3 +18,4 @@ release/38385479741-a527156c core=success apk=success arm64=success
 runs/38387311349-317d8d81 x86=success arm64=success
 runs/38388078175-bc057780 x86=cancelled arm64=cancelled
 release/38388081269-bc057780 core=cancelled apk=cancelled arm64=cancelled
+runs/38388151616-424d85fe x86=success arm64=success
