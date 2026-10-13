@@ -17,14 +17,10 @@ unset WINEPREFIX WINEARCH WINELOADER WINESERVER WINEDLLPATH WINEDLLOVERRIDES LD_
 # The compositor's ARM64 preload remains on the FEX host. FEX must not forward
 # it into the x86-64 guest; supply guest variables through FEX_ENV explicitly.
 host_preload=${LD_PRELOAD:-}
-export FEX_ROOTFS=$guest
-export FEX_PORTABLE=1
-export FEX_APP_CONFIG_LOCATION=$runtime
-export FEX_THUNKHOSTLIBS=$runtime/host/usr/lib/aarch64-linux-gnu/fex-emu/HostThunks
-export FEX_THUNKGUESTLIBS=$runtime/host/usr/share/fex-emu/GuestThunks
-export FEX_THUNKCONFIG=$runtime/thunks.json
-export PATH=$runtime/host/usr/bin:$PATH
-export FEX_ENV='LD_PRELOAD='
+source "$base/fex-linux.sh"
+nova_fex_setup "$runtime" "$base/fex-config"
+export -f nova_fex_run
+export nova_fex nova_loader nova_guest_libs
 export FEX_TSOENABLED=1 FEX_VECTORTSOENABLED=1 FEX_MEMCPYSETTSOENABLED=1
 export FEX_X87REDUCEDPRECISION=0
 export SDL_VIDEODRIVER=x11
@@ -40,14 +36,15 @@ preflight() {
     else local status=$?; echo "NOVA_ERROR: $stage failed (status $status; 124 means timeout)"; exit "$status"; fi
 }
 preflight 'A FEX runtime version' "$runtime/host/usr/bin/FEXGetConfig" --version
-preflight 'B x86-64 Linux executable' "$fex" /nova-probe
-preflight 'C Kyty dynamic dependencies' "$fex" /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 --list "$core"
-preflight 'D Linux Kyty CLI' "$fex" "$core" --help
+preflight 'B x86-64 Linux executable' bash -c 'nova_fex_run "$@"' nova "$guest/nova-probe"
+preflight 'C Kyty dynamic dependencies' bash -c 'nova_fex_run "$@"' nova --list "$core"
+preflight 'D Linux Kyty CLI' bash -c 'nova_fex_run "$@"' nova "$core" --help
 step 'Guest memory mapping diagnostic'
-"$fex" /nova-probe --memory
-preflight 'Vulkan instance and physical device preflight' "$fex" /nova-probe --vulkan
+bash -c 'nova_fex_run "$@"' nova "$guest/nova-probe" --memory
+preflight 'Vulkan instance and physical device preflight' bash -c 'nova_fex_run "$@"' nova "$guest/nova-probe" --vulkan
 echo 'NOVA_STAGE: F guest execution and G frame presentation UNVERIFIED'
 cd "$base/linux-kyty"
 echo "NOVA_LAUNCH: Linux Kyty game=$game"
 step 'E Linux Kyty attempting selected game'
-"$fex" "$core" --game "$game" --screen-width 1280 --screen-height 720 --vblank-frequency 60 --present-mode Fifo --fullscreen --hide-cursor --no-splash --vulkan-validation false --network-connected false
+bash -c 'nova_fex_run "$@"' nova "$core" --game "$game" --screen-width 1280 --screen-height 720 --vblank-frequency 60 --present-mode Fifo --fullscreen --hide-cursor --no-splash --vulkan-validation false --network-connected false
+

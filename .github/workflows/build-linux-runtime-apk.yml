@@ -51,11 +51,11 @@ jobs:
         run: keytool -genkeypair -storetype PKCS12 -keystore "$RUNNER_TEMP/novaps5-ci.keystore" -storepass android -keypass android -alias novaps5dev -keyalg RSA -keysize 2048 -validity 10000 -dname 'CN=NovaPs5 Linux FEX CI Development'
       - name: Build Linux FEX Android APK
         run: |
-          python3 build-runtime-apk.py --sdk "$ANDROID_HOME" --ndk "$ANDROID_HOME/ndk/28.2.13676358" --jdk "$JAVA_HOME" --keystore "$RUNNER_TEMP/novaps5-ci.keystore" --output dist/NovaPS5-0.3.0-linux-fex-arm64.apk --linux-core build/linux-core/dist/kyty_emulator
+          python3 build-runtime-apk.py --sdk "$ANDROID_HOME" --ndk "$ANDROID_HOME/ndk/28.2.13676358" --jdk "$JAVA_HOME" --keystore "$RUNNER_TEMP/novaps5-ci.keystore" --output dist/NovaPS5-0.3.1-linux-fex-arm64.apk --linux-core build/linux-core/dist/kyty_emulator
       - name: Verify Linux APK
         run: |
-          python3 tests/verify_runtime_apk.py dist/NovaPS5-0.3.0-linux-fex-arm64.apk --sdk "$ANDROID_HOME" --linux-core --json-output dist/verification.json
-          sha256sum dist/NovaPS5-0.3.0-linux-fex-arm64.apk > dist/SHA256SUMS.txt
+          python3 tests/verify_runtime_apk.py dist/NovaPS5-0.3.1-linux-fex-arm64.apk --sdk "$ANDROID_HOME" --linux-core --json-output dist/verification.json
+          sha256sum dist/NovaPS5-0.3.1-linux-fex-arm64.apk > dist/SHA256SUMS.txt
           cp build/linux-core/dist/cli-preflight.txt dist/linux-host-cli.txt
       - uses: actions/upload-artifact@v4
         with:
@@ -83,26 +83,25 @@ jobs:
           python3 - <<'PY'
           import zipfile,tarfile,io
           from pathlib import Path
-          with zipfile.ZipFile('dist/NovaPS5-0.3.0-linux-fex-arm64.apk') as apk:
+          with zipfile.ZipFile('dist/NovaPS5-0.3.1-linux-fex-arm64.apk') as apk:
               Path('build').mkdir(exist_ok=True)
               Path('build/kyty_emulator').write_bytes(apk.read('assets/engine/kyty_emulator'))
+              Path('build/fex-linux.sh').write_bytes(apk.read('assets/engine/fex-linux.sh'))
               with tarfile.open(fileobj=io.BytesIO(apk.read('assets/engine/linux-runtime.tar.gz')),mode='r:gz') as runtime:
                   runtime.extractall('build/runtime',filter='data')
           PY
           chmod 755 build/kyty_emulator
-          export FEX_ROOTFS="$PWD/build/runtime/guest"
-          export FEX_APP_CONFIG_LOCATION="$PWD/build/runtime"
-          export FEX_PORTABLE=1
-          export PATH="$PWD/build/runtime/host/usr/bin:$PATH"
-          export FEX_THUNKHOSTLIBS="$PWD/build/runtime/host/usr/lib/aarch64-linux-gnu/fex-emu/HostThunks"
-          export FEX_THUNKGUESTLIBS="$PWD/build/runtime/host/usr/share/fex-emu/GuestThunks"
+          source build/fex-linux.sh
+          nova_fex_setup "$PWD/build/runtime" "$PWD/build/fex-config"
+          export -f nova_fex_run
+          export nova_fex nova_loader nova_guest_libs
           {
             echo 'CI host: ARM64 Linux; Android/Adreno hardware unavailable'
             timeout 30s FEXGetConfig --version
-            timeout 60s FEX /nova-probe
-            timeout 60s FEX /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 --list "$PWD/build/kyty_emulator"
-            timeout 60s FEX "$PWD/build/kyty_emulator" --help
-            timeout 60s FEX /nova-probe --memory
+            timeout 60s bash -c 'nova_fex_run "$@"' nova "$PWD/build/runtime/guest/nova-probe"
+            timeout 60s bash -c 'nova_fex_run "$@"' nova --list "$PWD/build/kyty_emulator"
+            timeout 60s bash -c 'nova_fex_run "$@"' nova "$PWD/build/kyty_emulator" --help
+            timeout 60s bash -c 'nova_fex_run "$@"' nova "$PWD/build/runtime/guest/nova-probe" --memory
           } 2>&1 | tee dist/arm64-fex-preflight.txt
       - name: Verify Vulkan thunk using the ARM64 software ICD
         shell: bash
@@ -110,18 +109,41 @@ jobs:
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libvulkan1 mesa-vulkan-drivers
-          export FEX_ROOTFS="$PWD/build/runtime/guest"
-          export FEX_APP_CONFIG_LOCATION="$PWD/build/runtime"
-          export FEX_PORTABLE=1
-          export FEX_THUNKHOSTLIBS="$PWD/build/runtime/host/usr/lib/aarch64-linux-gnu/fex-emu/HostThunks"
-          export FEX_THUNKGUESTLIBS="$PWD/build/runtime/host/usr/share/fex-emu/GuestThunks"
-          export FEX_THUNKCONFIG="$PWD/build/runtime/thunks.json"
+          source build/fex-linux.sh
+          nova_fex_setup "$PWD/build/runtime" "$PWD/build/fex-config"
+          export -f nova_fex_run
+          export nova_fex nova_loader nova_guest_libs
           export VK_DRIVER_FILES="$(find /usr/share/vulkan/icd.d -maxdepth 1 -name 'lvp_icd*.json' -print -quit)"
           test -n "$VK_DRIVER_FILES" && test -r "$VK_DRIVER_FILES" || { echo 'Software Vulkan ICD missing'; ls -l /usr/share/vulkan/icd.d; exit 1; }
           echo "Software ICD: $VK_DRIVER_FILES"
           cat "$VK_DRIVER_FILES"
           echo 'CI Vulkan uses software rendering; no Adreno or presented game frame claim' | tee -a dist/arm64-fex-preflight.txt
-          timeout 90s build/runtime/host/usr/bin/FEX /nova-probe --vulkan 2>&1 | tee -a dist/arm64-fex-preflight.txt
+          timeout 90s bash -c 'nova_fex_run "$@"' nova "$PWD/build/runtime/guest/nova-probe" --vulkan 2>&1 | tee -a dist/arm64-fex-preflight.txt
+      - name: Verify the identical loader wrapper inside pinned DroidDeck rootfs and proot
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y --no-install-recommends proot zstd
+          curl --fail --location --retry 3 --silent --show-error https://github.com/The412Banner/winlator-contents/releases/download/linuxfs-r9/linuxfs.tar.zst -o build/linuxfs.tar.zst
+          echo 'd3240c1531531615b0dd06b6ad56e92db9015a8641eb18c3a613835ae45992e7  build/linuxfs.tar.zst' | sha256sum -c -
+          mkdir -p build/droid-root
+          tar --zstd -xf build/linuxfs.tar.zst -C build/droid-root
+          rm build/linuxfs.tar.zst
+          mkdir -p build/droid-root/opt/novaps5/linux-kyty build/droid-root/opt/novaps5/linux-runtime
+          cp build/fex-linux.sh build/droid-root/opt/novaps5/fex-linux.sh
+          # Reproduce a global ARM64 preload; the x86-64 guest must mask it.
+          echo /usr/lib/libm.so.6 > build/droid-root/etc/ld.so.preload
+          cat > build/droid-root/opt/novaps5/ci-preflight.sh <<'SH'
+          set -euo pipefail
+          source /opt/novaps5/fex-linux.sh
+          nova_fex_setup /opt/novaps5/linux-runtime /opt/novaps5/fex-config
+          FEXGetConfig --version
+          nova_fex_run /opt/novaps5/linux-runtime/guest/nova-probe
+          nova_fex_run --list /opt/novaps5/linux-kyty/kyty_emulator
+          nova_fex_run /opt/novaps5/linux-kyty/kyty_emulator --help
+          echo 'NOVA_PROOT: probe, dependency resolution and Kyty CLI PASS inside DroidDeck linuxfs-r9'
+          SH
+          timeout 180s proot -0 -r "$PWD/build/droid-root" -b /dev -b /proc -b /sys -b "$PWD/build/runtime:/opt/novaps5/linux-runtime" -b "$PWD/build/kyty_emulator:/opt/novaps5/linux-kyty/kyty_emulator" -w /opt/novaps5 /bin/bash /opt/novaps5/ci-preflight.sh 2>&1 | tee -a dist/arm64-fex-preflight.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -129,3 +151,4 @@ jobs:
           path: dist/arm64-fex-preflight.txt
           if-no-files-found: warn
           retention-days: 30
+

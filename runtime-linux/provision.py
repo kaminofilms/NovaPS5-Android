@@ -35,6 +35,9 @@ def main():
             root=host if path.is_relative_to(host) else guest
             target=root/os.readlink(path).lstrip('/')
             path.unlink();path.symlink_to(os.path.relpath(target,path.parent))
+    # Mask host-only ARM64 preload entries in the x86-64 rootfs.
+    (guest/'etc').mkdir(exist_ok=True)
+    (guest/'etc/ld.so.preload').write_text('')
     # Use a directory rootfs: FUSE mounts and binfmt_misc registration are unnecessary.
     # Preserve licenses and exact upstream package provenance in the distributable.
     (work/'dependencies.json').write_text(json.dumps(pins,indent=2)+'\n')
@@ -54,7 +57,8 @@ def main():
                     if info.isfile():
                         with path.open('rb') as stream:out.addfile(info,stream)
                     else:out.addfile(info)
-    manifest={'revision':'linux-fex-2610-r1','archive_sha256':digest(a.output),'core_sha256':CORE_SHA,'files':{p.relative_to(work).as_posix():digest(p) for p in work.rglob('*') if p.is_file() and not p.is_symlink()}}
+    manifest={'revision':'linux-fex-2610-r2','archive_sha256':digest(a.output),'core_sha256':CORE_SHA,'files':{p.relative_to(work).as_posix():digest(p) for p in work.rglob('*') if p.is_file() and not p.is_symlink()}}
     a.output.with_suffix('.json').write_text(json.dumps(manifest,indent=2)+'\n')
     print('Linux runtime:',a.output,a.output.stat().st_size,manifest['archive_sha256'])
 if __name__=='__main__':main()
+

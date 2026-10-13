@@ -148,9 +148,15 @@ def main():
                     if path.endswith(('FEX','FEXServer','nova-probe')):assert runtime.getmember(path).mode&0o111
             linux_launcher=archive.read('assets/engine/launch.sh')
             assert linux_launcher==archive.read('assets/engine/launch-linux.sh')
-            assert b'"$fex" "$core" --game "$game"' in linux_launcher
+            assert b'nova "$core" --game "$game"' in linux_launcher
             assert b'"$wine"' not in linux_launcher and b'Z:' not in linux_launcher and b'.exe' not in linux_launcher
-            assert b'FEX_THUNKHOSTLIBS' in linux_launcher and b'FEX_ROOTFS' in linux_launcher
+            helper=archive.read('assets/engine/fex-linux.sh')
+            subprocess.run(['bash','-n'],input=helper,check=True)
+            assert b'FEX_THUNKHOSTLIBS' in helper and b'FEX_ROOTFS' in helper
+            assert b'--inhibit-cache --library-path "$nova_guest_libs"' in helper
+            with tarfile.open(fileobj=io.BytesIO(payload),mode='r:gz') as runtime:
+                assert runtime.extractfile('guest/etc/ld.so.preload').read()==b''
+
         else:
             engine_bytes = archive.read('assets/engine/kyty-windows-df5b9b9.zip')
             if args.core_exe_sha:
@@ -211,4 +217,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 

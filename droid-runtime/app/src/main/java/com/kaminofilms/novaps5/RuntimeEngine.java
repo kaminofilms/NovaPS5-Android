@@ -82,7 +82,7 @@ final class RuntimeEngine {
             Files.move(staging.toPath(),executable.toPath(),java.nio.file.StandardCopyOption.REPLACE_EXISTING,java.nio.file.StandardCopyOption.ATOMIC_MOVE);
         }
         if(!executable.setExecutable(true,false))throw new IOException("Cannot execute Linux Kyty");
-        for(String asset:new String[]{"launch-linux.sh","session-guard.sh"}){
+        for(String asset:new String[]{"launch-linux.sh","fex-linux.sh","session-guard.sh"}){
             File launcher=new File(base,asset.equals("launch-linux.sh")?"launch.sh":asset);try(InputStream in=context.getAssets().open("engine/"+asset);OutputStream out=new FileOutputStream(launcher)){copy(in,out);}if(!launcher.setExecutable(true,false))throw new IOException("Cannot execute "+asset);
         }
         BootLog.write(context,"Linux core verified: "+LINUX_CORE_SHA+"; FEX/runtime verified: "+expected);
@@ -145,4 +145,5 @@ final class RuntimeEngine {
     }
     static void clear(File f)throws IOException {if(java.nio.file.Files.isSymbolicLink(f.toPath())){if(!f.delete())throw new IOException("Cannot remove stale runtime link");return;}if(!f.exists())return;if(f.isDirectory()){File[] files=f.listFiles();if(files!=null)for(File child:files)clear(child);}if(!f.delete())throw new IOException("Cannot remove stale runtime staging file");}
 }
+
 
