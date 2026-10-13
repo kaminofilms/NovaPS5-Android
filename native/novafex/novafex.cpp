@@ -32,6 +32,9 @@
 #include <thread>
 #include <vector>
 #include <cxxabi.h>
+#include <dirent.h>
+#include <execinfo.h>
+#include <sys/syscall.h>
 #include <dlfcn.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -275,14 +278,61 @@ ThreadData::~ThreadData() {
 	}
 }
 
+// Stall diagnostics: every host thread prints its own native backtrace on SIGRTMIN+6.
+void DumpSelf(int, siginfo_t*, void*) {
+	void* frames[40];
+	const int count = backtrace(frames, 40);
+	char header[96];
+	const int n = std::snprintf(header, sizeof(header), "NOVA_FEX: --- stack of tid %d ---\n", static_cast<int>(gettid()));
+	(void)!write(2, header, static_cast<size_t>(n));
+	backtrace_symbols_fd(frames, count, 2);
+}
+
+void DumpAllThreads() {
+	struct sigaction sa {};
+	sa.sa_sigaction = DumpSelf;
+	sa.sa_flags = SA_SIGINFO | SA_RESTART;
+	sigemptyset(&sa.sa_mask);
+	sigaction(SIGRTMIN + 6, &sa, nullptr);
+	const int self = static_cast<int>(gettid());
+	if (DIR* dir = opendir("/proc/self/task")) {
+		while (dirent* entry = readdir(dir)) {
+			const int tid = atoi(entry->d_name);
+			if (tid <= 0 || tid == self) continue;
+			char path[64], stat[512] = "";
+			std::snprintf(path, sizeof(path), "/proc/self/task/%d/stat", tid);
+			if (FILE* f = std::fopen(path, "r")) {
+				if (std::fgets(stat, sizeof(stat), f) == nullptr) stat[0] = 0;
+				std::fclose(f);
+			}
+			// "tid (comm) S ..." -> print comm and run state (R = running/spinning, S/D = waiting)
+			std::fprintf(stderr, "NOVA_FEX: thread %.80s\n", stat);
+			syscall(SYS_tgkill, getpid(), tid, SIGRTMIN + 6);
+			usleep(150000);
+		}
+		closedir(dir);
+	}
+}
+
 void Watchdog() {
 	const char* env = getenv("NOVA_FEX_HEARTBEAT");
 	const int seconds = env != nullptr ? atoi(env) : 5;
 	if (seconds <= 0) return;
 	uint64_t last_gates = 0;
+	uint64_t last_calls = 0;
+	int stalled = 0;
+	bool dumped = false;
 	for (;;) {
 		sleep(static_cast<unsigned>(seconds));
 		const auto gates = g_total_gates.load();
+		const auto calls = g_total_calls.load();
+		stalled = (gates == last_gates && calls == last_calls) ? stalled + 1 : 0;
+		last_calls = calls;
+		if (stalled >= 3 && !dumped) {
+			dumped = true;
+			std::fprintf(stderr, "NOVA_FEX: no guest progress for %d s, dumping host threads\n", stalled * seconds);
+			DumpAllThreads();
+		}
 		std::fprintf(stderr, "NOVA_FEX: heartbeat gates=%llu (+%llu) guest_calls=%llu\n", (unsigned long long)gates,
 		             (unsigned long long)(gates - last_gates), (unsigned long long)g_total_calls.load());
 		last_gates = gates;
