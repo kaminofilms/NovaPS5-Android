@@ -1,0 +1,61 @@
+name: Nova PS5 lab (FEX inside DroidDeck rootfs under proot)
+on:
+  push:
+    branches: [nova-proot-lab]
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  proot:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inputs (APK from release run, DroidDeck rootfs)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run download 38379410109 --repo "$GITHUB_REPOSITORY" --name NovaPS5-Linux-FEX-APK-63d9977f2944d4ea7afec861b7a9fef85857c438 --dir dist
+          python3 - <<'PY'
+          import zipfile,tarfile,io
+          from pathlib import Path
+          with zipfile.ZipFile('dist/NovaPS5-0.3.2-linux-fex-arm64.apk') as apk:
+              Path('build').mkdir(exist_ok=True)
+              Path('build/kyty_emulator').write_bytes(apk.read('assets/engine/kyty_emulator'))
+              with tarfile.open(fileobj=io.BytesIO(apk.read('assets/engine/linux-runtime.tar.gz')),mode='r:gz') as runtime:
+                  runtime.extractall('build/runtime',filter='data')
+          PY
+          chmod 755 build/kyty_emulator
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends proot zstd strace
+          curl --fail --location --retry 3 --silent --show-error https://github.com/The412Banner/winlator-contents/releases/download/linuxfs-r9/linuxfs.tar.zst -o build/linuxfs.tar.zst
+          mkdir -p build/droid-root && tar --zstd -xf build/linuxfs.tar.zst -C build/droid-root && rm build/linuxfs.tar.zst
+          mkdir -p build/droid-root/opt/novaps5/linux-kyty build/droid-root/opt/novaps5/linux-runtime
+          cp droid-runtime/app/src/main/assets/engine/fex-linux.sh build/droid-root/opt/novaps5/fex-linux.sh
+          printf '/usr/local/lib/libblsession.so\n/usr/local/lib/libfakeinput.so\n' > build/droid-root/etc/ld.so.preload
+          cp tools/lab/proot-probe.sh build/droid-root/opt/novaps5/proot-probe.sh
+      - name: Native (no proot) reference
+        shell: bash
+        run: |
+          mkdir -p out
+          bash tools/lab/proot-probe.sh "$PWD/build/runtime" "$PWD/build/fex-config-native" "$PWD/droid-runtime/app/src/main/assets/engine/fex-linux.sh" > out/native.txt 2>&1 || true
+          cat out/native.txt
+      - name: Inside DroidDeck rootfs with proot (as on the phone)
+        shell: bash
+        run: |
+          timeout 600s proot -0 -r "$PWD/build/droid-root" -b /dev -b /proc -b /sys -b "$PWD/build/runtime:/opt/novaps5/linux-runtime" -b "$PWD/build/kyty_emulator:/opt/novaps5/linux-kyty/kyty_emulator" -w /opt/novaps5 /bin/bash /opt/novaps5/proot-probe.sh /opt/novaps5/linux-runtime /opt/novaps5/fex-config /opt/novaps5/fex-linux.sh > out/proot.txt 2>&1 || true
+          cat out/proot.txt
+      - name: Commit logs to lab-logs
+        if: always()
+        run: |
+          set -euo pipefail
+          dest="proot/${GITHUB_RUN_ID}-${GITHUB_SHA::8}"
+          git init -q logs && cd logs
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q --depth 1 origin lab-logs; then git checkout -q -b lab-logs FETCH_HEAD; else git checkout -q --orphan lab-logs; fi
+          mkdir -p "$dest"; cp -r ../out/. "$dest/" || true
+          echo "$dest" >> INDEX.txt
+          git add -A
+          git -c user.name=nova-lab -c user.email=nova-lab@users.noreply.github.com commit -qm "proot lab $dest"
+          for i in 1 2 3; do git push -q origin HEAD:lab-logs && break; git pull -q --rebase origin lab-logs; done
