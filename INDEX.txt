@@ -26,3 +26,4 @@ runs/38390813839-513cd0e4 x86=success arm64=success
 release/38390817240-513cd0e4 core=success apk=success arm64=success
 runs/38392157455-45d4c408 x86=success arm64=success
 runs/novafex-38393722880-87d6f402 novafex job=cancelled
+runs/novafex-38393957842-7f0bc2c1 novafex job=failure
