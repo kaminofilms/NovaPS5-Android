@@ -48,3 +48,4 @@ release/38427824643-b8cc029b core=success apk=success arm64=success
 runs/native-38427824641-b8cc029b native job=cancelled
 runs/novafex-38429836327-d5e71aef novafex job=success
 release/38429836272-d5e71aef core=cancelled apk=cancelled arm64=cancelled
+release/38430236671-100967d5 core=success apk=success arm64=success
