@@ -1,0 +1,77 @@
+name: Nova PS5 native ARM64 bridge (embedded FEXCore)
+# Builds the NovaFex bridge inside a pinned FEX tree on a Linux ARM64 runner and runs its
+# guest<->host tests. The log is committed to the lab-logs branch (runs/novafex-*).
+on:
+  push:
+    branches: [native-arm64]
+    paths: ['native/**', '.github/workflows/novafex.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: novafex-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  FEX_COMMIT: 14c92681f4d62cf84d901460e0358de09c8847a7
+jobs:
+  bridge:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang lld ninja-build cmake git python3 ccache
+      - name: Pinned FEX source
+        run: |
+          set -euo pipefail
+          git init -q fex && cd fex
+          git remote add origin https://github.com/FEX-Emu/FEX.git
+          git fetch -q --depth 1 origin "$FEX_COMMIT" && git checkout -q FETCH_HEAD
+          git submodule update --init --depth 1 External/fmt External/range-v3 External/rpmalloc \
+            External/unordered_dense External/vixl External/xxhash External/jemalloc_glibc \
+            Source/Common/cpp-optparse
+          cp -r "$GITHUB_WORKSPACE/native/novafex" Source/Tools/NovaFex
+          echo 'add_subdirectory(NovaFex/)' >> Source/Tools/CMakeLists.txt
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: novafex-ccache-${{ env.FEX_COMMIT }}-${{ hashFiles('native/**') }}
+          restore-keys: novafex-ccache-${{ env.FEX_COMMIT }}-
+      - name: Build
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          export CCACHE_DIR=~/.cache/ccache CCACHE_MAXSIZE=2G
+          cmake -S fex -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DENABLE_LTO=OFF -DBUILD_FEXCONFIG=OFF -DBUILD_TESTING=OFF -DBUILD_THUNKS=OFF \
+            -DENABLE_JEMALLOC_GLIBC_ALLOC=OFF -DENABLE_ASSERTIONS=ON -DENABLE_CCACHE=OFF 2>&1 | tail -30 | tee out/cmake.txt
+          cmake --build build --target novafex_test --parallel 4 2>&1 | tail -150 | tee out/build.txt
+          test "${PIPESTATUS[0]}" -eq 0
+          ccache -s | tee -a out/build.txt
+      - name: Bridge tests
+        run: |
+          set -uo pipefail
+          lscpu | head -20 > out/cpu.txt
+          bin=$(find build -type f -name novafex_test -perm /111 | head -n 1)
+          status=0
+          timeout 300s "$bin" > out/novafex-test.txt 2>&1 || status=$?
+          echo "NOVAFEX_TEST: exit=$status" >> out/novafex-test.txt
+          cat out/novafex-test.txt
+          grep -q 'NOVAFEX_TEST: ALL PASS' out/novafex-test.txt
+      - name: Commit logs to lab-logs
+        if: always()
+        run: |
+          set -euo pipefail
+          dest="runs/novafex-${GITHUB_RUN_ID}-${GITHUB_SHA::8}"
+          git init -q logs && cd logs
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q --depth 1 origin lab-logs; then git checkout -q -b lab-logs FETCH_HEAD; else git checkout -q --orphan lab-logs; fi
+          mkdir -p "$dest"; cp -r ../out/. "$dest/" 2>/dev/null || true
+          printf '%s novafex job=%s\n' "$dest" "${{ job.status }}" >> INDEX.txt
+          git add -A
+          git -c user.name=nova-lab -c user.email=nova-lab@users.noreply.github.com commit -qm "novafex logs $dest"
+          for i in 1 2 3; do git push -q origin HEAD:lab-logs && break; git pull -q --rebase origin lab-logs; done
