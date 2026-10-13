@@ -1,0 +1,30 @@
+-- Performing Test GCC_COLOR
+-- Performing Test GCC_COLOR - Success
+-- Performing Test CLANG_COLOR
+-- Performing Test CLANG_COLOR - Success
+-- Performing Test ENUM_ENUM_WARNING
+-- Performing Test ENUM_ENUM_WARNING - Success
+-- Performing Test COMPILER_SUPPORTS_ARCH_TYPE
+-- Performing Test COMPILER_SUPPORTS_ARCH_TYPE - Success
+-- Performing Test COMPILER_SUPPORTS_CPU_TYPE
+-- Performing Test COMPILER_SUPPORTS_CPU_TYPE - Success
+-- FEX version: 
+-- FEX commit: 14c92681f4d62cf84d901460e0358de09c8847a7
+-- Performing Test HAS_SYSCALL_GETCPU
+-- Performing Test HAS_SYSCALL_GETCPU - Success
+-- Has getcpu helper
+-- Performing Test HAS_SYSCALL_GETTID
+-- Performing Test HAS_SYSCALL_GETTID - Success
+-- Has gettid helper
+-- Performing Test HAS_SYSCALL_TGKILL
+-- Performing Test HAS_SYSCALL_TGKILL - Success
+-- Has tgkill helper
+-- Performing Test HAS_SYSCALL_STATX
+-- Performing Test HAS_SYSCALL_STATX - Success
+-- Has statx helper
+-- Performing Test HAS_SYSCALL_RENAMEAT2
+-- Performing Test HAS_SYSCALL_RENAMEAT2 - Success
+-- Has renameat2 helper
+-- Configuring done (13.8s)
+-- Generating done (0.1s)
+-- Build files have been written to: /home/runner/work/NovaPS5-Android/NovaPS5-Android/build
