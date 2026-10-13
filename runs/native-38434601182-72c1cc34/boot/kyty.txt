@@ -1,0 +1,53 @@
+Initialized: Config
+Initialized: Log
+Initialized: Timer
+Initialized: Pthread
+Initialized: Profiler
+Initialized: Network
+NOVA_MEMORY: host VA ceiling 0x0000008000000000; guest user window clamped to [0x0000001000000000, 0x0000006000000000); extended memory at 0x0000080000000000 unavailable
+Initialized: Memory
+Initialized: FileSystem
+Initialized: Controller
+Initialized: Audio
+Vulkan pipeline cache: disabled (dirty build)
+Initialized: Graphics
+Title ID: PPSA59322
+NOVA_FEX: host AVX=1 SVE256=0 AFP=0 RCPC=1
+--- Guest fault context ---
+thread: MainThread
+rax=0000003000000008 rbx=0000003000000017 rcx=0000ffb5760f7620 rdx=00000024032fb978
+rsi=0000000000000073 rdi=0000000000000000 rbp=0000ffb16efec920 rsp=0000ffb16efec3b0
+r8 =0000000000000000 r9 =0000000000000000 r10=0000000000000000 r11=0000000000000000
+r12=0000ffb57685a350 r13=0000000000000002 r14=0000000003297ef0 r15=0000ffb575ff7ec0
+code (pc-48 .. pc+48, fault at byte 48):
+ 3f 00 00 71 0d 9f 00 54 c3 2e 00 91 e0 03 16 aa
+ 76 f0 7d 92 e1 53 00 b9 d8 ff ff 17 e0 53 40 b9
+ 20 7e f8 37 c1 3e 00 91 e0 03 16 aa 36 f0 7d 92
+ 15 00 40 f9 00 03 00 52 35 08 00 b5 9f 17 00 71
+ 84 db 41 3a c0 8d 00 54 75 08 00 b0 b5 82 38 91
+ 01 00 80 52 18 00 80 d2 e0 2b 40 b9 17 00 01 6b
+stack:
+  0000ffb16efec430 00000000000000d2 3900ffb16efec4a0 3065333661633130
+  0000ffb575ff7f5c 0000aaae00000000 0000aaae00000000 3000ffb16efec430
+  0000ffb100000020 0000aaae00000000 0000000000111e90 001fffb57605bb8c
+  0000ffb16efee200 0000ffb500000000 0000000000000000 0000000000000000
+  00000000121c1db1 46cf1aca1fd9b700 0000ffb16efec470 0000ffb5760f75a0
+  0000ffb5760f7680 00000007efdf2770 0000000000000009 00000007efdf2690
+  0000000900cbee5e 0000000900cbee7e 0000ffb16efec4f8 0000000000001700
+  000000006efec550 ffffffffffffffff 0000ffb15c0d7140 0000ffb15c075ae0
+--- Build ---
+Source build df5b9b9-dirty
+--- Error ---
+Unhandled host exception: type=1 code=11 pc=0x0000ffb575ff8290 access=1 address=0x0000003000000008
+ in /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/loader/runtimeLinker.cpp:723
+--- Host backtrace ---
+#01 /home/runner/work/NovaPS5-Android/NovaPS5-Android/dist/ci/kyty_emulator+0x949a48 Common::DbgExitHandler(char const*, int, std::basic_string_view<char, std::char_traits<char> >)
+#02 /home/runner/work/NovaPS5-Android/NovaPS5-Android/dist/ci/kyty_emulator+0x9321a8 ?
+#03 /home/runner/work/NovaPS5-Android/NovaPS5-Android/dist/ci/kyty_emulator+0x951b84 ?
+#04 linux-vdso.so.1+0x938 __kernel_rt_sigreturn
+#05 /lib/aarch64-linux-gnu/libc.so.6+0x58290 ?
+#06 /lib/aarch64-linux-gnu/libc.so.6+0x79790 ?
+#07 /lib/aarch64-linux-gnu/libc.so.6+0x79880 vasprintf
+#08 /home/runner/work/NovaPS5-Android/NovaPS5-Android/dist/ci/kyty_emulator+0x825780 ?
+#09 /home/runner/work/NovaPS5-Android/NovaPS5-Android/dist/ci/libnovafex.so+0x5d0d4 ?
+NOVA_LAB: mode=native exit=65 elapsed=16s (124 = still running at timeout)

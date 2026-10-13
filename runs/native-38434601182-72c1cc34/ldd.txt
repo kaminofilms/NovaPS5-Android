@@ -1,0 +1,7 @@
+	linux-vdso.so.1 (0x0000ffa57cf5e000)
+	libnovafex.so => /home/runner/work/NovaPS5-Android/NovaPS5-Android/dist/ci/libnovafex.so (0x0000ffa57a4f0000)
+	libm.so.6 => /lib/aarch64-linux-gnu/libm.so.6 (0x0000ffa57a440000)
+	libstdc++.so.6 => /lib/aarch64-linux-gnu/libstdc++.so.6 (0x0000ffa57a1b0000)
+	libgcc_s.so.1 => /lib/aarch64-linux-gnu/libgcc_s.so.1 (0x0000ffa57a170000)
+	libc.so.6 => /lib/aarch64-linux-gnu/libc.so.6 (0x0000ffa579fb0000)
+	/lib/ld-linux-aarch64.so.1 (0x0000ffa57cf10000)
