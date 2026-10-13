@@ -269,6 +269,21 @@ ThreadData& Current() {
 			t.fex->CallRetStackBase = static_cast<uint8_t*>(p) + kSlack;
 			t.fex->CurrentFrame->State.callret_sp = reinterpret_cast<uint64_t>(t.fex->CallRetStackBase) + kSize / 4;
 		}
+		// Per-thread GDT with a 64-bit user code segment (the decoder reads the mode from CS).
+		{
+			using FEXCore::Core::CPUState;
+			auto* gdt = new CPUState::gdt_segment[32] {};
+			auto& st = t.fex->CurrentFrame->State;
+			st.segment_arrays[CPUState::SEGMENT_ARRAY_INDEX_GDT] = gdt;
+			st.segment_arrays[CPUState::SEGMENT_ARRAY_INDEX_LDT] = gdt;
+			st.cs_idx = CPUState::DEFAULT_USER_CS << 3;
+			auto* cs = CPUState::GetSegmentFromIndex(st, st.cs_idx);
+			CPUState::SetGDTBase(cs, 0);
+			CPUState::SetGDTLimit(cs, 0xF'FFFFU);
+			cs->L = 1;
+			cs->D = 0;
+			st.cs_cached = CPUState::CalculateGDTBase(*cs);
+		}
 		// ExecuteThread() normally sets this; Nova only ever enters through callbacks.
 		t.fex->CurrentFrame->Pointers.ThunkCallbackRet = g_arena.callback_ret;
 		auto& s = t.fex->CurrentFrame->State;
