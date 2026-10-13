@@ -343,8 +343,22 @@ void Watchdog() {
 		static int beat = 0;
 		const bool report = (beat++ % 6) == 0;
 		if (report) {
-			std::fprintf(stderr, "NOVA_FEX: heartbeat gates=%llu guest_calls=%llu threads=%zu\n", (unsigned long long)gates,
-			             (unsigned long long)g_total_calls.load(), g_threads.size());
+			// Memory: a silent kill (no error, no exit status) is usually Android's low-memory killer.
+			auto read_kb = [](const char* path, const char* key) -> long {
+				long value = -1;
+				if (FILE* f = std::fopen(path, "r")) {
+					char line[256];
+					const size_t len = strlen(key);
+					while (std::fgets(line, sizeof(line), f) != nullptr) {
+						if (strncmp(line, key, len) == 0) { value = atol(line + len); break; }
+					}
+					std::fclose(f);
+				}
+				return value;
+			};
+			std::fprintf(stderr, "NOVA_FEX: heartbeat gates=%llu guest_calls=%llu threads=%zu rss=%ldMB avail=%ldMB\n",
+			             (unsigned long long)gates, (unsigned long long)g_total_calls.load(), g_threads.size(),
+			             read_kb("/proc/self/status", "VmRSS:") / 1024, read_kb("/proc/meminfo", "MemAvailable:") / 1024);
 		}
 		last_gates = gates;
 		// Per-thread detail only when the guest has stopped making progress.
