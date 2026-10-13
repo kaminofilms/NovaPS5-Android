@@ -5,7 +5,6 @@ from pathlib import Path
 import urllib.request
 
 ROOT=Path(__file__).resolve().parent
-CORE_SHA='e594d71bb9c60ff47d2ac1e1ee4b9c21eca7ad1ba949d1943a7644eabc2f846c'
 def digest(p): return hashlib.sha256(p.read_bytes()).hexdigest()
 def fetch(pin,cache):
     path=cache/(pin['sha256']+'.deb')
@@ -19,7 +18,7 @@ def fetch(pin,cache):
     else: raise RuntimeError('Checksum mismatch: '+pin['url'])
     return path
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--output',type=Path,required=True);p.add_argument('--cache',type=Path,default=ROOT.parent/'build/linux-debs');a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--output',type=Path,required=True);p.add_argument('--core-sha',required=True);p.add_argument('--cache',type=Path,default=ROOT.parent/'build/linux-debs');a=p.parse_args()
     a.cache.mkdir(parents=True,exist_ok=True);work=a.cache/'overlay';shutil.rmtree(work,ignore_errors=True)
     host=work/'host';guest=work/'guest';host.mkdir(parents=True);guest.mkdir()
     pins=json.loads((ROOT/'dependencies.json').read_text());allpins=[pins['fex']]+pins['guest']
@@ -57,7 +56,7 @@ def main():
                     if info.isfile():
                         with path.open('rb') as stream:out.addfile(info,stream)
                     else:out.addfile(info)
-    manifest={'revision':'linux-fex-2610-r2','archive_sha256':digest(a.output),'core_sha256':CORE_SHA,'files':{p.relative_to(work).as_posix():digest(p) for p in work.rglob('*') if p.is_file() and not p.is_symlink()}}
+    manifest={'revision':'linux-fex-2610-r3','archive_sha256':digest(a.output),'core_sha256':a.core_sha,'files':{p.relative_to(work).as_posix():digest(p) for p in work.rglob('*') if p.is_file() and not p.is_symlink()}}
     a.output.with_suffix('.json').write_text(json.dumps(manifest,indent=2)+'\n')
     print('Linux runtime:',a.output,a.output.stat().st_size,manifest['archive_sha256'])
 if __name__=='__main__':main()

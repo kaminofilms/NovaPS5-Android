@@ -31,11 +31,11 @@ jobs:
       - name: Apply Nova Kyty patches
         run: |
           set -euo pipefail
-          for p in patches/kyty-nova-*.patch; do echo "apply $p"; git -C linux-kyty apply --verbose "$GITHUB_WORKSPACE/$p"; done
+          grep -v '^#' patches/linux-core.series | while read -r p; do echo "apply $p"; git -C linux-kyty apply --verbose "$GITHUB_WORKSPACE/patches/$p"; done
       - uses: actions/cache@v4
         with:
           path: ~/.cache/ccache
-          key: kyty-ccache-df5b9b9-${{ hashFiles('patches/kyty-nova-*.patch') }}
+          key: kyty-ccache-df5b9b9-${{ hashFiles('patches/linux-core.series', 'patches/*.patch') }}
           restore-keys: kyty-ccache-df5b9b9-
       - name: Build
         run: |

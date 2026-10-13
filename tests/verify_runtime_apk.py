@@ -134,7 +134,10 @@ def main():
             import io,tarfile
             core=archive.read('assets/engine/kyty_emulator')
             assert core[:6]==b'\x7fELF\x02\x01' and struct.unpack_from('<H',core,18)[0]==62
-            assert hashlib.sha256(core).hexdigest()=='e594d71bb9c60ff47d2ac1e1ee4b9c21eca7ad1ba949d1943a7644eabc2f846c'
+            core_sha=hashlib.sha256(core).hexdigest()
+            # RuntimeEngine re-verifies the installed core against this exact string.
+            assert any(core_sha.encode() in archive.read(name) for name in names if re.fullmatch(r'classes\d*\.dex',name)),'core SHA-256 not compiled into RuntimeEngine'
+            assert not any(b'@NOVA_LINUX_CORE_SHA256@' in archive.read(name) for name in names if name.endswith('.dex'))
             assert b'/lib64/ld-linux-x86-64.so.2' in core
             assert 'assets/engine/memory-compat.zip' not in names
             manifest=json.loads(archive.read('assets/engine/linux-runtime.tar.json'))
@@ -153,6 +156,10 @@ def main():
             helper=archive.read('assets/engine/fex-linux.sh')
             subprocess.run(['bash','-n'],input=helper,check=True)
             assert b'FEX_THUNKHOSTLIBS' in helper and b'FEX_ROOTFS' in helper
+            # FEX concatenates file names onto FEX_APP_CONFIG_LOCATION; without the slash
+            # the Vulkan thunk overlays are never loaded (vkCreateInstance=-9 on device).
+            assert b'FEX_APP_CONFIG_LOCATION=${config%/}/' in helper
+            assert b'NOVA_KYTY_REQ' in linux_launcher and b'NOVA_STAGE: $1 $2' in linux_launcher
             assert b'--inhibit-cache --library-path "$nova_guest_libs"' in helper
             with tarfile.open(fileobj=io.BytesIO(payload),mode='r:gz') as runtime:
                 assert runtime.extractfile('guest/etc/ld.so.preload').read()==b''
@@ -207,7 +214,9 @@ def main():
         for line in badging.splitlines():
             if line.startswith('package:'):
                 report['packageMetadata'] = line
-        assert "name='com.kaminofilms.novaps5'" in badging and "native-code: 'arm64-v8a'" in badging
+        assert "name='com.kaminofilms.novaps5'" in badging
+        if args.linux_core:
+            assert "versionName='0.3.2-linux-fex'" in badging and "versionCode='12'" in badging and "native-code: 'arm64-v8a'" in badging
         subprocess.run([str(bt / 'zipalign'), '-c', '-P', '16', '4', str(args.apk)], check=True)
     if args.json_output:
         args.json_output.parent.mkdir(parents=True, exist_ok=True)

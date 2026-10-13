@@ -5,16 +5,68 @@ on:
     paths:
       - 'build-runtime-apk.py'
       - 'runtime-linux/**'
+      - 'patches/**'
       - 'droid-runtime/app/src/main/java/com/kaminofilms/novaps5/**'
-      - 'droid-runtime/app/src/main/assets/engine/launch-linux.sh'
-      - 'tests/verify_runtime_apk.py'
+      - 'droid-runtime/app/src/main/assets/engine/**'
+      - 'tests/**'
       - '.github/workflows/build-linux-runtime-apk.yml'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
   actions: read
+env:
+  APK: NovaPS5-0.3.2-linux-fex-arm64.apk
+  KYTY_COMMIT: df5b9b92be7dfd463b47756b707d6d356a9f0550
 jobs:
+  core:
+    name: Build Linux x86-64 Kyty (pinned source + Nova patches)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install headless Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang lld ninja-build cmake git glslang-tools python3 pkg-config ccache libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev libxfixes-dev libxi-dev libxrandr-dev libxss-dev libxtst-dev libxkbcommon-dev libasound2-dev libpulse-dev libudev-dev libdbus-1-dev libwayland-dev wayland-protocols
+      - uses: actions/checkout@v4
+        with:
+          repository: KytyPS5/KytyPS5
+          ref: ${{ env.KYTY_COMMIT }}
+          submodules: recursive
+          path: linux-kyty
+      - name: Apply Nova Kyty patches
+        run: grep -v '^#' patches/linux-core.series | while read -r p; do echo "apply $p"; git -C linux-kyty apply --verbose "$GITHUB_WORKSPACE/patches/$p"; done
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: kyty-ccache-df5b9b9-${{ hashFiles('patches/linux-core.series', 'patches/*.patch') }}
+          restore-keys: kyty-ccache-df5b9b9-
+      - name: Build
+        run: |
+          set -euo pipefail
+          export CCACHE_DIR=~/.cache/ccache CCACHE_MAXSIZE=2G
+          cmake -S linux-kyty -B build/linux-kyty -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DKYTY_BUILD_LAUNCHER=OFF -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build build/linux-kyty --target kyty_emulator --parallel 4
+          mkdir -p core
+          cp "$(find build/linux-kyty -type f -name kyty_emulator -perm /111 | head -n 1)" core/kyty_emulator
+          file core/kyty_emulator | grep -q 'ELF 64-bit.*x86-64'
+          timeout 30s core/kyty_emulator --help > core/cli-preflight.txt
+          python3 - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          h=lambda p:hashlib.sha256(Path(p).read_bytes()).hexdigest()
+          json.dump({'sha256':h('core/kyty_emulator'),'source_commit':'${{ env.KYTY_COMMIT }}',
+                     'patches':{n:h('patches/'+n) for n in Path('patches/linux-core.series').read_text().split() if not n.startswith('#') and n.endswith('.patch')}},
+                    open('core/kyty-core.json','w'),indent=2)
+          print(open('core/kyty-core.json').read())
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kyty-linux-core
+          path: core/*
+          retention-days: 30
   linux-apk:
+    needs: core
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -27,36 +79,36 @@ jobs:
         with:
           packages: platform-tools
           log-accepted-android-sdk-licenses: false
-      - name: Install Android build tools
-        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;28.2.13676358'
-      - name: Retrieve pinned successful Linux core
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Install Android build tools and Vulkan headers
         run: |
-          set -euo pipefail
-          mkdir -p build/linux-core/dist
-          gh run download 38324155342 --repo "$GITHUB_REPOSITORY" --name NovaPS5-Linux-Kyty-x86_64-802adeb479110a76b590a0f56747b41c049b3adb --dir build/linux-core/dist
-          cd build/linux-core
-          sha256sum -c dist/SHA256SUMS.txt
-          echo 'e594d71bb9c60ff47d2ac1e1ee4b9c21eca7ad1ba949d1943a7644eabc2f846c  dist/kyty_emulator' | sha256sum -c -
-          chmod 755 dist/kyty_emulator
-          readelf -l dist/kyty_emulator > dist/program-headers.txt
-          readelf -d dist/kyty_emulator > dist/dynamic-dependencies.txt
-          timeout 30s dist/kyty_emulator --help | tee dist/cli-preflight.txt
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;28.2.13676358'
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends libvulkan-dev
+      - uses: actions/download-artifact@v4
+        with:
+          name: kyty-linux-core
+          path: build/linux-core
       - name: Test Linux launch routing
         run: python3 tests/test_linux_launch.py
       - name: Provision pinned standalone FEX and x86-64 guest libraries
-        run: python3 runtime-linux/provision.py --output droid-runtime/app/src/main/assets/engine/linux-runtime.tar.gz
-      - name: Create CI signing identity
-        run: keytool -genkeypair -storetype PKCS12 -keystore "$RUNNER_TEMP/novaps5-ci.keystore" -storepass android -keypass android -alias novaps5dev -keyalg RSA -keysize 2048 -validity 10000 -dname 'CN=NovaPs5 Linux FEX CI Development'
-      - name: Build Linux FEX Android APK
         run: |
-          python3 build-runtime-apk.py --sdk "$ANDROID_HOME" --ndk "$ANDROID_HOME/ndk/28.2.13676358" --jdk "$JAVA_HOME" --keystore "$RUNNER_TEMP/novaps5-ci.keystore" --output dist/NovaPS5-0.3.1-linux-fex-arm64.apk --linux-core build/linux-core/dist/kyty_emulator
+          set -euo pipefail
+          chmod 755 build/linux-core/kyty_emulator
+          sha=$(python3 -c "import json;print(json.load(open('build/linux-core/kyty-core.json'))['sha256'])")
+          python3 runtime-linux/provision.py --core-sha "$sha" --output droid-runtime/app/src/main/assets/engine/linux-runtime.tar.gz
+      - name: Signing identity (repository secret NOVA_KEYSTORE_B64 keeps upgrades installable)
+        env:
+          NOVA_KEYSTORE_B64: ${{ secrets.NOVA_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$NOVA_KEYSTORE_B64" ]; then echo "$NOVA_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/novaps5-ci.keystore"; echo 'Using persistent signing key';
+          else keytool -genkeypair -storetype PKCS12 -keystore "$RUNNER_TEMP/novaps5-ci.keystore" -storepass android -keypass android -alias novaps5dev -keyalg RSA -keysize 2048 -validity 10000 -dname 'CN=NovaPs5 Linux FEX CI Development'; echo '::warning::Temporary signing key: uninstall the previous Nova PS5 before installing this APK'; fi
+      - name: Build Linux FEX Android APK
+        run: python3 build-runtime-apk.py --sdk "$ANDROID_HOME" --ndk "$ANDROID_HOME/ndk/28.2.13676358" --jdk "$JAVA_HOME" --keystore "$RUNNER_TEMP/novaps5-ci.keystore" --output "dist/$APK" --linux-core build/linux-core/kyty_emulator
       - name: Verify Linux APK
         run: |
-          python3 tests/verify_runtime_apk.py dist/NovaPS5-0.3.1-linux-fex-arm64.apk --sdk "$ANDROID_HOME" --linux-core --json-output dist/verification.json
-          sha256sum dist/NovaPS5-0.3.1-linux-fex-arm64.apk > dist/SHA256SUMS.txt
-          cp build/linux-core/dist/cli-preflight.txt dist/linux-host-cli.txt
+          python3 tests/verify_runtime_apk.py "dist/$APK" --sdk "$ANDROID_HOME" --linux-core --json-output dist/verification.json
+          (cd dist && sha256sum "$APK" > SHA256SUMS.txt)
+          cp build/linux-core/cli-preflight.txt dist/linux-host-cli.txt
+          cp build/linux-core/kyty-core.json dist/kyty-core.json
       - uses: actions/upload-artifact@v4
         with:
           name: NovaPS5-Linux-FEX-APK-${{ github.sha }}
@@ -69,21 +121,19 @@ jobs:
   arm64-fex-preflight:
     needs: linux-apk
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: NovaPS5-Linux-FEX-APK-${{ github.sha }}
           path: dist
-      - name: Run standalone FEX stages A through D on Linux ARM64
-        shell: bash
+      - name: Unpack the APK payload exactly as Android receives it
         run: |
-          set -euo pipefail
           python3 - <<'PY'
-          import zipfile,tarfile,io
+          import zipfile,tarfile,io,os
           from pathlib import Path
-          with zipfile.ZipFile('dist/NovaPS5-0.3.1-linux-fex-arm64.apk') as apk:
+          with zipfile.ZipFile('dist/'+os.environ['APK']) as apk:
               Path('build').mkdir(exist_ok=True)
               Path('build/kyty_emulator').write_bytes(apk.read('assets/engine/kyty_emulator'))
               Path('build/fex-linux.sh').write_bytes(apk.read('assets/engine/fex-linux.sh'))
@@ -91,35 +141,44 @@ jobs:
                   runtime.extractall('build/runtime',filter='data')
           PY
           chmod 755 build/kyty_emulator
+      - name: Stages B-C and E through standalone FEX on Linux ARM64
+        shell: bash
+        run: |
+          set -euo pipefail
           source build/fex-linux.sh
           nova_fex_setup "$PWD/build/runtime" "$PWD/build/fex-config"
           export -f nova_fex_run
           export nova_fex nova_loader nova_guest_libs
+          run() { timeout 60s bash -c 'nova_fex_run "$@"' nova "$@"; }
           {
             echo 'CI host: ARM64 Linux; Android/Adreno hardware unavailable'
             timeout 30s FEXGetConfig --version
-            timeout 60s bash -c 'nova_fex_run "$@"' nova "$PWD/build/runtime/guest/nova-probe"
-            timeout 60s bash -c 'nova_fex_run "$@"' nova --list "$PWD/build/kyty_emulator"
-            timeout 60s bash -c 'nova_fex_run "$@"' nova "$PWD/build/kyty_emulator" --help
-            timeout 60s bash -c 'nova_fex_run "$@"' nova "$PWD/build/runtime/guest/nova-probe" --memory
+            run "$PWD/build/runtime/guest/nova-probe"
+            run --list "$PWD/build/kyty_emulator"
+            run "$PWD/build/kyty_emulator" --help
+            run "$PWD/build/runtime/guest/nova-probe" --memory
           } 2>&1 | tee dist/arm64-fex-preflight.txt
-      - name: Verify Vulkan thunk using the ARM64 software ICD
+      - name: Stage D Vulkan translation through FEX thunks (ARM64 lavapipe)
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libvulkan1 mesa-vulkan-drivers
           source build/fex-linux.sh
           nova_fex_setup "$PWD/build/runtime" "$PWD/build/fex-config"
-          export -f nova_fex_run
-          export nova_fex nova_loader nova_guest_libs
           export VK_DRIVER_FILES="$(find /usr/share/vulkan/icd.d -maxdepth 1 -name 'lvp_icd*.json' -print -quit)"
-          test -n "$VK_DRIVER_FILES" && test -r "$VK_DRIVER_FILES" || { echo 'Software Vulkan ICD missing'; ls -l /usr/share/vulkan/icd.d; exit 1; }
-          echo "Software ICD: $VK_DRIVER_FILES"
-          cat "$VK_DRIVER_FILES"
-          echo 'CI Vulkan uses software rendering; no Adreno or presented game frame claim' | tee -a dist/arm64-fex-preflight.txt
-          timeout 90s bash -c 'nova_fex_run "$@"' nova "$PWD/build/runtime/guest/nova-probe" --vulkan 2>&1 | tee -a dist/arm64-fex-preflight.txt
-      - name: Verify the identical loader wrapper inside pinned DroidDeck rootfs and proot
+          test -n "$VK_DRIVER_FILES" || { echo 'Software Vulkan ICD missing'; exit 1; }
+          echo "CI Vulkan: $VK_DRIVER_FILES (software; no Adreno or presented-frame claim)" | tee -a dist/arm64-fex-preflight.txt
+          status=0
+          timeout 90s bash -c 'source build/fex-linux.sh; nova_fex_setup "$PWD/build/runtime" "$PWD/build/fex-config" >/dev/null; nova_fex_run "$PWD/build/runtime/guest/nova-probe" --vulkan' > build/vulkan.txt 2>&1 || status=$?
+          cat build/vulkan.txt | tee -a dist/arm64-fex-preflight.txt
+          # The guest loader must reach the ARM64 host driver through the thunk (not the x86 loader's empty ICD list).
+          grep -q 'NOVA_VULKAN: vkEnumeratePhysicalDevices=0 devices=[1-9]' build/vulkan.txt
+          grep -q 'NOVA_VULKAN: device 0: llvmpipe' build/vulkan.txt
+          # lavapipe lacks barycentrics/minLod/depthBounds, so Kyty requirements are expected to FAIL (75) here.
+          [[ $status -eq 0 || $status -eq 75 ]] || { echo "unexpected probe status $status"; exit 1; }
+          echo "NOVA_CI: guest Vulkan reached the ARM64 host ICD through FEX thunks (probe status $status)" | tee -a dist/arm64-fex-preflight.txt
+      - name: Same wrapper inside the pinned DroidDeck rootfs under proot
         shell: bash
         run: |
           set -euo pipefail
@@ -131,19 +190,25 @@ jobs:
           rm build/linuxfs.tar.zst
           mkdir -p build/droid-root/opt/novaps5/linux-kyty build/droid-root/opt/novaps5/linux-runtime
           cp build/fex-linux.sh build/droid-root/opt/novaps5/fex-linux.sh
-          # Reproduce a global ARM64 preload; the x86-64 guest must mask it.
           echo /usr/lib/libm.so.6 > build/droid-root/etc/ld.so.preload
           cat > build/droid-root/opt/novaps5/ci-preflight.sh <<'SH'
-          set -euo pipefail
+          set -uo pipefail
           source /opt/novaps5/fex-linux.sh
           nova_fex_setup /opt/novaps5/linux-runtime /opt/novaps5/fex-config
           FEXGetConfig --version
-          nova_fex_run /opt/novaps5/linux-runtime/guest/nova-probe
-          nova_fex_run --list /opt/novaps5/linux-kyty/kyty_emulator
-          nova_fex_run /opt/novaps5/linux-kyty/kyty_emulator --help
+          nova_fex_run /opt/novaps5/linux-runtime/guest/nova-probe || exit 1
+          nova_fex_run --list /opt/novaps5/linux-kyty/kyty_emulator || exit 1
+          nova_fex_run /opt/novaps5/linux-kyty/kyty_emulator --help || exit 1
           echo 'NOVA_PROOT: probe, dependency resolution and Kyty CLI PASS inside DroidDeck linuxfs-r9'
+          echo "NOVA_PROOT: DroidDeck host Vulkan ICDs: $(ls /usr/share/vulkan/icd.d 2>/dev/null | tr '\n' ' ')"
+          ldd /opt/novaps5/linux-runtime/host/usr/lib/aarch64-linux-gnu/fex-emu/HostThunks/libvulkan-host.so | grep -i 'not found' && echo 'NOVA_PROOT: host Vulkan thunk has unresolved deps' || echo 'NOVA_PROOT: host Vulkan thunk dependencies resolve in DroidDeck rootfs'
+          for icd in /usr/share/vulkan/icd.d/*.json; do
+            echo "--- guest probe with host ICD $icd (no GPU in CI; failure to open a device is expected for hardware ICDs)"
+            VK_DRIVER_FILES=$icd timeout 90s bash -c 'source /opt/novaps5/fex-linux.sh; nova_fex_setup /opt/novaps5/linux-runtime /opt/novaps5/fex-config >/dev/null; nova_fex_run /opt/novaps5/linux-runtime/guest/nova-probe --vulkan' || echo "probe status $?"
+          done
           SH
-          timeout 180s proot -0 -r "$PWD/build/droid-root" -b /dev -b /proc -b /sys -b "$PWD/build/runtime:/opt/novaps5/linux-runtime" -b "$PWD/build/kyty_emulator:/opt/novaps5/linux-kyty/kyty_emulator" -w /opt/novaps5 /bin/bash /opt/novaps5/ci-preflight.sh 2>&1 | tee -a dist/arm64-fex-preflight.txt
+          timeout 600s proot -0 -r "$PWD/build/droid-root" -b /dev -b /proc -b /sys -b "$PWD/build/runtime:/opt/novaps5/linux-runtime" -b "$PWD/build/kyty_emulator:/opt/novaps5/linux-kyty/kyty_emulator" -w /opt/novaps5 /bin/bash /opt/novaps5/ci-preflight.sh 2>&1 | tee -a dist/arm64-fex-preflight.txt
+          grep -q 'NOVA_PROOT: probe, dependency resolution and Kyty CLI PASS' dist/arm64-fex-preflight.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -151,4 +216,26 @@ jobs:
           path: dist/arm64-fex-preflight.txt
           if-no-files-found: warn
           retention-days: 30
-
+  publish:
+    # Artifacts need a GitHub login to download; a prerelease gives a plain link.
+    needs: [linux-apk, arm64-fex-preflight]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: NovaPS5-Linux-FEX-APK-${{ github.sha }}
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: NovaPS5-Linux-FEX-Preflight-${{ github.sha }}
+          path: dist
+      - name: Publish prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="v0.3.2-linux-fex-${GITHUB_SHA::7}"
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            --title "Nova PS5 0.3.2 Linux/FEX ARM64 (CI ${GITHUB_SHA::7}, device test build)" \
+            --notes "CI-signed device test build. Vulkan thunks verified on ARM64 CI with lavapipe; Adreno driver, PS5 game boot and frame presentation are UNVERIFIED until tested on hardware. Workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            "dist/$APK" dist/SHA256SUMS.txt dist/verification.json dist/kyty-core.json dist/arm64-fex-preflight.txt

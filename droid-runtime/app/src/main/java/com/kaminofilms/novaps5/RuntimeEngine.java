@@ -24,7 +24,8 @@ final class RuntimeEngine {
     interface Progress {void update(String stage,int percent);}
     static final String RUNTIME_URL="https://github.com/The412Banner/winlator-contents/releases/download/linuxfs-r9/linuxfs.tar.zst";
     static final String RUNTIME_SHA="d3240c1531531615b0dd06b6ad56e92db9015a8641eb18c3a613835ae45992e7";
-    static final String LINUX_CORE_SHA="e594d71bb9c60ff47d2ac1e1ee4b9c21eca7ad1ba949d1943a7644eabc2f846c";
+    // Substituted by build-runtime-apk.py with the SHA-256 of the packaged, CI-built core.
+    static final String LINUX_CORE_SHA="@NOVA_LINUX_CORE_SHA256@";
     final Activity context;
     RuntimeEngine(Activity c){context=c;}
     File root(){return LinuxRuntime.rootDir(context);}

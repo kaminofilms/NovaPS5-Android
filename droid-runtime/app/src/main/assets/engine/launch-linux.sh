@@ -1,6 +1,9 @@
 #!/bin/bash
+# Nova PS5 0.3.2: Linux x86-64 Kyty through standalone FEX inside DroidDeck.
+# Every stage prints NOVA_STAGE: <id> <name> PASS|FAIL|DEGRADED|UNVERIFIED.
 set -Eeuo pipefail
 step() { echo "== STEP $(date -u +%H:%M:%S) $*"; }
+stage() { echo "NOVA_STAGE: $1 $2"; }
 trap 'status=$?; echo "NOVA_EXIT: Linux Kyty launch ended with status $status"; exit "$status"' EXIT
 trap 'status=$?; echo "NOVA_ERROR: Linux launcher line $LINENO status $status" >&2; exit "$status"' ERR
 base=/opt/novaps5
@@ -13,6 +16,7 @@ game=${1:?Missing selected game directory}
 [[ -r "$game/eboot.bin" ]] || { echo 'NOVA_ERROR: eboot.bin is not readable'; exit 66; }
 [[ -x "$fex" && -x "$runtime/host/usr/bin/FEXServer" ]] || { echo 'NOVA_ERROR: Standalone FEX/FEXServer missing'; exit 67; }
 [[ -x "$core" && -r "$guest/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2" ]] || { echo 'NOVA_ERROR: Linux Kyty or x86-64 glibc loader missing'; exit 68; }
+stage A 'Android runtime files PASS'
 unset WINEPREFIX WINEARCH WINELOADER WINESERVER WINEDLLPATH WINEDLLOVERRIDES LD_LIBRARY_PATH
 # The compositor's ARM64 preload remains on the FEX host. FEX must not forward
 # it into the x86-64 guest; supply guest variables through FEX_ENV explicitly.
@@ -27,36 +31,62 @@ export SDL_VIDEODRIVER=x11
 export XDG_CONFIG_HOME=/root/.config XDG_DATA_HOME=/root/.local/share
 mkdir -p /root/.config/kyty /root/.local/share/kyty /root/.cache/kyty
 echo "NOVA_HOST: uname=$(uname -a) page_size=$(getconf PAGESIZE)"
-echo "NOVA_FEX: rootfs=$FEX_ROOTFS host_thunks=$FEX_THUNKHOSTLIBS guest_thunks=$FEX_THUNKGUESTLIBS"
-echo "NOVA_DISPLAY: DISPLAY=${DISPLAY:-missing} VK_DRIVER_FILES=${VK_DRIVER_FILES:-default} host_preload=$host_preload"
-preflight() {
-    local stage=$1; shift
-    step "$stage"
-    if timeout --kill-after=5s 90s "$@"; then echo "NOVA_STAGE: $stage PASS";
-    else local status=$?; echo "NOVA_ERROR: $stage failed (status $status; 124 means timeout)"; exit "$status"; fi
-}
-preflight 'A FEX runtime version' "$runtime/host/usr/bin/FEXGetConfig" --version
-preflight 'B x86-64 Linux executable' bash -c 'nova_fex_run "$@"' nova "$guest/nova-probe"
-preflight 'C Kyty dynamic dependencies' bash -c 'nova_fex_run "$@"' nova --list "$core"
-preflight 'D Linux Kyty CLI' bash -c 'nova_fex_run "$@"' nova "$core" --help
-step 'Guest memory mapping diagnostic'
-bash -c 'nova_fex_run "$@"' nova "$guest/nova-probe" --memory
-step 'Vulkan thunk diagnostics'
-echo "NOVA_VULKAN: host ICD=${VK_DRIVER_FILES:-unset}; guest root=$FEX_ROOTFS"
-for thunk in "$FEX_THUNKHOSTLIBS/libvulkan-host.so" "$FEX_THUNKGUESTLIBS/libvulkan-guest.so"; do
-    if [[ -r "$thunk" ]]; then echo "NOVA_VULKAN: thunk present $thunk"; else echo "NOVA_ERROR: Vulkan thunk missing $thunk" >&2; exit 73; fi
+echo "NOVA_FEX: rootfs=$FEX_ROOTFS config=$FEX_APP_CONFIG_LOCATION host_thunks=$FEX_THUNKHOSTLIBS guest_thunks=$FEX_THUNKGUESTLIBS"
+echo "NOVA_DISPLAY: DISPLAY=${DISPLAY:-missing} VK_DRIVER_FILES=${VK_DRIVER_FILES:-unset} VK_ICD_FILENAMES=${VK_ICD_FILENAMES:-unset} host_preload=$host_preload"
+for icd in ${VK_DRIVER_FILES:-} ${VK_ICD_FILENAMES:-}; do
+    for file in ${icd//:/ }; do [[ -r $file ]] && echo "NOVA_ICD: $file $(tr -d '\n ' < "$file" | head -c 300)"; done
 done
-if timeout --kill-after=5s 90s bash -c 'nova_fex_run "$@"' nova "$guest/nova-probe" --vulkan; then
-    echo 'NOVA_STAGE: Vulkan instance and physical device preflight PASS'
-else
-    status=$?
-    echo "NOVA_ERROR: Guest Vulkan preflight failed; inspect FEX Vulkan thunk overlay and ARM64 ICD (vkCreateInstance=-9 means incompatible driver)" >&2
-    echo "NOVA_VULKAN: guest Vulkan failed before Kyty game loader; status=$status" >&2
-    exit 73
-fi
-echo 'NOVA_STAGE: F guest execution and G frame presentation UNVERIFIED'
-cd "$base/linux-kyty"
-echo "NOVA_LAUNCH: Linux Kyty game=$game"
-step 'E Linux Kyty attempting selected game'
-bash -c 'nova_fex_run "$@"' nova "$core" --game "$game" --screen-width 1280 --screen-height 720 --vblank-frequency 60 --present-mode Fifo --fullscreen --hide-cursor --no-splash --vulkan-validation false --network-connected false
+preflight() {
+    local id=$1 name=$2; shift 2
+    step "$id $name"
+    if timeout --kill-after=5s 90s "$@"; then stage "$id" "$name PASS";
+    else local status=$?; stage "$id" "$name FAIL"; echo "NOVA_ERROR: $id $name failed (status $status; 124 means timeout)"; exit "$status"; fi
+}
+preflight B 'x86-64 Linux executable via FEX' bash -c 'nova_fex_run "$@"' nova "$guest/nova-probe"
+preflight C1 'Kyty dynamic dependencies' bash -c 'nova_fex_run "$@"' nova --list "$core"
+preflight C2 'Kyty CLI' bash -c 'nova_fex_run "$@"' nova "$core" --help
 
+step 'D Vulkan through FEX thunks'
+for thunk in "$FEX_THUNKHOSTLIBS/libvulkan-host.so" "$FEX_THUNKGUESTLIBS/libvulkan-guest.so"; do
+    [[ -r "$thunk" ]] || { stage D 'Vulkan FAIL'; echo "NOVA_ERROR: Vulkan thunk missing $thunk" >&2; exit 73; }
+done
+vulkan_status=0
+vulkan_log=$(timeout --kill-after=5s 90s bash -c 'nova_fex_run "$@"' nova "$guest/nova-probe" --vulkan 2>&1) || vulkan_status=$?
+printf '%s\n' "$vulkan_log"
+relaxed=0
+case $vulkan_status in
+    0) stage D 'Vulkan instance, device and Kyty feature requirements PASS' ;;
+    75)
+        # Instance and device work, but the driver lacks something Kyty checks for.
+        # imageViewMinLod/depthBounds/barycentrics can be relaxed (rendering is then
+        # incomplete); anything else is a hard stop.
+        missing=$(printf '%s\n' "$vulkan_log" | sed -n 's/^NOVA_KYTY_REQ: device [0-9]* \(FEATURE\|EXTENSION\) MISSING //p' | sort -u)
+        hard=$(printf '%s\n' "$missing" | grep -Ev '^(imageViewMinLod|depthBounds|fragmentShaderBarycentric|VK_EXT_image_view_min_lod|VK_KHR_fragment_shader_barycentric)$' || true)
+        if [[ -z $hard ]]; then
+            relaxed=1
+            stage D "Vulkan DEGRADED (driver lacks: $(echo $missing))"
+            echo 'NOVA_WARNING: continuing with NOVA_RELAXED_VULKAN=1; shading that needs these features will be wrong or fail'
+        else
+            stage D "Vulkan FAIL (driver lacks: $(echo $missing))"
+            echo 'NOVA_ERROR: The active Vulkan driver cannot run Kyty. A Turnip (Mesa) driver for this Adreno GPU is required.' >&2
+            exit 75
+        fi ;;
+    *)
+        stage D 'Vulkan FAIL'
+        echo "NOVA_ERROR: Guest Vulkan preflight failed (status $vulkan_status). 73 = vkCreateInstance failed (thunk or host ICD), 74 = no physical device." >&2
+        exit 73 ;;
+esac
+
+step 'E Guest memory'
+memory_status=0
+bash -c 'nova_fex_run "$@"' nova "$guest/nova-probe" --memory || memory_status=$?
+if [[ $memory_status -eq 0 ]]; then stage E 'Guest memory base mapping PASS (Kyty clamps its user window to the host VA ceiling)';
+else stage E 'Guest memory FAIL'; exit 76; fi
+
+stage F 'PS5 loader UNVERIFIED (see Kyty output below)'
+stage G 'First rendered frame UNVERIFIED'
+cd "$base/linux-kyty"
+echo "NOVA_LAUNCH: Linux Kyty game=$game relaxed_vulkan=$relaxed"
+step 'F Linux Kyty attempting selected game'
+export NOVA_RELAXED_VULKAN=$relaxed
+bash -c 'nova_fex_run "$@"' nova "$core" --game "$game" --screen-width 1280 --screen-height 720 --vblank-frequency 60 --present-mode Fifo --fullscreen --hide-cursor --no-splash --vulkan-validation false --network-connected false

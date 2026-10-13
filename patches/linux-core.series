@@ -1,0 +1,4 @@
+# Applied in order to KytyPS5 df5b9b9 for the Linux x86-64 core packaged in the Android APK.
+pc-boot-api.patch
+kyty-nova-va39.patch
+kyty-nova-relaxed-vulkan.patch

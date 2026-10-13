@@ -7,6 +7,7 @@ The compile-only ABI declarations below NEVER enter the packaged DEX.
 """
 import argparse
 import hashlib
+import json
 import os
 from pathlib import Path
 import re
@@ -18,6 +19,8 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT = Path(__file__).resolve().parent
+KYTY_COMMIT = 'df5b9b92be7dfd463b47756b707d6d356a9f0550'
+CORE_SHA_PLACEHOLDER = '@NOVA_LINUX_CORE_SHA256@'
 APP = ROOT / 'droid-runtime/app/src/main'
 PINS = {
     'platform.apk': (
@@ -98,7 +101,7 @@ def prepare_platform(base, core=None, linux_core=False):
     if 'resourcesInfo:\n' not in value:
         raise RuntimeError('Pinned Apktool resource metadata changed')
     value = value.replace('resourcesInfo:\n', 'resourcesInfo:\n  packageName: com.kaminofilms.novaps5\n', 1)
-    for key, setting in [('versionCode', '11' if linux_core else '6'), ('versionName', '0.3.1-linux-fex' if linux_core else '0.2.4-bootapi'), ('minSdkVersion', '28'), ('targetSdkVersion', '28')]:
+    for key, setting in [('versionCode', '12' if linux_core else '6'), ('versionName', '0.3.2-linux-fex' if linux_core else '0.2.4-bootapi'), ('minSdkVersion', '28'), ('targetSdkVersion', '28')]:
         value = re.sub(r'(?m)^(  ' + key + r':).*$', r'\1 ' + setting, value)
     path.write_text(value)
     shutil.copyfile(ROOT / 'android/res/drawable/app_icon.xml', base / 'res/drawable/novaps5_icon.xml')
@@ -195,8 +198,16 @@ def main():
         import struct
         core=args.linux_core.resolve()
         raw=core.read_bytes()
-        if hashlib.sha256(raw).hexdigest()!='e594d71bb9c60ff47d2ac1e1ee4b9c21eca7ad1ba949d1943a7644eabc2f846c':
-            raise RuntimeError('Linux Kyty checksum mismatch')
+        # The core is built by CI from pinned Kyty source plus patches/kyty-nova-*.patch.
+        # kyty-core.json (written by that build) must describe exactly this file and patch set.
+        core_manifest=json.loads((core.parent/'kyty-core.json').read_text())
+        core_sha=hashlib.sha256(raw).hexdigest()
+        if core_manifest['sha256']!=core_sha:
+            raise RuntimeError('Linux Kyty checksum does not match kyty-core.json')
+        series=[line.strip() for line in (ROOT/'patches/linux-core.series').read_text().splitlines() if line.strip() and not line.startswith('#')]
+        expected_patches={name:sha(ROOT/'patches'/name) for name in series}
+        if core_manifest['patches']!=expected_patches or core_manifest['source_commit']!=KYTY_COMMIT:
+            raise RuntimeError('Linux Kyty was not built from the pinned source and current Nova patches')
         if raw[:6]!=b'\x7fELF\x02\x01' or struct.unpack_from('<H',raw,18)[0]!=62:
             raise RuntimeError('Expected Linux x86-64 ELF')
         for name in ['linux-runtime.tar.gz','linux-runtime.tar.json']:
@@ -258,7 +269,16 @@ def main():
     run(javac, '-source', '8', '-target', '8', '-classpath', platform, '-d', build / 'stub-classes', *sorted((build / 'stubs').rglob('*.java')))
     jar(build / 'stub-classes', build / 'stubs.jar')
     classpath = os.pathsep.join(str(x) for x in [platform, build / 'stubs.jar', build / 'commons-compress.jar'])
-    run(javac, '-source', '8', '-target', '8', '-classpath', classpath, '-d', build / 'nova-classes', *sorted((APP / 'java/com/kaminofilms/novaps5').glob('*.java')))
+    sources = build / 'nova-sources'
+    shutil.rmtree(sources, ignore_errors=True)
+    shutil.copytree(APP / 'java/com/kaminofilms/novaps5', sources)
+    if args.linux_core:
+        engine = sources / 'RuntimeEngine.java'
+        text = engine.read_text()
+        if text.count(CORE_SHA_PLACEHOLDER) != 1:
+            raise RuntimeError('RuntimeEngine core checksum placeholder missing')
+        engine.write_text(text.replace(CORE_SHA_PLACEHOLDER, core_sha))
+    run(javac, '-source', '8', '-target', '8', '-classpath', classpath, '-d', build / 'nova-classes', *sorted(sources.glob('*.java')))
     jar(build / 'nova-classes', build / 'nova.jar')
     run(bt / 'd8', '--release', '--min-api', '28', '--lib', platform, '--classpath', build / 'stubs.jar', '--classpath', build / 'commons-compress.jar', '--output', build / 'dex', build / 'nova.jar')
     native = APP / 'cpp/novadiag'
