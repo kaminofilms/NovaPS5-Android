@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Nova PS5 0.7: a self-contained Android emulator. Kyty and the embedded FEXCore run inside the
+     game activity's own process (":game"); there is no Linux runtime, proot or compositor. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.kaminofilms.novaps5"
+    android:versionCode="@NOVA_VERSION_CODE@" android:versionName="@NOVA_VERSION_NAME@">
+    <uses-sdk android:minSdkVersion="33" android:targetSdkVersion="33" />
+    <uses-feature android:name="android.hardware.vulkan.level" android:version="1" android:required="false" />
+    <uses-feature android:name="android.hardware.vulkan.version" android:version="0x403000" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.hardware.gamepad" android:required="false" />
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <application android:label="NovaPs5" android:icon="@drawable/app_icon" android:theme="@style/NovaTheme"
+        android:allowBackup="false" android:extractNativeLibs="true" android:hardwareAccelerated="true"
+        android:largeHeap="true" android:requestLegacyExternalStorage="true" android:appCategory="game"
+        android:isGame="true">
+        <meta-data android:name="android.game_mode_config" android:resource="@xml/game_mode_config" />
+        <activity android:name=".MainActivity" android:exported="true" android:screenOrientation="sensorLandscape"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode"
+            android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <!-- The game: its own process, so ending a game ends exactly that process and the next
+             launch starts clean. -->
+        <activity android:name=".GameActivity" android:exported="false" android:process=":game"
+            android:screenOrientation="sensorLandscape" android:launchMode="singleTask"
+            android:taskAffinity="com.kaminofilms.novaps5.game" android:excludeFromRecents="false"
+            android:configChanges="layoutDirection|locale|orientation|uiMode|screenLayout|screenSize|smallestScreenSize|keyboard|keyboardHidden|navigation|density|fontScale"
+            android:preferMinimalPostProcessing="true" android:resizeableActivity="false"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
+    </application>
+</manifest>

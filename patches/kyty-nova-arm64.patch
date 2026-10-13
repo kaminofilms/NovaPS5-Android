@@ -1,8 +1,42 @@
+diff --git a/3rdparty/CMakeLists.txt b/3rdparty/CMakeLists.txt
+index f3cdf3a9..ca8d2e5a 100644
+--- a/3rdparty/CMakeLists.txt
++++ b/3rdparty/CMakeLists.txt
+@@ -93,7 +93,14 @@ else()
+ 	target_compile_options(zarchive PRIVATE -w)
+ endif()
+ 
+-set(SDL_SHARED OFF CACHE BOOL "" FORCE)
++if(CMAKE_SYSTEM_NAME STREQUAL "Android")
++	# SDL's Java activity loads libSDL3.so itself, before libmain.so.
++	set(SDL_SHARED ON CACHE BOOL "" FORCE)
++	set(SDL_STATIC OFF CACHE BOOL "" FORCE)
++	set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
++else()
++	set(SDL_SHARED OFF CACHE BOOL "" FORCE)
++endif()
+ if(APPLE)
+ 	# SDL's built-in iconv fallback does not support CP932.
+ 	set(SDL_SYSTEM_ICONV ON CACHE BOOL "Use system iconv for CP932 conversion" FORCE)
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 213dd35b..7b345f55 100644
+index 213dd35b..5dadd86f 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -198,6 +198,17 @@ option(KYTY_BUILD_LAUNCHER "Build Qt launcher" ON)
+@@ -35,6 +35,13 @@ set(KYTY_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty")
+ if(CMAKE_SYSTEM_NAME MATCHES ".*Linux")
+ 	set(LINUX TRUE)
+ endif()
++# Nova PS5: Android (bionic) is Linux for Kyty's purposes; the emulator becomes libmain.so, which
++# SDL's Android activity loads into the app process.
++if(CMAKE_SYSTEM_NAME STREQUAL "Android")
++	set(LINUX TRUE)
++	set(KYTY_ANDROID TRUE)
++	add_compile_definitions(KYTY_ANDROID=1)
++endif()
+ 
+ if (NOT (WIN32 OR LINUX OR APPLE))
+     message(FATAL_ERROR "only Windows, Linux, and macOS builds are supported")
+@@ -198,6 +205,19 @@ option(KYTY_BUILD_LAUNCHER "Build Qt launcher" ON)
  
  config_compiler_and_linker()
  
@@ -13,17 +47,26 @@ index 213dd35b..7b345f55 100644
 +	endif()
 +	include_directories("${NOVAFEX_DIR}/include")
 +	set(KYTY_NOVAFEX_LIB "${NOVAFEX_DIR}/lib/libnovafex.so")
-+	set(CMAKE_BUILD_RPATH "$ORIGIN")
-+	set(CMAKE_INSTALL_RPATH "$ORIGIN")
++	if(NOT KYTY_ANDROID)
++		set(CMAKE_BUILD_RPATH "$ORIGIN")
++		set(CMAKE_INSTALL_RPATH "$ORIGIN")
++	endif()
 +endif()
 +
  add_subdirectory("${KYTY_THIRD_PARTY_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/3rdparty")
  add_subdirectory("${KYTY_SOURCE_DIR}/common" "${CMAKE_CURRENT_BINARY_DIR}/common")
  
-@@ -337,6 +348,11 @@ if (KYTY_CLANG_CL)
+@@ -336,7 +356,17 @@ if (KYTY_CLANG_CL)
+ 	set_source_files_properties(${kyty_emulator_src} PROPERTIES COMPILE_FLAGS "-Wno-pragma-pack -Wno-deprecated-declarations -D_TIMESPEC_DEFINED")
  endif()
  
- set(kyty_emulator_link_libraries common Vulkan::Headers spirv-tools-opt spirv-tools SDL3::SDL3-static imgui xxhash FFmpeg::ffmpeg fmt::fmt nlohmann_json::nlohmann_json LibAtrac9 kyty_git_version Zydis::Zydis xbyak::xbyak opus)
+-set(kyty_emulator_link_libraries common Vulkan::Headers spirv-tools-opt spirv-tools SDL3::SDL3-static imgui xxhash FFmpeg::ffmpeg fmt::fmt nlohmann_json::nlohmann_json LibAtrac9 kyty_git_version Zydis::Zydis xbyak::xbyak opus)
++if(KYTY_ANDROID)
++	set(KYTY_SDL_TARGET SDL3::SDL3-shared)
++else()
++	set(KYTY_SDL_TARGET SDL3::SDL3-static)
++endif()
++set(kyty_emulator_link_libraries common Vulkan::Headers spirv-tools-opt spirv-tools ${KYTY_SDL_TARGET} imgui xxhash FFmpeg::ffmpeg fmt::fmt nlohmann_json::nlohmann_json LibAtrac9 kyty_git_version Zydis::Zydis xbyak::xbyak opus)
 +if(KYTY_NOVAFEX_LIB)
 +	list(APPEND kyty_emulator_link_libraries "${KYTY_NOVAFEX_LIB}")
 +	# Symbol names for fatal-error backtraces on the device.
@@ -32,6 +75,56 @@ index 213dd35b..7b345f55 100644
  
  # Linux system libraries.
  if(LINUX)
+@@ -514,7 +544,7 @@ target_link_libraries(audio_out2_port_tests common fmt::fmt)
+ target_include_directories(audio_out2_port_tests PRIVATE ${inc_headers})
+ 
+ add_executable(audio_out_timing_tests EXCLUDE_FROM_ALL "${KYTY_TESTS_DIR}/AudioOutTimingTests.cpp")
+-target_link_libraries(audio_out_timing_tests common fmt::fmt SDL3::SDL3-static)
++target_link_libraries(audio_out_timing_tests common fmt::fmt ${KYTY_SDL_TARGET})
+ target_include_directories(audio_out_timing_tests PRIVATE ${inc_headers})
+ 
+ add_executable(ngs2_sampler_tests EXCLUDE_FROM_ALL
+@@ -527,13 +557,13 @@ target_include_directories(ngs2_sampler_tests PRIVATE ${inc_headers})
+ add_executable(pad_haptics_tests EXCLUDE_FROM_ALL
+ 	"${KYTY_TESTS_DIR}/PadHapticsTests.cpp"
+ )
+-target_link_libraries(pad_haptics_tests common fmt::fmt SDL3::SDL3-static opus)
++target_link_libraries(pad_haptics_tests common fmt::fmt ${KYTY_SDL_TARGET} opus)
+ target_include_directories(pad_haptics_tests PRIVATE ${inc_headers})
+ 
+ add_executable(controller_settings_tests EXCLUDE_FROM_ALL
+ 	"${KYTY_TESTS_DIR}/ControllerSettingsTests.cpp"
+ )
+-target_link_libraries(controller_settings_tests common fmt::fmt SDL3::SDL3-static)
++target_link_libraries(controller_settings_tests common fmt::fmt ${KYTY_SDL_TARGET})
+ target_include_directories(controller_settings_tests PRIVATE ${inc_headers})
+ 
+ add_executable(save_data_memory_tests EXCLUDE_FROM_ALL
+@@ -547,7 +577,7 @@ target_link_libraries(png_enc_tests common fmt::fmt)
+ target_include_directories(png_enc_tests PRIVATE ${inc_headers})
+ 
+ add_executable(ces_tests EXCLUDE_FROM_ALL "${KYTY_TESTS_DIR}/CesTests.cpp")
+-target_link_libraries(ces_tests common fmt::fmt SDL3::SDL3-static)
++target_link_libraries(ces_tests common fmt::fmt ${KYTY_SDL_TARGET})
+ target_include_directories(ces_tests PRIVATE ${inc_headers})
+ 
+ add_executable(save_data_dialog_tests EXCLUDE_FROM_ALL
+@@ -756,7 +786,14 @@ if(APPLE AND (CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64" OR
+ 	endif()
+ endif()
+ 
+-add_executable(kyty_emulator "${KYTY_SOURCE_DIR}/main.cpp" ${kyty_emulator_src})
++if(KYTY_ANDROID)
++	add_library(kyty_emulator SHARED "${KYTY_SOURCE_DIR}/main.cpp" "${KYTY_SOURCE_DIR}/novaAndroid.cpp" ${kyty_emulator_src})
++	set_target_properties(kyty_emulator PROPERTIES OUTPUT_NAME main)
++	target_link_options(kyty_emulator PRIVATE -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384 -Wl,--no-undefined)
++	target_link_libraries(kyty_emulator android log)
++else()
++	add_executable(kyty_emulator "${KYTY_SOURCE_DIR}/main.cpp" ${kyty_emulator_src})
++endif()
+ configure_macos_guest_address_space(kyty_emulator)
+ 
+ set(KYTY_TROPHY_UNLOCK_SOUND "${CMAKE_CURRENT_SOURCE_DIR}/assets/sounds/trophy-unlock.wav")
 diff --git a/src/common/abi.h b/src/common/abi.h
 index 621ed610..e8be1765 100644
 --- a/src/common/abi.h
@@ -1125,4 +1218,135 @@ index 7500c364..7a82c07e 100644
 +	return false;
 +}
 +} // namespace Loader::X64InstructionEmulator
++#endif
+diff --git a/src/main.cpp b/src/main.cpp
+index a9610102..892e7405 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -535,6 +535,16 @@ int wmain(int argc, wchar_t* argv[]) {
+     return Main(argc, utf8_argv.data());
+ }
+ 
++#elif defined(KYTY_ANDROID)
++
++// Nova PS5 on Android: SDL's activity calls SDL_main (SDL_main.h renames main) on its own thread.
++#include <SDL3/SDL_main.h>
++void NovaAndroidStartup();
++int  main(int argc, char* argv[]) {
++    NovaAndroidStartup();
++    return Main(argc, argv);
++}
++
+ #else
+ 
+ int main(int argc, char* argv[]) {
+diff --git a/src/novaAndroid.cpp b/src/novaAndroid.cpp
+new file mode 100644
+index 00000000..a6373a67
+--- /dev/null
++++ b/src/novaAndroid.cpp
+@@ -0,0 +1,104 @@
++// Nova PS5 on Android: process setup and the on-screen PS5 controller.
++#if defined(KYTY_ANDROID)
++
++#include <SDL3/SDL.h>
++#include <android/log.h>
++#include <fcntl.h>
++#include <jni.h>
++#include <unistd.h>
++
++#include <cstdio>
++#include <cstdlib>
++#include <ctime>
++#include <mutex>
++
++void NovaAndroidStartup() {
++	// Kyty reports everything on stdout/stderr; an Android app's streams go nowhere, so they are
++	// sent to the session log the app shows and exports.
++	if (const char* log = getenv("NOVA_LOG_FILE"); log != nullptr && log[0] != 0) {
++		const int fd = open(log, O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
++		if (fd >= 0) {
++			dup2(fd, STDOUT_FILENO);
++			dup2(fd, STDERR_FILENO);
++			close(fd);
++		}
++		setvbuf(stdout, nullptr, _IOLBF, 0);
++		setvbuf(stderr, nullptr, _IONBF, 0);
++	}
++	if (const char* dir = getenv("NOVA_WORKDIR"); dir != nullptr && dir[0] != 0) {
++		if (chdir(dir) != 0) {
++			std::fprintf(stderr, "NOVA_ANDROID: cannot enter %s\n", dir);
++		}
++	}
++	const time_t now = time(nullptr);
++	std::fprintf(stderr, "NOVA_ANDROID: Kyty started in the app process (pid %d) %s", static_cast<int>(getpid()),
++	             ctime(&now));
++	__android_log_print(ANDROID_LOG_INFO, "NovaPS5", "Kyty started (pid %d)", static_cast<int>(getpid()));
++}
++
++namespace {
++
++std::mutex     g_pad_mutex;
++SDL_Joystick*  g_pad          = nullptr;
++int            g_last_buttons = -1;
++Sint16         g_last_axes[SDL_GAMEPAD_AXIS_COUNT] {};
++
++// The touch controller is an SDL virtual gamepad, so Kyty sees it exactly like a real pad.
++bool EnsurePad() {
++	if (g_pad != nullptr) {
++		return true;
++	}
++	if (!SDL_WasInit(SDL_INIT_JOYSTICK)) {
++		return false;
++	}
++	SDL_VirtualJoystickDesc desc;
++	SDL_INIT_INTERFACE(&desc);
++	desc.type     = SDL_JOYSTICK_TYPE_GAMEPAD;
++	desc.naxes    = SDL_GAMEPAD_AXIS_COUNT;
++	desc.nbuttons = SDL_GAMEPAD_BUTTON_COUNT;
++	desc.name     = "Nova touch controller";
++	const SDL_JoystickID id = SDL_AttachVirtualJoystick(&desc);
++	if (id == 0) {
++		std::fprintf(stderr, "NOVA_ANDROID: touch controller unavailable: %s\n", SDL_GetError());
++		return false;
++	}
++	g_pad = SDL_OpenJoystick(id);
++	std::fprintf(stderr, "NOVA_ANDROID: touch controller attached (%s)\n", g_pad != nullptr ? "ok" : SDL_GetError());
++	return g_pad != nullptr;
++}
++
++Sint16 Axis(float value) {
++	if (value < -1.0f) value = -1.0f;
++	if (value > 1.0f) value = 1.0f;
++	return static_cast<Sint16>(value * 32767.0f);
++}
++
++} // namespace
++
++// buttons: bit n = SDL_GamepadButton n. Sticks -1..1, triggers 0..1.
++extern "C" JNIEXPORT void JNICALL Java_com_kaminofilms_novaps5_NovaPad_nativeState(JNIEnv*, jclass, jint buttons, jfloat lx,
++                                                                                    jfloat ly, jfloat rx, jfloat ry,
++                                                                                    jfloat l2, jfloat r2) {
++	std::lock_guard lock(g_pad_mutex);
++	if (!EnsurePad()) {
++		return;
++	}
++	if (buttons != g_last_buttons) {
++		for (int b = 0; b < SDL_GAMEPAD_BUTTON_COUNT && b < 31; b++) {
++			const bool down = ((buttons >> b) & 1) != 0;
++			if (g_last_buttons < 0 || down != (((g_last_buttons >> b) & 1) != 0)) {
++				SDL_SetJoystickVirtualButton(g_pad, b, down);
++			}
++		}
++		g_last_buttons = buttons;
++	}
++	const Sint16 axes[SDL_GAMEPAD_AXIS_COUNT] = {Axis(lx), Axis(ly), Axis(rx), Axis(ry), Axis(l2), Axis(r2)};
++	for (int a = 0; a < SDL_GAMEPAD_AXIS_COUNT; a++) {
++		if (axes[a] != g_last_axes[a]) {
++			SDL_SetJoystickVirtualAxis(g_pad, a, axes[a]);
++			g_last_axes[a] = axes[a];
++		}
++	}
++}
++
 +#endif

@@ -58,8 +58,96 @@ jobs:
         with:
           name: android-novafex-test
           path: dist/novafex/novafex-test-android.txt
+  ffmpeg:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        id: cache
+        with:
+          path: dist/ffmpeg
+          key: android-ffmpeg-n7.1-${{ hashFiles('tools/ci/build-android-ffmpeg.sh') }}
+      - name: Build FFmpeg (NDK)
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          export ANDROID_NDK=$ANDROID_NDK_LATEST_HOME
+          bash tools/ci/build-android-ffmpeg.sh "$PWD/work" "$PWD/dist/ffmpeg"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-ffmpeg
+          path: dist/ffmpeg
+          retention-days: 7
+  kyty:
+    needs: [novafex, ffmpeg]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ninja-build ccache python3 glslang-tools
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-novafex
+          path: dist/novafex
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-ffmpeg
+          path: dist/ffmpeg
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: android-kyty-ccache-${{ env.KYTY_COMMIT }}-${{ hashFiles('patches/*.patch') }}
+          restore-keys: android-kyty-ccache-${{ env.KYTY_COMMIT }}-
+      - name: Build Kyty for Android (libmain.so + SDL3)
+        run: |
+          set -o pipefail
+          export ANDROID_NDK=$ANDROID_NDK_LATEST_HOME
+          bash tools/ci/build-android-kyty.sh "$PWD" "$PWD/work" "$PWD/dist/kyty" "$PWD/dist/novafex" "$PWD/dist/ffmpeg" 2>&1 | tail -200
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-kyty
+          path: dist/kyty
+          retention-days: 7
+  apk:
+    needs: [kyty, novafex-test]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-kyty
+          path: dist/kyty
+      - name: Build and sign the APK
+        run: |
+          set -euo pipefail
+          python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java \
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.7.0-android-arm64.apk" \
+            --version-name 0.7.0-android --version-code 28 2>&1 | tee dist/apk-build.txt
+      - name: Verify the APK
+        run: python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.7.0-android-arm64.apk --sdk "$ANDROID_HOME" | tee dist/apk/verify.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: dist/apk
+          retention-days: 14
+      - name: Publish device test build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="v0.7.0-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.7.0-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.7.0-android-arm64.apk SHA256SUMS.txt verify.txt --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.7.0 native Android (CI ${GITHUB_SHA::7}, device test build)" \
+            --notes "Native Android build: Kyty + embedded FEXCore in the app process, SDL3/Vulkan/AAudio. No DroidDeck, proot or Linux runtime. Signed with the same key as earlier test builds."
   logs:
-    needs: [novafex, novafex-test]
+    needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()
     runs-on: ubuntu-24.04
     steps:
@@ -75,7 +163,7 @@ jobs:
           if git fetch -q --depth 1 origin lab-logs; then git checkout -q -b lab-logs FETCH_HEAD; else git checkout -q --orphan lab-logs; fi
           mkdir -p "$dest"
           (cd ../out && find . -type f \( -name '*.txt' -o -name '*.json' -o -name '*.log' \) -size -20M -exec cp --parents {} "../logs/$dest/" \;) || true
-          printf '%s android novafex=%s test=%s\n' "$dest" "${{ needs.novafex.result }}" "${{ needs.novafex-test.result }}" >> INDEX.txt
+          printf '%s android novafex=%s test=%s ffmpeg=%s kyty=%s apk=%s\n' "$dest" "${{ needs.novafex.result }}" "${{ needs.novafex-test.result }}" "${{ needs.ffmpeg.result }}" "${{ needs.kyty.result }}" "${{ needs.apk.result }}" >> INDEX.txt
           git add -A
           git -c user.name=nova-lab -c user.email=nova-lab@users.noreply.github.com commit -qm "android logs $dest"
           for i in 1 2 3; do git push -q origin HEAD:lab-logs && break; git pull -q --rebase origin lab-logs; done
