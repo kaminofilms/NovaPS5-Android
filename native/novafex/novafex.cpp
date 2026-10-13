@@ -96,6 +96,7 @@ std::shared_mutex g_code_mutex;
 std::map<uint64_t, uint64_t> g_guest_code; // start -> end
 
 thread_local ThreadData t_thread;
+std::atomic<uint64_t (*)()> g_fs_provider {nullptr};
 
 uint64_t* Xmm(FEXCore::Core::CPUState& s, int i) {
 	return g_converged_avx ? &s.xmm.avx.data[i][0] : &s.xmm.sse.data[i][0];
@@ -288,6 +289,11 @@ ThreadData& Current() {
 		t.fex->CurrentFrame->Pointers.ThunkCallbackRet = g_arena.callback_ret;
 		auto& s = t.fex->CurrentFrame->State;
 		s.gregs[REG_RSP] = (t.guest_stack_top - 512) & ~uint64_t {15};
+		if (t.fs_base == 0) {
+			if (auto provider = g_fs_provider.load(); provider != nullptr) {
+				t.fs_base = provider();
+			}
+		}
 		s.fs_cached = t.fs_base;
 		s.mxcsr = 0x1F80;
 	}
@@ -332,6 +338,8 @@ bool Init() {
 	FEXCore::Config::Set(FEXCore::Config::CONFIG_SMCCHECKS, "0");
 	SetDefault(FEXCore::Config::CONFIG_TSOENABLED, "1");
 	SetDefault(FEXCore::Config::CONFIG_MULTIBLOCK, "1");
+	// Guest rdtsc returns the raw generic timer (CNTVCT_EL0); the HLE reports CNTFRQ_EL0.
+	FEXCore::Config::Set(FEXCore::Config::CONFIG_SMALLTSCSCALE, "0");
 	if (const char* strict = getenv("NOVA_FEX_STRICT_TSO"); strict != nullptr && strict[0] == '1') {
 		FEXCore::Config::Set(FEXCore::Config::CONFIG_VECTORTSOENABLED, "1");
 		FEXCore::Config::Set(FEXCore::Config::CONFIG_MEMCPYSETTSOENABLED, "1");
@@ -375,6 +383,9 @@ bool IsInitialized() {
 }
 
 void CallGuest(uint64_t target, CallArgs* args) {
+	if (!g_initialized && !Init()) {
+		std::abort();
+	}
 	auto& t = Current();
 	auto& s = t.fex->CurrentFrame->State;
 	const uint64_t saved_rsp = s.gregs[REG_RSP];
@@ -435,6 +446,9 @@ uint64_t MakeGate(const void* host_function) {
 	if (host_function == nullptr) {
 		return 0;
 	}
+	if (!g_initialized && !Init()) {
+		std::abort();
+	}
 	std::lock_guard lock(g_gate_mutex);
 	if (auto it = g_gates.find(host_function); it != g_gates.end()) {
 		return it->second;
@@ -471,6 +485,22 @@ void SetThreadFsBase(uint64_t base) {
 	if (t_thread.fex != nullptr) {
 		t_thread.fex->CurrentFrame->State.fs_cached = base;
 	}
+}
+
+void SetFsBaseProvider(uint64_t (*provider)()) {
+	g_fs_provider = provider;
+}
+
+void AbandonGuestCalls() {
+	auto& t = t_thread;
+	if (t.fex != nullptr) {
+		t.fex->CurrentFrame->SignalHandlerRefCounter = 0;
+		t.fex->CurrentFrame->State.callret_sp =
+		    reinterpret_cast<uint64_t>(t.fex->CallRetStackBase) + FEXCore::Core::InternalThreadState::CALLRET_STACK_SIZE / 4;
+	}
+	t.depth = 0;
+	t.gate_stack_args = 0;
+	t.gate_rsp = 0;
 }
 
 uint64_t GetThreadFsBase() {

@@ -67,6 +67,13 @@ NOVAFEX_API uint64_t GetThreadGuestStack();
 NOVAFEX_API void SetThreadFsBase(uint64_t base);
 NOVAFEX_API uint64_t GetThreadFsBase();
 
+// Called when a host thread first runs guest code without an explicit FS base (e.g. a host
+// worker invoking a guest callback); returns that thread's guest TLS pointer.
+NOVAFEX_API void SetFsBaseProvider(uint64_t (*provider)());
+// Forget nested guest calls on this thread after the host unwound past them with longjmp
+// (guest pthread_exit). Only valid when no guest frame of this thread will be resumed.
+NOVAFEX_API void AbandonGuestCalls();
+
 // Guest code ranges: never host-executable; host jumps into them become guest calls.
 NOVAFEX_API void RegisterGuestCodeRange(uint64_t start, uint64_t size);
 NOVAFEX_API void UnregisterGuestCodeRange(uint64_t start);

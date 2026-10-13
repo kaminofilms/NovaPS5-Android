@@ -1,0 +1,654 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 213dd35b..53dabe77 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -198,6 +198,17 @@ option(KYTY_BUILD_LAUNCHER "Build Qt launcher" ON)
+ 
+ config_compiler_and_linker()
+ 
++# Nova PS5 native AArch64 host: guest x86-64 code runs in an embedded FEXCore (libnovafex).
++if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|ARM64)$" AND NOT APPLE)
++	if(NOT NOVAFEX_DIR)
++		message(FATAL_ERROR "AArch64 builds need -DNOVAFEX_DIR=<dir with include/novafex.h and lib/libnovafex.so>")
++	endif()
++	include_directories("${NOVAFEX_DIR}/include")
++	set(KYTY_NOVAFEX_LIB "${NOVAFEX_DIR}/lib/libnovafex.so")
++	set(CMAKE_BUILD_RPATH "$ORIGIN")
++	set(CMAKE_INSTALL_RPATH "$ORIGIN")
++endif()
++
+ add_subdirectory("${KYTY_THIRD_PARTY_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/3rdparty")
+ add_subdirectory("${KYTY_SOURCE_DIR}/common" "${CMAKE_CURRENT_BINARY_DIR}/common")
+ 
+@@ -337,6 +348,9 @@ if (KYTY_CLANG_CL)
+ endif()
+ 
+ set(kyty_emulator_link_libraries common Vulkan::Headers spirv-tools-opt spirv-tools SDL3::SDL3-static imgui xxhash FFmpeg::ffmpeg fmt::fmt nlohmann_json::nlohmann_json LibAtrac9 kyty_git_version Zydis::Zydis xbyak::xbyak opus)
++if(KYTY_NOVAFEX_LIB)
++	list(APPEND kyty_emulator_link_libraries "${KYTY_NOVAFEX_LIB}")
++endif()
+ 
+ # Linux system libraries.
+ if(LINUX)
+diff --git a/src/common/abi.h b/src/common/abi.h
+index 621ed610..e8be1765 100644
+--- a/src/common/abi.h
++++ b/src/common/abi.h
+@@ -3,10 +3,16 @@
+ 
+ #include "common/common.h"
+ 
++#if defined(__aarch64__)
++// Native AArch64 host: guest calls are bridged by NovaFex gates, host code uses AAPCS64.
++#define KYTY_MS_ABI
++#define KYTY_SYSV_ABI
++#else
+ // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+ #define KYTY_MS_ABI __attribute__((ms_abi))
+ 
+ // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+ #define KYTY_SYSV_ABI __attribute__((sysv_abi))
++#endif
+ 
+ #endif /* KYTY_COMMON_ABI_H_ */
+diff --git a/src/common/hostException.cpp b/src/common/hostException.cpp
+index d44c623c..54f512cd 100644
+--- a/src/common/hostException.cpp
++++ b/src/common/hostException.cpp
+@@ -10,7 +10,9 @@
+ #include <csignal>
+ #include <cstdlib>
+ #include <initializer_list>
++#include <cstring>
+ #include <unistd.h>
++#include "common/novaFex.h"
+ #if defined(__APPLE__)
+ #include <sys/ucontext.h>
+ #else
+@@ -225,6 +227,87 @@ static void ChainToDefault(int signal_number) noexcept {
+ 	::sigaction(signal_number, &restore, nullptr);
+ }
+ 
++#if defined(__aarch64__)
++// Native AArch64 host (NovaFex). Faults raised by translated guest code arrive here with the
++// JIT's host context; access type comes from the ESR record of the signal frame.
++static uint64_t ReadEsr(const ucontext_t* context) {
++	const auto* p   = reinterpret_cast<const uint8_t*>(context->uc_mcontext.__reserved);
++	const auto* end = p + sizeof(context->uc_mcontext.__reserved);
++	while (p + 8 <= end) {
++		uint32_t magic = 0;
++		uint32_t size  = 0;
++		std::memcpy(&magic, p, 4);
++		std::memcpy(&size, p + 4, 4);
++		if (magic == 0 || size == 0) {
++			break;
++		}
++		if (magic == 0x45535201u && size >= 16) { // ESR_MAGIC
++			uint64_t esr = 0;
++			std::memcpy(&esr, p + 8, 8);
++			return esr;
++		}
++		p += size;
++	}
++	return 0;
++}
++
++static void SignalHandler(int signal_number, siginfo_t* signal_info, void* native_context) {
++	auto* context = static_cast<ucontext_t*>(native_context);
++	if (NovaFex::HandleHostFault(signal_number, signal_info, native_context)) {
++		return;
++	}
++
++	ExceptionInfo info {};
++	info.exception_address = context->uc_mcontext.pc;
++	info.native_code       = static_cast<uint32_t>(signal_number);
++	info.native_context    = context;
++
++	if (signal_number == SIGSEGV || signal_number == SIGBUS) {
++		info.type      = ExceptionType::AccessViolation;
++		const auto esr = ReadEsr(context);
++		const auto ec  = (esr >> 26u) & 0x3fu;
++		if (ec == 0x20 || ec == 0x21 || reinterpret_cast<uint64_t>(signal_info->si_addr) == info.exception_address) {
++			info.access_violation_type = AccessViolationType::Execute;
++		} else if ((esr & (1u << 6u)) != 0) { // WnR
++			info.access_violation_type = AccessViolationType::Write;
++		} else {
++			info.access_violation_type = AccessViolationType::Read;
++		}
++		info.access_violation_vaddr = reinterpret_cast<uint64_t>(signal_info->si_addr);
++	} else if (signal_number == SIGILL) {
++		info.type = ExceptionType::IllegalInstruction;
++	} else {
++		ChainToDefault(signal_number);
++		return;
++	}
++
++	// Host registers for the fault report (x0..x15 in the rax..r15 slots).
++	const auto* x = context->uc_mcontext.regs;
++	info.rax = x[0];
++	info.rbx = x[1];
++	info.rcx = x[2];
++	info.rdx = x[3];
++	info.rsi = x[4];
++	info.rdi = x[5];
++	info.rbp = x[29];
++	info.rsp = context->uc_mcontext.sp;
++	info.r8  = x[8];
++	info.r9  = x[9];
++	info.r10 = x[10];
++	info.r11 = x[11];
++	info.r12 = x[12];
++	info.r13 = x[13];
++	info.r14 = x[14];
++	info.r15 = x[30];
++
++	const auto handler = g_handler.load(std::memory_order_acquire);
++	if (handler != nullptr && handler(info)) {
++		return;
++	}
++
++	ChainToDefault(signal_number);
++}
++#else
+ static void SignalHandler(int signal_number, siginfo_t* signal_info, void* native_context) {
+ 	auto* context = static_cast<ucontext_t*>(native_context);
+ 	auto* gregs   = context->uc_mcontext.gregs;
+@@ -276,6 +359,7 @@ static void SignalHandler(int signal_number, siginfo_t* signal_info, void* nativ
+ 
+ 	ChainToDefault(signal_number);
+ }
++#endif
+ 
+ #endif
+ 
+diff --git a/src/common/novaFex.h b/src/common/novaFex.h
+new file mode 100644
+index 00000000..a2badb0a
+--- /dev/null
++++ b/src/common/novaFex.h
+@@ -0,0 +1,11 @@
++#ifndef KYTY_COMMON_NOVA_FEX_H_
++#define KYTY_COMMON_NOVA_FEX_H_
++
++// Nova PS5 native AArch64 host: guest (PS5 x86-64) code runs in an embedded FEXCore,
++// the emulator itself is native. See NovaPS5-Android native/novafex/novafex.h.
++#if defined(__aarch64__)
++#define KYTY_NOVA_FEX 1
++#include <novafex.h>
++#endif
++
++#endif /* KYTY_COMMON_NOVA_FEX_H_ */
+diff --git a/src/common/platform/sysLinuxVirtual.cpp b/src/common/platform/sysLinuxVirtual.cpp
+index 154d621d..de24c788 100644
+--- a/src/common/platform/sysLinuxVirtual.cpp
++++ b/src/common/platform/sysLinuxVirtual.cpp
+@@ -47,17 +47,25 @@ void Init() {
+ 	g_allocs = new std::map<uintptr_t, size_t>;
+ }
+ 
++// Guest code is never executed by the AArch64 host CPU (FEXCore translates it); executable
++// guest mappings are readable instead, so a stray host jump into them faults and is bridged.
++#if defined(__aarch64__)
++#define KYTY_GUEST_PROT_EXEC PROT_READ
++#else
++#define KYTY_GUEST_PROT_EXEC PROT_EXEC
++#endif
++
+ static int get_protection_flag(Mode mode) {
+ 	int protect = PROT_NONE;
+ 	switch (mode) {
+ 		case Mode::Read: protect = PROT_READ; break;
+ 		case Mode::Write:
+ 		case Mode::ReadWrite: protect = PROT_READ | PROT_WRITE; break; // NOLINT
+-		case Mode::Execute: protect = PROT_EXEC; break;
+-		case Mode::ExecuteRead: protect = PROT_EXEC | PROT_READ; break; // NOLINT
++		case Mode::Execute: protect = KYTY_GUEST_PROT_EXEC; break;
++		case Mode::ExecuteRead: protect = KYTY_GUEST_PROT_EXEC | PROT_READ; break; // NOLINT
+ 		case Mode::ExecuteWrite:
+ 		case Mode::ExecuteReadWrite:
+-			protect = PROT_EXEC | PROT_WRITE | PROT_READ;
++			protect = KYTY_GUEST_PROT_EXEC | PROT_WRITE | PROT_READ;
+ 			break; // NOLINT
+ 		case Mode::NoAccess:
+ 		default: protect = PROT_NONE; break;
+diff --git a/src/graphics/shader/recompiler/ir/passes/SrtWalker.cpp b/src/graphics/shader/recompiler/ir/passes/SrtWalker.cpp
+index 06731ee7..7701ecaf 100644
+--- a/src/graphics/shader/recompiler/ir/passes/SrtWalker.cpp
++++ b/src/graphics/shader/recompiler/ir/passes/SrtWalker.cpp
+@@ -432,6 +432,10 @@ void CompileSrtWalker(ResourcePlan& program) {
+ 	}
+ 	if (visited.size() != pointer_uses.size()) return;
+ 
++#if defined(__aarch64__)
++	// The generated walker is x86-64 code; the AArch64 host uses the interpreted path.
++	return;
++#endif
+ 	program.srt_code = std::make_unique<Xbyak::CodeGenerator>(4096, Xbyak::AutoGrow);
+ 	auto& code = *program.srt_code;
+ 	Xbyak::Label failed, finished;
+diff --git a/src/kernel/memoryAddressSpace.inc b/src/kernel/memoryAddressSpace.inc
+index 6951f933..aadee503 100644
+--- a/src/kernel/memoryAddressSpace.inc
++++ b/src/kernel/memoryAddressSpace.inc
+@@ -635,15 +635,21 @@ private:
+ #elif KYTY_PLATFORM == KYTY_PLATFORM_LINUX
+ 	[[nodiscard]] static uint64_t GetMappableTestSize() { return 0x4000; }
+ 
++#if defined(__aarch64__)
++#define KYTY_GUEST_PROT_EXEC PROT_READ // see sysLinuxVirtual.cpp
++#else
++#define KYTY_GUEST_PROT_EXEC PROT_EXEC
++#endif
++
+ 	static int GetProtect(VirtualMemory::Mode mode) {
+ 		switch (mode) {
+ 			case VirtualMemory::Mode::Read: return PROT_READ;
+ 			case VirtualMemory::Mode::Write:
+ 			case VirtualMemory::Mode::ReadWrite: return PROT_READ | PROT_WRITE;
+-			case VirtualMemory::Mode::Execute: return PROT_EXEC;
+-			case VirtualMemory::Mode::ExecuteRead: return PROT_EXEC | PROT_READ;
++			case VirtualMemory::Mode::Execute: return KYTY_GUEST_PROT_EXEC;
++			case VirtualMemory::Mode::ExecuteRead: return KYTY_GUEST_PROT_EXEC | PROT_READ;
+ 			case VirtualMemory::Mode::ExecuteWrite:
+-			case VirtualMemory::Mode::ExecuteReadWrite: return PROT_EXEC | PROT_READ | PROT_WRITE;
++			case VirtualMemory::Mode::ExecuteReadWrite: return KYTY_GUEST_PROT_EXEC | PROT_READ | PROT_WRITE;
+ 			case VirtualMemory::Mode::NoAccess:
+ 			default: return PROT_NONE;
+ 		}
+diff --git a/src/kernel/pthread.cpp b/src/kernel/pthread.cpp
+index 673a7dc7..85268c37 100644
+--- a/src/kernel/pthread.cpp
++++ b/src/kernel/pthread.cpp
+@@ -47,6 +47,10 @@
+ #endif
+ 
+ #include <pthread.h>
++#include <csetjmp>
++
++#include "common/novaFex.h"
++#include "loader/runtimeLinker.h"
+ 
+ #if KYTY_PLATFORM == KYTY_PLATFORM_WINDOWS
+ #include <fmt/format.h>
+@@ -135,6 +139,11 @@ static uint64_t GetHostThreadId() {
+ static uint64_t KernelReadTscNative() {
+ #if defined(_M_X64) || defined(__x86_64__)
+ 	return __rdtsc();
++#elif defined(__aarch64__)
++	// FEX implements guest rdtsc with the generic timer counter.
++	uint64_t value = 0;
++	asm volatile("isb; mrs %0, cntvct_el0" : "=r"(value));
++	return value;
+ #else
+ 	return Common::Timer::QueryPerformanceCounter();
+ #endif
+@@ -172,6 +181,10 @@ static uint64_t KernelGetTscFrequencyNative() {
+ 		freq = (mod >= ROUND_TO / 2 ? freq - mod + ROUND_TO : freq - mod);
+ 
+ 		return freq != 0 ? freq : host_frequency;
++#elif defined(__aarch64__)
++		uint64_t value = 0;
++		asm volatile("mrs %0, cntfrq_el0" : "=r"(value));
++		return value != 0 ? value : Common::Timer::QueryPerformanceFrequency();
+ #else
+ 		return Common::Timer::QueryPerformanceFrequency();
+ #endif
+@@ -810,6 +823,11 @@ bool TestGuestStackOwnerLifecycle(uint64_t* first_address, uint64_t* second_addr
+ }
+ #endif
+ 
++#if defined(KYTY_NOVA_FEX)
++static thread_local sigjmp_buf* g_nova_exit_point = nullptr;
++static thread_local void*       g_nova_exit_value = nullptr;
++#endif
++
+ static KYTY_SYSV_ABI void* RunOnGuestStack(void* arg, pthread_entry_func_t func, void* stack_top) {
+ #if defined(__x86_64__) || defined(_M_X64)
+ 	void*      ret = nullptr;
+@@ -929,6 +947,22 @@ static KYTY_SYSV_ABI void* RunOnGuestStack(void* arg, pthread_entry_func_t func,
+ 	}
+ 
+ 	return ret;
++#elif defined(KYTY_NOVA_FEX)
++	if (stack_top != nullptr) {
++		NovaFex::SetThreadGuestStack(reinterpret_cast<uintptr_t>(stack_top) & ~static_cast<uintptr_t>(0x0f));
++	}
++	NovaFex::SetThreadFsBase(Loader::NovaGuestFsBase());
++	sigjmp_buf exit_point;
++	g_nova_exit_point = &exit_point;
++	if (sigsetjmp(exit_point, 0) != 0) {
++		// PthreadExit() unwound the guest frames of this thread.
++		NovaFex::AbandonGuestCalls();
++		g_nova_exit_point = nullptr;
++		return g_nova_exit_value;
++	}
++	const auto ret = NovaFex::CallGuest(reinterpret_cast<uint64_t>(func), reinterpret_cast<uint64_t>(arg));
++	g_nova_exit_point = nullptr;
++	return reinterpret_cast<void*>(ret);
+ #else
+ 	(void)stack_top;
+ 	return func(arg);
+@@ -3556,6 +3590,11 @@ void KYTY_SYSV_ABI PthreadExit(void* value) {
+ 			__builtin_unreachable();
+ 		}
+ 	}
++#elif defined(KYTY_NOVA_FEX)
++	if (g_nova_exit_point != nullptr) {
++		g_nova_exit_value = value;
++		siglongjmp(*g_nova_exit_point, 1);
++	}
+ #endif
+ 
+ 	pthread_exit(value);
+diff --git a/src/libs/libKernel.cpp b/src/libs/libKernel.cpp
+index 7f75f2bb..54207c3c 100644
+--- a/src/libs/libKernel.cpp
++++ b/src/libs/libKernel.cpp
+@@ -1,3 +1,4 @@
++#include "common/novaFex.h"
+ #include "graphics/host_gpu/hostMemory.h"
+ #include "common/abi.h"
+ #include "common/assert.h"
+@@ -465,7 +466,11 @@ static KYTY_SYSV_ABI void stack_chk_fail() {
+ 	PRINT_NAME();
+ 
+ 	uint64_t rsp = 0;
++#if defined(__x86_64__)
+ 	asm volatile("movq %%rsp, %0" : "=r"(rsp));
++#elif defined(KYTY_NOVA_FEX)
++	rsp = NovaFex::CurrentGuestRsp();
++#endif
+ 	dump_stack_chk_fail_context(reinterpret_cast<uint64_t>(__builtin_return_address(0)), rsp);
+ 
+ 	EXIT("stack fail!!!");
+@@ -705,6 +710,7 @@ static SignalUcontext CreateSignalUcontext(
+ 	return ctx;
+ }
+ 
++#if defined(__x86_64__)
+ static SignalUcontext CreateCurrentGuestCallSignalUcontext(uint64_t rip) {
+ 	auto ctx = CreateSignalUcontext();
+ 
+@@ -746,6 +752,7 @@ static SignalUcontext CreateCurrentGuestCallSignalUcontext(uint64_t rip) {
+ 
+ 	return ctx;
+ }
++#endif
+ 
+ static bool IsGuestCodeAddress(uint64_t addr) {
+ 	return addr >= 0x0000000900000000ull && addr < 0x0000000980000000ull;
+@@ -3480,7 +3487,7 @@ static void AddLibkernelUnityFunc(Loader::SymbolDatabase* s, const char* nid, ui
+ 	sr.module_version_major = 1;
+ 	sr.module_version_minor = 1;
+ 	sr.type                 = Loader::SymbolType::Func;
+-	s->Add(sr, func, dbg_name);
++	s->Add(sr, Libs::NovaExportAddress(func, Loader::SymbolType::Func), dbg_name);
+ }
+ 
+ LIB_DEFINE(InitLibKernel_1) {
+diff --git a/src/libs/libs.h b/src/libs/libs.h
+index d1220ed3..cdce1023 100644
+--- a/src/libs/libs.h
++++ b/src/libs/libs.h
+@@ -39,7 +39,7 @@
+ 		sr.module_version_major = g_module_version_major;                                          \
+ 		sr.module_version_minor = g_module_version_minor;                                          \
+ 		sr.type                 = t;                                                               \
+-		auto        func        = reinterpret_cast<uint64_t>(f);                                   \
++		auto        func        = Libs::NovaExportAddress(reinterpret_cast<uint64_t>(f), t);       \
+ 		const char* dbg_name    = "" #f;                                                           \
+ 		s->Add(sr, func, dbg_name);                                                                \
+ 	}
+@@ -58,6 +58,23 @@ namespace Loader {
+ class SymbolDatabase;
+ } // namespace Loader
+ 
++#include "common/novaFex.h"
++#include "loader/symbolDatabase.h"
++
++namespace Libs {
++// Address the guest sees for an HLE export: functions are native AArch64 code on the Nova
++// host and are reached through a NovaFex gate; data objects are shared directly.
++inline uint64_t NovaExportAddress(uint64_t address, Loader::SymbolType type) {
++#if defined(KYTY_NOVA_FEX)
++	if (type == Loader::SymbolType::Func && address != 0) {
++		return NovaFex::MakeGate(reinterpret_cast<const void*>(address));
++	}
++#endif
++	(void)type;
++	return address;
++}
++} // namespace Libs
++
+ namespace Libs {
+ 
+ // Keep the formatting path from inflating fiber functions' stack frames under LTO.
+diff --git a/src/libs/vaContext.h b/src/libs/vaContext.h
+index 399d0cc0..b874ea50 100644
+--- a/src/libs/vaContext.h
++++ b/src/libs/vaContext.h
+@@ -2,7 +2,17 @@
+ #define EMULATOR_INCLUDE_EMULATOR_LIBS_VACONTEXT_H_
+ 
+ #include <cstddef>
++#include <cstdint>
++#if defined(__aarch64__)
++#include "common/novaFex.h"
++// 16-byte vector passed in v0-v7 by AAPCS64; NovaFex gates map xmm0-7 to v0-7.
++typedef float __m128 __attribute__((__vector_size__(16), __aligned__(16))); // NOLINT
++// The SysV overflow area is the guest stack of the current gate call.
++#define KYTY_VA_OVERFLOW_AREA reinterpret_cast<void*>(NovaFex::CurrentGateStackArgs())
++#else
+ #include <xmmintrin.h>
++#define KYTY_VA_OVERFLOW_AREA (&overflow_arg_area)
++#endif
+ 
+ // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+ #define VA_ARGS                                                                                    \
+@@ -30,7 +40,8 @@
+ 	(ctx).va_list.reg_save_area     = &(ctx).reg_save_area;                                        \
+ 	(ctx).va_list.gp_offset         = offsetof(VaRegSave, gp);                                     \
+ 	(ctx).va_list.fp_offset         = offsetof(VaRegSave, fp);                                     \
+-	(ctx).va_list.overflow_arg_area = &overflow_arg_area;
++	(ctx).va_list.overflow_arg_area = KYTY_VA_OVERFLOW_AREA;                                       \
++	(void)overflow_arg_area;
+ 
+ namespace Libs {
+ 
+diff --git a/src/loader/guestInstructionPatcher.cpp b/src/loader/guestInstructionPatcher.cpp
+index 0ab7de67..59402560 100644
+--- a/src/loader/guestInstructionPatcher.cpp
++++ b/src/loader/guestInstructionPatcher.cpp
+@@ -1,3 +1,4 @@
++#if !defined(__aarch64__)
+ // SPDX-FileCopyrightText: Copyright 2026 shadPS4 Emulator Project
+ // SPDX-License-Identifier: GPL-2.0-or-later
+ 
+@@ -1761,3 +1762,26 @@ void UnregisterGuestInstructionPatchModule(void* module_ptr) {
+ #undef ASSERT
+ 
+ } // namespace Loader
++
++#else
++// Native AArch64 host: FEXCore implements SSE4a, RDPID and CLWB, so guest code is left as is.
++#include "loader/guestInstructionPatcher.h"
++namespace Loader {
++GuestInstructionHostFeatures GetGuestInstructionHostFeatures() {
++	return {true, true, true};
++}
++void RegisterGuestInstructionPatchModule(void* /*module_ptr*/, uint64_t /*module_size*/,
++                                         void* /*trampoline_area_ptr*/, uint64_t /*trampoline_area_size*/) {}
++void UnregisterGuestInstructionPatchModule(void* /*module_ptr*/) {}
++GuestInstructionPatchResult PatchGuestInstructions(uint64_t /*segment_addr*/, uint64_t /*segment_size*/,
++                                                   std::span<const uintptr_t> /*function_starts*/,
++                                                   bool /*protect_memory*/, bool /*emulate_amd*/,
++                                                   GuestInstructionHostFeatures /*host_features*/) {
++	return {};
++}
++bool DecodeEhFrameFunctionStarts(uint64_t /*eh_frame_header_addr*/, uint64_t /*eh_frame_header_size*/,
++                                 std::vector<uintptr_t>* /*function_starts*/) {
++	return false;
++}
++} // namespace Loader
++#endif
+diff --git a/src/loader/jit.h b/src/loader/jit.h
+index ebc72e43..05cb8332 100644
+--- a/src/loader/jit.h
++++ b/src/loader/jit.h
+@@ -2,6 +2,7 @@
+ #define EMULATOR_INCLUDE_EMULATOR_LOADER_JIT_H_
+ 
+ #include "common/abi.h"
++#include "common/novaFex.h"
+ 
+ namespace Loader::Jit {
+ 
+@@ -10,7 +11,11 @@ namespace Loader::Jit {
+ struct JmpRax {
+ 	template <class Handler>
+ 	void SetFunc(Handler func) {
++#if defined(KYTY_NOVA_FEX)
++		*reinterpret_cast<uint64_t*>(&code[2]) = NovaFex::MakeGate(reinterpret_cast<const void*>(func));
++#else
+ 		*reinterpret_cast<Handler*>(&code[2]) = func;
++#endif
+ 	}
+ 
+ 	// mov rax, 0x1122334455667788
+@@ -73,7 +78,14 @@ struct TlsRegStub {
+ struct SafeCall {
+ 	using func_t = KYTY_MS_ABI uint8_t* (*)();
+ 
+-	void SetFunc(func_t func) { *reinterpret_cast<func_t*>(&code[0x22]) = func; }
++	void SetFunc(func_t func) {
++#if defined(KYTY_NOVA_FEX)
++		// The stub is guest code: call the native function through a NovaFex gate.
++		*reinterpret_cast<uint64_t*>(&code[0x22]) = NovaFex::MakeGate(reinterpret_cast<const void*>(func));
++#else
++		*reinterpret_cast<func_t*>(&code[0x22]) = func;
++#endif
++	}
+ 
+ 	static uint64_t GetSize() { return 0x1000; }
+ 
+diff --git a/src/loader/runtimeLinker.cpp b/src/loader/runtimeLinker.cpp
+index f267da60..a7ca7d46 100644
+--- a/src/loader/runtimeLinker.cpp
++++ b/src/loader/runtimeLinker.cpp
+@@ -22,6 +22,8 @@
+ #include "loader/jit.h"
+ #include "loader/symbolDatabase.h"
+ #include "loader/x64InstructionEmulator.h"
++#include "libs/libs.h"
++#include "common/novaFex.h"
+ 
+ #include <algorithm>
+ #include <atomic>
+@@ -159,7 +161,8 @@ static uint64_t AllocateUnresolvedImportThunk(uint64_t record_id) {
+ 	    0x0f, 0x57, 0xc0,                     // xorps xmm0, xmm0
+ 	    0xc3,                                 // ret
+ 	};
+-	const auto target = reinterpret_cast<uint64_t>(UnresolvedImportStub);
++	const auto target = Libs::NovaExportAddress(reinterpret_cast<uint64_t>(UnresolvedImportStub),
++	                                            Loader::SymbolType::Func);
+ 	std::memcpy(bytes + 6, &record_id, sizeof(record_id));
+ 	std::memcpy(bytes + 16, &target, sizeof(target));
+ 	std::memcpy(code, bytes, sizeof(bytes));
+@@ -222,6 +225,8 @@ static Program*              g_tls_main_program        = nullptr;
+ static thread_local Program* g_tls_cached_main_program = nullptr;
+ static thread_local uint8_t* g_tls_cached_main_tcb     = nullptr;
+ 
++static KYTY_MS_ABI uint8_t* TlsMainGetAddr();
++
+ static KYTY_SYSV_ABI void RunEntry(uint64_t addr, EntryParams* params, atexit_func_t atexit_func,
+                                    void* stack_top) {
+ #if defined(__x86_64__) || defined(_M_X64)
+@@ -357,6 +362,13 @@ static KYTY_SYSV_ABI void RunEntry(uint64_t addr, EntryParams* params, atexit_fu
+ 	               "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7", "xmm8", "xmm9", "xmm10",
+ 	               "xmm11", "xmm12", "xmm13", "xmm14", "xmm15");
+ #endif
++#elif defined(KYTY_NOVA_FEX)
++	if (stack_top != nullptr) {
++		NovaFex::SetThreadGuestStack(reinterpret_cast<uintptr_t>(stack_top) & ~static_cast<uintptr_t>(0x0f));
++	}
++	NovaFex::SetThreadFsBase(NovaGuestFsBase());
++	NovaFex::CallGuest(addr, reinterpret_cast<uint64_t>(params),
++	                   Libs::NovaExportAddress(reinterpret_cast<uint64_t>(atexit_func), SymbolType::Func));
+ #else
+ 	(void)stack_top;
+ 	reinterpret_cast<entry_func_t>(addr)(params, atexit_func);
+@@ -928,6 +940,10 @@ static KYTY_MS_ABI uint8_t* TlsMainGetAddr() {
+ 	return g_tls_cached_main_tcb;
+ }
+ 
++uint64_t NovaGuestFsBase() {
++	return g_tls_main_program != nullptr ? reinterpret_cast<uint64_t>(TlsMainGetAddr()) : 0;
++}
++
+ static void PatchProgram(Program* program, uint64_t address, uint64_t size) {
+ 	EXIT_IF(program == nullptr);
+ 	EXIT_IF(program->elf == nullptr);
+@@ -956,8 +972,13 @@ static void PatchProgram(Program* program, uint64_t address, uint64_t size) {
+ 		}
+ 	}
+ 
++#if defined(KYTY_NOVA_FEX)
++	// FEX gives guest code a real FS base (the thread's TCB), so fs:[0] needs no patching.
++	if (false) {
++#else
+ 	if (!program->elf->IsShared() && program->tls.handler_vaddr != 0 &&
+ 	    size >= Jit::Call9::GetSize()) {
++#endif
+ 		// Replace:
+ 		//   66 66 66
+ 		//   mov <reg>, qword ptr fs:[0x00]
+@@ -1719,6 +1740,12 @@ void RuntimeLinker::LoadProgramToMemory(Program* program) {
+ 		LOGF("tls_handler_size       = 0x%016" PRIx64 "\n", tls_handler_size);
+ 	}
+ 
++#if defined(KYTY_NOVA_FEX)
++	if (!NovaFex::Init()) {
++		EXIT("NovaFex (embedded FEXCore) failed to initialize\n");
++	}
++	NovaFex::SetFsBaseProvider(&NovaGuestFsBase);
++#endif
+ 	if (!Common::HostException::InstallHandler(KytyExceptionHandler)) {
+ 		EXIT("Failed to install the required vectored exception handler\n");
+ 	}
+diff --git a/src/loader/runtimeLinker.h b/src/loader/runtimeLinker.h
+index 3787b94c..d887724e 100644
+--- a/src/loader/runtimeLinker.h
++++ b/src/loader/runtimeLinker.h
+@@ -25,6 +25,9 @@ struct Elf64_Sym;
+ struct Elf64_Rela;
+ class RuntimeLinker;
+ 
++// Guest FS base (TCB pointer of the main program's static TLS) for the calling thread.
++uint64_t NovaGuestFsBase();
++
+ using module_func_t                          = KYTY_SYSV_ABI int (*)(size_t args, const void* argp);
+ using application_heap_free_func_t           = KYTY_SYSV_ABI void (*)(void*);
+ using application_heap_malloc_func_t         = KYTY_SYSV_ABI void* (*)(uint64_t);
+diff --git a/src/loader/x64InstructionEmulator.cpp b/src/loader/x64InstructionEmulator.cpp
+index 7500c364..7a82c07e 100644
+--- a/src/loader/x64InstructionEmulator.cpp
++++ b/src/loader/x64InstructionEmulator.cpp
+@@ -1,3 +1,4 @@
++#if !defined(__aarch64__)
+ #include "loader/x64InstructionEmulator.h"
+ 
+ #include "common/common.h"
+@@ -823,3 +824,13 @@ bool TryEmulate(void* native_context) {
+ }
+ 
+ } // namespace Loader::X64InstructionEmulator
++
++#else
++// Native AArch64 host: guest instructions are translated by FEXCore, nothing to emulate here.
++#include "loader/x64InstructionEmulator.h"
++namespace Loader::X64InstructionEmulator {
++bool TryEmulate(void* /*native_context*/) {
++	return false;
++}
++} // namespace Loader::X64InstructionEmulator
++#endif
