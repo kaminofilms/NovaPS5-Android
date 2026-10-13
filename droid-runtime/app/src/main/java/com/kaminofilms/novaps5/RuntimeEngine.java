@@ -26,6 +26,8 @@ final class RuntimeEngine {
     static final String RUNTIME_SHA="d3240c1531531615b0dd06b6ad56e92db9015a8641eb18c3a613835ae45992e7";
     // Substituted by build-runtime-apk.py with the SHA-256 of the packaged, CI-built core.
     static final String LINUX_CORE_SHA="@NOVA_LINUX_CORE_SHA256@";
+    static final android.os.Handler LAUNCH_HANDLER=new android.os.Handler(android.os.Looper.getMainLooper());
+    static Runnable pendingLaunch;
     final Activity context;
     RuntimeEngine(Activity c){context=c;}
     File root(){return LinuxRuntime.rootDir(context);}
@@ -115,6 +117,7 @@ final class RuntimeEngine {
         clear(previous);
     }
     void launch(String game,String name){
+        if(pendingLaunch!=null){LAUNCH_HANDLER.removeCallbacks(pendingLaunch);pendingLaunch=null;}
         if(SessionState.INSTANCE.getRunning()){
             // A previous game whose Kyty process already ended can leave the session marked running;
             // stop it instead of forcing the user to kill the whole app.
@@ -122,13 +125,18 @@ final class RuntimeEngine {
             try{context.startService(new Intent(context,SessionService.class).setAction(context.getPackageName()+".STOP_SESSION"));}catch(Exception x){BootLog.write(context,"Session stop failed: "+x);}
             // The session service handles the stop on this (main) thread, so never block here:
             // poll from the main looper and start the game once the old session has gone.
-            final android.os.Handler handler=new android.os.Handler(android.os.Looper.getMainLooper());
-            final long deadline=android.os.SystemClock.uptimeMillis()+15000;
-            handler.postDelayed(new Runnable(){public void run(){
-                if(!SessionState.INSTANCE.getRunning()){start(game,name);return;}
-                if(android.os.SystemClock.uptimeMillis()>deadline){BootLog.write(context,"Previous session did not stop within 15 s");android.widget.Toast.makeText(context,"The previous game is still closing. Try again in a moment.",android.widget.Toast.LENGTH_LONG).show();return;}
+            final long deadline=android.os.SystemClock.uptimeMillis()+30000;
+            // Only the most recent request survives: tapping several games while the old session
+            // closes must not start all of them at once.
+            if(pendingLaunch!=null)LAUNCH_HANDLER.removeCallbacks(pendingLaunch);
+            android.widget.Toast.makeText(context,"Closing the previous game…",android.widget.Toast.LENGTH_SHORT).show();
+            final android.os.Handler handler=LAUNCH_HANDLER;
+            pendingLaunch=new Runnable(){public void run(){
+                if(!SessionState.INSTANCE.getRunning()){pendingLaunch=null;start(game,name);return;}
+                if(android.os.SystemClock.uptimeMillis()>deadline){pendingLaunch=null;BootLog.write(context,"Previous session did not stop within 30 s");android.widget.Toast.makeText(context,"The previous game is still closing. Try again in a moment.",android.widget.Toast.LENGTH_LONG).show();return;}
                 handler.postDelayed(this,200);
-            }},200);
+            }};
+            handler.postDelayed(pendingLaunch,200);
             return;
         }
         start(game,name);
