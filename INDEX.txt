@@ -56,3 +56,4 @@ runs/native-38431391220-f077d804 native job=cancelled
 runs/novafex-38433728833-dc0c61ae novafex job=success
 release/38433728895-dc0c61ae core=success apk=cancelled arm64=cancelled
 runs/native-38433728529-dc0c61ae native job=cancelled
+release/38434601168-72c1cc34 core=success apk=success arm64=success
