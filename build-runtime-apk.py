@@ -101,7 +101,7 @@ def prepare_platform(base, core=None, linux_core=False):
     if 'resourcesInfo:\n' not in value:
         raise RuntimeError('Pinned Apktool resource metadata changed')
     value = value.replace('resourcesInfo:\n', 'resourcesInfo:\n  packageName: com.kaminofilms.novaps5\n', 1)
-    for key, setting in [('versionCode', '14' if linux_core else '6'), ('versionName', '0.3.4-linux-fex' if linux_core else '0.2.4-bootapi'), ('minSdkVersion', '28'), ('targetSdkVersion', '28')]:
+    for key, setting in [('versionCode', '15' if linux_core else '6'), ('versionName', '0.4.0-native' if linux_core else '0.2.4-bootapi'), ('minSdkVersion', '28'), ('targetSdkVersion', '28')]:
         value = re.sub(r'(?m)^(  ' + key + r':).*$', r'\1 ' + setting, value)
     path.write_text(value)
     shutil.copyfile(ROOT / 'android/res/drawable/app_icon.xml', base / 'res/drawable/novaps5_icon.xml')
@@ -164,7 +164,7 @@ def prepare_platform(base, core=None, linux_core=False):
     hints = tree.getroot().find("string-array[@name='loading_hints']")
     hints.clear()
     hints.set('name', 'loading_hints')
-    for hint in ['Nova starts Linux Kyty directly through standalone FEX.' if linux_core else 'Nova starts the selected game directly through Kyty and ARM64 Wine/FEX.',
+    for hint in ['Nova runs Kyty natively on ARM64; only game code is translated.' if linux_core else 'Nova starts the selected game directly through Kyty and ARM64 Wine/FEX.',
                  'Tap the boot status at the top to read the Kyty session log.',
                  '720p and 60 Hz are configuration targets; game compatibility is experimental.']:
         ET.SubElement(hints, 'item').text = hint

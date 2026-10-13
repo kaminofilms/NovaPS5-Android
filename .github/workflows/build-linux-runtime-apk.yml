@@ -1,7 +1,7 @@
 name: Nova PS5 Linux Kyty FEX Android APK
 on:
   push:
-    branches: [ps5-linux-core]
+    branches: [ps5-linux-core, native-arm64]
     paths:
       - 'build-runtime-apk.py'
       - 'runtime-linux/**'
@@ -10,13 +10,14 @@ on:
       - 'droid-runtime/app/src/main/assets/engine/**'
       - 'tests/**'
       - 'tools/ci/**'
+      - 'native/**'
       - '.github/workflows/build-linux-runtime-apk.yml'
   workflow_dispatch:
 permissions:
   contents: write
   actions: read
 env:
-  APK: NovaPS5-0.3.4-linux-fex-arm64.apk
+  APK: NovaPS5-0.4.0-native-arm64.apk
   KYTY_COMMIT: df5b9b92be7dfd463b47756b707d6d356a9f0550
 jobs:
   core:
@@ -66,8 +67,34 @@ jobs:
           name: kyty-linux-core
           path: core/*
           retention-days: 30
+  native-core:
+    name: Build native AArch64 Kyty (embedded FEXCore)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang lld ninja-build cmake git glslang-tools python3 pkg-config ccache patchelf \
+            libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev libxfixes-dev libxi-dev libxrandr-dev libxss-dev libxtst-dev \
+            libxkbcommon-dev libasound2-dev libpulse-dev libudev-dev libdbus-1-dev libwayland-dev wayland-protocols
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: native-ccache-${{ hashFiles('native/**', 'patches/*') }}
+          restore-keys: native-ccache-
+      - name: Build
+        run: bash tools/ci/build-native-kyty.sh "$PWD" "$PWD/work" "$PWD/dist" 2>&1 | tail -120
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kyty-native-core
+          path: |
+            dist/native
+            dist/native-core.json
+          retention-days: 30
   linux-apk:
-    needs: core
+    needs: [core, native-core]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -88,6 +115,10 @@ jobs:
         with:
           name: kyty-linux-core
           path: build/linux-core
+      - uses: actions/download-artifact@v4
+        with:
+          name: kyty-native-core
+          path: build/native-core
       - name: Test Linux launch routing
         run: python3 tests/test_linux_launch.py
       - name: Provision pinned standalone FEX and x86-64 guest libraries
@@ -95,7 +126,7 @@ jobs:
           set -euo pipefail
           chmod 755 build/linux-core/kyty_emulator
           sha=$(python3 -c "import json;print(json.load(open('build/linux-core/kyty-core.json'))['sha256'])")
-          python3 runtime-linux/provision.py --core-sha "$sha" --output droid-runtime/app/src/main/assets/engine/linux-runtime.tar.gz
+          python3 runtime-linux/provision.py --core-sha "$sha" --native-dir build/native-core/native --output droid-runtime/app/src/main/assets/engine/linux-runtime.tar.gz
       - name: Signing identity (repository secret NOVA_KEYSTORE_B64 keeps upgrades installable)
         env:
           NOVA_KEYSTORE_B64: ${{ secrets.NOVA_KEYSTORE_B64 }}
@@ -111,6 +142,7 @@ jobs:
           (cd dist && sha256sum "$APK" > SHA256SUMS.txt)
           cp build/linux-core/cli-preflight.txt dist/linux-host-cli.txt
           cp build/linux-core/kyty-core.json dist/kyty-core.json
+          cp build/native-core/native-core.json dist/native-core.json
       - uses: actions/upload-artifact@v4
         with:
           name: NovaPS5-Linux-FEX-APK-${{ github.sha }}
@@ -254,11 +286,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          tag="v0.3.4-linux-fex-${GITHUB_SHA::7}"
+          tag="v0.4.0-native-${GITHUB_SHA::7}"
           gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
-            --title "Nova PS5 0.3.4 Linux/FEX ARM64 (CI ${GITHUB_SHA::7}, device test build)" \
-            --notes "CI-signed device test build. Vulkan thunks verified on ARM64 CI with lavapipe; Adreno driver, PS5 game boot and frame presentation are UNVERIFIED until tested on hardware. Workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
-            "dist/$APK" dist/SHA256SUMS.txt dist/verification.json dist/kyty-core.json dist/arm64-fex-preflight.txt
+            --title "Nova PS5 0.4.0 native ARM64 Kyty (CI ${GITHUB_SHA::7}, device test build)" \
+            --notes "CI-signed device test build. Kyty runs natively on ARM64 with an embedded FEXCore translating only game code (NOVA_ENGINE=fex selects the previous full-FEX path). PS5 game boot and frame presentation on Adreno are UNVERIFIED until tested on hardware. Workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            "dist/$APK" dist/SHA256SUMS.txt dist/verification.json dist/kyty-core.json dist/native-core.json dist/arm64-fex-preflight.txt
   logs:
     # CI logs are also committed to the lab-logs branch so they can be read with plain git.
     needs: [core, linux-apk, arm64-fex-preflight]
