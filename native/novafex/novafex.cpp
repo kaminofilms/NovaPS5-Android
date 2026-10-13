@@ -300,7 +300,25 @@ void ReadSmall(const char* path, char* out, size_t size) {
 }
 
 // Every task of the process: name, run state (R running, S/D waiting, t stopped by a tracer) and
-// the kernel function it waits in; then each one prints its own native stack.
+// the kernel function it waits in. Read from /proc only; the threads are not disturbed.
+void ReportTasks() {
+	const int self = static_cast<int>(gettid());
+	if (DIR* dir = opendir("/proc/self/task")) {
+		while (dirent* entry = readdir(dir)) {
+			const int tid = atoi(entry->d_name);
+			if (tid <= 0 || tid == self) continue;
+			char path[64], stat[512], wchan[96];
+			std::snprintf(path, sizeof(path), "/proc/self/task/%d/stat", tid);
+			ReadSmall(path, stat, sizeof(stat));
+			std::snprintf(path, sizeof(path), "/proc/self/task/%d/wchan", tid);
+			ReadSmall(path, wchan, sizeof(wchan));
+			std::fprintf(stderr, "NOVA_FEX: thread %.60s wchan=%s\n", stat, wchan[0] != 0 ? wchan : "?");
+		}
+		closedir(dir);
+	}
+}
+
+// Then each thread prints its own native stack (interrupts every thread once; last resort).
 void DumpAllThreads() {
 	struct sigaction sa {};
 	sa.sa_sigaction = DumpSelf;
@@ -315,14 +333,6 @@ void DumpAllThreads() {
 			if (tid > 0 && tid != self) tids.push_back(tid);
 		}
 		closedir(dir);
-	}
-	for (const int tid: tids) {
-		char path[64], stat[512], wchan[96];
-		std::snprintf(path, sizeof(path), "/proc/self/task/%d/stat", tid);
-		ReadSmall(path, stat, sizeof(stat));
-		std::snprintf(path, sizeof(path), "/proc/self/task/%d/wchan", tid);
-		ReadSmall(path, wchan, sizeof(wchan));
-		std::fprintf(stderr, "NOVA_FEX: thread %.60s wchan=%s\n", stat, wchan[0] != 0 ? wchan : "?");
 	}
 	for (const int tid: tids) {
 		syscall(SYS_tgkill, getpid(), tid, SIGRTMIN + 6);
@@ -380,7 +390,7 @@ void Watchdog() {
 	// tree (outside proot); when the launcher is gone the session has ended.
 	const pid_t launcher = static_cast<pid_t>(EnvInt("NOVA_LAUNCHER_PID", 0));
 	uint64_t last_frames = 0, report_frames = 0, report_gates = 0, last_gates = 0;
-	int frozen_for = 0, quiet_for = 0, freeze_dumps = 0;
+	int frozen_for = 0, quiet_for = 0, freeze_episodes = 0;
 	bool stall_dumped = false;
 	for (int tick = 1;; tick++) {
 		sleep(1);
@@ -397,14 +407,18 @@ void Watchdog() {
 		} else if (frames != 0) {
 			frozen_for++;
 		}
-		// The game had been presenting frames and stopped: report where every thread is.
-		if (freeze_after > 0 && frozen_for == freeze_after && freeze_dumps < 3) {
-			freeze_dumps++;
+		// The game had been presenting frames and stopped: report where every thread is. Loading
+		// screens can pause presentation for a while, so the first reports only read /proc; the
+		// stacks (which interrupt each thread) come only if it stays frozen.
+		if (freeze_after > 0 && frames != 0 && freeze_episodes <= 3 &&
+		    (frozen_for == freeze_after || frozen_for == freeze_after * 3 || frozen_for == freeze_after * 5)) {
+			if (frozen_for == freeze_after) freeze_episodes++;
 			std::fprintf(stderr, "NOVA_FREEZE: no frame for %d s (frames=%llu gates=%llu guest_calls=%llu rss=%ldMB avail=%ldMB)\n",
 			             frozen_for, (unsigned long long)frames, (unsigned long long)gates, (unsigned long long)calls,
 			             ReadKb("/proc/self/status", "VmRSS:") / 1024, ReadKb("/proc/meminfo", "MemAvailable:") / 1024);
 			ReportGuestThreads();
-			DumpAllThreads();
+			ReportTasks();
+			if (frozen_for == freeze_after * 5) DumpAllThreads();
 			std::fprintf(stderr, "NOVA_FREEZE: end of report\n");
 		}
 		// Before the first frame: (almost) no guest->host traffic for 15 s.
@@ -414,6 +428,7 @@ void Watchdog() {
 			stall_dumped = true;
 			std::fprintf(stderr, "NOVA_FEX: no guest progress for 15 s, dumping host threads\n");
 			ReportGuestThreads();
+			ReportTasks();
 			DumpAllThreads();
 		}
 		if (report_every > 0 && (tick == 5 || tick % report_every == 0)) {
