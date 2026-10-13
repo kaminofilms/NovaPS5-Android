@@ -1,0 +1,45 @@
+Initialized: Config
+Initialized: Log
+Initialized: Timer
+Initialized: Pthread
+Initialized: Profiler
+Initialized: Network
+Initialized: Memory
+Initialized: FileSystem
+Initialized: Controller
+Initialized: Audio
+Vulkan pipeline cache: disabled (dirty build)
+Initialized: Graphics
+Title ID: PPSA59322
+[ccleste] starts (standard error to klog: yes)
+[ccleste] splash dismissed: 0
+[ccleste] pad: player 0 opened for user 1000, rumble mode 0
+[ccleste] sample celeste: starts
+--- Guest fault context ---
+thread: MainThread
+rax=0000000000000000 rbx=0000000000000000 rcx=0000002000099c40 rdx=0000000000001b04
+rsi=0000000000000001 rdi=0000002000010e41 rbp=00000007efdf19b0 rsp=00000007efdf1890
+r8 =0000000000000000 r9 =0000002000010000 r10=0000002000099e40 r11=0000000000000000
+r12=0000000000000000 r13=0000002000099c40 r14=0000002000099d40 r15=0000000000000000
+code (pc-48 .. pc+48, fault at byte 48):
+ b8 78 29 45 85 db 0f 84 9a 0e 00 00 48 8b 45 88
+ 48 3b 85 38 ff ff ff 0f 85 71 04 00 00 e9 84 0e
+ 00 00 66 2e 0f 1f 84 00 00 00 00 00 4d 8b 61 10
+ 49 83 7c 24 08 00 0f 84 40 04 00 00 8b 85 5c ff
+ ff ff c0 e8 02 f6 85 58 ff ff ff 01 4c 89 b5 28
+ ff ff ff 0f 94 c1 4d 85 c0 0f 9e c2 20 ca 48 8b
+stack:
+  00000007efdf18a0 00005565c6f599d9 0000000000000000 0000000000000000
+  0000000000000000 0000000000000000 0000002000099c40 0000000000000001
+  0000002000010e41 0000002000099d40 0000000000000000 0000002000099c40
+  0000000000000000 0000000000000000 0000000000000000 0000000900000000
+  0000000000000000 0000000000000000 0000000defdf1930 000000000000000f
+  ffffffffffffffff 0000002000099c40 0000000000000000 0000002000099e40
+  0000000000000001 0000000900000000 0000000000000000 0000000000000000
+  0063002000012180 0000002000010000 0000002000012a80 0000000000000000
+--- Build ---
+Source build df5b9b9-dirty
+--- Error ---
+Unhandled host exception: type=1 code=11 pc=0x0000000900b8eec4 access=1 address=0x0000000000000008
+ in /home/runner/work/NovaPS5-Android/NovaPS5-Android/linux-kyty/src/loader/runtimeLinker.cpp:711
+NOVA_LAB: mode=native exit=65 elapsed=15s (124 = still running at timeout)
