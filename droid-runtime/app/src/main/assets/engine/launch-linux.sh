@@ -24,7 +24,7 @@ export FEX_THUNKHOSTLIBS=$runtime/host/usr/lib/aarch64-linux-gnu/fex-emu/HostThu
 export FEX_THUNKGUESTLIBS=$runtime/host/usr/share/fex-emu/GuestThunks
 export FEX_THUNKCONFIG=$runtime/thunks.json
 export PATH=$runtime/host/usr/bin:$PATH
-unset FEX_ENV
+export FEX_ENV='LD_PRELOAD='
 export FEX_TSOENABLED=1 FEX_VECTORTSOENABLED=1 FEX_MEMCPYSETTSOENABLED=1
 export FEX_X87REDUCEDPRECISION=0
 export SDL_VIDEODRIVER=x11
@@ -39,7 +39,7 @@ preflight() {
     if timeout --kill-after=5s 90s "$@"; then echo "NOVA_STAGE: $stage PASS";
     else local status=$?; echo "NOVA_ERROR: $stage failed (status $status; 124 means timeout)"; exit "$status"; fi
 }
-preflight 'A FEX starts' "$fex" --version
+preflight 'A FEX runtime version' "$runtime/host/usr/bin/FEXGetConfig" --version
 preflight 'B x86-64 Linux executable' "$fex" /nova-probe
 preflight 'C Kyty dynamic dependencies' "$fex" /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 --list "$core"
 preflight 'D Linux Kyty CLI' "$fex" "$core" --help

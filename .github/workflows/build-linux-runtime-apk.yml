@@ -98,7 +98,7 @@ jobs:
           export FEX_THUNKGUESTLIBS="$PWD/build/runtime/host/usr/share/fex-emu/GuestThunks"
           {
             echo 'CI host: ARM64 Linux; Android/Adreno hardware unavailable'
-            timeout 30s FEX --version
+            timeout 30s FEXGetConfig --version
             timeout 60s FEX /nova-probe
             timeout 60s FEX /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 --list "$PWD/build/kyty_emulator"
             timeout 60s FEX "$PWD/build/kyty_emulator" --help

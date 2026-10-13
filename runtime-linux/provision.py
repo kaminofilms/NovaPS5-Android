@@ -41,7 +41,7 @@ def main():
     subprocess.run(['gcc','-O2',str(ROOT/'probe.c'),'-ldl','-o',str(guest/'nova-probe')],check=True)
     for path,machine in [(guest/'nova-probe',62),(host/'usr/bin/FEX',183),(host/'usr/bin/FEXServer',183),(host/'usr/share/fex-emu/GuestThunks/libvulkan-guest.so',62),(host/'usr/lib/aarch64-linux-gnu/fex-emu/HostThunks/libvulkan-host.so',183)]:
         data=path.read_bytes();assert data[:6]==b'\x7fELF\x02\x01' and int.from_bytes(data[18:20],'little')==machine,str(path)
-    (work/'Config.json').write_text(json.dumps({'Config':{'Env':['LD_PRELOAD=','LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu']}})+'\n')
+    (work/'Config.json').write_text(json.dumps({'Config':{'Env':'LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu'}})+'\n')
     (work/'thunks.json').write_text(json.dumps({'ThunksDB':{'Vulkan':1,'asound':1,'WaylandClient':1}})+'\n')
     shutil.copyfile(host/'usr/share/fex-emu/ThunksDB.json',work/'ThunksDB.json')
     a.output.parent.mkdir(parents=True,exist_ok=True)
