@@ -1,0 +1,5 @@
+NOVA_HOST: Kyty requested outside proot (loader //usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1)
+NOVA_HOST: libraries //home/runner/work/NovaPS5-Android/NovaPS5-Android/dist/native://lib/aarch64-linux-gnu://usr/lib
+NOVA_HOST: Kyty pid 11768 running outside proot
+NOVA_HOST: Kyty exited with status 65 after 0 s
+NOVA_LAB: host launch exit=65 (124/143 = still running at timeout)

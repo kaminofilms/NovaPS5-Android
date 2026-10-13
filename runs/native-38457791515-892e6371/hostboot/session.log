@@ -1,0 +1,53 @@
+Initialized: Config
+Initialized: Log
+Initialized: Timer
+Initialized: Pthread
+Initialized: Profiler
+Initialized: Network
+NOVA_MEMORY: host VA ceiling 0x0000008000000000; guest user window clamped to [0x0000001000000000, 0x0000006000000000); extended memory at 0x0000080000000000 unavailable
+Initialized: Memory
+Initialized: FileSystem
+Initialized: Controller
+Initialized: Audio
+Vulkan pipeline cache: initializing _PipelineCache/PPSA59322.bin
+Vulkan pipeline cache: initialized empty
+Initialized: Graphics
+Title ID: PPSA59322
+NOVA_FEX: host AVX=1 SVE256=0 AFP=0 RCPC=1
+[ccleste] starts (standard error to klog: yes)
+[ccleste] splash dismissed: 0
+[ccleste] pad: player 0 opened for user 1000, rumble mode 0
+[ccleste] sample celeste: starts
+--- Guest fault context ---
+thread: MainThread
+rax=0000ff14e5e6d7e0 rbx=0000ff14e5e6ddc0 rcx=0000000000000000 rdx=0000000000000000
+rsi=0000000000000000 rdi=0000000000001b04 rbp=0000000000000000 rsp=0000ff14e7ffcd00
+r8 =00000007efdf1650 r9 =00000007efdf1770 r10=0000002000010e40 r11=00000007efdf1540
+r12=0000000000000000 r13=0000002000010000 r14=0000002000099e40 r15=0000ff14e5e0e558
+code (pc-48 .. pc+48, fault at byte 48):
+ 44 01 00 54 ff 01 00 71 20 0e 01 54 24 81 58 d9
+ 1f 20 03 d5 34 81 53 d9 1f 20 03 d5 9f 00 14 eb
+ 41 5e 00 54 6a 08 00 14 b0 01 41 d9 1f 20 03 d5
+ 14 82 40 d9 1f 20 03 d5 9f 02 00 f1 a0 5c 00 54
+ 24 c1 55 99 1f 20 03 d5 94 1c 00 53 94 7e 02 53
+ 84 1e 40 b3 34 81 55 19 94 02 00 12 9f 02 00 71
+stack:
+  5c5c5c5c5c5c5c5c 0000000000000000 0000000000000000 0000000000000000
+  0000000000000000 0000000000000000 0000000000000000 0000000000000000
+  0000ff14e7ffcda0 0000ff18f92db2bc 0000ff18fbcd8020 0000ff14e6ff0000
+  0000ff18f95b076c 0000ff18f8ef0000 0000000000000000 0000ff14e7fff860
+  0000ff14dc0d7140 00000007efdf2ce0 0000ff14e7ffcdf0 0000000900000120
+  0000ff14e7ffcee0 0000ff18f92db40c 0000ff18f8ef0000 0000ff14dc0151c0
+  00000007efdf3fe0 0000aaaadf300880 0000ff14e7fff760 0000000900000120
+  0000ff18fa8d5000 00000007efdf3ee0 00000007efdf3ee0 0000ff156cbc59c0
+--- Build ---
+Source build df5b9b9-dirty
+--- Error ---
+Unhandled host exception: type=1 code=11 pc=0x0000ff14e5e703e4 access=1 address=0x0000000000000008
+ in /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/loader/runtimeLinker.cpp:723
+--- Host backtrace ---
+#01 //home/runner/work/NovaPS5-Android/NovaPS5-Android/dist/native/kyty_emulator+0x94b7f4 Common::DbgExitHandler(char const*, int, std::basic_string_view<char, std::char_traits<char> >)
+#02 //home/runner/work/NovaPS5-Android/NovaPS5-Android/dist/native/kyty_emulator+0x933f54 ?
+#03 //home/runner/work/NovaPS5-Android/NovaPS5-Android/dist/native/kyty_emulator+0x953930 ?
+#04 linux-vdso.so.1+0x938 __kernel_rt_sigreturn
+#05 0xff14e5e703e4
