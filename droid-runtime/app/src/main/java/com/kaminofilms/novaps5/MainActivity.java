@@ -19,7 +19,7 @@ public final class MainActivity extends Activity {
     RuntimeEngine engine;
     static final int FOLDER=10,FIRMWARE=11,EXPORT=12,DRIVER=13;
     // Nova launches through the DroidDeck session in "run" mode, which draws with the desktop (lxqt) driver choice.
-    static final String DRIVER_MODE="lxqt",TURNIP_RELEASES="https://github.com/The412Banner/Banners-Turnip/releases";
+    static final String DRIVER_MODE="lxqt",TURNIP_RELEASES="https://github.com/The412Banner/Banners-Turnip/releases/tag/v26.3.0-20260923";
     static final String FIRMWARE_URL="https://pc.ps5.update.playstation.net/update/ps5/official/tJMRE80IbXnE9YuG0jzTXgKEjIMoabr6/image/2026_0928/sys_c17384946df6e5c85b2d72cbeee2057b165bf90279d9e2a86d527d0778cdaaf6/PS5UPDATE.PUP";
     final ExecutorService io=Executors.newSingleThreadExecutor();
     GameStore store;HomeView home;FrameLayout screen;SurfaceView surface;TouchControls controls;
@@ -77,7 +77,7 @@ public final class MainActivity extends Activity {
         String name="Turnip";try(Cursor c=getContentResolver().query(uri,new String[]{OpenableColumns.DISPLAY_NAME},null,null,null)){if(c!=null&&c.moveToFirst()&&c.getString(0)!=null)name=c.getString(0);}
         String id=new com.droiddeck.launcher.gpu.LinuxVulkanDriverManager(this).installDriver(uri,name.replaceAll("(?i)\\.zip$",""));
         com.droiddeck.launcher.session.SessionPrefs.INSTANCE.setLinuxDriver(this,DRIVER_MODE,id);BootLog.write(this,"Imported Linux GPU driver "+id+" from "+name);
-        return "Installed and selected: "+com.droiddeck.launcher.gpu.LinuxVulkanDriver.optionLabel(this,id)+"\n\nIt takes effect at the next game launch. Use a \"-Linux\" Turnip build (for Adreno 8xx: the A8xx Linux zip). Android-only drivers cannot load inside the Linux runtime.";
+        return "Installed and selected: "+com.droiddeck.launcher.gpu.LinuxVulkanDriver.optionLabel(this,id)+"\n\nIt takes effect at the next game launch. Use a \"-Linux\" Turnip build (for Adreno 8xx: Turnip-v26.3.0-20260923-A8xx-Linux.zip). Android-only drivers cannot load inside the Linux runtime.";
     }
     void launchGame(GameStore.Entry e){
         try{engine.resolveGame(e);}catch(Exception x){info("Game access",x.getMessage());return;}
