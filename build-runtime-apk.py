@@ -113,7 +113,12 @@ def prepare_platform(base, core=None, linux_core=False):
     anchor = 'shift || true\n'
     if anchor not in value:
         raise RuntimeError('Pinned compositor session entry changed')
-    path.write_text(value.replace(anchor, anchor + '# NOVA_DIRECT_KYTY_ONLY\nsource /opt/novaps5/session-guard.sh "$mode" "${1:-}" || exit $?\n', 1))
+    value = value.replace(anchor, anchor + '# NOVA_DIRECT_KYTY_ONLY\nsource /opt/novaps5/session-guard.sh "$mode" "${1:-}" || exit $?\n', 1)
+    # Games are driven by the touch gamepad: hide gamescope's X pointer immediately.
+    launch = '  exec gamescope "${args[@]}" -- "$0" "$mode" "$@"\n'
+    if launch not in value:
+        raise RuntimeError('Pinned gamescope launch line changed')
+    path.write_text(value.replace(launch, '  args+=(--hide-cursor-delay 1)\n' + launch, 1))
     if linux_core:
         for name in ['kyty-windows-df5b9b9.zip','memory-compat.zip','memory-compat.json']:
             (base / 'assets/engine' / name).unlink(missing_ok=True)
