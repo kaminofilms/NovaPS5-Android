@@ -54,7 +54,7 @@ index 621ed610..e8be1765 100644
  
  #endif /* KYTY_COMMON_ABI_H_ */
 diff --git a/src/common/assert.cpp b/src/common/assert.cpp
-index 22cb3f27..601c916b 100644
+index 22cb3f27..7d9e9180 100644
 --- a/src/common/assert.cpp
 +++ b/src/common/assert.cpp
 @@ -9,6 +9,12 @@
@@ -105,6 +105,20 @@ index 22cb3f27..601c916b 100644
  	Subsystems::EmergencyShutdownActive();
  	return 1;
  }
+@@ -34,11 +66,13 @@ int DbgNotImplementedHandler(const char* expr, const char* file, int line) {
+ 
+ int DbgExitHandler(const char* file, int line, std::string_view text) {
+ 	Log::WriteFatal(BuildFatalReport("--- Error ---", text, file, line));
++	PrintHostBacktrace();
+ 	return 1;
+ }
+ 
+ int DbgExitHandler(const char* file, int line, fmt::text_style style, std::string_view text) {
+ 	Log::WriteFatal(style, BuildFatalReport("--- Error ---", text, file, line));
++	PrintHostBacktrace();
+ 	return 1;
+ }
+ 
 diff --git a/src/common/hostException.cpp b/src/common/hostException.cpp
 index d44c623c..54f512cd 100644
 --- a/src/common/hostException.cpp
@@ -280,6 +294,80 @@ index e2b06883..d2750f37 100644
  			command();
  
  			Common::LockGuard lock(gpu->m_queue_mutex);
+diff --git a/src/graphics/presentation/window/vulkanWindow.cpp b/src/graphics/presentation/window/vulkanWindow.cpp
+index 95005f5a..e4124de6 100644
+--- a/src/graphics/presentation/window/vulkanWindow.cpp
++++ b/src/graphics/presentation/window/vulkanWindow.cpp
+@@ -167,6 +167,9 @@ static bool NovaRelaxable(const char* name) {
+ }
+ 
+ static bool g_nova_barycentric_enabled = true;
++namespace ShaderRecompiler::IR {
++extern bool g_nova_shader_barycentric;
++} // namespace ShaderRecompiler::IR
+ static bool g_nova_depth_bounds_enabled = true;
+ 
+ static void VulkanFindPhysicalDevice(vk::Instance instance, vk::SurfaceKHR surface,
+@@ -263,7 +266,10 @@ static void VulkanFindPhysicalDevice(vk::Instance instance, vk::SurfaceKHR surfa
+ 			if (required == VK_TRUE && supported != VK_TRUE) {
+ 				if (NovaRelaxable(name)) {
+ 					LOGF("NOVA_RELAXED: %s is not supported; continuing without it\n", name);
+-					if (strcmp(name, "fragmentShaderBarycentric") == 0) g_nova_barycentric_enabled = false;
++					if (strcmp(name, "fragmentShaderBarycentric") == 0) {
++						g_nova_barycentric_enabled = false;
++						ShaderRecompiler::IR::g_nova_shader_barycentric = false;
++					}
+ 					if (strcmp(name, "depthBounds") == 0) g_nova_depth_bounds_enabled = false;
+ 					return;
+ 				}
+diff --git a/src/graphics/shader/recompiler/ir/passes/ShaderInfoCollection.cpp b/src/graphics/shader/recompiler/ir/passes/ShaderInfoCollection.cpp
+index 29aecffe..a27e7296 100644
+--- a/src/graphics/shader/recompiler/ir/passes/ShaderInfoCollection.cpp
++++ b/src/graphics/shader/recompiler/ir/passes/ShaderInfoCollection.cpp
+@@ -7,6 +7,12 @@
+ #include <fmt/format.h>
+ 
+ namespace Libs::Graphics::ShaderRecompiler::IR {
++
++// Nova: cleared when the Vulkan device lacks fragmentShaderBarycentric (Turnip on Adreno).
++// Shaders then avoid gl_BaryCoordKHR: per-vertex smooth inputs fall back to ordinary
++// interpolated inputs and raw I/J reads see zero, instead of failing in the driver.
++bool g_nova_shader_barycentric = true;
++
+ namespace {
+ 
+ [[noreturn]] void Fail(std::string_view message) {
+@@ -110,6 +116,13 @@ void CollectPixelInputs(const ShaderPixelInputInfo* pixel, ShaderInfo& info,
+ 			}
+ 		}
+ 	}
++	if (!g_nova_shader_barycentric) {
++		for (uint32_t input = 0; input < pixel->input_num; input++) {
++			if (!ShaderPixelParameterIsFlat(*pixel, input)) {
++				per_vertex[input] = false;
++			}
++		}
++	}
+ 	for (uint32_t input = 0; input < pixel->input_num; input++) {
+ 		AddInput(info, StageInputKind::Parameter, input, 4, fmt::format("in_param_{}", input),
+ 		         per_vertex[input]);
+@@ -163,13 +176,16 @@ void AddBuiltinInput(ShaderInfo& info, StageInputKind kind) {
+ 		case StageInputKind::Layer: AddInput(info, kind, 0, 1, "gl_Layer"); break;
+ 		case StageInputKind::SampleId: AddInput(info, kind, 0, 1, "gl_SampleID"); break;
+ 		case StageInputKind::BaryCoordSmoothSample:
++			if (!g_nova_shader_barycentric) break;
+ 			AddInput(info, StageInputKind::SampleId, 0, 1, "gl_SampleID");
+ 			[[fallthrough]];
+ 		case StageInputKind::BaryCoordSmooth:
+ 		case StageInputKind::BaryCoordSmoothCentroid:
++			if (!g_nova_shader_barycentric) break;
+ 			AddInput(info, StageInputKind::BaryCoordSmooth, 0, 3, "gl_BaryCoordKHR");
+ 			break;
+ 		case StageInputKind::BaryCoordNoPerspective:
++			if (!g_nova_shader_barycentric) break;
+ 			AddInput(info, kind, 0, 3, "gl_BaryCoordNoPerspKHR");
+ 			break;
+ 		case StageInputKind::WorkgroupId:
 diff --git a/src/graphics/shader/recompiler/ir/passes/SrtWalker.cpp b/src/graphics/shader/recompiler/ir/passes/SrtWalker.cpp
 index 06731ee7..0ce2c79b 100644
 --- a/src/graphics/shader/recompiler/ir/passes/SrtWalker.cpp
