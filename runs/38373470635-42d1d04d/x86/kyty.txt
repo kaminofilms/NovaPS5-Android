@@ -1,0 +1,19 @@
+Initialized: Config
+Initialized: Log
+Initialized: Timer
+Initialized: Pthread
+Initialized: Profiler
+Initialized: Network
+Initialized: Memory
+Initialized: FileSystem
+Initialized: Controller
+Initialized: Audio
+Vulkan pipeline cache: disabled (dirty build)
+Initialized: Graphics
+Title ID: PPSA59322
+Unresolved import stub called: -Jp7F+pXxNg[libkernel_v1][libkernel_v0.1][Func]
+--- Build ---
+Source build df5b9b9-dirty
+--- Fatal Error ---
+Not implemented (stream != stdout) in /home/runner/work/NovaPS5-Android/NovaPS5-Android/linux-kyty/src/libs/libC.cpp:633
+NOVA_LAB: mode=native exit=65 elapsed=15s (124 = still running at timeout)
