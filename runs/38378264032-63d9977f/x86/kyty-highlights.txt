@@ -1,0 +1,26 @@
+626:Unresolved import stub called [0]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+627:Unresolved import stub called [1]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+628:Unresolved import stub called [2]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+629:Unresolved import stub called [3]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+630:Unresolved import stub called [4]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+631:Unresolved import stub called [5]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+632:Unresolved import stub called [6]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+633:Unresolved import stub called [7]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+634:Unresolved import stub called [8]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+635:Unresolved import stub called [9]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+636:Unresolved import stub called [10]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+637:Unresolved import stub called [11]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+638:Guest abort diagnostics:
+672:Guest abort stack words:
+674:	 stack[00] bytes = f0 97 0d 50 d5 7f 00 00 00 00 00 00 20 00 00 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+675:	 stack[00][0] = 0x00007fd5500d97f0
+676:	 stack[00][0] bytes = 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+677:	 stack[00][1] = 0x0000002000000000
+678:	 stack[00][1] bytes = 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 c3 03 00 00 00 00 00 00 00 00 01 10 00 00 00 00 a0 03 00 00 00 00 00 00 80 67 f6 00 00 00 00 00 00 00 00 00 20 00 00 00
+680:	 stack[01] string = "stack[01]"
+681:	 stack[01] bytes = 73 74 61 63 6b 5b 30 31 5d 00 47 e3 64 55 00 00 09 20 5b 30 31 5d 20 30 78 30 30 30 30 30 30 30 37 65 66 64 66 31 63 39 38 0a 20 72 65 74 75 72 6e 20 3d 20 30 78 30 30 30 30 30 30 30 39 30 30
+682:	 stack[01][1] = 0x00005564e347005d
+683:	 stack[01][1] bytes = 80 20 03 00 00 a8 01 75 1e 31 c0 48 89 45 d0 44 89 f0 25 00 ff 00 00 3d 00 11 00 00 0f 85 82 00 00 00 e9 a3 00 00 00 48 89 5d c8 e8 e3 86 89 00 48 8b 80 28 03 00 00 48 89 45 d0 e8 63 86 89 00
+687:	 stack[04] bytes = 80 20 03 00 00 a8 01 75 1e 31 c0 48 89 45 d0 44 89 f0 25 00 ff 00 00 3d 00 11 00 00 0f 85 82 00 00 00 e9 a3 00 00 00 48 89 5d c8 e8 e3 86 89 00 48 8b 80 28 03 00 00 48 89 45 d0 e8 63 86 89 00
+701:--- Error ---
+702:Guest abort()

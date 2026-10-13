@@ -1,0 +1,400 @@
+Relocate: unresolved non-PLT import patched to stub [21268] [0000000901b8c6c0] <- 00000002000000cc, QuJYZ2KVGGQ[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+PS5 NID fallback: ih4CD9-gghM -> ih4CD9-gghM[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: mKoTx03HRWA -> mKoTx03HRWA[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: EjllaAqAPZo -> EjllaAqAPZo[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 0TyVk4MSLt0 -> 0TyVk4MSLt0[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: dJcuQVn6-Iw -> dJcuQVn6-Iw[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: RXXqi4CtF8w -> RXXqi4CtF8w[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: mkx2fVhNMsg -> mkx2fVhNMsg[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 2MOy+rUfuhQ -> 2MOy+rUfuhQ[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 27bAgiJmOh0 -> 27bAgiJmOh0[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: Op8TBGY5KHg -> Op8TBGY5KHg[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: cOYia2dE0Ik -> cOYia2dE0Ik[libc_v1][libc_v1.1][Func]
+Relocate: unresolved non-PLT import patched to stub [21280] [0000000901b8c720] <- 00000002000000ee, n01yNbQO5W4[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+PS5 NID fallback: 9eMlfusH4sU -> 9eMlfusH4sU[libkernel_v1][libkernel_v1.1][Func]
+Relocate: unresolved non-PLT import patched to stub [21282] [0000000901b8c730] <- 0000000200000110, mkawd0NA9ts[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Relocate: unresolved non-PLT import patched to stub [21283] [0000000901b8c738] <- 0000000200000132, kg4x8Prhfxw[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Relocate: unresolved non-PLT import patched to stub [21284] [0000000901b8c740] <- 0000000200000154, tvpHe5kBO4E[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Relocate: unresolved non-PLT import patched to stub [21285] [0000000901b8c748] <- 0000000200000176, 72rYuYoDTWk[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Relocate: unresolved non-PLT import patched to stub [21286] [0000000901b8c750] <- 0000000200000198, AfuS23bX6kg[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Relocate: unresolved non-PLT import patched to stub [21287] [0000000901b8c758] <- 00000002000001ba, 1nTKA7pN1jw[LibcInternal_v1][LibcInternal_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Relocate: unresolved non-PLT import patched to stub [21288] [0000000901b8c760] <- 00000002000001dc, BPE9s9vQQXo[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+PS5 NID fallback: UqDGjXA5yUM -> UqDGjXA5yUM[Posix_v1][libkernel_v1.1][Func]
+Relocate: unresolved non-PLT import patched to stub [21290] [0000000901b8c770] <- 00000002000001fe, c7ZnT7V1B98[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+PS5 NID fallback: q0F6yS-rCms -> q0F6yS-rCms[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: XGnuIBmEmyk -> XGnuIBmEmyk[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: 3QIPIh-GDjw -> 3QIPIh-GDjw[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: 04AjkP0jO9U -> 04AjkP0jO9U[libkernel_v1][libkernel_v1.1][Func]
+Relocate: unresolved non-PLT import patched to stub [21295] [0000000901b8c798] <- 0000000200000220, UNS2V4S097M[LibcInternal_v1][LibcInternal_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+PS5 NID fallback: qdlHjTa9hQ4 -> qdlHjTa9hQ4[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: 6XG4B33N09g -> 6XG4B33N09g[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 8nY19bKoiZk -> 8nY19bKoiZk[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: Oy6IpwgtYOk -> Oy6IpwgtYOk[libkernel_v1][libkernel_v1.1][Func]
+Relocate: unresolved non-PLT import patched to stub [21300] [0000000901b8c7c0] <- 0000000200000242, smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+PS5 NID fallback: M4YYbSFfJ8g -> M4YYbSFfJ8g[libc_v1][libc_v1.1][Func]
+Relocate: unresolved non-PLT import patched to stub [21302] [0000000901b8c7d0] <- 0000000200000264, CRJcH8CnPSI[LibcInternal_v1][LibcInternal_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Relocate: unresolved non-PLT import patched to stub [21303] [0000000901b8c7d8] <- 0000000200000286, DFmMT80xcNI[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Relocate: unresolved non-PLT import patched to stub [21304] [0000000901b8c7e0] <- 00000002000002a8, Wh7HbV7JFqc[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+PS5 NID fallback: 7Psx1DlAyE4 -> 7Psx1DlAyE4[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: ytQULN-nhL4 -> ytQULN-nhL4[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 1471ajPzxh0 -> 1471ajPzxh0[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: iGjsr1WAtI0 -> iGjsr1WAtI0[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: EgmLo6EWgso -> EgmLo6EWgso[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: sIlRvQqsN2Y -> sIlRvQqsN2Y[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 5jNubw4vlAA -> 5jNubw4vlAA[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: cVSk9y8URbc -> cVSk9y8URbc[libc_v1][libc_v1.1][Func]
+Relocate: unresolved non-PLT import patched to stub [21313] [0000000901b8c828] <- 00000002000002ca, vhtcIgZG-Lk[LibcInternal_v1][LibcInternal_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Relocate: unresolved non-PLT import patched to stub [21314] [0000000901b8c830] <- 00000002000002ec, ucFJiTO1EUw[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Relocate: unresolved non-PLT import patched to stub [21315] [0000000901b8c838] <- 000000020000030e, VkTAsrZDcJ0[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Relocate: unresolved non-PLT import patched to stub [21316] [0000000901b8c840] <- 0000000200000330, Nd-u09VFSCA[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Relocate: unresolved non-PLT import patched to stub [21317] [0000000901b8c848] <- 0000000200000352, JZKw5+Wrnaw[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+PS5 NID fallback: EotR8a3ASf4 -> EotR8a3ASf4[libkernel_v1][libkernel_v1.1][Func]
+Relocate: unresolved non-PLT import patched to stub [21319] [0000000901b8c858] <- 0000000200000374, oxMp8uPqa+U[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Relocate: unresolved non-PLT import patched to stub [21320] [0000000901b8c860] <- 0000000200000396, nnoxZUHK+SA[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Relocate: unresolved non-PLT import patched to stub [21321] [0000000901b8c868] <- 00000002000003b8, ZsXLFtd2jqQ[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Relocate: unresolved non-PLT import patched to stub [21322] [0000000901b8c870] <- 00000002000003da, +Pqub9HZCPo[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Relocate: unresolved non-PLT import patched to stub [21323] [0000000901b8c878] <- 00000002000003fc, CawZgCYqXWk[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+PS5 NID fallback: kHg45qPC6f0 -> kHg45qPC6f0[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: kDZvoVssCgQ -> kDZvoVssCgQ[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: fPxypibz2MY -> fPxypibz2MY[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: Z4QosVuAsA0 -> Z4QosVuAsA0[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: ltCfaGr2JGE -> ltCfaGr2JGE[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: ttHNfU+qDBU -> ttHNfU+qDBU[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: dQHWEsJtoE4 -> dQHWEsJtoE4[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: mDmgMOGVUqg -> mDmgMOGVUqg[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: HF7lK46xzjY -> HF7lK46xzjY[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 7H0iTOciTLo -> 7H0iTOciTLo[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: Io9+nTKXZtA -> Io9+nTKXZtA[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: K-jXhbt2gn4 -> K-jXhbt2gn4[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 2Z+PpY6CaJg -> 2Z+PpY6CaJg[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: +U1R4WtXvoc -> +U1R4WtXvoc[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 7Xl257M4VNI -> 7Xl257M4VNI[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: FJrT5LuUBAU -> FJrT5LuUBAU[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: mqULNdimTn0 -> mqULNdimTn0[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 6BpEZuDT7YI -> 6BpEZuDT7YI[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 0-KXaS70xy4 -> 0-KXaS70xy4[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: WrOLvHU0yQM -> WrOLvHU0yQM[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: aaDMGGkXFxo -> aaDMGGkXFxo[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: kA-TdiOCsaY -> kA-TdiOCsaY[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: dhK16CKwhQg -> dhK16CKwhQg[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: WuMbPBKN1TU -> WuMbPBKN1TU[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: Ls4tzzhimqQ -> Ls4tzzhimqQ[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: m5wN+SwZOR4 -> m5wN+SwZOR4[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: rDMyAf1Jhug -> rDMyAf1Jhug[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: 2WE3BTYVwKM -> 2WE3BTYVwKM[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: Q8pvJimUWis -> Q8pvJimUWis[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: WkYnBHFsmW4 -> WkYnBHFsmW4[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: fGPRa6T+Cu8 -> fGPRa6T+Cu8[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: hsi9drzHR2k -> hsi9drzHR2k[libc_v1][libc_v1.1][Func]
+Relocate: unresolved non-PLT import patched to stub [21356] [0000000901b8c9b0] <- 000000020000041e, Jc6E7N+dHz0[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+PS5 NID fallback: dnaeGXbjP6E -> dnaeGXbjP6E[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: jbz9I9vkqkk -> jbz9I9vkqkk[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: -kU6bB4M-+k -> -kU6bB4M-+k[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: CBiu4mCE1DA -> CBiu4mCE1DA[VideoOut_v1][VideoOut_v1.1][Func]
+PS5 NID fallback: pO96TwzOm5E -> pO96TwzOm5E[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: rTXw65xmLIA -> rTXw65xmLIA[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: L-Q3LEjIbgA -> L-Q3LEjIbgA[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: MBuItvba6z8 -> MBuItvba6z8[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: PjS5uASwcV8 -> PjS5uASwcV8[VideoOut_v1][VideoOut_v1.1][Func]
+PS5 NID fallback: rKBUtgRrtbk -> rKBUtgRrtbk[VideoOut_v1][VideoOut_v1.1][Func]
+PS5 NID fallback: Up36PTk687E -> Up36PTk687E[VideoOut_v1][VideoOut_v1.1][Func]
+PS5 NID fallback: Nv8c-Kb+DUM -> Nv8c-Kb+DUM[VideoOut_v1][VideoOut_v1.1][Func]
+PS5 NID fallback: w0hLuNarQxY -> w0hLuNarQxY[VideoOut_v1][VideoOut_v1.1][Func]
+PS5 NID fallback: j6RaAUlaLv0 -> j6RaAUlaLv0[VideoOut_v1][VideoOut_v1.1][Func]
+PS5 NID fallback: SbU3dwp80lQ -> SbU3dwp80lQ[VideoOut_v1][VideoOut_v1.1][Func]
+PS5 NID fallback: U46NwOiJpys -> U46NwOiJpys[VideoOut_v1][VideoOut_v1.1][Func]
+PS5 NID fallback: efhK-YSUYYQ -> efhK-YSUYYQ[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: qjBlw2cVMAM -> qjBlw2cVMAM[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: gNQ1V2vfXDE -> gNQ1V2vfXDE[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: lKEN2IebgJ0 -> lKEN2IebgJ0[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: NesIgTmfF0Q -> NesIgTmfF0Q[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: Av3zjWi64Kw -> Av3zjWi64Kw[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: C0f7TJcbfac -> C0f7TJcbfac[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: cQke9UuBQOk -> cQke9UuBQOk[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 7oxv3PPCumo -> 7oxv3PPCumo[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: vSMAm3cxYTY -> vSMAm3cxYTY[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: fnUEjBCNRVU -> fnUEjBCNRVU[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: QJ5xVfKkni0 -> QJ5xVfKkni0[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: xENtRue8dpI -> xENtRue8dpI[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: nW9JRkciRk4 -> nW9JRkciRk4[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: 5AYcEn7aoro -> 5AYcEn7aoro[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: 34nH7v2xvNQ -> 34nH7v2xvNQ[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: DAbZ-Vfu6lQ -> DAbZ-Vfu6lQ[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: 7SXNu+0KBYQ -> 7SXNu+0KBYQ[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: 7-a7sBHeUQ8 -> 7-a7sBHeUQ8[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: LEbYWl9rBc8 -> LEbYWl9rBc8[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: nJz16JE1txM -> nJz16JE1txM[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: d3dMyWORw8A -> d3dMyWORw8A[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: RBcs3uut1TA -> RBcs3uut1TA[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: bgAcsbcEznc -> bgAcsbcEznc[LibcInternal_v1][LibcInternal_v1.1][Object]
+PS5 NID fallback: -LFO7jhD5CE -> -LFO7jhD5CE[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: 8Q60JLJ6Rv4 -> 8Q60JLJ6Rv4[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: Nz7J62MvgQs -> Nz7J62MvgQs[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: bzbQ5zQ2Y3g -> bzbQ5zQ2Y3g[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: 1QJWxoB6pCo -> 1QJWxoB6pCo[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: PqF+kHW-2WQ -> PqF+kHW-2WQ[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: PtsB1Q9wsFA -> PtsB1Q9wsFA[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: srzSVSbKn7M -> srzSVSbKn7M[libc_v1][libc_v1.1][Func]
+Relocate: unresolved non-PLT import patched to stub [21406] [0000000901b8cba8] <- 0000000200000440, s62MgBhosjU[LibcInternal_v1][LibcInternal_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+PS5 NID fallback: -Jp7F+pXxNg -> -Jp7F+pXxNg[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: wdUufa9g-D8 -> wdUufa9g-D8[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: QMFyLoqNxIg -> QMFyLoqNxIg[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: 9JYNqN6jAKI -> 9JYNqN6jAKI[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: CL7VJxznu6g -> CL7VJxznu6g[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: +3PtYiUxl-U -> +3PtYiUxl-U[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: j6OnScWpu7k -> j6OnScWpu7k[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: y9OoA+P5cjk -> y9OoA+P5cjk[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: 1QcrrL9UDRQ -> 1QcrrL9UDRQ[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: VuMMb5CfpEw -> VuMMb5CfpEw[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: AEPvEZkaLsU -> AEPvEZkaLsU[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: 1uf1SQsj5go -> 1uf1SQsj5go[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: Ok8KPy3nFls -> Ok8KPy3nFls[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: zogPrkd46DY -> zogPrkd46DY[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: J3J1T9fjUik -> J3J1T9fjUik[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: U7IhU4VEB-0 -> U7IhU4VEB-0[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: p6DbM0OAHNo -> p6DbM0OAHNo[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: 6A+1YZ79qFk -> 6A+1YZ79qFk[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: qVHpv0PxouI -> qVHpv0PxouI[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: AHxyhN96dy4 -> AHxyhN96dy4[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: 8hygs6D9KBY -> 8hygs6D9KBY[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: wjG0GyCyaP0 -> wjG0GyCyaP0[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: n0kT+8Eeizs -> n0kT+8Eeizs[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: wDmL2EH0CBs -> wDmL2EH0CBs[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: vqtytrxgLMs -> vqtytrxgLMs[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: AEuF3F2f8TA -> AEuF3F2f8TA[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: 6eU9xX9oEdQ -> 6eU9xX9oEdQ[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: fV2xHER+bKE -> fV2xHER+bKE[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: gjbmYpP-XJQ -> gjbmYpP-XJQ[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: UTrpOVLcoOA -> UTrpOVLcoOA[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: D-qDARDb1aM -> D-qDARDb1aM[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: cjmSjRlnMAs -> cjmSjRlnMAs[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: 45E7omS0vvc -> 45E7omS0vvc[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: NDcSfcYZRC8 -> NDcSfcYZRC8[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: LEvm25Sxi7I -> LEvm25Sxi7I[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: 1mecP7RgI2A -> 1mecP7RgI2A[libc_v1][libc_v1.1][Func]
+Relocate: unresolved non-PLT import patched to stub [21446] [0000000901b8cce8] <- 0000000200000462, GDuV00CHrUg[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Relocate: unresolved non-PLT import patched to stub [21447] [0000000901b8ccf0] <- 0000000200000484, Jahsnh4KKkg[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+PS5 NID fallback: rcrVFJsQWRY -> rcrVFJsQWRY[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 7ZlAakEf0Qg -> 7ZlAakEf0Qg[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: C2kJ-byS5rM -> C2kJ-byS5rM[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: RtLRV-pBTTY -> RtLRV-pBTTY[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 2Q0z6rnBrTE -> 2Q0z6rnBrTE[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 0qOtCR-ZHck -> 0qOtCR-ZHck[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: euKRgm0Vn2M -> euKRgm0Vn2M[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: VUT1ZSrHT0I -> VUT1ZSrHT0I[Posix_v1][libkernel_v1.1][Func]
+Relocate: unresolved non-PLT import patched to stub [21456] [0000000901b8cd38] <- 00000002000004a6, +0EDo7YzcoU[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Relocate: unresolved non-PLT import patched to stub [21457] [0000000901b8cd40] <- 00000002000004c8, DRGXpDDh8Ng[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+PS5 NID fallback: bt3CTBKmGyI -> bt3CTBKmGyI[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: E+tyo3lp5Lw -> E+tyo3lp5Lw[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: JarMIy8kKEY -> JarMIy8kKEY[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: qlk9pSLsUmM -> qlk9pSLsUmM[Posix_v1][libkernel_v1.1][Func]
+Relocate: unresolved non-PLT import patched to stub [21462] [0000000901b8cd68] <- 00000002000004ea, e2G+cdEkOmU[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Relocate: unresolved non-PLT import patched to stub [21463] [0000000901b8cd70] <- 000000020000050c, oLjPqUKhzes[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+PS5 NID fallback: zHchY8ft5pk -> zHchY8ft5pk[Posix_v1][libkernel_v1.1][Func]
+Relocate: unresolved non-PLT import patched to stub [21465] [0000000901b8cd80] <- 000000020000052e, 2G6i6hMIUUY[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+PS5 NID fallback: 3e+4Iv7IJ8U -> 3e+4Iv7IJ8U[Posix_v1][libkernel_v1.1][Func]
+Relocate: unresolved non-PLT import patched to stub [21467] [0000000901b8cd90] <- 0000000200000550, DxmIMUQ-wXY[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+PS5 NID fallback: -SrbXpGR1f0 -> -SrbXpGR1f0[Posix_v1][libkernel_v1.1][Func]
+Relocate: unresolved non-PLT import patched to stub [21469] [0000000901b8cda0] <- 0000000200000572, xesmlSI-KCI[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+PS5 NID fallback: -2IRUCO--PM -> -2IRUCO--PM[libkernel_v1][libkernel_v1.1][Func]
+Relocate: unresolved non-PLT import patched to stub [21471] [0000000901b8cdb0] <- 0000000200000594, ku7D4q1Y9PI[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+PS5 NID fallback: wtkt-teR1so -> wtkt-teR1so[Posix_v1][libkernel_v1.1][Func]
+Relocate: unresolved non-PLT import patched to stub [21473] [0000000901b8cdc0] <- 00000002000005b6, PfccT7qURYE[libkernel_v1][libkernel_v0.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+PS5 NID fallback: Q3VBxCXhUHs -> Q3VBxCXhUHs[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: 8zTFvBIAIN8 -> 8zTFvBIAIN8[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: L1SBTkC+Cvw -> L1SBTkC+Cvw[LibcInternal_v1][LibcInternal_v1.1][Func]
+PS5 NID fallback: Z4QosVuAsA0 -> Z4QosVuAsA0[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 7H0iTOciTLo -> 7H0iTOciTLo[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 2Z+PpY6CaJg -> 2Z+PpY6CaJg[libkernel_v1][libkernel_v1.1][Func]
+PS5 NID fallback: mqULNdimTn0 -> mqULNdimTn0[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: 0-KXaS70xy4 -> 0-KXaS70xy4[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: WrOLvHU0yQM -> WrOLvHU0yQM[Posix_v1][libkernel_v1.1][Func]
+PS5 NID fallback: Ou3iL1abvng -> Ou3iL1abvng[libkernel_v1][libkernel_v1.1][Func]
+--- Relocate program: /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/sce_module/libc.prx ---
+PS5 NID fallback: NhpspxdjEKU -> NhpspxdjEKU[Posix_v1][libkernel_v1.1][Func]
+Relocate: unresolved PLT import patched to stub [20] [000000091010f928] <- 00000002000005d8, hHlZQUnlxSM[libkernel_v1][libkernel_v1.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/sce_module/libc.prx
+PS5 NID fallback: yS8U2TGCe1A -> yS8U2TGCe1A[Posix_v1][libkernel_v1.1][Func]
+Relocate: unresolved PLT import patched to stub [31] [000000091010f980] <- 00000002000005fa, c7ZnT7V1B98[libkernel_v1][libkernel_v1.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/sce_module/libc.prx
+Relocate: unresolved PLT import patched to stub [32] [000000091010f988] <- 000000020000061c, fgIsQ10xYVA[libkernel_v1][libkernel_v1.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/sce_module/libc.prx
+Relocate: unresolved PLT import patched to stub [45] [000000091010f9f0] <- 000000020000063e, -YTW+qXc3CQ[libkernel_v1][libkernel_v1.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/sce_module/libc.prx
+Relocate: unresolved PLT import patched to stub [49] [000000091010fa10] <- 0000000200000660, 3k6kx-zOOSQ[libkernel_v1][libkernel_v1.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/sce_module/libc.prx
+Relocate: unresolved PLT import patched to stub [54] [000000091010fa38] <- 0000000200000682, WlyEA-sLDf0[libkernel_v1][libkernel_v1.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/sce_module/libc.prx
+Relocate: unresolved PLT import patched to stub [56] [000000091010fa48] <- 00000002000006a4, 0Cq8ipKr9n0[libkernel_v1][libkernel_v1.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/sce_module/libc.prx
+PS5 NID fallback: gQX+4GDQjpM -> gQX+4GDQjpM[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: tIhsqj0qsFE -> tIhsqj0qsFE[libc_v1][libc_v1.1][Func]
+PS5 NID fallback: cVSk9y8URbc -> cVSk9y8URbc[libc_v1][libc_v1.1][Func]
+Relocate: unresolved PLT import patched to stub [97] [000000091010fb90] <- 00000002000006c6, EHsF2i9FXPM[LibcInternalExt_v1][LibcInternal_v1.1][Func], Func, Global, /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/sce_module/libc.prx
+PS5 NID fallback: al3JzFI9MQ0 -> al3JzFI9MQ0[LibcInternal_v1][LibcInternal_v1.1][Func]
+---
+--- Start module: /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/sce_module/libc.prx
+---
+	api[0] = 0x0000000910000050
+	api[1] = 0x0000000910000050
+	api[2] = 0x0000000000000000
+	api[3] = 0x0000000000000000
+	api[4] = 0x0000000000000000
+	api[5] = 0x0000000000000000
+	api[6] = 0x0000000910000050
+	api[7] = 0x0000000000000000
+	api[8] = 0x0000000000000000
+	api[9] = 0x0000000000000000
+---
+--- Execute: Main
+---
+stack_addr = 7efdf3ee0
+	 argc = 1
+	 argv = 0x00000007efdf3ee8
+	 envp = 0x00000007efdf3ef8
+	 argv[0] = 
+	mutex init: Static0000000901ca58e8, 0
+	mutex init: Static0000000901ca58d0, 0
+	cond init: Static0000000901ca58d8, cond=0x0000000901ca58d8, caller=0x00007ffff54c4d18, 0
+	 in_addr   = 0x0000002000000000
+	 len       = 0x0000000400000000
+	 flags     = 0x00000000
+	 alignment = 0x0000000000010000
+	 out_addr  = 0x0000002000000000
+	mutex init: Static0000000901cac7b0, 0
+	mutex init: Static0000000901ca66b8, 0
+	 search_start = 0x0000000000000000
+	 search_end   = 0x0000000320000000
+	 len          = 0x0000000001000000
+	 alignment    = 0x0000000000010000
+	 memory_type  = 12
+	phys_addr    = 0000000000200000
+	[Ok]
+	 in_addr  = 0x0000002000000000
+	 out_addr = 0x0000002000000000
+	 dmem     = 0x0000000000200000
+	 size     = 0x0000000001000000
+	 mode     = ReadWrite
+	 flags    = 0x00000010
+	 align    = 0x0000000000010000
+	 gpu_mode = NoAccess
+	 shared   = yes
+	 reason   = n/a
+	 [Ok]
+	mutex init: Static0000000901ca6388, 0
+	mutex init: Static0000000901ca6470, 0
+	 in_addr   = 0x0000000400000000
+	 len       = 0x0000000000204000
+	 flags     = 0x00000000
+	 alignment = 0x0000000000010000
+	 out_addr  = 0x0000000400000000
+	 search_start = 0x0000000000000000
+	 search_end   = 0x0000000320000000
+	 len          = 0x0000000000200000
+	 alignment    = 0x0000000000010000
+	 memory_type  = 12
+	phys_addr    = 0000000001200000
+	[Ok]
+	 start = 0x0000000001200000
+	 len   = 0x0000000000200000
+	 start = 0x0000000400000000
+	 len   = 0x0000000000204000
+	 addr = 0x00000007ef8ec000
+	 len  = 0x0000000000004000
+	 prot: ReadWrite -> NoAccess
+	thread create: , id = -1, 0
+	cpu_mask       = 0x7f
+	detach_state   = 0
+	guard_size     = 4096
+	inherit_sched  = 4
+	sched_priority = 700
+	policy         = 1
+	solosched      = 0
+	stack_addr     = 0x00000007ef8f0000
+	stack_size    = 3145728
+[3][00:00:00.499] libkernel::libkernel::PthreadDetach()
+	thread detach: , 0
+[3][00:00:00.499] libkernel::libkernel::PthreadMutexInitNamed()
+	mutex init: Static0000000901ca63e0, 0
+	Pthread run begin: , id = 4, os_thread_id = 2866, entry = 0x0000000900b918a0, arg = 0x0000002000000640, stack_addr = 0x00000007ef8f0000, stack_size = 3145728
+	 user_id = 1000
+	 type    = 0
+	 index   = 0
+	 param   = 0x0000000000000000
+	 handle      = 1
+	 mode        = 2
+	 path = /app0/hui/theme.txt
+	 flags = 00000000
+	 mode = 0040
+	 KernelStat: /app0/assets/
+Unresolved import stub called [0]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Unresolved import stub called [1]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Unresolved import stub called [2]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Unresolved import stub called [3]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Unresolved import stub called [4]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Unresolved import stub called [5]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Unresolved import stub called [6]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Unresolved import stub called [7]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Unresolved import stub called [8]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Unresolved import stub called [9]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Unresolved import stub called [10]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Unresolved import stub called [11]: patch_vaddr=0x0000000901b8c7c0 jmprela_index=21300 symbol=smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func] type=Func bind=Global program=/home/runner/work/NovaPS5-Android/NovaPS5-Android/build/PPSA59322/eboot.bin
+Guest abort diagnostics:
+	 return = 0x0000000900882a62
+	 rbp    = 0x00000007efdf1fe0
+	 rsp    = 0x00000007efdf1c80
+	 arg0   = 0x00007ffff62924a0
+	 arg1   = 0x0000000900d0a87f
+	 arg2   = 0x0000000900cb267b
+	 arg3   = 0x0000000000000185
+	 arg4   = 0x00007ffbf40008e0
+	 arg5   = 0x0000000000000000
+	 arg0 bytes = 17 25 29 f6 ff 7f 00 00 00 00 00 00 00 00 00 00 0a 00 02 00 00 00 00 00 17 25 29 f6 ff 7f 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a0 24 29 f6 ff 7f 00 00 d0 a2 55 f5 ff 7f 00 00
+	 arg1 string = "%s: %d: out of memory.
+"
+	 arg1 bytes = 25 73 3a 20 25 64 3a 20 6f 75 74 20 6f 66 20 6d 65 6d 6f 72 79 2e 0a 00 20 20 20 20 20 20 20 20 20 20 3c 65 6e 75 6d 20 76 61 6c 75 65 3d 22 25 64 22 20 74 65 78 74 3d 22 25 73 22 2f 3e 0a 00
+	 arg2 string = "../radv-src/src/util/xmlconfig.c"
+	 arg2 bytes = 2e 2e 2f 72 61 64 76 2d 73 72 63 2f 73 72 63 2f 75 74 69 6c 2f 78 6d 6c 63 6f 6e 66 69 67 2e 63 00 45 78 61 6e 69 6d 61 2e 65 78 65 00 57 61 72 73 6f 77 20 28 33 32 2d 62 69 74 29 00 57 6f 72
+	 arg4 bytes = 01 00 05 00 01 00 02 00 03 00 03 00 02 00 03 00 02 00 01 00 01 00 03 00 01 00 01 00 01 00 01 00 01 00 01 00 00 00 01 00 01 00 00 00 01 00 02 00 00 00 00 00 03 00 00 00 01 00 02 00 00 00 01 00
+	 arg0[0] = 0x00007ffff6292517
+	 arg0[0] bytes = 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+	 arg0[3] = 0x00007ffff6292517
+	 arg0[3] bytes = 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+	 arg0[6] = 0x00007ffff62924a0
+	 arg0[6] bytes = 17 25 29 f6 ff 7f 00 00 00 00 00 00 00 00 00 00 0a 00 02 00 00 00 00 00 17 25 29 f6 ff 7f 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a0 24 29 f6 ff 7f 00 00 d0 a2 55 f5 ff 7f 00 00
+	 arg0[7] = 0x00007ffff555a2d0
+	 arg0[7] bytes = 55 48 89 e5 53 50 0f bf 7f 12 e8 d1 18 f4 ff 85 c0 74 29 8d 88 ff ff fd 7f 05 00 00 fe 7f 83 f9 65 bb 26 04 00 00 0f 42 d8 e8 72 16 fb ff 89 18 b8 ff ff ff ff 48 83 c4 08 5b 5d c3 31 c0 48 83
+Stack trace [thread = 3]:
+[0] 0000000900882a62, off=0000000000882a62, eboot.bin
+[1] 000000090038dcba, off=000000000038dcba, eboot.bin
+[2] 0000000900a97759, off=0000000000a97759, eboot.bin
+[3] 000000090008a1ad, off=000000000008a1ad, eboot.bin
+[4] 0000000900091b91, off=0000000000091b91, eboot.bin
+[5] 000000090010ea44, off=000000000010ea44, eboot.bin
+[6] 000000090010c9eb, off=000000000010c9eb, eboot.bin
+[7] 0000000900000174, off=0000000000000174, eboot.bin
+Guest abort stack words:
+	 [00] 0x0000002000000398
+	 stack[00] bytes = f0 97 0d f4 fb 7f 00 00 00 00 00 00 20 00 00 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+	 stack[00][0] = 0x00007ffbf40d97f0
+	 stack[00][0] bytes = 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+	 stack[00][1] = 0x0000002000000000
+	 stack[00][1] bytes = 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 c3 03 00 00 00 00 00 00 00 00 01 10 00 00 00 00 a0 03 00 00 00 00 00 00 80 67 f6 00 00 00 00 00 00 00 00 00 20 00 00 00
+	 [01] 0x00000007efdf1c98
+	 stack[01] string = "stack[01]"
+	 stack[01] bytes = 73 74 61 63 6b 5b 30 31 5d 00 26 f5 ff 7f 00 00 09 20 5b 30 31 5d 20 30 78 30 30 30 30 30 30 30 37 65 66 64 66 31 63 39 38 0a 20 72 65 74 75 72 6e 20 3d 20 30 78 30 30 30 30 30 30 30 39 30 30
+	 stack[01][1] = 0x00007ffff526005d
+	 stack[01][1] bytes = ff 0f 85 bd 00 00 00 41 83 fe 28 44 8b 6d c8 75 09 81 65 c4 ff 0f 00 00 74 05 e8 74 8f 01 00 48 8d bd 48 fd ff ff e8 78 02 00 00 eb 24 41 83 fe 28 75 09 81 65 c4 ff 0f 00 00 74 05 e8 52 8f 01
+	 [02] 0x0000000000000009
+	 [03] 0x32305b6b63617473
+	 [04] 0x00007ffff526005d
+	 stack[04] bytes = ff 0f 85 bd 00 00 00 41 83 fe 28 44 8b 6d c8 75 09 81 65 c4 ff 0f 00 00 74 05 e8 74 8f 01 00 48 8d bd 48 fd ff ff e8 78 02 00 00 eb 24 41 83 fe 28 75 09 81 65 c4 ff 0f 00 00 74 05 e8 52 8f 01
+	 [05] 0x30205d34305b2009
+	 [06] 0x3364353032303378
+	 [07] 0x3733333033323330
+	 [08] 0x7275746572200a30
+	 [09] 0x30307830203d206e
+	 [10] 0x3030393030303030
+	 [11] 0x090a323661323838
+	 [12] 0x2020202070627220
+	 [13] 0x303030307830203d
+	 [14] 0x6664666537303030
+	 [15] 0x7220090a30656631
+--- Build ---
+Source build df5b9b9-dirty
+--- Error ---
+Guest abort()
+ in /home/runner/work/NovaPS5-Android/NovaPS5-Android/linux-kyty/src/libs/libC.cpp:252

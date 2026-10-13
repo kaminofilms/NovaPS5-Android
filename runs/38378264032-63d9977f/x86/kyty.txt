@@ -1,0 +1,31 @@
+Initialized: Config
+Initialized: Log
+Initialized: Timer
+Initialized: Pthread
+Initialized: Profiler
+Initialized: Network
+Initialized: Memory
+Initialized: FileSystem
+Initialized: Controller
+Initialized: Audio
+Vulkan pipeline cache: disabled (dirty build)
+Initialized: Graphics
+Title ID: PPSA59322
+Unresolved import stub called: smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func]
+Unresolved import stub called: smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func]
+Unresolved import stub called: smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func]
+Unresolved import stub called: smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func]
+Unresolved import stub called: smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func]
+Unresolved import stub called: smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func]
+Unresolved import stub called: smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func]
+Unresolved import stub called: smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func]
+Unresolved import stub called: smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func]
+Unresolved import stub called: smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func]
+Unresolved import stub called: smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func]
+Unresolved import stub called: smbQukfxYJM[LibcInternal_v1][LibcInternal_v0.1][Func]
+--- Build ---
+Source build df5b9b9-dirty
+--- Error ---
+Guest abort()
+ in /home/runner/work/NovaPS5-Android/NovaPS5-Android/linux-kyty/src/libs/libC.cpp:252
+NOVA_LAB: mode=native exit=65 elapsed=15s (124 = still running at timeout)
