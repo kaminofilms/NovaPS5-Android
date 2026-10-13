@@ -12,6 +12,8 @@ with tempfile.TemporaryDirectory() as directory:
     fex.chmod(0o755);config=fex.with_name('FEXGetConfig');config.write_bytes(fex.read_bytes());config.chmod(0o755);server=fex.with_name('FEXServer');server.write_text('#!/bin/bash\nexit 0\n');server.chmod(0o755)
     for name in ['linux-runtime/guest/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2','linux-kyty/kyty_emulator','linux-runtime/guest/usr/lib/x86_64-linux-gnu/libc.so.6','linux-runtime/guest/usr/lib/x86_64-linux-gnu/libm.so.6','linux-runtime/guest/usr/lib/x86_64-linux-gnu/libgcc_s.so.1','linux-runtime/guest/usr/lib/x86_64-linux-gnu/libstdc++.so.6','linux-runtime/guest/etc/ld.so.preload']:
         p=base/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(b'test');p.chmod(0o755)
+    for name in ['linux-runtime/host/usr/lib/aarch64-linux-gnu/fex-emu/HostThunks/libvulkan-host.so','linux-runtime/host/usr/share/fex-emu/GuestThunks/libvulkan-guest.so']:
+        p=base/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(b'mock thunk')
     import json
     runtime=base/'linux-runtime'
     (runtime/'ThunksDB.json').write_text(json.dumps({'DB':{'Vulkan':{'Library':'libvulkan-guest.so','Overlay':['@PREFIX_LIB@/libvulkan.so.1']}}}))
