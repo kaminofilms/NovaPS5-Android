@@ -1,0 +1,12 @@
+{
+  "sha256": "f3170afc1fbf41e3257ca8d1925a287e4b5879daec0864116827165f9ea47409",
+  "source_commit": "df5b9b92be7dfd463b47756b707d6d356a9f0550",
+  "patches": {
+    "pc-boot-api.patch": "47359956f07d4744db3769b4d02425607b43e60f3e0a131bd68d33e5837e9b2b",
+    "kyty-nova-va39.patch": "31411207a791fa3d2053cca3355d9939f1524b2929926fb23094a8a3e64329cc",
+    "kyty-nova-relaxed-vulkan.patch": "fd9f35c97ac10c1c65b4894ace657bd8a59d8eb220864c120ef18b820131c5f0",
+    "kyty-nova-libc-hle.patch": "391ca5666e99144b8bdedd30ada78b2a6c280f292239786b5ceab309f50a1554",
+    "kyty-nova-posix.patch": "0dbb9669bb6620a59e3c43d19d814ad5c56c22c49d6a1fa6cf8b583c88e27bb8",
+    "kyty-nova-arm64.patch": "237fc25cf135c1e4859f910c8454e70c7d9ef913d1edfa6dd46058ff4d05d227"
+  }
+}
