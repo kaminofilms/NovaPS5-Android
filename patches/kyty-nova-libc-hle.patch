@@ -1,5 +1,5 @@
 diff --git a/src/libs/libC.cpp b/src/libs/libC.cpp
-index 20b44706..83b458bc 100644
+index 20b44706..acff2c8c 100644
 --- a/src/libs/libC.cpp
 +++ b/src/libs/libC.cpp
 @@ -16,6 +16,14 @@
@@ -29,7 +29,7 @@ index 20b44706..83b458bc 100644
  static int FlushSdkOutput(void* stream) {
  	return FlushBsdOutput(stream,
  	    [](const void* pointer, size_t size, bool write) {
-@@ -904,10 +917,820 @@ LIB_DEFINE(InitLibcInternal_1) {
+@@ -904,10 +917,824 @@ LIB_DEFINE(InitLibcInternal_1) {
  
  } // namespace LibcInternal
  
@@ -845,7 +845,11 @@ index 20b44706..83b458bc 100644
  LIB_DEFINE(InitLibC_1) {
  	LibcInternal::InitLibcInternal_1(s);
 +#if KYTY_PLATFORM == KYTY_PLATFORM_LINUX
-+	LibcNova::InitLibcNova_1(s);
++	// Only for titles whose sce_module/libc.prx is the open-SDK stub (Nova's launcher sets this
++	// after checking its hash). Retail titles keep resolving to Sony's own libc.prx.
++	if (const char* hle = std::getenv("NOVA_LIBC_HLE"); hle != nullptr && hle[0] == '1') {
++		LibcNova::InitLibcNova_1(s);
++	}
 +#endif
  
  	LIB_OBJECT("P330P3dFF68", &LibC::g_need_flag);

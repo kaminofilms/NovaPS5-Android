@@ -5,7 +5,7 @@
 set -uo pipefail
 mode=$1 kyty=$2 game=$3 out=$4 seconds=$5
 mkdir -p "$out/shots"
-export DISPLAY=:99
+export DISPLAY=:99 NOVA_LIBC_HLE=1
 Xvfb :99 -screen 0 1280x720x24 -nolisten tcp >"$out/xvfb.txt" 2>&1 &
 xvfb=$!
 sleep 2

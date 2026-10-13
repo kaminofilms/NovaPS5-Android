@@ -163,6 +163,8 @@ def main():
             assert b'--inhibit-cache --library-path "$nova_guest_libs"' in helper
             with tarfile.open(fileobj=io.BytesIO(payload),mode='r:gz') as runtime:
                 assert runtime.extractfile('guest/etc/ld.so.preload').read()==b''
+                # The guest Vulkan loader is the FEX thunk itself (proot cannot redirect openat2()).
+                assert runtime.extractfile('guest/usr/lib/x86_64-linux-gnu/libvulkan.so.1').read()==runtime.extractfile('host/usr/share/fex-emu/GuestThunks/libvulkan-guest.so').read()
 
         else:
             engine_bytes = archive.read('assets/engine/kyty-windows-df5b9b9.zip')
@@ -216,7 +218,7 @@ def main():
                 report['packageMetadata'] = line
         assert "name='com.kaminofilms.novaps5'" in badging
         if args.linux_core:
-            assert "versionName='0.3.2-linux-fex'" in badging and "versionCode='12'" in badging and "native-code: 'arm64-v8a'" in badging
+            assert "versionName='0.3.3-linux-fex'" in badging and "versionCode='13'" in badging and "native-code: 'arm64-v8a'" in badging
         subprocess.run([str(bt / 'zipalign'), '-c', '-P', '16', '4', str(args.apk)], check=True)
     if args.json_output:
         args.json_output.parent.mkdir(parents=True, exist_ok=True)

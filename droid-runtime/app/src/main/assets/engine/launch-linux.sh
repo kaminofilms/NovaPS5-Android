@@ -51,8 +51,11 @@ for thunk in "$FEX_THUNKHOSTLIBS/libvulkan-host.so" "$FEX_THUNKGUESTLIBS/libvulk
     [[ -r "$thunk" ]] || { stage D 'Vulkan FAIL'; echo "NOVA_ERROR: Vulkan thunk missing $thunk" >&2; exit 73; }
 done
 vulkan_status=0
-vulkan_log=$(timeout --kill-after=5s 90s bash -c 'nova_fex_run "$@"' nova "$guest/nova-probe" --vulkan 2>&1) || vulkan_status=$?
-printf '%s\n' "$vulkan_log"
+# FEX debug output shows whether the thunk reached the host loader ("LoadLib: libvulkan").
+vulkan_log=$(FEX_OUTPUTLOG=stderr FEX_SILENTLOG=0 VK_LOADER_DEBUG=error,warn timeout --kill-after=5s 90s bash -c 'nova_fex_run "$@"' nova "$guest/nova-probe" --vulkan 2>&1) || vulkan_status=$?
+printf '%s\n' "$vulkan_log" | grep -v 'Linking address\|Adding host trampoline\|Adding guest trampoline\|Loaded [0-9]* syms' | head -120 || true
+if printf '%s\n' "$vulkan_log" | grep -q 'LoadLib: libvulkan'; then echo 'NOVA_VULKAN: FEX Vulkan thunk ACTIVE (guest calls reach the ARM64 host loader)';
+else echo 'NOVA_VULKAN: FEX Vulkan thunk NOT active (guest used the x86-64 loader)'; fi
 relaxed=0
 case $vulkan_status in
     0) stage D 'Vulkan instance, device and Kyty feature requirements PASS' ;;
@@ -89,4 +92,12 @@ cd "$base/linux-kyty"
 echo "NOVA_LAUNCH: Linux Kyty game=$game relaxed_vulkan=$relaxed"
 step 'F Linux Kyty attempting selected game'
 export NOVA_RELAXED_VULKAN=$relaxed
+# Homebrew built with the open PS5 SDK ships a generated stub libc.prx (PS5_Vulkan runtime,
+# SHA-256 below) and imports the firmware C library directly; Kyty then needs its host libc.
+# Retail games ship Sony's libc.prx and must keep using it.
+export NOVA_LIBC_HLE=0
+if [[ -r "$game/sce_module/libc.prx" ]] && sha256sum "$game/sce_module/libc.prx" | grep -q '^e6ff45d16adf687855cc3b33b0c8a4132b6504360b221e0a34c7e99fb3ba0036 '; then
+    NOVA_LIBC_HLE=1
+    echo 'NOVA_LAUNCH: open-SDK homebrew libc stub detected; Kyty host C library enabled'
+fi
 bash -c 'nova_fex_run "$@"' nova "$core" --game "$game" --screen-width 1280 --screen-height 720 --vblank-frequency 60 --present-mode Fifo --fullscreen --hide-cursor --no-splash --vulkan-validation false --network-connected false
