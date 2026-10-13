@@ -95,7 +95,7 @@ public final class MainActivity extends Activity {
     String androidLog(){
         StringBuilder out=new StringBuilder();
         for(String[] cmd:new String[][]{{"logcat","-d","-b","crash","-t","200"},{"logcat","-d","-t","600"}}){
-            try{Process p=new ProcessBuilder(cmd).redirectErrorStream(true).start();
+            try{java.lang.Process p=new ProcessBuilder(cmd).redirectErrorStream(true).start();
                 try(java.io.BufferedReader r=new java.io.BufferedReader(new java.io.InputStreamReader(p.getInputStream()))){String line;while((line=r.readLine())!=null)out.append(line).append('\n');}
                 p.waitFor();}catch(Exception x){out.append(String.join(" ",cmd)).append(": ").append(x).append('\n');}
             out.append("----\n");
