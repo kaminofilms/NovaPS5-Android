@@ -47,7 +47,7 @@ for p in $(grep -v '^#' "$repo/patches/linux-core.series"); do
     git -C kyty apply "$repo/patches/$p" || { echo "patch failed: $p"; exit 1; }
 done
 cmake -S kyty -B build-kyty -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
-    -DCMAKE_C_FLAGS="-include ctype.h" -DKYTY_BUILD_LAUNCHER=OFF -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+    -DCMAKE_C_FLAGS="-Wno-error=implicit-function-declaration" -DKYTY_BUILD_LAUNCHER=OFF -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
     -DNOVAFEX_DIR="$work/novafex-dist" > "$out/logs/kyty-cmake.txt" 2>&1 || { tail -60 "$out/logs/kyty-cmake.txt"; exit 1; }
 status=0
 cmake --build build-kyty --target kyty_emulator --parallel "$(nproc)" -- -k 0 > "$out/logs/kyty-build.txt" 2>&1 || status=$?

@@ -85,7 +85,9 @@ jobs:
           key: native-ccache-${{ hashFiles('native/**', 'patches/*') }}
           restore-keys: native-ccache-
       - name: Build
-        run: bash tools/ci/build-native-kyty.sh "$PWD" "$PWD/work" "$PWD/dist" 2>&1 | tail -120
+        run: |
+          set -euo pipefail
+          bash tools/ci/build-native-kyty.sh "$PWD" "$PWD/work" "$PWD/dist" 2>&1 | tail -120
       - uses: actions/upload-artifact@v4
         with:
           name: kyty-native-core
