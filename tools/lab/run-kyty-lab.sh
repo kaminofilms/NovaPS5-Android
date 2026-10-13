@@ -10,7 +10,8 @@ Xvfb :99 -screen 0 1280x720x24 -nolisten tcp >"$out/xvfb.txt" 2>&1 &
 xvfb=$!
 sleep 2
 args=(--game "$game" --screen-width 1280 --screen-height 720 --vblank-frequency 60
-      --present-mode Fifo --no-splash --vulkan-validation false --network-connected false)
+      --present-mode Fifo --no-splash --vulkan-validation false --network-connected false
+      --printf-direction File --printf-output-file "$out/kyty-full.log")
 start=$(date +%s)
 if [[ $mode == native ]]; then
     timeout --kill-after=10s "${seconds}s" "$kyty" "${args[@]}" >"$out/kyty.txt" 2>&1 &
@@ -31,5 +32,8 @@ for shot in "$out"/shots/*.png; do
     mean=$(convert "$shot" -colorspace Gray -format '%[fx:mean]' info: 2>/dev/null || echo 0)
     echo "$(basename "$shot") mean=$mean" >> "$out/shots/index.txt"
 done
+grep -n "abort\|Fatal\|Error\|Unresolved\|stack\[" "$out/kyty-full.log" 2>/dev/null | head -200 > "$out/kyty-highlights.txt" || true
+tail -400 "$out/kyty-full.log" > "$out/kyty-tail.txt" 2>/dev/null || true
+gzip -f "$out/kyty-full.log" 2>/dev/null || true
 kill "$xvfb" 2>/dev/null || true
 exit 0
