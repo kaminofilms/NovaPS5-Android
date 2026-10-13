@@ -1,0 +1,139 @@
+name: Nova PS5 lab (Kyty homebrew boot, native x86-64 and ARM64 FEX)
+# Diagnostic workflow. Logs and screenshots are committed to the lab-logs branch
+# so they can be read with plain git. Uses the legal ccleste homebrew on lab-assets.
+on:
+  push:
+    branches: [nova-lab]
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: nova-lab
+  cancel-in-progress: true
+jobs:
+  x86:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libvulkan-dev mesa-vulkan-drivers vulkan-tools xvfb imagemagick
+      - name: Inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/core out/x86
+          if [ -f build-override/kyty_emulator ]; then cp build-override/kyty_emulator build/core/; else
+          gh run download 38324155342 --repo "$GITHUB_REPOSITORY" --name NovaPS5-Linux-Kyty-x86_64-802adeb479110a76b590a0f56747b41c049b3adb --dir build/core; fi
+          chmod 755 build/core/kyty_emulator
+          sha256sum build/core/kyty_emulator | tee out/x86/core-sha256.txt
+          git fetch --depth 1 origin lab-assets
+          git show origin/lab-assets:ccleste-PPSA59322.zip > build/ccleste.zip
+          (cd build && unzip -q ccleste.zip)
+          ldd build/core/kyty_emulator > out/x86/ldd.txt || true
+      - name: Provision FEX runtime (for the ARM64 job)
+        run: python3 runtime-linux/provision.py --output build/linux-runtime.tar.gz
+      - name: Native probe and lavapipe capabilities
+        run: |
+          gcc -O2 runtime-linux/probe.c -ldl -o build/probe
+          { build/probe --memory; build/probe --vulkan; vulkaninfo --summary; } > out/x86/vulkan.txt 2>&1 || true
+      - name: Boot ccleste with native x86-64 Linux Kyty
+        run: |
+          mkdir -p out/x86/cwd && cd out/x86/cwd
+          bash "$GITHUB_WORKSPACE/tools/lab/run-kyty-lab.sh" native "$GITHUB_WORKSPACE/build/core/kyty_emulator" "$GITHUB_WORKSPACE/build/PPSA59322" "$GITHUB_WORKSPACE/out/x86" 240
+          tail -60 "$GITHUB_WORKSPACE/out/x86/kyty.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lab-inputs
+          path: |
+            build/core/kyty_emulator
+            build/linux-runtime.tar.gz
+            build/ccleste.zip
+          retention-days: 3
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lab-out-x86
+          path: out
+          retention-days: 3
+  arm64:
+    needs: x86
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: lab-inputs
+          path: build
+      - name: Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libvulkan1 mesa-vulkan-drivers vulkan-tools xvfb imagemagick
+      - name: Unpack runtime
+        run: |
+          set -euo pipefail
+          mkdir -p build/runtime out/arm64
+          tar -xzf build/linux-runtime.tar.gz -C build/runtime
+          (cd build && unzip -q ccleste.zip)
+          chmod 755 build/core/kyty_emulator
+          getconf PAGESIZE > out/arm64/host.txt; uname -a >> out/arm64/host.txt; vulkaninfo --summary >> out/arm64/host.txt 2>&1 || true
+      - name: Guest Vulkan through FEX thunks (lavapipe ARM64 host ICD)
+        shell: bash
+        run: |
+          set -uo pipefail
+          source droid-runtime/app/src/main/assets/engine/fex-linux.sh
+          nova_fex_setup "$PWD/build/runtime" "$PWD/build/fex-config" > out/arm64/vulkan.txt 2>&1
+          ls -la build/fex-config >> out/arm64/vulkan.txt
+          export VK_DRIVER_FILES="$(find /usr/share/vulkan/icd.d -maxdepth 1 -name 'lvp_icd*.json' -print -quit)"
+          { nova_fex_run "$PWD/build/runtime/guest/nova-probe" --memory
+            nova_fex_run "$PWD/build/runtime/guest/nova-probe" --vulkan; echo "probe exit $?"
+            echo '--- loader debug ---'
+            VK_LOADER_DEBUG=error,warn,info FEX_OUTPUTLOG=stderr FEX_SILENTLOG=0 nova_fex_run "$PWD/build/runtime/guest/nova-probe" --vulkan 2>&1 | head -150
+          } >> out/arm64/vulkan.txt 2>&1
+          cat out/arm64/vulkan.txt
+      - name: Boot ccleste with Linux Kyty under FEX
+        shell: bash
+        run: |
+          set -uo pipefail
+          source droid-runtime/app/src/main/assets/engine/fex-linux.sh
+          nova_fex_setup "$PWD/build/runtime" "$PWD/build/fex-config"
+          export -f nova_fex_run; export nova_fex nova_loader nova_guest_libs
+          export VK_DRIVER_FILES="$(find /usr/share/vulkan/icd.d -maxdepth 1 -name 'lvp_icd*.json' -print -quit)"
+          export FEX_TSOENABLED=1
+          mkdir -p out/arm64/cwd && cd out/arm64/cwd
+          bash "$GITHUB_WORKSPACE/tools/lab/run-kyty-lab.sh" fex "$GITHUB_WORKSPACE/build/core/kyty_emulator" "$GITHUB_WORKSPACE/build/PPSA59322" "$GITHUB_WORKSPACE/out/arm64" 600
+          tail -60 "$GITHUB_WORKSPACE/out/arm64/kyty.txt"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lab-out-arm64
+          path: out
+          retention-days: 3
+  publish:
+    needs: [x86, arm64]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: lab-out-*
+          merge-multiple: true
+          path: out
+      - name: Commit logs to lab-logs
+        run: |
+          set -euo pipefail
+          dest="runs/${GITHUB_RUN_ID}-${GITHUB_SHA::8}"
+          git init -q logs && cd logs
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q --depth 1 origin lab-logs; then git checkout -q -b lab-logs FETCH_HEAD; else git checkout -q --orphan lab-logs; fi
+          mkdir -p "$dest"; cp -r ../out/. "$dest/" || true
+          find "$dest" -type f -size +20M -delete
+          printf '%s x86=%s arm64=%s\n' "$dest" "${{ needs.x86.result }}" "${{ needs.arm64.result }}" >> INDEX.txt
+          git add -A
+          git -c user.name=nova-lab -c user.email=nova-lab@users.noreply.github.com commit -qm "lab logs $dest"
+          git push -q origin HEAD:lab-logs

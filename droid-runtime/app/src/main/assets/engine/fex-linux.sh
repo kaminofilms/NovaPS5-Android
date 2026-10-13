@@ -30,7 +30,8 @@ for item in db['DB'].values():
 (config/'ThunksDB.json').write_text(json.dumps(db)+'\n')
 (config/'Config.json').write_text(json.dumps({'Config':{'Env':'LD_LIBRARY_PATH='+str(guest/'usr/lib/x86_64-linux-gnu')}})+'\n')
 PY
-    export FEX_ROOTFS=$nova_guest FEX_APP_CONFIG_LOCATION=$config FEX_PORTABLE=1
+    # FEX appends file names directly to this directory, so it needs a trailing slash.
+    export FEX_ROOTFS=$nova_guest FEX_APP_CONFIG_LOCATION=${config%/}/ FEX_PORTABLE=1
     export FEX_THUNKHOSTLIBS=$runtime/host/usr/lib/aarch64-linux-gnu/fex-emu/HostThunks
     export FEX_THUNKGUESTLIBS=$runtime/host/usr/share/fex-emu/GuestThunks
     export FEX_THUNKCONFIG=$runtime/thunks.json
