@@ -44,6 +44,8 @@ fwd('bsearch','void*','const void*','const void*','size_t','size_t','NovaCompare
 fwd('rand','int'); fwd('ctime','char*','const time_t*')
 cus('getprogname','const char*',[],'return "eboot.bin";')
 cus('setlocale','const char*',['int','const char*'],'return (a1 == nullptr || a1[0] == 0 || std::strcmp(a1, "C") == 0 || std::strcmp(a1, "POSIX") == 0) ? "C" : nullptr;')
+cus('realpath','char*',['const char*','char*'],'if (a0 == nullptr) { *Posix::GetErrorAddr() = Posix::POSIX_EINVAL; return nullptr; } char* out = a1 != nullptr ? a1 : static_cast<char*>(std::malloc(1024)); std::snprintf(out, 1024, "%s", a0); return out; // guest paths are already absolute mount paths')
+cus('_Unwind_Backtrace','int',['void*','void*'],'(void)a0; (void)a1; return 5; // _URC_END_OF_STACK')
 cus('getenv','const char*',['const char*'],'(void)a0; return nullptr; // the guest environment is empty')
 cus('unsetenv','int',['const char*'],'(void)a0; return 0;')
 # stdio
@@ -98,7 +100,7 @@ for name,(first,vname) in VARIADIC.items():
     fn=f'nova_{name}_v'
     out.append(f'static KYTY_SYSV_ABI int {fn}({first} a0, const char* a1, ...) {{\n\tva_list ap;\n\tva_start(ap, a1);\n\tconst int r = {vfn}(a0, a1, ap);\n\tva_end(ap);\n\treturn r;\n}}\n')
     reg.append((n,name,fn))
-for extra,obj in [('__isthreaded','&g_nova_isthreaded')]:
+for extra,obj in [('__isthreaded','&g_nova_isthreaded'),('__mb_cur_max','&g_nova_mb_cur_max'),('__mb_sb_limit','&g_nova_mb_sb_limit'),('_DefaultRuneLocale','&g_nova_rune_locale'),('_CurrentRuneLocale','&g_nova_current_rune_locale')]:
     n=nid(extra)
     if n not in existing: reg.append((n,extra,obj))
 sj=[('_setjmp','::_setjmp'),('setjmp','::_setjmp'),('longjmp','::longjmp'),('_longjmp','::longjmp')]
@@ -116,6 +118,47 @@ LIB_VERSION("LibcInternal", 1, "LibcInternal", 1, 1);
 using NovaCompare = int (*)(const void*, const void*);
 using NovaVaList  = va_list;
 static int g_nova_isthreaded = 1;
+static int g_nova_mb_cur_max  = 1;   // "C" locale: single-byte
+static int g_nova_mb_sb_limit = 256;
+
+// FreeBSD amd64 _RuneLocale ("C" locale). Inline <ctype.h> macros in SDK-built titles index
+// __runetype/__maplower/__mapupper directly through _CurrentRuneLocale.
+struct NovaRuneRange { int32_t nranges; void* ranges; };
+struct NovaRuneLocale {
+	char magic[8]; char encoding[32]; void* sgetrune; void* sputrune; int32_t invalid_rune;
+	uint64_t runetype[256]; int32_t maplower[256]; int32_t mapupper[256];
+	NovaRuneRange runetype_ext, maplower_ext, mapupper_ext; void* variable; int32_t variable_len;
+};
+static_assert(offsetof(NovaRuneLocale, runetype) == 64 && offsetof(NovaRuneLocale, maplower) == 2112 &&
+              offsetof(NovaRuneLocale, mapupper) == 3136 && offsetof(NovaRuneLocale, runetype_ext) == 4160);
+static NovaRuneLocale MakeRuneLocale() {
+	NovaRuneLocale r {};
+	std::memcpy(r.magic, "RuneMagi", 8);
+	std::memcpy(r.encoding, "NONE", 5);
+	r.invalid_rune = 0xfffd;
+	for (int c = 0; c < 256; c++) {
+		uint64_t t = 0;
+		if (c < 128) {
+			if (std::isalpha(c)) t |= 0x100;
+			if (std::iscntrl(c)) t |= 0x200;
+			if (std::isdigit(c)) t |= 0x400 | static_cast<uint64_t>(c - '0');
+			if (std::isgraph(c)) t |= 0x800;
+			if (std::islower(c)) t |= 0x1000;
+			if (std::ispunct(c)) t |= 0x2000;
+			if (std::isspace(c)) t |= 0x4000;
+			if (std::isupper(c)) t |= 0x8000;
+			if (std::isxdigit(c)) { t |= 0x10000; if (!std::isdigit(c)) t |= static_cast<uint64_t>(std::tolower(c) - 'a' + 10); }
+			if (c == ' ' || c == '\t') t |= 0x20000;
+			if (std::isprint(c)) t |= 0x40000 | 0x40000000; // print, width 1
+		}
+		r.runetype[c] = t;
+		r.maplower[c] = c < 128 ? std::tolower(c) : c;
+		r.mapupper[c] = c < 128 ? std::toupper(c) : c;
+	}
+	return r;
+}
+static NovaRuneLocale  g_nova_rune_locale         = MakeRuneLocale();
+static NovaRuneLocale* g_nova_current_rune_locale = &g_nova_rune_locale;
 
 static int GuestFd(void* file) {
 	if (file == LibcInternal::NovaGuestStream(0) || file == stdin) return 0;

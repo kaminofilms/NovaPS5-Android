@@ -1,12 +1,13 @@
 diff --git a/src/libs/libC.cpp b/src/libs/libC.cpp
-index 20b44706..9d34e811 100644
+index 20b44706..83b458bc 100644
 --- a/src/libs/libC.cpp
 +++ b/src/libs/libC.cpp
-@@ -16,6 +16,13 @@
+@@ -16,6 +16,14 @@
  #include "loader/symbolDatabase.h"
  
  #include <algorithm>
 +#include <malloc.h>
++#include <cstddef>
 +#include <clocale>
 +#include <cwctype>
 +#include <cwchar>
@@ -16,7 +17,7 @@ index 20b44706..9d34e811 100644
  #include <cctype>
  #include <chrono>
  #include <cinttypes>
-@@ -672,6 +679,11 @@ static void InitializeSdkStdio() {
+@@ -672,6 +680,11 @@ static void InitializeSdkStdio() {
  	(void)initialized;
  }
  
@@ -28,7 +29,7 @@ index 20b44706..9d34e811 100644
  static int FlushSdkOutput(void* stream) {
  	return FlushBsdOutput(stream,
  	    [](const void* pointer, size_t size, bool write) {
-@@ -904,10 +916,765 @@ LIB_DEFINE(InitLibcInternal_1) {
+@@ -904,10 +917,820 @@ LIB_DEFINE(InitLibcInternal_1) {
  
  } // namespace LibcInternal
  
@@ -45,6 +46,47 @@ index 20b44706..9d34e811 100644
 +using NovaCompare = int (*)(const void*, const void*);
 +using NovaVaList  = va_list;
 +static int g_nova_isthreaded = 1;
++static int g_nova_mb_cur_max  = 1;   // "C" locale: single-byte
++static int g_nova_mb_sb_limit = 256;
++
++// FreeBSD amd64 _RuneLocale ("C" locale). Inline <ctype.h> macros in SDK-built titles index
++// __runetype/__maplower/__mapupper directly through _CurrentRuneLocale.
++struct NovaRuneRange { int32_t nranges; void* ranges; };
++struct NovaRuneLocale {
++	char magic[8]; char encoding[32]; void* sgetrune; void* sputrune; int32_t invalid_rune;
++	uint64_t runetype[256]; int32_t maplower[256]; int32_t mapupper[256];
++	NovaRuneRange runetype_ext, maplower_ext, mapupper_ext; void* variable; int32_t variable_len;
++};
++static_assert(offsetof(NovaRuneLocale, runetype) == 64 && offsetof(NovaRuneLocale, maplower) == 2112 &&
++              offsetof(NovaRuneLocale, mapupper) == 3136 && offsetof(NovaRuneLocale, runetype_ext) == 4160);
++static NovaRuneLocale MakeRuneLocale() {
++	NovaRuneLocale r {};
++	std::memcpy(r.magic, "RuneMagi", 8);
++	std::memcpy(r.encoding, "NONE", 5);
++	r.invalid_rune = 0xfffd;
++	for (int c = 0; c < 256; c++) {
++		uint64_t t = 0;
++		if (c < 128) {
++			if (std::isalpha(c)) t |= 0x100;
++			if (std::iscntrl(c)) t |= 0x200;
++			if (std::isdigit(c)) t |= 0x400 | static_cast<uint64_t>(c - '0');
++			if (std::isgraph(c)) t |= 0x800;
++			if (std::islower(c)) t |= 0x1000;
++			if (std::ispunct(c)) t |= 0x2000;
++			if (std::isspace(c)) t |= 0x4000;
++			if (std::isupper(c)) t |= 0x8000;
++			if (std::isxdigit(c)) { t |= 0x10000; if (!std::isdigit(c)) t |= static_cast<uint64_t>(std::tolower(c) - 'a' + 10); }
++			if (c == ' ' || c == '	') t |= 0x20000;
++			if (std::isprint(c)) t |= 0x40000 | 0x40000000; // print, width 1
++		}
++		r.runetype[c] = t;
++		r.maplower[c] = c < 128 ? std::tolower(c) : c;
++		r.mapupper[c] = c < 128 ? std::toupper(c) : c;
++	}
++	return r;
++}
++static NovaRuneLocale  g_nova_rune_locale         = MakeRuneLocale();
++static NovaRuneLocale* g_nova_current_rune_locale = &g_nova_rune_locale;
 +
 +static int GuestFd(void* file) {
 +	if (file == LibcInternal::NovaGuestStream(0) || file == stdin) return 0;
@@ -473,6 +515,14 @@ index 20b44706..9d34e811 100644
 +	return (a1 == nullptr || a1[0] == 0 || std::strcmp(a1, "C") == 0 || std::strcmp(a1, "POSIX") == 0) ? "C" : nullptr;
 +}
 +
++static KYTY_SYSV_ABI char* nova_realpath(const char* a0, char* a1) {
++	if (a0 == nullptr) { *Posix::GetErrorAddr() = Posix::POSIX_EINVAL; return nullptr; } char* out = a1 != nullptr ? a1 : static_cast<char*>(std::malloc(1024)); std::snprintf(out, 1024, "%s", a0); return out; // guest paths are already absolute mount paths
++}
++
++static KYTY_SYSV_ABI int nova_Unwind_Backtrace(void* a0, void* a1) {
++	(void)a0; (void)a1; return 5; // _URC_END_OF_STACK
++}
++
 +static KYTY_SYSV_ABI const char* nova_getenv(const char* a0) {
 +	(void)a0; return nullptr; // the guest environment is empty
 +}
@@ -738,6 +788,8 @@ index 20b44706..9d34e811 100644
 +	LIB_FUNC("0uAUs3hYuG4", nova_ctime); // ctime
 +	LIB_FUNC("7Psx1DlAyE4", nova_getprogname); // getprogname
 +	LIB_FUNC("PtsB1Q9wsFA", nova_setlocale); // setlocale
++	LIB_FUNC("vhtcIgZG-Lk", nova_realpath); // realpath
++	LIB_FUNC("s62MgBhosjU", nova_Unwind_Backtrace); // _Unwind_Backtrace
 +	LIB_FUNC("smbQukfxYJM", nova_getenv); // getenv
 +	LIB_FUNC("CRJcH8CnPSI", nova_unsetenv); // unsetenv
 +	LIB_FUNC("xeYO4u7uyJ0", nova_fopen); // fopen
@@ -775,6 +827,10 @@ index 20b44706..9d34e811 100644
 +	LIB_FUNC("cOYia2dE0Ik", nova_asprintf_v); // asprintf
 +	LIB_FUNC("1Pk0qZQGeWo", nova_sscanf_v); // sscanf
 +	LIB_OBJECT("q1OvUam0BJU", &g_nova_isthreaded); // __isthreaded
++	LIB_OBJECT("77pL1FoD4I4", &g_nova_mb_cur_max); // __mb_cur_max
++	LIB_OBJECT("fGYLBr2COwA", &g_nova_mb_sb_limit); // __mb_sb_limit
++	LIB_OBJECT("lWGF8NHv880", &g_nova_rune_locale); // _DefaultRuneLocale
++	LIB_OBJECT("chlN6g6UbGo", &g_nova_current_rune_locale); // _CurrentRuneLocale
 +	LIB_FUNC("sjpkrhugvVI", ::_setjmp); // _setjmp: guest jmp_buf (96 bytes) holds glibc's 72-byte layout
 +	LIB_FUNC("gNQ1V2vfXDE", ::_setjmp); // setjmp: guest jmp_buf (96 bytes) holds glibc's 72-byte layout
 +	LIB_FUNC("lKEN2IebgJ0", ::longjmp); // longjmp: guest jmp_buf (96 bytes) holds glibc's 72-byte layout
