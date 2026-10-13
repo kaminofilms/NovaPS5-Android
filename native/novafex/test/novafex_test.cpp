@@ -15,6 +15,7 @@
 #include <vector>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <dlfcn.h>
 
 namespace {
 
@@ -35,6 +36,22 @@ void FaultHandler(int signal, siginfo_t* info, void* ucontext) {
 	int n = std::snprintf(buf, sizeof(buf), "NOVAFEX_TEST: unhandled signal %d addr=%p pc=0x%llx\n", signal,
 	                      info->si_addr, static_cast<unsigned long long>(uc->uc_mcontext.pc));
 	(void)!write(2, buf, n);
+	auto where = [](const char* tag, uint64_t a) {
+		Dl_info di {};
+		if (dladdr(reinterpret_cast<void*>(a), &di) && di.dli_fname) {
+			std::fprintf(stderr, "  %s 0x%llx %s+0x%llx (%s)\n", tag, (unsigned long long)a, di.dli_fname,
+			             (unsigned long long)(a - reinterpret_cast<uint64_t>(di.dli_fbase)), di.dli_sname ? di.dli_sname : "?");
+		} else {
+			std::fprintf(stderr, "  %s 0x%llx (JIT/anon)\n", tag, (unsigned long long)a);
+		}
+	};
+	where("pc", uc->uc_mcontext.pc);
+	where("lr", uc->uc_mcontext.regs[30]);
+	auto* fp = reinterpret_cast<uint64_t*>(uc->uc_mcontext.regs[29]);
+	for (int i = 0; i < 16 && fp != nullptr && (reinterpret_cast<uint64_t>(fp) & 7) == 0; i++) {
+		where("frame", fp[1]);
+		fp = reinterpret_cast<uint64_t*>(fp[0]);
+	}
 	_exit(90 + signal % 10);
 }
 

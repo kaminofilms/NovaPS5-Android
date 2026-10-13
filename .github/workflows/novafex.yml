@@ -60,6 +60,9 @@ jobs:
           status=0
           timeout 300s "$bin" > out/novafex-test.txt 2>&1 || status=$?
           echo "NOVAFEX_TEST: exit=$status" >> out/novafex-test.txt
+          lib=$(find build -name libnovafex.so | head -n 1)
+          grep -o 'libnovafex.so+0x[0-9a-f]*' out/novafex-test.txt | sed 's/.*+//' | while read -r off; do
+            echo "$off $(addr2line -f -C -i -e "$lib" "$off" | tr '\n' ' ')"; done >> out/novafex-test.txt || true
           cat out/novafex-test.txt
           grep -q 'NOVAFEX_TEST: ALL PASS' out/novafex-test.txt
       - name: Commit logs to lab-logs
