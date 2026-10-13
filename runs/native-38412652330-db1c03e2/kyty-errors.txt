@@ -1,0 +1,2 @@
+FAILED: [code=1] 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/arm/linux/chipset.c.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/kyty/3rdparty/cpuinfo/src/arm/linux/chipset.c:330:11: error: call to undeclared library function 'tolower' with type 'int (int)'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
