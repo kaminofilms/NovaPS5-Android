@@ -1,0 +1,28 @@
+name: Publish a CI-built Nova APK as a prerelease
+on:
+  push:
+    branches: [publish-apk]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download verified APK from the release workflow run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run download 38379410109 --repo "$GITHUB_REPOSITORY" --name NovaPS5-Linux-FEX-APK-63d9977f2944d4ea7afec861b7a9fef85857c438 --dir dist
+          ls -la dist
+          (cd dist && sha256sum -c SHA256SUMS.txt)
+      - name: Create prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create v0.3.2-linux-fex-63d9977 --repo "$GITHUB_REPOSITORY" --target 63d9977f2944d4ea7afec861b7a9fef85857c438 --prerelease \
+            --title "Nova PS5 0.3.2 Linux/FEX ARM64 — device test build (63d9977)" \
+            --notes "CI-signed device test build from https://github.com/${GITHUB_REPOSITORY}/actions/runs/38379410109 (APK build and verification passed; ARM64 FEX stages B, C, D (Vulkan thunk → lavapipe) and E passed; the proot-in-DroidDeck-rootfs CI step failed and is being investigated). Fixes: FEX Vulkan thunk config path, Kyty 39-bit VA clamp, boot API patch, staged launcher diagnostics. PS5 game boot and frame presentation on Adreno are UNVERIFIED. Uninstall the previous Nova PS5 first (different CI signing key)." \
+            dist/NovaPS5-0.3.2-linux-fex-arm64.apk dist/SHA256SUMS.txt dist/verification.json dist/kyty-core.json
