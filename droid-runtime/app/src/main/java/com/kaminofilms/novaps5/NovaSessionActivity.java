@@ -28,8 +28,12 @@ public final class NovaSessionActivity extends SessionActivity {
     private volatile String logTail="Waiting for the compatibility session log…";
     private String lastStep="",lastFailure="";
     private TextView boot;
+    // The platform keeps pointing at the previous session's log until the new session creates its
+    // own; never report that old log's NOVA_EXIT as this launch's result.
+    private File initialLog;private long initialLength;
 
     @Override protected void onCreate(Bundle state){
+        initialLog=SessionState.INSTANCE.getLogFile();initialLength=initialLog!=null&&initialLog.isFile()?initialLog.length():0;
         Intent intent=getIntent();String game=intent.getStringExtra("nova_game_path");
         // Never inherit an upstream default mode or a saved Steam session.
         intent.putExtra("mode","run");intent.putExtra("program","/opt/novaps5/launch.sh");
@@ -53,8 +57,10 @@ public final class NovaSessionActivity extends SessionActivity {
     private void poll(){
         try{
             File log=SessionState.INSTANCE.getLogFile();if(log==null||!log.isFile())return;
+            boolean previous=initialLog!=null&&log.getAbsolutePath().equals(initialLog.getAbsolutePath());
             String text;try(RandomAccessFile in=new RandomAccessFile(log,"r")){
-                long size=in.length();byte[] data=new byte[(int)Math.min(size,49152)];in.seek(size-data.length);in.readFully(data);text=new String(data,StandardCharsets.UTF_8);
+                long size=in.length(),start=previous?initialLength:0;if(size<=start)return;
+                byte[] data=new byte[(int)Math.min(size-start,49152)];in.seek(size-data.length);in.readFully(data);text=new String(data,StandardCharsets.UTF_8);
             }
             logTail=text;String step=null,failure=null;
             for(String line:text.split("\n")){
