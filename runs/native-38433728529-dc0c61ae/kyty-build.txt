@@ -1,0 +1,544 @@
+[0/2] Re-checking globbed directories...
+[1/1051] Generating wayland-generated-protocols/alpha-modifier-v1-client-protocol.h
+[2/1051] Generating wayland-generated-protocols/color-management-v1-client-protocol.h
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/wayland-protocols/color-management-v1.xml:328: element entry: validity error : No declaration for attribute deprecated-since of element entry
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/wayland-protocols/color-management-v1.xml:338: element entry: validity error : No declaration for attribute deprecated-since of element entry
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/wayland-protocols/color-management-v1.xml:781: element event: validity error : No declaration for attribute deprecated-since of element event
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/wayland-protocols/color-management-v1.xml:1443: element event: validity error : No declaration for attribute deprecated-since of element event
+*******************************************************
+*                                                     *
+* WARNING: XML failed validation against built-in DTD *
+*                                                     *
+*******************************************************
+[3/1051] Generating wayland-generated-protocols/cursor-shape-v1-client-protocol.h
+[4/1051] Generating wayland-generated-protocols/fractional-scale-v1-client-protocol.h
+[5/1051] Generating wayland-generated-protocols/idle-inhibit-unstable-v1-client-protocol.h
+[6/1051] Generating wayland-generated-protocols/frog-color-management-v1-client-protocol.h
+[7/1051] Generating wayland-generated-protocols/keyboard-shortcuts-inhibit-unstable-v1-client-protocol.h
+[8/1051] Generating wayland-generated-protocols/input-timestamps-unstable-v1-client-protocol.h
+[9/1051] Generating wayland-generated-protocols/pointer-constraints-unstable-v1-client-protocol.h
+[10/1051] Generating wayland-generated-protocols/pointer-gestures-unstable-v1-client-protocol.h
+[11/1051] Generating wayland-generated-protocols/pointer-warp-v1-client-protocol.h
+[12/1051] Generating wayland-generated-protocols/primary-selection-unstable-v1-client-protocol.h
+[13/1051] Generating wayland-generated-protocols/relative-pointer-unstable-v1-client-protocol.h
+[14/1051] Generating wayland-generated-protocols/text-input-unstable-v3-client-protocol.h
+[15/1051] Generating wayland-generated-protocols/tablet-v2-client-protocol.h
+[16/1051] Generating wayland-generated-protocols/viewporter-client-protocol.h
+[17/1051] Generating wayland-generated-protocols/xdg-activation-v1-client-protocol.h
+[18/1051] Generating wayland-generated-protocols/wayland-client-protocol.h
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/wayland-protocols/wayland.xml:180: element interface: validity error : No declaration for attribute frozen of element interface
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/wayland-protocols/wayland.xml:312: element entry: validity error : No declaration for attribute deprecated-since of element entry
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/wayland-protocols/wayland.xml:523: element interface: validity error : No declaration for attribute frozen of element interface
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/wayland-protocols/wayland.xml:2429: element event: validity error : No declaration for attribute deprecated-since of element event
+*******************************************************
+*                                                     *
+* WARNING: XML failed validation against built-in DTD *
+*                                                     *
+*******************************************************
+[19/1051] Generating wayland-generated-protocols/xdg-decoration-unstable-v1-client-protocol.h
+[20/1051] Generating wayland-generated-protocols/xdg-dialog-v1-client-protocol.h
+[21/1051] Generating wayland-generated-protocols/xdg-foreign-unstable-v2-client-protocol.h
+[22/1051] Generating wayland-generated-protocols/xdg-output-unstable-v1-client-protocol.h
+[23/1051] Generating wayland-generated-protocols/xdg-shell-client-protocol.h
+[24/1051] Generating wayland-generated-protocols/xdg-toplevel-icon-v1-client-protocol.h
+[25/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/common/debug.c.o
+[26/1051] Generate grammar tables
+[27/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/common/entropy_common.c.o
+[28/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/common/error_private.c.o
+[29/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/common/pool.c.o
+[30/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/common/threading.c.o
+[31/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/common/fse_decompress.c.o
+[32/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/common/xxhash.c.o
+[33/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/common/zstd_common.c.o
+[34/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/fse_compress.c.o
+[35/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/hist.c.o
+[36/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/huf_compress.c.o
+[37/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/zstd_compress_literals.c.o
+[38/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/zstd_compress_sequences.c.o
+[39/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/zstd_compress_superblock.c.o
+[40/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/zstd_compress.c.o
+[41/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/zstd_double_fast.c.o
+[42/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/zstd_fast.c.o
+[43/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/zstd_ldm.c.o
+[44/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/zstd_opt.c.o
+[45/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/zstd_preSplit.c.o
+[46/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/zstdmt_compress.c.o
+[47/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/decompress/huf_decompress.c.o
+[48/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/decompress/zstd_ddict.c.o
+[49/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/zstd_lazy.c.o
+[50/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/decompress/zstd_decompress.c.o
+[51/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/dictBuilder/cover.c.o
+[52/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/decompress/zstd_decompress_block.c.o
+[53/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/dictBuilder/fastcover.c.o
+[54/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/dictBuilder/divsufsort.c.o
+[55/1051] Generating wayland-generated-protocols/alpha-modifier-v1-protocol.c
+[56/1051] Generating wayland-generated-protocols/color-management-v1-protocol.c
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/wayland-protocols/color-management-v1.xml:328: element entry: validity error : No declaration for attribute deprecated-since of element entry
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/wayland-protocols/color-management-v1.xml:338: element entry: validity error : No declaration for attribute deprecated-since of element entry
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/wayland-protocols/color-management-v1.xml:781: element event: validity error : No declaration for attribute deprecated-since of element event
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/wayland-protocols/color-management-v1.xml:1443: element event: validity error : No declaration for attribute deprecated-since of element event
+*******************************************************
+*                                                     *
+* WARNING: XML failed validation against built-in DTD *
+*                                                     *
+*******************************************************
+[57/1051] Generating wayland-generated-protocols/cursor-shape-v1-protocol.c
+[58/1051] Generating wayland-generated-protocols/fractional-scale-v1-protocol.c
+[59/1051] Generating wayland-generated-protocols/frog-color-management-v1-protocol.c
+[60/1051] Generating wayland-generated-protocols/idle-inhibit-unstable-v1-protocol.c
+[61/1051] Generating wayland-generated-protocols/input-timestamps-unstable-v1-protocol.c
+[62/1051] Generating wayland-generated-protocols/keyboard-shortcuts-inhibit-unstable-v1-protocol.c
+[63/1051] Generating wayland-generated-protocols/pointer-constraints-unstable-v1-protocol.c
+[64/1051] Generating wayland-generated-protocols/pointer-gestures-unstable-v1-protocol.c
+[65/1051] Generating wayland-generated-protocols/pointer-warp-v1-protocol.c
+[66/1051] Generating wayland-generated-protocols/primary-selection-unstable-v1-protocol.c
+[67/1051] Generating wayland-generated-protocols/relative-pointer-unstable-v1-protocol.c
+[68/1051] Generating wayland-generated-protocols/tablet-v2-protocol.c
+[69/1051] Generating wayland-generated-protocols/text-input-unstable-v3-protocol.c
+[70/1051] Generating wayland-generated-protocols/viewporter-protocol.c
+[71/1051] Generating wayland-generated-protocols/wayland-protocol.c
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/wayland-protocols/wayland.xml:180: element interface: validity error : No declaration for attribute frozen of element interface
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/wayland-protocols/wayland.xml:312: element entry: validity error : No declaration for attribute deprecated-since of element entry
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/wayland-protocols/wayland.xml:523: element interface: validity error : No declaration for attribute frozen of element interface
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/wayland-protocols/wayland.xml:2429: element event: validity error : No declaration for attribute deprecated-since of element event
+*******************************************************
+*                                                     *
+* WARNING: XML failed validation against built-in DTD *
+*                                                     *
+*******************************************************
+[72/1051] Generating wayland-generated-protocols/xdg-activation-v1-protocol.c
+[73/1051] Generating wayland-generated-protocols/xdg-decoration-unstable-v1-protocol.c
+[74/1051] Generating wayland-generated-protocols/xdg-dialog-v1-protocol.c
+[75/1051] Generating wayland-generated-protocols/xdg-foreign-unstable-v2-protocol.c
+[76/1051] Generating wayland-generated-protocols/xdg-output-unstable-v1-protocol.c
+[77/1051] Generating wayland-generated-protocols/xdg-shell-protocol.c
+[78/1051] Generating wayland-generated-protocols/xdg-toplevel-icon-v1-protocol.c
+[79/1051] Generate language specific header for DebugInfo.
+[80/1051] Generate language specific header for OpenCLDebugInfo100.
+[81/1051] Generate language specific header for NonSemanticShaderDebugInfo100.
+[82/1051] Generate tables based on the SPIR-V XML registry.
+[83/1051] Update build-version.inc in the SPIRV-Tools build directory (if necessary).
+[84/1051] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/dictBuilder/zdict.c.o
+[85/1051] Building CXX object 3rdparty/fmt/CMakeFiles/fmt.dir/src/os.cc.o
+[86/1051] Generate kytyGitVersion.h
+[87/1051] Building CXX object 3rdparty/CMakeFiles/zarchive.dir/__/_deps/zarchive_source-src/src/zarchivereader.cpp.o
+[88/1051] Building CXX object 3rdparty/fmt/CMakeFiles/fmt.dir/src/format.cc.o
+[89/1051] Building C object 3rdparty/CMakeFiles/zarchive.dir/__/_deps/zarchive_source-src/src/sha_256.c.o
+[90/1051] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/init.c.o
+[91/1051] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/api.c.o
+[92/1051] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/cache.c.o
+[93/1051] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/deps/clog/src/clog.c.o
+[94/1051] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/arm/uarch.c.o
+[95/1051] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/arm/cache.c.o
+[96/1051] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/arm/linux/init.c.o
+[97/1051] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/arm/linux/cpuinfo.c.o
+[98/1051] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/arm/linux/clusters.c.o
+[99/1051] Building CXX object 3rdparty/CMakeFiles/zarchive.dir/__/_deps/zarchive_source-src/src/zarchivewriter.cpp.o
+[100/1051] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/arm/linux/chipset.c.o
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/cpuinfo/src/arm/linux/chipset.c:330:11: warning: call to undeclared library function 'tolower' with type 'int (int)'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+  330 |                 int d = tolower((unsigned char)*a) - tolower((unsigned char)*b);
+      |                         ^
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/cpuinfo/src/arm/linux/chipset.c:330:11: note: include the header <ctype.h> or explicitly provide a declaration for 'tolower'
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/cpuinfo/src/arm/linux/chipset.c:451:13: warning: unused function 'match_exynos' [-Wunused-function]
+  451 | static bool match_exynos(
+      |             ^~~~~~~~~~~~
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/cpuinfo/src/arm/linux/chipset.c:563:13: warning: unused function 'match_and_parse_smdk' [-Wunused-function]
+  563 | static bool match_and_parse_smdk(
+      |             ^~~~~~~~~~~~~~~~~~~~
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/cpuinfo/src/arm/linux/chipset.c:966:13: warning: unused function 'match_lc' [-Wunused-function]
+  966 | static bool match_lc(
+      |             ^~~~~~~~
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/cpuinfo/src/arm/linux/chipset.c:1034:13: warning: unused function 'match_pxa' [-Wunused-function]
+ 1034 | static bool match_pxa(
+      |             ^~~~~~~~~
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/cpuinfo/src/arm/linux/chipset.c:1147:13: warning: unused function 'match_omap' [-Wunused-function]
+ 1147 | static bool match_omap(
+      |             ^~~~~~~~~~
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/cpuinfo/src/arm/linux/chipset.c:1195:13: warning: unused function 'match_and_parse_broadcom' [-Wunused-function]
+ 1195 | static bool match_and_parse_broadcom(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/cpuinfo/src/arm/linux/chipset.c:1469:13: warning: unused function 'match_and_parse_wmt' [-Wunused-function]
+ 1469 | static bool match_and_parse_wmt(
+      |             ^~~~~~~~~~~~~~~~~~~
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/cpuinfo/src/arm/linux/chipset.c:1677:13: warning: unused function 'match_and_parse_huawei' [-Wunused-function]
+ 1677 | static bool match_and_parse_huawei(
+      |             ^~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/cpuinfo/src/arm/linux/chipset.c:1807:13: warning: unused function 'is_tegra' [-Wunused-function]
+ 1807 | static bool is_tegra(const char* start, const char* end) {
+      |             ^~~~~~~~
+10 warnings generated.
+[101/1051] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/arm/linux/hwcap.c.o
+[102/1051] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/arm/linux/midr.c.o
+[103/1051] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/arm/linux/aarch64-isa.c.o
+[104/1051] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/linux/smallfile.c.o
+[105/1051] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/linux/multiline.c.o
+[106/1051] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/linux/cpulist.c.o
+[107/1051] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/API/Memory.c.o
+[108/1051] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/linux/processors.c.o
+[109/1051] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/API/Process.c.o
+[110/1051] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/API/Synchronization.c.o
+[111/1051] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/API/Terminal.c.o
+[112/1051] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/API/Thread.c.o
+[113/1051] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/Allocator.c.o
+[114/1051] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/ArgParse.c.o
+[115/1051] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/Bitset.c.o
+[116/1051] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/Format.c.o
+[117/1051] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/List.c.o
+[118/1051] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/String.c.o
+[119/1051] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/Vector.c.o
+[120/1051] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/Zycore.c.o
+[121/1051] Linking C static library _deps/zstd-build/lib/libzstd.a
+[122/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/cmake_pch.h.pch
+[123/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/util/bit_vector.cpp.o
+[124/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/util/string_utils.cpp.o
+[125/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/util/parse_number.cpp.o
+[126/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/assembly_grammar.cpp.o
+[127/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/diagnostic.cpp.o
+[128/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/binary.cpp.o
+[129/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/ext_inst.cpp.o
+[130/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/extensions.cpp.o
+[131/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/disassemble.cpp.o
+[132/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/libspirv.cpp.o
+[133/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/opcode.cpp.o
+[134/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/name_mapper.cpp.o
+[135/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/parsed_operand.cpp.o
+[136/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/operand.cpp.o
+[137/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/software_version.cpp.o
+[138/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/spirv_endian.cpp.o
+[139/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/print.cpp.o
+[140/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/spirv_optimizer_options.cpp.o
+[141/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/spirv_fuzzer_options.cpp.o
+[142/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/spirv_reducer_options.cpp.o
+[143/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/spirv_validator_options.cpp.o
+[144/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/spirv_target_env.cpp.o
+[145/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/table.cpp.o
+[146/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/table2.cpp.o
+[147/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/text.cpp.o
+[148/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/to_string.cpp.o
+[149/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/text_handler.cpp.o
+[150/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_adjacency.cpp.o
+[151/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate.cpp.o
+[152/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_annotation.cpp.o
+[153/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_arithmetics.cpp.o
+[154/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_atomics.cpp.o
+[155/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_barriers.cpp.o
+[156/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_bitwise.cpp.o
+[157/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_capability.cpp.o
+[158/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_cfg.cpp.o
+[159/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_composites.cpp.o
+[160/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_builtins.cpp.o
+[161/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_conversion.cpp.o
+[162/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_constants.cpp.o
+[163/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_debug.cpp.o
+[164/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_derivatives.cpp.o
+[165/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_decorations.cpp.o
+[166/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_execution_limitations.cpp.o
+[167/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_extensions.cpp.o
+[168/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_function.cpp.o
+[169/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_graph.cpp.o
+[170/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_id.cpp.o
+[171/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_image.cpp.o
+[172/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_interfaces.cpp.o
+[173/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_instruction.cpp.o
+[174/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_layout.cpp.o
+[175/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_literals.cpp.o
+[176/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_logicals.cpp.o
+[177/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_memory_semantics.cpp.o
+[178/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_memory.cpp.o
+[179/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_mesh_shading.cpp.o
+[180/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_misc.cpp.o
+[181/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_non_uniform.cpp.o
+[182/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_mode_setting.cpp.o
+[183/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_primitives.cpp.o
+[184/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_ray_query.cpp.o
+[185/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_ray_tracing.cpp.o
+[186/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_ray_tracing_reorder.cpp.o
+[187/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_scopes.cpp.o
+[188/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_small_type_uses.cpp.o
+[189/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_tensor_layout.cpp.o
+[190/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_tensor.cpp.o
+[191/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_invalid_type.cpp.o
+[192/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_type.cpp.o
+[193/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/basic_block.cpp.o
+[194/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/construct.cpp.o
+[195/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/instruction.cpp.o
+[196/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/function.cpp.o
+[197/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/util/timer.cpp.o
+[198/1051] Linking CXX static library 3rdparty/fmt/libfmt.a
+[199/1051] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validation_state.cpp.o
+[200/1051] Building CXX object 3rdparty/spdlog/CMakeFiles/spdlog.dir/src/stdout_sinks.cpp.o
+[201/1051] Building CXX object 3rdparty/spdlog/CMakeFiles/spdlog.dir/src/spdlog.cpp.o
+[202/1051] Building CXX object 3rdparty/spdlog/CMakeFiles/spdlog.dir/src/color_sinks.cpp.o
+[203/1051] Building CXX object 3rdparty/spdlog/CMakeFiles/spdlog.dir/src/file_sinks.cpp.o
+[204/1051] Building CXX object 3rdparty/spdlog/CMakeFiles/spdlog.dir/src/async.cpp.o
+[205/1051] Building CXX object 3rdparty/spdlog/CMakeFiles/spdlog.dir/src/cfg.cpp.o
+[206/1051] Linking CXX static library 3rdparty/libzarchive.a
+[207/1051] Building CXX object 3rdparty/CMakeFiles/imgui.dir/imgui/imgui.cpp.o
+[208/1051] Building CXX object 3rdparty/tracy/CMakeFiles/TracyClient.dir/public/TracyClient.cpp.o
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/tracy/public/TracyClient.cpp:23:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/tracy/public/client/TracyProfiler.cpp:286:13: warning: unused function 'EnsureReadable' [-Wunused-function]
+  286 | static bool EnsureReadable( uintptr_t address )
+      |             ^~~~~~~~~~~~~~
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/tracy/public/TracyClient.cpp:23:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/tracy/public/client/TracyProfiler.cpp:79:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/tracy/public/client/TracyScoped.hpp:14:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/tracy/public/client/TracyProfiler.hpp:1250:7: warning: private field 'm_prevSignal' is not used [-Wunused-private-field]
+ 1250 |     } m_prevSignal;
+      |       ^
+2 warnings generated.
+[209/1051] Building CXX object 3rdparty/CMakeFiles/imgui.dir/imgui/imgui_draw.cpp.o
+[210/1051] Building CXX object 3rdparty/CMakeFiles/imgui.dir/imgui/imgui_tables.cpp.o
+[211/1051] Building CXX object 3rdparty/CMakeFiles/imgui.dir/imgui/backends/imgui_impl_vulkan.cpp.o
+[212/1051] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/band_extension.c.o
+[213/1051] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/bit_allocation.c.o
+[214/1051] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/bit_reader.c.o
+[215/1051] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/decinit.c.o
+[216/1051] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/decoder.c.o
+[217/1051] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/huffCodes.c.o
+[218/1051] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/imdct.c.o
+[219/1051] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/libatrac9.c.o
+[220/1051] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/quantization.c.o
+[221/1051] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/scale_factors.c.o
+[222/1051] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/tables.c.o
+[223/1051] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/unpack.c.o
+[224/1051] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/utility.c.o
+[225/1051] Linking C static library 3rdparty/cpuinfo/libcpuinfo.a
+[226/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/opus.c.o
+[227/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/opus_decoder.c.o
+[228/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/opus_encoder.c.o
+[229/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/extensions.c.o
+[230/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/opus_multistream.c.o
+[231/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/opus_multistream_encoder.c.o
+[232/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/opus_multistream_decoder.c.o
+[233/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/repacketizer.c.o
+[234/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/opus_projection_encoder.c.o
+[235/1051] Building CXX object 3rdparty/CMakeFiles/imgui.dir/imgui/imgui_widgets.cpp.o
+[236/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/opus_projection_decoder.c.o
+[237/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/mapping_matrix.c.o
+[238/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/mlp.c.o
+[239/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/mlp_data.c.o
+[240/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/CNG.c.o
+[241/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/analysis.c.o
+[242/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/code_signs.c.o
+[243/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/init_decoder.c.o
+[244/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/decode_frame.c.o
+[245/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/decode_core.c.o
+[246/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/decode_parameters.c.o
+[247/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/decode_indices.c.o
+[248/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/decoder_set_fs.c.o
+[249/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/decode_pulses.c.o
+[250/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/dec_API.c.o
+[251/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/enc_API.c.o
+[252/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/encode_indices.c.o
+[253/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/gain_quant.c.o
+[254/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/encode_pulses.c.o
+[255/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/interpolate.c.o
+[256/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/LP_variable_cutoff.c.o
+[257/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/NLSF_decode.c.o
+[258/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/NSQ.c.o
+[259/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/NSQ_del_dec.c.o
+[260/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/PLC.c.o
+[261/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/shell_coder.c.o
+[262/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/tables_gain.c.o
+[263/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/tables_LTP.c.o
+[264/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/tables_NLSF_CB_NB_MB.c.o
+[265/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/tables_NLSF_CB_WB.c.o
+[266/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/tables_other.c.o
+[267/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/tables_pitch_lag.c.o
+[268/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/tables_pulses_per_block.c.o
+[269/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/control_audio_bandwidth.c.o
+[270/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/VAD.c.o
+[271/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/quant_LTP_gains.c.o
+[272/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/VQ_WMat_EC.c.o
+[273/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/HP_variable_cutoff.c.o
+[274/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/NLSF_encode.c.o
+[275/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/NLSF_VQ.c.o
+[276/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/NLSF_unpack.c.o
+[277/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/NLSF_del_dec_quant.c.o
+[278/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/process_NLSFs.c.o
+[279/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/stereo_MS_to_LR.c.o
+[280/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/stereo_LR_to_MS.c.o
+[281/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/check_control_input.c.o
+[282/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/control_SNR.c.o
+[283/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/init_encoder.c.o
+[284/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/control_codec.c.o
+[285/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/ana_filt_bank_1.c.o
+[286/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/A2NLSF.c.o
+[287/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/bwexpander_32.c.o
+[288/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/biquad_alt.c.o
+[289/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/debug.c.o
+[290/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/bwexpander.c.o
+[291/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/decode_pitch.c.o
+[292/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/inner_prod_aligned.c.o
+[293/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/lin2log.c.o
+[294/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/log2lin.c.o
+[295/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/LPC_analysis_filter.c.o
+[296/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/LPC_inv_pred_gain.c.o
+[297/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/table_LSF_cos.c.o
+[298/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/NLSF2A.c.o
+[299/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/NLSF_stabilize.c.o
+[300/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/NLSF_VQ_weights_laroia.c.o
+[301/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/pitch_est_tables.c.o
+[302/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/resampler.c.o
+[303/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/resampler_down2_3.c.o
+[304/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/resampler_down2.c.o
+[305/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/resampler_private_AR2.c.o
+[306/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/resampler_private_down_FIR.c.o
+[307/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/resampler_private_IIR_FIR.c.o
+[308/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/resampler_private_up2_HQ.c.o
+[309/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/resampler_rom.c.o
+[310/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/sigm_Q15.c.o
+[311/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/sort.c.o
+[312/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/sum_sqr_shift.c.o
+[313/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/stereo_decode_pred.c.o
+[314/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/stereo_encode_pred.c.o
+[315/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/stereo_find_predictor.c.o
+[316/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/stereo_quant_pred.c.o
+[317/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/LPC_fit.c.o
+[318/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/celt.c.o
+[319/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/bands.c.o
+[320/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/celt_decoder.c.o
+[321/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/celt_encoder.c.o
+[322/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/cwrs.c.o
+[323/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/entcode.c.o
+[324/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/entdec.c.o
+[325/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/entenc.c.o
+[326/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/laplace.c.o
+[327/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/mathops.c.o
+[328/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/kiss_fft.c.o
+[329/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/mdct.c.o
+[330/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/modes.c.o
+[331/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/pitch.c.o
+[332/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/celt_lpc.c.o
+[333/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/quant_bands.c.o
+[334/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/rate.c.o
+[335/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/apply_sine_window_FLP.c.o
+[336/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/corrMatrix_FLP.c.o
+[337/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/vq.c.o
+[338/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/find_LPC_FLP.c.o
+[339/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/find_LTP_FLP.c.o
+[340/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/encode_frame_FLP.c.o
+[341/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/find_pitch_lags_FLP.c.o
+[342/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/find_pred_coefs_FLP.c.o
+[343/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/LTP_analysis_filter_FLP.c.o
+[344/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/LPC_analysis_filter_FLP.c.o
+[345/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/LTP_scale_ctrl_FLP.c.o
+[346/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/process_gains_FLP.c.o
+[347/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/noise_shape_analysis_FLP.c.o
+[348/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/regularize_correlations_FLP.c.o
+[349/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/residual_energy_FLP.c.o
+[350/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/warped_autocorrelation_FLP.c.o
+[351/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/wrappers_FLP.c.o
+[352/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/autocorrelation_FLP.c.o
+[353/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/bwexpander_FLP.c.o
+[354/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/burg_modified_FLP.c.o
+[355/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/energy_FLP.c.o
+[356/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/inner_product_FLP.c.o
+[357/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/k2a_FLP.c.o
+[358/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/LPC_inv_pred_gain_FLP.c.o
+[359/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/scale_copy_vector_FLP.c.o
+[360/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/scale_vector_FLP.c.o
+[361/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/pitch_analysis_core_FLP.c.o
+[362/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/schur_FLP.c.o
+[363/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/arm/armcpu.c.o
+[364/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/sort_FLP.c.o
+[365/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/arm/arm_celt_map.c.o
+[366/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/arm/arm_silk_map.c.o
+[367/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/arm/pitch_neon_intr.c.o
+[368/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/arm/celt_neon_intr.c.o
+[369/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/arm/biquad_alt_neon_intr.c.o
+[370/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/arm/LPC_inv_pred_gain_neon_intr.c.o
+[371/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/arm/NSQ_neon.c.o
+[372/1051] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/MetaInfo.c.o
+[373/1051] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/Mnemonic.c.o
+[374/1051] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/Register.c.o
+[375/1051] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/arm/NSQ_del_dec_neon_intr.c.o
+[376/1051] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/String.c.o
+[377/1051] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/Utils.c.o
+[378/1051] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/Zydis.c.o
+[379/1051] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/Decoder.c.o
+[380/1051] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/SharedData.c.o
+[381/1051] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/DecoderData.c.o
+[382/1051] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/EncoderData.c.o
+[383/1051] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/Disassembler.c.o
+[384/1051] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/Encoder.c.o
+[385/1051] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/Formatter.c.o
+[386/1051] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/FormatterBuffer.c.o
+[387/1051] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/FormatterATT.c.o
+[388/1051] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/FormatterIntel.c.o
+[389/1051] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/FormatterBase.c.o
+[390/1051] Linking C static library _deps/zydis-build/zycore/libZycore.a
+[391/1051] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/Segment.c.o
+[392/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/SDL_assert.c.o
+[393/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/SDL_error.c.o
+[394/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/SDL.c.o
+[395/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/SDL_guid.c.o
+[396/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/SDL_hints.c.o
+[397/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/SDL_list.c.o
+[398/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/SDL_hashtable.c.o
+[399/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/SDL_log.c.o
+[400/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/SDL_properties.c.o
+[401/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/atomic/SDL_atomic.c.o
+[402/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/atomic/SDL_spinlock.c.o
+[403/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/SDL_utils.c.o
+[404/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/audio/SDL_audio.c.o
+[405/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/audio/SDL_audiodev.c.o
+[406/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/audio/SDL_audioqueue.c.o
+[407/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/audio/SDL_audiocvt.c.o
+[408/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/audio/SDL_audioresample.c.o
+[409/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/audio/SDL_mixer.c.o
+[410/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/audio/SDL_audiotypecvt.c.o
+[411/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/audio/SDL_wave.c.o
+[412/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/core/SDL_core_unsupported.c.o
+[413/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/camera/SDL_camera.c.o
+[414/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/cpuinfo/SDL_cpuinfo.c.o
+[415/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/events/SDL_categories.c.o
+[416/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/events/SDL_clipboardevents.c.o
+[417/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/events/SDL_displayevents.c.o
+[418/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/events/SDL_dropevents.c.o
+[419/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/events/SDL_events.c.o
+[420/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/events/SDL_eventwatch.c.o
+[421/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/events/SDL_keyboard.c.o
+[422/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/events/SDL_keymap.c.o
+[423/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/events/SDL_keysym_to_keycode.c.o
+[424/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/events/SDL_keysym_to_scancode.c.o
+[425/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/events/SDL_mouse.c.o
+[426/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/events/SDL_pen.c.o
+[427/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/events/SDL_quit.c.o
+[428/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/events/SDL_scancode_tables.c.o
+[429/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/events/SDL_touch.c.o
+[430/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/events/SDL_windowevents.c.o
+[431/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/events/imKStoUCS.c.o
+[432/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/filesystem/SDL_filesystem.c.o
+[433/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/gpu/SDL_gpu.c.o
+[434/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/haptic/SDL_haptic.c.o
+[435/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/hidapi/SDL_hidapi.c.o
+[436/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/io/SDL_asyncio.c.o
+[437/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/dynapi/SDL_dynapi.c.o
+[438/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/io/SDL_iostream.c.o
+[439/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/io/generic/SDL_asyncio_generic.c.o
+[440/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/joystick/SDL_gamepad.c.o
+[441/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/joystick/SDL_steam_virtual_gamepad.c.o
+[442/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/joystick/SDL_joystick.c.o
+[443/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/joystick/controller_type.c.o
+[444/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/locale/SDL_locale.c.o
+[445/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/main/SDL_runapp.c.o
+[446/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/main/SDL_main_callbacks.c.o
+[447/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/misc/SDL_libusb.c.o
+[448/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/misc/SDL_url.c.o
+[449/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/power/SDL_power.c.o
+[450/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/render/SDL_render_unsupported.c.o
+[451/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/render/SDL_yuv_sw.c.o
+[452/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/render/direct3d/SDL_render_d3d.c.o
+[453/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/render/direct3d/SDL_shaders_d3d.c.o
+[454/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/render/direct3d11/SDL_render_d3d11.c.o
+[455/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/render/direct3d11/SDL_shaders_d3d11.c.o
+[456/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/render/direct3d12/SDL_render_d3d12.c.o
+[457/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/render/direct3d12/SDL_shaders_d3d12.c.o
+[458/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/render/gpu/SDL_pipeline_gpu.c.o
+[459/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/render/gpu/SDL_render_gpu.c.o
+[460/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/render/gpu/SDL_shaders_gpu.c.o
+[461/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/render/ngage/SDL_render_ngage.c.o
+[462/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/render/opengl/SDL_render_gl.c.o
+[463/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/render/opengl/SDL_shaders_gl.c.o
+[464/1051] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/render/SDL_render.c.o
