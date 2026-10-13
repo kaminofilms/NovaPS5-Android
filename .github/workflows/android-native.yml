@@ -1,0 +1,81 @@
+name: Nova PS5 Android-native (no DroidDeck)
+# Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
+# backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
+on:
+  push:
+    branches: [android-native]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: android-native-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  FEX_COMMIT: 14c92681f4d62cf84d901460e0358de09c8847a7
+  KYTY_COMMIT: df5b9b92be7dfd463b47756b707d6d356a9f0550
+  ANDROID_API: '33'
+jobs:
+  novafex:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ninja-build ccache python3
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: android-fex-ccache-${{ env.FEX_COMMIT }}-${{ hashFiles('native/**', 'patches/fex-android/**') }}
+          restore-keys: android-fex-ccache-${{ env.FEX_COMMIT }}-
+      - name: Build libnovafex.so (NDK)
+        run: |
+          set -o pipefail
+          export ANDROID_NDK=$ANDROID_NDK_LATEST_HOME
+          bash tools/ci/build-android-novafex.sh "$PWD" "$PWD/work" "$PWD/dist/novafex" 2>&1 | tail -150
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-novafex
+          path: dist/novafex
+          retention-days: 7
+  novafex-test:
+    needs: novafex
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-novafex
+          path: dist/novafex
+      - name: Bridge tests (static bionic binary on Linux arm64)
+        run: |
+          set -o pipefail
+          chmod +x dist/novafex/novafex_test_static
+          timeout 300s dist/novafex/novafex_test_static 2>&1 | tee dist/novafex/novafex-test-android.txt
+          grep -q 'NOVAFEX_TEST: ALL PASS' dist/novafex/novafex-test-android.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-novafex-test
+          path: dist/novafex/novafex-test-android.txt
+  logs:
+    needs: [novafex, novafex-test]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+      - name: Commit logs to lab-logs
+        run: |
+          set -euo pipefail
+          dest="runs/android-${GITHUB_RUN_ID}-${GITHUB_SHA::8}"
+          git init -q logs && cd logs
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q --depth 1 origin lab-logs; then git checkout -q -b lab-logs FETCH_HEAD; else git checkout -q --orphan lab-logs; fi
+          mkdir -p "$dest"
+          find ../out -type f \( -name '*.txt' -o -name '*.json' -o -name '*.log' \) -size -20M -exec cp --parents {} "$dest/" \; 2>/dev/null || true
+          printf '%s android novafex=%s test=%s\n' "$dest" "${{ needs.novafex.result }}" "${{ needs.novafex-test.result }}" >> INDEX.txt
+          git add -A
+          git -c user.name=nova-lab -c user.email=nova-lab@users.noreply.github.com commit -qm "android logs $dest"
+          for i in 1 2 3; do git push -q origin HEAD:lab-logs && break; git pull -q --rebase origin lab-logs; done
