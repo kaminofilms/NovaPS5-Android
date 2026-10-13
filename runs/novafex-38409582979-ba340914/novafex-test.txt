@@ -1,0 +1,7 @@
+NOVA_FEX: host AVX=1 SVE256=0 AFP=0 RCPC=1
+NOVAFEX_TEST: init                         PASS 
+NOVAFEX_TEST: host->guest CallGuest        PASS 
+NOVAFEX_TEST: host->guest fn pointer       PASS 
+NOVAFEX_TEST: guest loop                   PASS 
+timeout: the monitored command dumped core
+NOVAFEX_TEST: exit=134
