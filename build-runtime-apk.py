@@ -66,7 +66,7 @@ def jar(classes, target):
             archive.write(path, path.relative_to(classes).as_posix())
 
 
-def prepare_platform(base, core=None):
+def prepare_platform(base, core=None, linux_core=False):
     android = '{http://schemas.android.com/apk/res/android}'
     path = base / 'AndroidManifest.xml'
     tree = ET.parse(path)
@@ -98,7 +98,7 @@ def prepare_platform(base, core=None):
     if 'resourcesInfo:\n' not in value:
         raise RuntimeError('Pinned Apktool resource metadata changed')
     value = value.replace('resourcesInfo:\n', 'resourcesInfo:\n  packageName: com.kaminofilms.novaps5\n', 1)
-    for key, setting in [('versionCode', '6'), ('versionName', '0.2.4-bootapi'), ('minSdkVersion', '28'), ('targetSdkVersion', '28')]:
+    for key, setting in [('versionCode', '10' if linux_core else '6'), ('versionName', '0.3.0-linux-fex' if linux_core else '0.2.4-bootapi'), ('minSdkVersion', '28'), ('targetSdkVersion', '28')]:
         value = re.sub(r'(?m)^(  ' + key + r':).*$', r'\1 ' + setting, value)
     path.write_text(value)
     shutil.copyfile(ROOT / 'android/res/drawable/app_icon.xml', base / 'res/drawable/novaps5_icon.xml')
@@ -111,7 +111,12 @@ def prepare_platform(base, core=None):
     if anchor not in value:
         raise RuntimeError('Pinned compositor session entry changed')
     path.write_text(value.replace(anchor, anchor + '# NOVA_DIRECT_KYTY_ONLY\nsource /opt/novaps5/session-guard.sh "$mode" "${1:-}" || exit $?\n', 1))
-    if core is not None:
+    if linux_core:
+        for name in ['kyty-windows-df5b9b9.zip','memory-compat.zip','memory-compat.json']:
+            (base / 'assets/engine' / name).unlink(missing_ok=True)
+        shutil.copyfile(core, base / 'assets/engine/kyty_emulator')
+        shutil.copyfile(APP / 'assets/engine/launch-linux.sh',base / 'assets/engine/launch.sh')
+    elif core is not None:
         shutil.copyfile(core, base / 'assets/engine/kyty-windows-df5b9b9.zip')
     # Change app-ID/action constants only. Preserve class names, Kotlin metadata
     # and native JNI namespaces from the upstream platform.
@@ -156,7 +161,7 @@ def prepare_platform(base, core=None):
     hints = tree.getroot().find("string-array[@name='loading_hints']")
     hints.clear()
     hints.set('name', 'loading_hints')
-    for hint in ['Nova starts the selected game directly through Kyty and ARM64 Wine/FEX.',
+    for hint in ['Nova starts Linux Kyty directly through standalone FEX.' if linux_core else 'Nova starts the selected game directly through Kyty and ARM64 Wine/FEX.',
                  'Tap the boot status at the top to read the Kyty session log.',
                  '720p and 60 Hz are configuration targets; game compatibility is experimental.']:
         ET.SubElement(hints, 'item').text = hint
@@ -170,6 +175,7 @@ def main():
     parser.add_argument('--jdk', type=Path, default=Path(os.environ.get('JAVA_HOME', '/usr')))
     parser.add_argument('--keystore', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--linux-core', type=Path, help='Verified Linux x86-64 Kyty ELF; activates Linux/FEX packaging')
     parser.add_argument('--core-zip', type=Path, help='Verified rebuilt Kyty engine ZIP')
     parser.add_argument('--core-exe-sha', help='SHA-256 of the rebuilt Kyty executable')
     parser.add_argument('--base-apk', type=Path)
@@ -185,27 +191,39 @@ def main():
     build.mkdir(parents=True, exist_ok=True)
     for name, provided in [('platform.apk', args.base_apk), ('apktool.jar', args.apktool), ('commons-compress.jar', args.compress_jar)]:
         fetch(build / name, *PINS[name], provided.resolve() if provided else None)
-    core = APP / 'assets/engine/kyty-windows-df5b9b9.zip'
-    if args.core_zip:
-        if not args.core_exe_sha or not re.fullmatch(r'[0-9a-fA-F]{64}', args.core_exe_sha):
-            raise RuntimeError('--core-zip requires --core-exe-sha (64 hex characters)')
-        core = args.core_zip.resolve()
-        with zipfile.ZipFile(core) as archive:
-            actual = hashlib.sha256(archive.read('kyty_emulator.exe')).hexdigest()
-        if actual != args.core_exe_sha.lower():
-            raise RuntimeError('Rebuilt Kyty executable checksum mismatch')
-    elif core.is_file():
-        if sha(core) != CORE_SHA:
-            raise RuntimeError('Incorrect pinned Kyty engine archive')
+    if args.linux_core:
+        import struct
+        core=args.linux_core.resolve()
+        raw=core.read_bytes()
+        if hashlib.sha256(raw).hexdigest()!='e594d71bb9c60ff47d2ac1e1ee4b9c21eca7ad1ba949d1943a7644eabc2f846c':
+            raise RuntimeError('Linux Kyty checksum mismatch')
+        if raw[:6]!=b'\x7fELF\x02\x01' or struct.unpack_from('<H',raw,18)[0]!=62:
+            raise RuntimeError('Expected Linux x86-64 ELF')
+        for name in ['linux-runtime.tar.gz','linux-runtime.tar.json']:
+            if not (APP / 'assets/engine' / name).is_file(): raise RuntimeError('Provision Linux runtime first: '+name)
     else:
-        core = build / 'kyty-windows-df5b9b9.zip'
-        fetch(core, CORE_URL, CORE_SHA)
+        core = APP / 'assets/engine/kyty-windows-df5b9b9.zip'
+        if args.core_zip:
+            if not args.core_exe_sha or not re.fullmatch(r'[0-9a-fA-F]{64}', args.core_exe_sha):
+                raise RuntimeError('--core-zip requires --core-exe-sha (64 hex characters)')
+            core = args.core_zip.resolve()
+            with zipfile.ZipFile(core) as archive:
+                actual = hashlib.sha256(archive.read('kyty_emulator.exe')).hexdigest()
+            if actual != args.core_exe_sha.lower():
+                raise RuntimeError('Rebuilt Kyty executable checksum mismatch')
+        elif core.is_file():
+            if sha(core) != CORE_SHA:
+                raise RuntimeError('Incorrect pinned Kyty engine archive')
+        else:
+            core = build / 'kyty-windows-df5b9b9.zip'
+            fetch(core, CORE_URL, CORE_SHA)
     if args.verify_dependencies_only:
         print('All four build dependencies verified by SHA-256')
         return
-    sys.path.insert(0, str(ROOT / 'runtime-compat'))
-    from build_compat import build as build_compat
-    build_compat(ndk, args.windows_sdk.resolve(), core, APP / 'assets/engine', build / 'memory-compat', expected_exe_sha=args.core_exe_sha)
+    if not args.linux_core:
+        sys.path.insert(0, str(ROOT / 'runtime-compat'))
+        from build_compat import build as build_compat
+        build_compat(ndk, args.windows_sdk.resolve(), core, APP / 'assets/engine', build / 'memory-compat', expected_exe_sha=args.core_exe_sha)
     environment = dict(os.environ, JAVA_HOME=str(jdk))
     def run(*command):
         subprocess.run([str(item) for item in command], check=True, env=environment)
@@ -216,7 +234,7 @@ def main():
     base = build / 'base'
     shutil.rmtree(base, ignore_errors=True)
     run(java, '-jar', build / 'apktool.jar', 'd', '-f', build / 'platform.apk', '-o', base)
-    prepare_platform(base, core)
+    prepare_platform(base, core, linux_core=bool(args.linux_core))
     # Apktool changes the tool mode; use a writable copy on hosted SDK installations.
     aapt = build / 'aapt2'
     shutil.copyfile(bt / 'aapt2', aapt)
@@ -272,3 +290,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

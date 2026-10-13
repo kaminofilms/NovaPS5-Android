@@ -1,0 +1,113 @@
+name: Nova PS5 Linux Kyty FEX Android APK
+on:
+  push:
+    branches: [ps5-linux-core]
+    paths:
+      - 'build-runtime-apk.py'
+      - 'runtime-linux/**'
+      - 'droid-runtime/app/src/main/java/com/kaminofilms/novaps5/**'
+      - 'droid-runtime/app/src/main/assets/engine/launch-linux.sh'
+      - 'tests/verify_runtime_apk.py'
+      - '.github/workflows/build-linux-runtime-apk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  linux-apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - name: Install Android build tools
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;28.2.13676358'
+      - name: Retrieve pinned successful Linux core
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/linux-core/dist
+          gh run download 38324155342 --repo "$GITHUB_REPOSITORY" --name NovaPS5-Linux-Kyty-x86_64-802adeb479110a76b590a0f56747b41c049b3adb --dir build/linux-core/dist
+          cd build/linux-core
+          sha256sum -c dist/SHA256SUMS.txt
+          echo 'e594d71bb9c60ff47d2ac1e1ee4b9c21eca7ad1ba949d1943a7644eabc2f846c  dist/kyty_emulator' | sha256sum -c -
+          chmod 755 dist/kyty_emulator
+          readelf -l dist/kyty_emulator > dist/program-headers.txt
+          readelf -d dist/kyty_emulator > dist/dynamic-dependencies.txt
+          timeout 30s dist/kyty_emulator --help | tee dist/cli-preflight.txt
+      - name: Test Linux launch routing
+        run: python3 tests/test_linux_launch.py
+      - name: Provision pinned standalone FEX and x86-64 guest libraries
+        run: python3 runtime-linux/provision.py --output droid-runtime/app/src/main/assets/engine/linux-runtime.tar.gz
+      - name: Create CI signing identity
+        run: keytool -genkeypair -storetype PKCS12 -keystore "$RUNNER_TEMP/novaps5-ci.keystore" -storepass android -keypass android -alias novaps5dev -keyalg RSA -keysize 2048 -validity 10000 -dname 'CN=NovaPs5 Linux FEX CI Development'
+      - name: Build Linux FEX Android APK
+        run: |
+          python3 build-runtime-apk.py --sdk "$ANDROID_HOME" --ndk "$ANDROID_HOME/ndk/28.2.13676358" --jdk "$JAVA_HOME" --keystore "$RUNNER_TEMP/novaps5-ci.keystore" --output dist/NovaPS5-0.3.0-linux-fex-arm64.apk --linux-core build/linux-core/dist/kyty_emulator
+      - name: Verify Linux APK
+        run: |
+          python3 tests/verify_runtime_apk.py dist/NovaPS5-0.3.0-linux-fex-arm64.apk --sdk "$ANDROID_HOME" --linux-core --json-output dist/verification.json
+          sha256sum dist/NovaPS5-0.3.0-linux-fex-arm64.apk > dist/SHA256SUMS.txt
+          cp build/linux-core/dist/cli-preflight.txt dist/linux-host-cli.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NovaPS5-Linux-FEX-APK-${{ github.sha }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+      - name: Remove temporary signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/novaps5-ci.keystore"
+  arm64-fex-preflight:
+    needs: linux-apk
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: NovaPS5-Linux-FEX-APK-${{ github.sha }}
+          path: dist
+      - name: Run standalone FEX stages A through D on Linux ARM64
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import zipfile,tarfile,io
+          from pathlib import Path
+          with zipfile.ZipFile('dist/NovaPS5-0.3.0-linux-fex-arm64.apk') as apk:
+              Path('build').mkdir(exist_ok=True)
+              Path('build/kyty_emulator').write_bytes(apk.read('assets/engine/kyty_emulator'))
+              with tarfile.open(fileobj=io.BytesIO(apk.read('assets/engine/linux-runtime.tar.gz')),mode='r:gz') as runtime:
+                  runtime.extractall('build/runtime',filter='data')
+          PY
+          chmod 755 build/kyty_emulator
+          export FEX_ROOTFS="$PWD/build/runtime/guest"
+          export FEX_APP_CONFIG_LOCATION="$PWD/build/runtime"
+          export FEX_PORTABLE=1
+          export PATH="$PWD/build/runtime/host/usr/bin:$PATH"
+          export FEX_THUNKHOSTLIBS="$PWD/build/runtime/host/usr/lib/aarch64-linux-gnu/fex-emu/HostThunks"
+          export FEX_THUNKGUESTLIBS="$PWD/build/runtime/host/usr/share/fex-emu/GuestThunks"
+          {
+            echo 'CI host: ARM64 Linux; Android/Adreno hardware unavailable'
+            timeout 30s FEX --version
+            timeout 60s FEX /nova-probe
+            timeout 60s FEX /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 --list "$PWD/build/kyty_emulator"
+            timeout 60s FEX "$PWD/build/kyty_emulator" --help
+            timeout 60s FEX /nova-probe --memory
+          } 2>&1 | tee dist/arm64-fex-preflight.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NovaPS5-Linux-FEX-Preflight-${{ github.sha }}
+          path: dist/arm64-fex-preflight.txt
+          if-no-files-found: warn
+          retention-days: 30

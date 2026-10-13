@@ -82,6 +82,7 @@ def main():
     parser.add_argument('apk', type=Path)
     parser.add_argument('--sdk', type=Path)
     parser.add_argument('--json-output', type=Path)
+    parser.add_argument('--linux-core', action='store_true')
     parser.add_argument('--core-exe-sha', help='Expected SHA-256 of rebuilt Kyty executable')
     parser.add_argument('--expect-inaccessible', action='store_true')
     args = parser.parse_args()
@@ -129,28 +130,50 @@ def main():
             for mode, target in [('steam', '/opt/novaps5/launch.sh'), ('run', '/usr/bin/steam')]:
                 rejected = subprocess.run(['bash', '-s', '--', mode, target], input=staged_script, capture_output=True, timeout=5)
                 assert rejected.returncode == 64 and b'NOVA_ERROR: Refusing non-Kyty session' in rejected.stderr
-        engine_bytes = archive.read('assets/engine/kyty-windows-df5b9b9.zip')
-        if args.core_exe_sha:
-            import io
-            with zipfile.ZipFile(io.BytesIO(engine_bytes)) as engine:
-                assert hashlib.sha256(engine.read('kyty_emulator.exe')).hexdigest() == args.core_exe_sha.lower(), 'Rebuilt Kyty executable checksum mismatch'
+        if args.linux_core:
+            import io,tarfile
+            core=archive.read('assets/engine/kyty_emulator')
+            assert core[:6]==b'\x7fELF\x02\x01' and struct.unpack_from('<H',core,18)[0]==62
+            assert hashlib.sha256(core).hexdigest()=='e594d71bb9c60ff47d2ac1e1ee4b9c21eca7ad1ba949d1943a7644eabc2f846c'
+            assert b'/lib64/ld-linux-x86-64.so.2' in core
+            assert 'assets/engine/memory-compat.zip' not in names
+            manifest=json.loads(archive.read('assets/engine/linux-runtime.tar.json'))
+            payload=archive.read('assets/engine/linux-runtime.tar.gz')
+            assert hashlib.sha256(payload).hexdigest()==manifest['archive_sha256']
+            with tarfile.open(fileobj=io.BytesIO(payload),mode='r:gz') as runtime:
+                for path,expected in manifest['files'].items():
+                    assert hashlib.sha256(runtime.extractfile(path).read()).hexdigest()==expected,path
+                for path,machine in [('host/usr/bin/FEX',183),('host/usr/bin/FEXServer',183),('guest/nova-probe',62),('host/usr/lib/aarch64-linux-gnu/fex-emu/HostThunks/libvulkan-host.so',183),('host/usr/share/fex-emu/GuestThunks/libvulkan-guest.so',62)]:
+                    raw=runtime.extractfile(path).read();assert raw[:6]==b'\x7fELF\x02\x01' and struct.unpack_from('<H',raw,18)[0]==machine
+                    if path.endswith(('FEX','FEXServer','nova-probe')):assert runtime.getmember(path).mode&0o111
+            linux_launcher=archive.read('assets/engine/launch.sh')
+            assert linux_launcher==archive.read('assets/engine/launch-linux.sh')
+            assert b'"$fex" "$core" --game "$game"' in linux_launcher
+            assert b'"$wine"' not in linux_launcher and b'Z:' not in linux_launcher and b'.exe' not in linux_launcher
+            assert b'FEX_THUNKHOSTLIBS' in linux_launcher and b'FEX_ROOTFS' in linux_launcher
         else:
-            assert hashlib.sha256(engine_bytes).hexdigest() == CORE_SHA
-        compatibility=json.loads(archive.read('assets/engine/memory-compat.json'))
-        compatibility_bytes=archive.read('assets/engine/memory-compat.zip')
-        assert hashlib.sha256(compatibility_bytes).hexdigest()==compatibility['archive_sha256']
-        import io
-        with zipfile.ZipFile(io.BytesIO(compatibility_bytes)) as overlay:
-            assert set(overlay.namelist())=={'kyty_emulator-nova.exe','novamemory.dll','host-va-limit'}
-            for name,expected in compatibility['files'].items():
-                assert hashlib.sha256(overlay.read(name)).hexdigest()==expected
-            exe=overlay.read('kyty_emulator-nova.exe')
-            assert b'novamemory.dll\0' in exe and b'NovaVirtualQuery\0' in exe and b'NovaVirtualAlloc2\0' in exe
-            probe=overlay.read('host-va-limit')
-            assert probe[:6]==b'\x7fELF\x02\x01' and struct.unpack_from('<H',probe,18)[0]==183
-            for member in ['kyty_emulator-nova.exe','novamemory.dll']:
-                pe=overlay.read(member); at=struct.unpack_from('<I',pe,60)[0]
-                assert pe[at:at+4]==b'PE\0\0' and struct.unpack_from('<H',pe,at+4)[0]==0x8664
+            engine_bytes = archive.read('assets/engine/kyty-windows-df5b9b9.zip')
+            if args.core_exe_sha:
+                import io
+                with zipfile.ZipFile(io.BytesIO(engine_bytes)) as engine:
+                    assert hashlib.sha256(engine.read('kyty_emulator.exe')).hexdigest() == args.core_exe_sha.lower(), 'Rebuilt Kyty executable checksum mismatch'
+            else:
+                assert hashlib.sha256(engine_bytes).hexdigest() == CORE_SHA
+            compatibility=json.loads(archive.read('assets/engine/memory-compat.json'))
+            compatibility_bytes=archive.read('assets/engine/memory-compat.zip')
+            assert hashlib.sha256(compatibility_bytes).hexdigest()==compatibility['archive_sha256']
+            import io
+            with zipfile.ZipFile(io.BytesIO(compatibility_bytes)) as overlay:
+                assert set(overlay.namelist())=={'kyty_emulator-nova.exe','novamemory.dll','host-va-limit'}
+                for name,expected in compatibility['files'].items():
+                    assert hashlib.sha256(overlay.read(name)).hexdigest()==expected
+                exe=overlay.read('kyty_emulator-nova.exe')
+                assert b'novamemory.dll\0' in exe and b'NovaVirtualQuery\0' in exe and b'NovaVirtualAlloc2\0' in exe
+                probe=overlay.read('host-va-limit')
+                assert probe[:6]==b'\x7fELF\x02\x01' and struct.unpack_from('<H',probe,18)[0]==183
+                for member in ['kyty_emulator-nova.exe','novamemory.dll']:
+                    pe=overlay.read(member); at=struct.unpack_from('<I',pe,60)[0]
+                    assert pe[at:at+4]==b'PE\0\0' and struct.unpack_from('<H',pe,at+4)[0]==0x8664
         launcher = archive.read('assets/engine/launch.sh')
         subprocess.run(['bash', '-n'], input=launcher, check=True)
         libraries = []
@@ -167,7 +190,8 @@ def main():
                 libraries.append(name)
     report = {'filename': args.apk.name, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest(),
         'installerConstructorFlags': hex(flags), 'platformMethodAccess': 'passed', 'zipIntegrity': 'passed',
-        'arm64Libraries': len(libraries), 'inherited4KiBLibraries': four_k, 'ps5GameBootVerified': False}
+        'arm64Libraries': len(libraries), 'inherited4KiBLibraries': four_k, 'ps5GameBootVerified': False, 'executionPath': 'linux-fex' if args.linux_core else 'windows-wine-fex'}
+    if args.linux_core:report['linuxCoreSha256']=hashlib.sha256(core).hexdigest();report['linuxRuntimeSha256']=manifest['archive_sha256']
     if args.sdk:
         bt = args.sdk / 'build-tools/36.0.0'
         signature = subprocess.check_output([str(bt / 'apksigner'), 'verify', '--verbose', '--print-certs', str(args.apk)], text=True)
@@ -187,3 +211,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
