@@ -81,7 +81,7 @@ jobs:
           (cd build && unzip -q ccleste.zip)
           ldd build/core/kyty_emulator > out/x86/ldd.txt || true
       - name: Provision FEX runtime (for the ARM64 job)
-        run: python3 runtime-linux/provision.py --output build/linux-runtime.tar.gz
+        run: python3 runtime-linux/provision.py --core-sha "$(sha256sum build/core/kyty_emulator | cut -d" " -f1)" --output build/linux-runtime.tar.gz
       - name: Native probe and lavapipe capabilities
         run: |
           gcc -O2 runtime-linux/probe.c -ldl -o build/probe
