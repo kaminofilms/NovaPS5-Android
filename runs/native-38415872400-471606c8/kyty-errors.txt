@@ -1,0 +1,25 @@
+FAILED: [code=1] _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/dictBuilder/cover.c.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/build-kyty/_deps/zstd-src/lib/dictBuilder/cover.c:332:5: error: call to undeclared function 'qsort_r'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+FAILED: [code=1] 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/io/SDL_iostream.c.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/src/io/SDL_iostream.c:644:20: error: call to undeclared function 'fseeko64'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/src/io/SDL_iostream.c:644:39: error: use of undeclared identifier 'off64_t'
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/src/io/SDL_iostream.c:645:28: error: call to undeclared function 'ftello64'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/src/io/SDL_iostream.c:1007:20: error: call to undeclared function 'fopen64'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/src/io/SDL_iostream.c:1007:15: error: incompatible integer to pointer conversion initializing 'FILE *' (aka 'struct _IO_FILE *') with an expression of type 'int' [-Wint-conversion]
+FAILED: [code=1] 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/video/wayland/SDL_waylanddatamanager.c.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/src/video/wayland/SDL_waylanddatamanager.c:450:16: error: call to undeclared function 'pipe2'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/src/video/wayland/SDL_waylanddatamanager.c:539:16: error: call to undeclared function 'pipe2'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/src/video/wayland/SDL_waylanddatamanager.c:573:16: error: call to undeclared function 'pipe2'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+FAILED: [code=1] 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/video/wayland/SDL_waylandshmbuffer.c.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/src/video/wayland/SDL_waylandshmbuffer.c:73:10: error: call to undeclared function 'memfd_create'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/src/video/wayland/SDL_waylandshmbuffer.c:73:30: error: use of undeclared identifier 'MFD_CLOEXEC'
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/src/video/wayland/SDL_waylandshmbuffer.c:73:44: error: use of undeclared identifier 'MFD_ALLOW_SEALING'
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/src/video/wayland/SDL_waylandshmbuffer.c:75:19: error: use of undeclared identifier 'F_ADD_SEALS'
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/src/video/wayland/SDL_waylandshmbuffer.c:75:32: error: use of undeclared identifier 'F_SEAL_SHRINK'
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/src/video/wayland/SDL_waylandshmbuffer.c:75:48: error: use of undeclared identifier 'F_SEAL_SEAL'
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/src/video/wayland/SDL_waylandshmbuffer.c:91:14: error: call to undeclared function 'mkostemp'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+FAILED: [code=1] 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/core/unix/SDL_gtk.c.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/src/core/unix/SDL_gtk.c:120:9: error: call to undeclared function 'getresuid'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/src/core/unix/SDL_gtk.c:125:9: error: call to undeclared function 'getresgid'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+FAILED: [code=1] 3rdparty/SDL3/CMakeFiles/SDL3-static.dir/src/core/unix/SDL_poll.c.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/src/core/unix/SDL_poll.c:62:18: error: call to undeclared function 'ppoll'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
