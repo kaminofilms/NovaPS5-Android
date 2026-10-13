@@ -9,6 +9,7 @@ on:
       - 'droid-runtime/app/src/main/java/com/kaminofilms/novaps5/**'
       - 'droid-runtime/app/src/main/assets/engine/**'
       - 'tests/**'
+      - 'tools/ci/**'
       - '.github/workflows/build-linux-runtime-apk.yml'
   workflow_dispatch:
 permissions:

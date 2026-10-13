@@ -17,7 +17,9 @@ import java.util.concurrent.*;
 
 public final class MainActivity extends Activity {
     RuntimeEngine engine;
-    static final int FOLDER=10,FIRMWARE=11,EXPORT=12;
+    static final int FOLDER=10,FIRMWARE=11,EXPORT=12,DRIVER=13;
+    // Nova launches through the DroidDeck session in "run" mode, which draws with the desktop (lxqt) driver choice.
+    static final String DRIVER_MODE="lxqt",TURNIP_RELEASES="https://github.com/The412Banner/Banners-Turnip/releases";
     static final String FIRMWARE_URL="https://pc.ps5.update.playstation.net/update/ps5/official/tJMRE80IbXnE9YuG0jzTXgKEjIMoabr6/image/2026_0928/sys_c17384946df6e5c85b2d72cbeee2057b165bf90279d9e2a86d527d0778cdaaf6/PS5UPDATE.PUP";
     final ExecutorService io=Executors.newSingleThreadExecutor();
     GameStore store;HomeView home;FrameLayout screen;SurfaceView surface;TouchControls controls;
@@ -44,6 +46,7 @@ public final class MainActivity extends Activity {
         if(request==FOLDER){try{int flags=data.getFlags()&Intent.FLAG_GRANT_READ_URI_PERMISSION;getContentResolver().takePersistableUriPermission(uri,flags);}catch(SecurityException e){info("Folder access","This provider cannot retain access. Choose a local folder using Android Files.");return;}
             busy("Importing game folder",()->{List<GameStore.Entry> found=store.scan(uri);store.addAll(found);store.loadImages();return found.size()+" game folder(s) found.";},value->{showHome();info("Library updated",value+"\n\nGames appear with their own metadata and artwork. Select a game and press Play to prepare its engine.");});
         }else if(request==FIRMWARE){busy("Importing PS5 update",()->copyFirmware(uri),value->{home.invalidate();info("Firmware file retained",value+"\n\nThis alpha stores the original update package. It does not decrypt, install or boot PS5 system software.");});}
+        else if(request==DRIVER){busy("Importing GPU driver",()->importDriver(uri),value->info("Linux GPU driver",value));}
         else if(request==EXPORT){final String content=exportText;busy("Exporting diagnostics",()->{try(OutputStream out=getContentResolver().openOutputStream(uri,"wt")){if(out==null)throw new IOException("No writable document returned");out.write(content.getBytes("UTF-8"));}return "Diagnostic report saved.";},value->Toast.makeText(this,value,Toast.LENGTH_SHORT).show());}
     }
     String copyFirmware(Uri uri)throws Exception {
@@ -62,6 +65,20 @@ public final class MainActivity extends Activity {
     }
     void firmware(){long bytes=getSharedPreferences("nova",0).getLong("firmware_bytes",0);new AlertDialog.Builder(this).setTitle("PS5 firmware file").setMessage((bytes>0?"Retained update: "+bytes/1048576+" MiB\n\n":"")+"You can retain Sony’s original PS5 update in app storage. Firmware installation and system-software boot are not implemented in this alpha.\n\nThe supplied official download is about 1.2 GB.")
         .setPositiveButton("Import PUP",(d,w)->firmwarePicker()).setNeutralButton("Official download",(d,w)->{try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(FIRMWARE_URL)));}catch(ActivityNotFoundException e){info("Official firmware",FIRMWARE_URL);}}).setNegativeButton("Close",null).show();}
+    String driverLabel(){return com.droiddeck.launcher.gpu.LinuxVulkanDriver.optionLabel(this,com.droiddeck.launcher.session.SessionPrefs.INSTANCE.linuxDriver(this,DRIVER_MODE));}
+    void gpuDriver(){
+        final List<String> ids=com.droiddeck.launcher.gpu.LinuxVulkanDriver.optionValues(this);String current=com.droiddeck.launcher.session.SessionPrefs.INSTANCE.linuxDriver(this,DRIVER_MODE);
+        final String[] labels=new String[ids.size()];int selected=0;for(int i=0;i<labels.length;i++){labels[i]=com.droiddeck.launcher.gpu.LinuxVulkanDriver.optionLabel(this,ids.get(i));if(ids.get(i).equals(current))selected=i;}
+        new AlertDialog.Builder(this).setTitle("Linux GPU driver (Turnip)").setSingleChoiceItems(labels,selected,(d,w)->{com.droiddeck.launcher.session.SessionPrefs.INSTANCE.setLinuxDriver(this,DRIVER_MODE,ids.get(w));BootLog.write(this,"Linux GPU driver selected: "+labels[w]);d.dismiss();Toast.makeText(this,"Kyty will use: "+labels[w],Toast.LENGTH_SHORT).show();})
+            .setPositiveButton("Import Turnip zip",(d,w)->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("*/*");startActivityForResult(i,DRIVER);})
+            .setNeutralButton("Get Turnip",(d,w)->{try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(TURNIP_RELEASES)));}catch(ActivityNotFoundException x){info("Turnip releases",TURNIP_RELEASES);}})
+            .setNegativeButton("Close",null).show();}
+    String importDriver(Uri uri)throws Exception {
+        String name="Turnip";try(Cursor c=getContentResolver().query(uri,new String[]{OpenableColumns.DISPLAY_NAME},null,null,null)){if(c!=null&&c.moveToFirst()&&c.getString(0)!=null)name=c.getString(0);}
+        String id=new com.droiddeck.launcher.gpu.LinuxVulkanDriverManager(this).installDriver(uri,name.replaceAll("(?i)\\.zip$",""));
+        com.droiddeck.launcher.session.SessionPrefs.INSTANCE.setLinuxDriver(this,DRIVER_MODE,id);BootLog.write(this,"Imported Linux GPU driver "+id+" from "+name);
+        return "Installed and selected: "+com.droiddeck.launcher.gpu.LinuxVulkanDriver.optionLabel(this,id)+"\n\nIt takes effect at the next game launch. Use a \"-Linux\" Turnip build (for Adreno 8xx: the A8xx Linux zip). Android-only drivers cannot load inside the Linux runtime.";
+    }
     void launchGame(GameStore.Entry e){
         try{engine.resolveGame(e);}catch(Exception x){info("Game access",x.getMessage());return;}
         Runnable prepare=()->{ProgressDialog p=new ProgressDialog(this);p.setTitle("Preparing NovaPs5 engine");p.setMessage("Preparing runtime…");p.setCancelable(false);p.show();io.execute(()->{
@@ -79,7 +96,8 @@ public final class MainActivity extends Activity {
         TextView opacity=new TextView(this);opacity.setText("Touch control opacity");box.addView(opacity);SeekBar alpha=new SeekBar(this);alpha.setMax(65);alpha.setProgress(prefs.getInt("opacity",75)-35);box.addView(alpha);
         TextView sensitivity=new TextView(this);sensitivity.setText("Right stick sensitivity");box.addView(sensitivity);SeekBar sense=new SeekBar(this);sense.setMax(15);sense.setProgress(prefs.getInt("sensitivity",10)-5);box.addView(sense);
         CheckBox sticks=new CheckBox(this);sticks.setText("Show L3 and R3 buttons");sticks.setChecked(prefs.getBoolean("stick_clicks",true));box.addView(sticks);
-        TextView state=new TextView(this);state.setText("0.3.3 Linux Kyty / FEX preview\nSystem Vulkan driver • ARM64\nExperimental Kyty / FEX compatibility");state.setTextColor(0xffa8b6d2);state.setPadding(0,16,0,8);box.addView(state);
+        android.widget.Button driver=new android.widget.Button(this);driver.setText("GPU driver: "+driverLabel());driver.setAllCaps(false);driver.setOnClickListener(v->gpuDriver());box.addView(driver);
+        TextView state=new TextView(this);state.setText("0.3.3 Linux Kyty / FEX preview\nLinux GPU driver: "+driverLabel()+" • ARM64\nExperimental Kyty / FEX compatibility");state.setTextColor(0xffa8b6d2);state.setPadding(0,16,0,8);box.addView(state);
         new AlertDialog.Builder(this).setTitle("NovaPs5 settings").setView(box).setPositiveButton("Save",(d,w)->{prefs.edit().putInt("opacity",alpha.getProgress()+35).putInt("sensitivity",sense.getProgress()+5).putBoolean("stick_clicks",sticks.isChecked()).apply();if(controls!=null)controls.invalidate();}).setNeutralButton("Firmware",(d,w)->firmware()).setNegativeButton("Close",null).show();}
     void test(){if(!NativeBridge.AVAILABLE){info("Native runtime","This APK contains an ARM64 backend. A compatible ARM64 device is required.");return;}testing=true;screen=new FrameLayout(this);surface=new SurfaceView(this);screen.addView(surface,new FrameLayout.LayoutParams(-1,-1));controls=new TouchControls(this);screen.addView(controls,new FrameLayout.LayoutParams(-1,-1));setContentView(screen);immersive();
         surface.getHolder().addCallback(new SurfaceHolder.Callback(){public void surfaceCreated(SurfaceHolder h){if(!paused&&testing)NativeBridge.startRenderer(h.getSurface());}public void surfaceChanged(SurfaceHolder h,int f,int w,int height){if(!paused&&testing){NativeBridge.stopRenderer();NativeBridge.startRenderer(h.getSurface());}}public void surfaceDestroyed(SurfaceHolder h){NativeBridge.stopRenderer();}});
