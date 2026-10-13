@@ -16,6 +16,12 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <dlfcn.h>
+#include <linux/filter.h>
+#include <linux/seccomp.h>
+#include <stddef.h>
+#include <sys/prctl.h>
+#include <sys/syscall.h>
+#include <sys/wait.h>
 
 namespace {
 
@@ -118,9 +124,35 @@ double NsPer(uint64_t count, F&& fn) {
 	return std::chrono::duration<double, std::nano>(t1 - t0).count() / static_cast<double>(count);
 }
 
+// Android's app seccomp policy traps (SIGSYS) syscalls it does not allow. libnovafex answers
+// those with ENOSYS; glibc's pthread_create then falls back from clone3 to clone.
+bool SeccompClone3Fallback() {
+	const pid_t child = fork();
+	if (child == 0) {
+		sock_filter filter[] = {
+		    BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(seccomp_data, nr)),
+		    BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_clone3, 0, 1),
+		    BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_TRAP),
+		    BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+		};
+		sock_fprog prog {static_cast<unsigned short>(sizeof(filter) / sizeof(filter[0])), filter};
+		if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0 || prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog) != 0) {
+			_exit(3);
+		}
+		std::atomic<int> ran {0};
+		std::thread([&] { ran = 1; }).join();
+		_exit(ran == 1 ? 0 : 4);
+	}
+	int status = 0;
+	waitpid(child, &status, 0);
+	return WIFEXITED(status) && WEXITSTATUS(status) == 0;
+}
+
 } // namespace
 
 int main() {
+	Check("seccomp SIGSYS -> ENOSYS (clone3 fallback)", SeccompClone3Fallback());
+
 	struct sigaction sa {};
 	sa.sa_sigaction = FaultHandler;
 	sa.sa_flags = SA_SIGINFO | SA_NODEFER;

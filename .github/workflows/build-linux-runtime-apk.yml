@@ -122,7 +122,9 @@ jobs:
           name: kyty-native-core
           path: build/native-core
       - name: Test Linux launch routing
-        run: python3 tests/test_linux_launch.py
+        run: |
+          python3 tests/test_linux_launch.py
+          python3 tests/test_host_launch.py
       - name: Provision pinned standalone FEX and x86-64 guest libraries
         run: |
           set -euo pipefail

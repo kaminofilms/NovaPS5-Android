@@ -85,9 +85,10 @@ final class RuntimeEngine {
             Files.move(staging.toPath(),executable.toPath(),java.nio.file.StandardCopyOption.REPLACE_EXISTING,java.nio.file.StandardCopyOption.ATOMIC_MOVE);
         }
         if(!executable.setExecutable(true,false))throw new IOException("Cannot execute Linux Kyty");
-        for(String asset:new String[]{"launch-linux.sh","fex-linux.sh","session-guard.sh"}){
+        for(String asset:new String[]{"launch-linux.sh","fex-linux.sh","session-guard.sh","host-launch.sh"}){
             File launcher=new File(base,asset.equals("launch-linux.sh")?"launch.sh":asset);try(InputStream in=context.getAssets().open("engine/"+asset);OutputStream out=new FileOutputStream(launcher)){copy(in,out);}if(!launcher.setExecutable(true,false))throw new IOException("Cannot execute "+asset);
         }
+        HostKyty.writeHostEnvironment(context,base,root());
         BootLog.write(context,"Linux core verified: "+LINUX_CORE_SHA+"; FEX/runtime verified: "+expected);
         // The installed root survives APK upgrades. Enforce the direct-only route
         // there as well as in the Activity, before gamescope or any client starts.
@@ -161,6 +162,7 @@ final class RuntimeEngine {
         BootLog.write(context,"Ended "+killed+" leftover session processes");
     }
     void start(String game,String name){
+        HostKyty.watch(context);
         // Android 12+ "phantom process" monitor silently kills the processes a session is made of
         // (Kyty dies mid-game with nothing in any log). Only the user can turn it off.
         String phantom=null;try{phantom=android.provider.Settings.Global.getString(context.getContentResolver(),"settings_enable_monitor_phantom_procs");}catch(Exception ignored){}

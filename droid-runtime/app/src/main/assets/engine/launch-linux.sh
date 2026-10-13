@@ -49,18 +49,25 @@ if [[ -x "$native/kyty_emulator" && "${NOVA_ENGINE:-native}" != fex ]]; then
     stage G 'First rendered frame UNVERIFIED'
     echo "NOVA_LAUNCH: native AArch64 Kyty game=$game relaxed_vulkan=$NOVA_RELAXED_VULKAN"
     cd "$native"
+    kyty_args=(--game "$game" --screen-width 1280 --screen-height 720 --vblank-frequency 60 --present-mode Fifo --fullscreen --hide-cursor --no-splash --vulkan-validation false --network-connected false)
+    # Outside proot first (see host-launch.sh); under proot only when the app cannot start it.
+    status=0
+    source "$base/host-launch.sh"
+    nova_host_launch "$native" "$native_preload" "${kyty_args[@]}" || status=$?
+    if [[ $status != 90 ]]; then exit "$status"; fi
+    status=0
+    echo 'NOVA_LAUNCH: Kyty under proot'
     # The session pins programs to the fastest cluster, which on Snapdragon 8 Elite-class chips is
     # only two cores. Kyty, the embedded FEX JIT and the game's 30+ threads need all of them.
     all_cores="0-$(( $(nproc --all) - 1 ))"
     taskset -cp "$all_cores" $$ >/dev/null 2>&1 && echo "NOVA_CPU: cores $all_cores (was $(cat /proc/self/status | sed -n 's/^Cpus_allowed_list:\s*//p'))" || true
     # System glibc/libstdc++ (newer than the build host's); Nova's libraries come from $native.
-    LD_PRELOAD="$native_preload" LD_LIBRARY_PATH="$native" \
-        "$native/kyty_emulator" --game "$game" --screen-width 1280 --screen-height 720 --vblank-frequency 60 --present-mode Fifo --fullscreen --hide-cursor --no-splash --vulkan-validation false --network-connected false &
+    NOVA_LAUNCHER_PID=$$ LD_PRELOAD="$native_preload" LD_LIBRARY_PATH="$native" \
+        "$native/kyty_emulator" "${kyty_args[@]}" &
     kyty_pid=$!
     # Exit game / session stop: guest threads parked in emulated waits can keep Kyty alive after
     # SIGTERM, which blocks the next launch. Give it a moment, then force it down.
     trap 'kill -TERM "$kyty_pid" 2>/dev/null; sleep 1; kill -KILL "$kyty_pid" 2>/dev/null; exit 143' TERM INT HUP
-    status=0
     wait "$kyty_pid" || status=$?
     exit "$status"
 fi

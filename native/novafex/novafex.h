@@ -92,4 +92,8 @@ NOVAFEX_API bool HandleHostFault(int signal, siginfo_t* info, void* ucontext);
 // Invalidates translated guest code (after the guest or the loader modifies code bytes).
 NOVAFEX_API void InvalidateGuestCode(uint64_t start, uint64_t size);
 
+// Called by the emulator once per presented frame. The watchdog uses it to detect a frozen game
+// (no frame for several seconds) and writes a report of every thread to stderr.
+NOVAFEX_API void NoteFrame();
+
 } // namespace NovaFex

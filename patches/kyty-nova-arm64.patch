@@ -120,20 +120,22 @@ index 22cb3f27..7d9e9180 100644
  }
  
 diff --git a/src/common/hostException.cpp b/src/common/hostException.cpp
-index d44c623c..54f512cd 100644
+index d44c623c..91e9eccb 100644
 --- a/src/common/hostException.cpp
 +++ b/src/common/hostException.cpp
-@@ -10,7 +10,9 @@
+@@ -10,7 +10,11 @@
  #include <csignal>
  #include <cstdlib>
  #include <initializer_list>
 +#include <cstring>
  #include <unistd.h>
++#include <sys/mman.h>
++#include <ctime>
 +#include "common/novaFex.h"
  #if defined(__APPLE__)
  #include <sys/ucontext.h>
  #else
-@@ -225,6 +227,87 @@ static void ChainToDefault(int signal_number) noexcept {
+@@ -225,6 +229,143 @@ static void ChainToDefault(int signal_number) noexcept {
  	::sigaction(signal_number, &restore, nullptr);
  }
  
@@ -159,6 +161,59 @@ index d44c623c..54f512cd 100644
 +		p += size;
 +	}
 +	return 0;
++}
++
++// A fault the handler reports as handled but that recurs immediately at the same instruction and
++// address never makes progress: the thread spins in the handler and the game freezes without a
++// message. Hundreds of identical faults within a fraction of a second are that loop. A page fault
++// is broken by making the page accessible (the GPU cache may then miss one CPU write, which is far
++// better than a frozen game); anything else is reported and ends the process.
++// Returns true when the fault cannot be broken and the default action should follow.
++static bool IsGuestReadable(uint64_t address) {
++	return address >= 0x10000;
++}
++
++static bool FaultLoops(int signal_number, const ucontext_t* context, const ExceptionInfo& info) {
++	struct Repeat {
++		uint64_t pc;
++		uint64_t address;
++		uint64_t since_ns;
++		uint32_t count;
++	};
++	static thread_local Repeat repeat {};
++	static std::atomic<uint32_t> broken {0};
++	timespec now {};
++	clock_gettime(CLOCK_MONOTONIC, &now);
++	const uint64_t now_ns = static_cast<uint64_t>(now.tv_sec) * 1000000000ull + static_cast<uint64_t>(now.tv_nsec);
++	if (repeat.pc != info.exception_address || repeat.address != info.access_violation_vaddr ||
++	    now_ns - repeat.since_ns > 250000000ull) {
++		repeat = {info.exception_address, info.access_violation_vaddr, now_ns, 1};
++		return false;
++	}
++	if (++repeat.count < 512) {
++		return false;
++	}
++	repeat.count = 0;
++	const auto     esr         = ReadEsr(context);
++	const uint32_t instruction = IsGuestReadable(info.exception_address) ? *reinterpret_cast<const uint32_t*>(info.exception_address) : 0;
++	std::fprintf(stderr,
++	             "NOVA_FAULT_LOOP: signal=%d pc=0x%016llx address=0x%016llx esr=0x%llx insn=0x%08x access=%u\n",
++	             signal_number, static_cast<unsigned long long>(info.exception_address),
++	             static_cast<unsigned long long>(info.access_violation_vaddr), static_cast<unsigned long long>(esr),
++	             instruction, static_cast<unsigned>(info.access_violation_type));
++	if (signal_number != SIGSEGV) {
++		return true;
++	}
++	const auto page = static_cast<uint64_t>(sysconf(_SC_PAGESIZE));
++	const auto base = info.access_violation_vaddr & ~(page - 1);
++	if (mprotect(reinterpret_cast<void*>(base), page, PROT_READ | PROT_WRITE) != 0) {
++		return true;
++	}
++	if (broken.fetch_add(1, std::memory_order_relaxed) < 32) {
++		std::fprintf(stderr, "NOVA_FAULT_LOOP: page 0x%016llx made writable to continue\n",
++		             static_cast<unsigned long long>(base));
++	}
++	return false;
 +}
 +
 +static void SignalHandler(int signal_number, siginfo_t* signal_info, void* native_context) {
@@ -212,6 +267,9 @@ index d44c623c..54f512cd 100644
 +
 +	const auto handler = g_handler.load(std::memory_order_acquire);
 +	if (handler != nullptr && handler(info)) {
++		if (info.type == ExceptionType::AccessViolation && FaultLoops(signal_number, context, info)) {
++			ChainToDefault(signal_number);
++		}
 +		return;
 +	}
 +
@@ -221,7 +279,7 @@ index d44c623c..54f512cd 100644
  static void SignalHandler(int signal_number, siginfo_t* signal_info, void* native_context) {
  	auto* context = static_cast<ucontext_t*>(native_context);
  	auto* gregs   = context->uc_mcontext.gregs;
-@@ -276,6 +359,7 @@ static void SignalHandler(int signal_number, siginfo_t* signal_info, void* nativ
+@@ -276,6 +417,7 @@ static void SignalHandler(int signal_number, siginfo_t* signal_info, void* nativ
  
  	ChainToDefault(signal_number);
  }
@@ -311,6 +369,28 @@ index d56b629b..b1a7b913 100644
  
  	m_driver_cache_path     = std::filesystem::path("_PipelineCache") / (title_id + ".bin");
  	const auto path         = Common::PathToString(m_driver_cache_path);
+diff --git a/src/graphics/presentation/window/swapchain.cpp b/src/graphics/presentation/window/swapchain.cpp
+index 07c74012..21606b8f 100644
+--- a/src/graphics/presentation/window/swapchain.cpp
++++ b/src/graphics/presentation/window/swapchain.cpp
+@@ -2,6 +2,7 @@
+ #include "common/common.h"
+ #include "common/emulatorConfig.h"
+ #include "common/logging/log.h"
++#include "common/novaFex.h"
+ #include "common/profiler.h"
+ #include "common/threads.h"
+ #include "gpu_blit_shaders/gpu_blit_fs_triangle_spv.h"
+@@ -908,6 +909,9 @@ Swapchain::Status Swapchain::Present() {
+ 		default: EXIT("vkQueuePresentKHR failed: %s\n", vk::to_string(result).c_str());
+ 	}
+ 	m_frame_index = (m_frame_index + 1u) % static_cast<uint32_t>(m_images.size());
++#if defined(KYTY_NOVA_FEX)
++	NovaFex::NoteFrame();
++#endif
+ 	return Status::Success;
+ }
+ 
 diff --git a/src/graphics/presentation/window/vulkanWindow.cpp b/src/graphics/presentation/window/vulkanWindow.cpp
 index 95005f5a..e4124de6 100644
 --- a/src/graphics/presentation/window/vulkanWindow.cpp

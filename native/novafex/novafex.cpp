@@ -278,6 +278,8 @@ ThreadData::~ThreadData() {
 	}
 }
 
+std::atomic<uint64_t> g_frames {0};
+
 // Stall diagnostics: every host thread prints its own native backtrace on SIGRTMIN+6.
 void DumpSelf(int, siginfo_t*, void*) {
 	void* frames[40];
@@ -288,6 +290,17 @@ void DumpSelf(int, siginfo_t*, void*) {
 	backtrace_symbols_fd(frames, count, 2);
 }
 
+void ReadSmall(const char* path, char* out, size_t size) {
+	out[0] = 0;
+	if (FILE* f = std::fopen(path, "r")) {
+		if (std::fgets(out, static_cast<int>(size), f) == nullptr) out[0] = 0;
+		std::fclose(f);
+	}
+	out[strcspn(out, "\n")] = 0;
+}
+
+// Every task of the process: name, run state (R running, S/D waiting, t stopped by a tracer) and
+// the kernel function it waits in; then each one prints its own native stack.
 void DumpAllThreads() {
 	struct sigaction sa {};
 	sa.sa_sigaction = DumpSelf;
@@ -295,100 +308,159 @@ void DumpAllThreads() {
 	sigemptyset(&sa.sa_mask);
 	sigaction(SIGRTMIN + 6, &sa, nullptr);
 	const int self = static_cast<int>(gettid());
+	std::vector<int> tids;
 	if (DIR* dir = opendir("/proc/self/task")) {
 		while (dirent* entry = readdir(dir)) {
 			const int tid = atoi(entry->d_name);
-			if (tid <= 0 || tid == self) continue;
-			char path[64], stat[512] = "";
-			std::snprintf(path, sizeof(path), "/proc/self/task/%d/stat", tid);
-			if (FILE* f = std::fopen(path, "r")) {
-				if (std::fgets(stat, sizeof(stat), f) == nullptr) stat[0] = 0;
-				std::fclose(f);
-			}
-			// "tid (comm) S ..." -> print comm and run state (R = running/spinning, S/D = waiting)
-			std::fprintf(stderr, "NOVA_FEX: thread %.80s\n", stat);
-			syscall(SYS_tgkill, getpid(), tid, SIGRTMIN + 6);
-			usleep(150000);
+			if (tid > 0 && tid != self) tids.push_back(tid);
 		}
 		closedir(dir);
 	}
+	for (const int tid: tids) {
+		char path[64], stat[512], wchan[96];
+		std::snprintf(path, sizeof(path), "/proc/self/task/%d/stat", tid);
+		ReadSmall(path, stat, sizeof(stat));
+		std::snprintf(path, sizeof(path), "/proc/self/task/%d/wchan", tid);
+		ReadSmall(path, wchan, sizeof(wchan));
+		std::fprintf(stderr, "NOVA_FEX: thread %.60s wchan=%s\n", stat, wchan[0] != 0 ? wchan : "?");
+	}
+	for (const int tid: tids) {
+		syscall(SYS_tgkill, getpid(), tid, SIGRTMIN + 6);
+		usleep(100000);
+	}
+}
+
+// Threads that run guest code: the host function each one is in, or the guest address it is at.
+void ReportGuestThreads() {
+	std::lock_guard lock(g_threads_mutex);
+	for (auto* t: g_threads) {
+		const auto in_host = t->in_host.load();
+		const auto shown = in_host != 0 ? in_host : t->last_host.load();
+		Dl_info info {};
+		const char* name = "?";
+		char* demangled = nullptr;
+		if (shown != 0 && dladdr(reinterpret_cast<void*>(shown), &info) != 0 && info.dli_sname != nullptr) {
+			int status = 0;
+			demangled = abi::__cxa_demangle(info.dli_sname, nullptr, nullptr, &status);
+			name = demangled != nullptr ? demangled : info.dli_sname;
+		}
+		char path[64], thread_name[32];
+		std::snprintf(path, sizeof(path), "/proc/self/task/%d/comm", t->tid);
+		ReadSmall(path, thread_name, sizeof(thread_name));
+		const uint64_t rip = t->fex != nullptr ? t->fex->CurrentFrame->State.rip : 0;
+		std::fprintf(stderr, "NOVA_FEX:   tid %d %-15s gates=%llu rip=0x%llx %s %.120s\n", t->tid, thread_name,
+		             (unsigned long long)t->gates.load(), (unsigned long long)rip,
+		             in_host != 0 ? "IN HOST" : "guest (last host)", name);
+		std::free(demangled);
+	}
+}
+
+long ReadKb(const char* path, const char* key) {
+	long value = -1;
+	if (FILE* f = std::fopen(path, "r")) {
+		char line[256];
+		const size_t len = strlen(key);
+		while (std::fgets(line, sizeof(line), f) != nullptr) {
+			if (strncmp(line, key, len) == 0) { value = atol(line + len); break; }
+		}
+		std::fclose(f);
+	}
+	return value;
+}
+
+int EnvInt(const char* name, int fallback) {
+	const char* value = getenv(name);
+	return value != nullptr && value[0] != 0 ? atoi(value) : fallback;
 }
 
 void Watchdog() {
-	const char* env = getenv("NOVA_FEX_HEARTBEAT");
-	const int seconds = env != nullptr ? atoi(env) : 5;
-	if (seconds <= 0) return;
-	uint64_t last_gates = 0;
-	uint64_t last_calls = 0;
-	int stalled = 0;
-	bool dumped = false;
-	for (;;) {
-		sleep(static_cast<unsigned>(seconds));
-		const auto gates = g_total_gates.load();
-		const auto calls = g_total_calls.load();
-		// "Stalled" = (almost) no guest->host traffic: a game blocked on a wait still makes a
-		// few calls per second, so a hard zero would miss it.
-		stalled = (gates - last_gates < 2000 && calls - last_calls < 50) ? stalled + 1 : 0;
-		last_calls = calls;
-		if (stalled >= 3 && !dumped) {
-			dumped = true;
-			std::fprintf(stderr, "NOVA_FEX: no guest progress for %d s, dumping host threads\n", stalled * seconds);
-			DumpAllThreads();
-		}
-		// Orphaned (launcher killed): do not linger and block the next session.
-		if (getppid() == 1) {
+	const int report_every = EnvInt("NOVA_FEX_HEARTBEAT", 30);
+	const int freeze_after = EnvInt("NOVA_FREEZE_SECONDS", 4);
+	// The Nova launcher that started this process. Kyty may run outside the session's process
+	// tree (outside proot); when the launcher is gone the session has ended.
+	const pid_t launcher = static_cast<pid_t>(EnvInt("NOVA_LAUNCHER_PID", 0));
+	uint64_t last_frames = 0, report_frames = 0, report_gates = 0, last_gates = 0;
+	int frozen_for = 0, quiet_for = 0, freeze_dumps = 0;
+	bool stall_dumped = false;
+	for (int tick = 1;; tick++) {
+		sleep(1);
+		if (getppid() == 1 || (launcher > 0 && kill(launcher, 0) != 0 && errno == ESRCH)) {
 			std::fprintf(stderr, "NOVA_FEX: launcher gone, exiting\n");
 			_exit(0);
 		}
-		static int beat = 0;
-		const bool report = (beat++ % 6) == 0;
-		if (report) {
-			// Memory: a silent kill (no error, no exit status) is usually Android's low-memory killer.
-			auto read_kb = [](const char* path, const char* key) -> long {
-				long value = -1;
-				if (FILE* f = std::fopen(path, "r")) {
-					char line[256];
-					const size_t len = strlen(key);
-					while (std::fgets(line, sizeof(line), f) != nullptr) {
-						if (strncmp(line, key, len) == 0) { value = atol(line + len); break; }
-					}
-					std::fclose(f);
-				}
-				return value;
-			};
-			std::fprintf(stderr, "NOVA_FEX: heartbeat gates=%llu guest_calls=%llu threads=%zu rss=%ldMB avail=%ldMB\n",
-			             (unsigned long long)gates, (unsigned long long)g_total_calls.load(), g_threads.size(),
-			             read_kb("/proc/self/status", "VmRSS:") / 1024, read_kb("/proc/meminfo", "MemAvailable:") / 1024);
+		const auto frames = g_frames.load(std::memory_order_relaxed);
+		const auto gates = g_total_gates.load(std::memory_order_relaxed);
+		const auto calls = g_total_calls.load(std::memory_order_relaxed);
+		if (frames != last_frames) {
+			last_frames = frames;
+			frozen_for = 0;
+		} else if (frames != 0) {
+			frozen_for++;
 		}
+		// The game had been presenting frames and stopped: report where every thread is.
+		if (freeze_after > 0 && frozen_for == freeze_after && freeze_dumps < 3) {
+			freeze_dumps++;
+			std::fprintf(stderr, "NOVA_FREEZE: no frame for %d s (frames=%llu gates=%llu guest_calls=%llu rss=%ldMB avail=%ldMB)\n",
+			             frozen_for, (unsigned long long)frames, (unsigned long long)gates, (unsigned long long)calls,
+			             ReadKb("/proc/self/status", "VmRSS:") / 1024, ReadKb("/proc/meminfo", "MemAvailable:") / 1024);
+			ReportGuestThreads();
+			DumpAllThreads();
+			std::fprintf(stderr, "NOVA_FREEZE: end of report\n");
+		}
+		// Before the first frame: (almost) no guest->host traffic for 15 s.
+		quiet_for = (frames == 0 && gates - last_gates < 400) ? quiet_for + 1 : 0;
 		last_gates = gates;
-		// Per-thread detail only when the guest has stopped making progress.
-		if (stalled < 2) continue;
-		std::lock_guard lock(g_threads_mutex);
-		for (auto* t: g_threads) {
-			const auto in_host = t->in_host.load();
-			const auto shown = in_host != 0 ? in_host : t->last_host.load();
-			Dl_info info {};
-			const char* name = "?";
-			char* demangled = nullptr;
-			if (shown != 0 && dladdr(reinterpret_cast<void*>(shown), &info) != 0 && info.dli_sname != nullptr) {
-				int status = 0;
-				demangled = abi::__cxa_demangle(info.dli_sname, nullptr, nullptr, &status);
-				name = demangled != nullptr ? demangled : info.dli_sname;
-			}
-			char thread_name[32] = "";
-			char path[64];
-			std::snprintf(path, sizeof(path), "/proc/self/task/%d/comm", t->tid);
-			if (FILE* f = std::fopen(path, "r")) {
-				if (std::fgets(thread_name, sizeof(thread_name), f) == nullptr) thread_name[0] = 0;
-				std::fclose(f);
-				thread_name[strcspn(thread_name, "\n")] = 0;
-			}
-			std::fprintf(stderr, "NOVA_FEX:   tid %d %-15s gates=%llu %s %.120s\n", t->tid, thread_name,
-			             (unsigned long long)t->gates.load(), in_host != 0 ? "IN HOST" : "guest (last host)", name);
-			std::free(demangled);
+		if (quiet_for == 15 && !stall_dumped) {
+			stall_dumped = true;
+			std::fprintf(stderr, "NOVA_FEX: no guest progress for 15 s, dumping host threads\n");
+			ReportGuestThreads();
+			DumpAllThreads();
+		}
+		if (report_every > 0 && (tick == 5 || tick % report_every == 0)) {
+			const int span = tick == 5 ? 5 : report_every;
+			std::fprintf(stderr, "NOVA_FEX: heartbeat fps=%.1f frames=%llu gates=%llu (+%llu) guest_calls=%llu threads=%zu rss=%ldMB avail=%ldMB\n",
+			             static_cast<double>(frames - report_frames) / span, (unsigned long long)frames,
+			             (unsigned long long)gates, (unsigned long long)(gates - report_gates), (unsigned long long)calls,
+			             g_threads.size(), ReadKb("/proc/self/status", "VmRSS:") / 1024,
+			             ReadKb("/proc/meminfo", "MemAvailable:") / 1024);
+			report_frames = frames;
+			report_gates = gates;
 		}
 	}
 }
+
+#if defined(__aarch64__)
+// Android's app seccomp policy answers system calls it does not allow with SIGSYS. Outside proot
+// that would end the process on a call glibc only probes (clone3, for one); answer ENOSYS instead
+// so the C library falls back, as it does on an older kernel.
+void SigsysHandler(int, siginfo_t* info, void* context) {
+	auto* uc = static_cast<ucontext_t*>(context);
+	uc->uc_mcontext.regs[0] = static_cast<uint64_t>(-ENOSYS);
+	static std::atomic<int> reported {0};
+	if (reported.fetch_add(1, std::memory_order_relaxed) < 16) {
+		char text[64] = "NOVA_FEX: seccomp denied syscall ";
+		size_t n = strlen(text);
+		char digits[16];
+		int d = 0;
+		unsigned value = static_cast<unsigned>(info->si_syscall);
+		do { digits[d++] = static_cast<char>('0' + value % 10); value /= 10; } while (value != 0 && d < 15);
+		while (d > 0 && n < sizeof(text) - 12) text[n++] = digits[--d];
+		std::memcpy(text + n, " -> ENOSYS\n", 11);
+		(void)!write(2, text, n + 11);
+	}
+}
+
+__attribute__((constructor)) void InstallSigsysHandler() {
+	if (const char* off = getenv("NOVA_NO_SIGSYS_HANDLER"); off != nullptr && off[0] == '1') {
+		return;
+	}
+	struct sigaction sa {};
+	sa.sa_sigaction = SigsysHandler;
+	sa.sa_flags = SA_SIGINFO;
+	sigemptyset(&sa.sa_mask);
+	sigaction(SIGSYS, &sa, nullptr);
+}
+#endif
 
 ThreadData& Current() {
 	auto& t = t_thread;
@@ -688,6 +760,10 @@ void InvalidateGuestCode(uint64_t start, uint64_t size) {
 	if (g_ctx) {
 		g_ctx->InvalidateCodeBuffersCodeRange(start, size);
 	}
+}
+
+void NoteFrame() {
+	g_frames.fetch_add(1, std::memory_order_relaxed);
 }
 
 bool HandleHostFault(int signal, siginfo_t* info, void* ucontext) {

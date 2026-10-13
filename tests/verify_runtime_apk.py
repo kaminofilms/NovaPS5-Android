@@ -178,7 +178,12 @@ def main():
                 assert runtime.getmember('native/kyty_emulator').mode&0o111
                 for name in ['libnovafex.so','libfakeinput.so']:
                     assert 'native/'+name in manifest['files'],name
-            assert b'"$native/kyty_emulator" --game "$game"' in linux_launcher
+            assert b'kyty_args=(--game "$game"' in linux_launcher and b'"$native/kyty_emulator" "${kyty_args[@]}"' in linux_launcher
+            # 0.6: Kyty runs outside proot (host-launch.sh, started by the app), proot as fallback.
+            host_launch=archive.read('assets/engine/host-launch.sh')
+            subprocess.run(['bash','-n'],input=host_launch,check=True)
+            assert b'nova_host_launch "$native" "$native_preload" "${kyty_args[@]}"' in linux_launcher
+            assert b'--library-path' in host_launch and b'NOVA_LAUNCHER_PID' in host_launch and b'return 90' in host_launch
 
         else:
             engine_bytes = archive.read('assets/engine/kyty-windows-df5b9b9.zip')
@@ -232,7 +237,7 @@ def main():
                 report['packageMetadata'] = line
         assert "name='com.kaminofilms.novaps5'" in badging
         if args.linux_core:
-            assert "versionName='0.5.0-native'" in badging and "versionCode='26'" in badging and "native-code: 'arm64-v8a'" in badging
+            assert "versionName='0.6.0-native'" in badging and "versionCode='27'" in badging and "native-code: 'arm64-v8a'" in badging
         subprocess.run([str(bt / 'zipalign'), '-c', '-P', '16', '4', str(args.apk)], check=True)
     if args.json_output:
         args.json_output.parent.mkdir(parents=True, exist_ok=True)

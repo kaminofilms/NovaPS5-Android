@@ -5,7 +5,7 @@ name: Nova PS5 native ARM64 Kyty (embedded FEXCore)
 on:
   push:
     branches: [native-arm64]
-    paths: ['native/**', 'patches/**', 'tools/lab/**', 'tools/ci/**', '.github/workflows/native-kyty.yml']
+    paths: ['native/**', 'patches/**', 'tools/lab/**', 'tools/ci/**', 'tests/test_host_launch.py', 'droid-runtime/app/src/main/assets/engine/host-launch.sh', '.github/workflows/native-kyty.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -27,7 +27,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends clang lld ninja-build cmake git glslang-tools python3 pkg-config ccache \
             libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev libxfixes-dev libxi-dev libxrandr-dev libxss-dev libxtst-dev \
             libxkbcommon-dev libasound2-dev libpulse-dev libudev-dev libdbus-1-dev libwayland-dev wayland-protocols \
-            libvulkan1 mesa-vulkan-drivers vulkan-tools xvfb imagemagick unzip patchelf
+            libvulkan1 mesa-vulkan-drivers vulkan-tools xvfb imagemagick unzip patchelf mksh
       - uses: actions/cache@v4
         with:
           path: ~/.cache/ccache
@@ -61,6 +61,15 @@ jobs:
           mkdir -p out/boot/cwd && cd out/boot/cwd
           bash "$GITHUB_WORKSPACE/tools/lab/run-kyty-lab.sh" native "$GITHUB_WORKSPACE/dist/ci/kyty_emulator" "$GITHUB_WORKSPACE/build/PPSA59322" "$GITHUB_WORKSPACE/out/boot" 300
           tail -80 "$GITHUB_WORKSPACE/out/boot/kyty.txt"
+      - name: Host launch path (outside proot, mksh) unit test
+        run: NOVA_TEST_SHELL=$(command -v mksh) python3 tests/test_host_launch.py
+      - name: Boot ccleste through the host launch path (lavapipe)
+        env:
+          NOVA_RELAXED_VULKAN: '1'
+          NOVA_HOST_VA_BITS: '39'
+        run: |
+          export VK_DRIVER_FILES="$(find /usr/share/vulkan/icd.d -maxdepth 1 -name 'lvp_icd*.json' -print -quit)"
+          bash tools/lab/host-launch-boot.sh "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/dist/native" "$GITHUB_WORKSPACE/build/PPSA59322" "$GITHUB_WORKSPACE/out/hostboot" 90
       - name: Commit logs to lab-logs
         if: always()
         run: |
