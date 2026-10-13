@@ -1,0 +1,4 @@
+NOVA_FEX: host AVX=1 SVE256=0 AFP=0 RCPC=1
+NOVAFEX_TEST: init                         PASS 
+NOVAFEX_TEST: unhandled signal 11 addr=0x4 pc=0xff4505817660
+NOVAFEX_TEST: exit=91
