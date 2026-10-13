@@ -44,6 +44,7 @@ if [[ -x "$native/kyty_emulator" && "${NOVA_ENGINE:-native}" != fex ]]; then
     else
         echo 'NOVA_INPUT: no DroidDeck gamepad rings'
     fi
+    echo "NOVA_AUDIO_ENV: PULSE_SERVER=${PULSE_SERVER:-unset} XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-unset} SDL_AUDIO_DRIVER=${SDL_AUDIO_DRIVER:-auto} libs: $(ls /usr/lib/aarch64-linux-gnu/libpulse.so.0 /usr/lib/aarch64-linux-gnu/libasound.so.2 /usr/lib/aarch64-linux-gnu/libpipewire-0.3.so.0 2>/dev/null | xargs -n1 basename 2>/dev/null | tr '\n' ' ')"
     stage F 'PS5 loader UNVERIFIED (see Kyty output below)'
     stage G 'First rendered frame UNVERIFIED'
     echo "NOVA_LAUNCH: native AArch64 Kyty game=$game relaxed_vulkan=$NOVA_RELAXED_VULKAN"

@@ -120,9 +120,20 @@ final class RuntimeEngine {
             // stop it instead of forcing the user to kill the whole app.
             BootLog.write(context,"Stopping the previous runtime session before launching "+name);
             try{context.startService(new Intent(context,SessionService.class).setAction(context.getPackageName()+".STOP_SESSION"));}catch(Exception x){BootLog.write(context,"Session stop failed: "+x);}
-            for(int i=0;i<30&&SessionState.INSTANCE.getRunning();i++){try{Thread.sleep(100);}catch(InterruptedException x){break;}}
-            if(SessionState.INSTANCE.getRunning())throw new IllegalStateException("The previous game session is still shutting down. Try again in a few seconds.");
+            // The session service handles the stop on this (main) thread, so never block here:
+            // poll from the main looper and start the game once the old session has gone.
+            final android.os.Handler handler=new android.os.Handler(android.os.Looper.getMainLooper());
+            final long deadline=android.os.SystemClock.uptimeMillis()+15000;
+            handler.postDelayed(new Runnable(){public void run(){
+                if(!SessionState.INSTANCE.getRunning()){start(game,name);return;}
+                if(android.os.SystemClock.uptimeMillis()>deadline){BootLog.write(context,"Previous session did not stop within 15 s");android.widget.Toast.makeText(context,"The previous game is still closing. Try again in a moment.",android.widget.Toast.LENGTH_LONG).show();return;}
+                handler.postDelayed(this,200);
+            }},200);
+            return;
         }
+        start(game,name);
+    }
+    void start(String game,String name){
         BootLog.write(context,"Starting Linux Kyty/FEX session for "+name);context.getSharedPreferences("nova",0).edit().remove("last_engine_error").apply();
         context.getSharedPreferences("session",0).edit().putInt("resolutionCap.run",720).putString("fexPreset","COMPATIBILITY").apply();
         Intent intent=new Intent(context,NovaSessionActivity.class);intent.putExtra(SessionService.EXTRA_MODE,SessionService.MODE_RUN);intent.putExtra(SessionService.EXTRA_PROGRAM,"/opt/novaps5/launch.sh");intent.putExtra(SessionService.EXTRA_PROGRAM_ARGS,new String[]{game});intent.putExtra("nova_game_path",game);intent.putExtra("nova_game_name",name);context.startActivity(intent);

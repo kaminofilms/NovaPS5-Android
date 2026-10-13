@@ -505,6 +505,218 @@ index 673a7dc7..85268c37 100644
  #endif
  
  	pthread_exit(value);
+diff --git a/src/libs/audio.cpp b/src/libs/audio.cpp
+index 1aa13b2c..2c3fbe8d 100644
+--- a/src/libs/audio.cpp
++++ b/src/libs/audio.cpp
+@@ -1,5 +1,7 @@
+ #include "libs/audio.h"
+ 
++#include <cstdio>
++
+ #include "common/assert.h"
+ #include "common/emulatorConfig.h"
+ #include "common/logging/log.h"
+@@ -265,8 +267,17 @@ bool Audio::OpenSdlDevice(PortOut* port) {
+ 
+ 	if (!SDL_InitSubSystem(SDL_INIT_AUDIO)) {
+ 		LOGF("AudioOut: SDL audio init failed: %s\n", SDL_GetError());
++		std::fprintf(stderr, "NOVA_AUDIO: SDL audio init failed: %s\n", SDL_GetError());
+ 		return false;
+ 	}
++	{
++		static bool reported = false;
++		if (!reported) {
++			reported = true;
++			std::fprintf(stderr, "NOVA_AUDIO: SDL audio driver %s\n",
++			             SDL_GetCurrentAudioDriver() != nullptr ? SDL_GetCurrentAudioDriver() : "(none)");
++		}
++	}
+ 
+ 	SDL_AudioSpec desired {};
+ 	desired.freq     = static_cast<int>(port->freq);
+@@ -277,6 +288,7 @@ bool Audio::OpenSdlDevice(PortOut* port) {
+ 	                                         nullptr);
+ 	if (port->stream == nullptr) {
+ 		LOGF("AudioOut: SDL_OpenAudioDeviceStream failed: %s\n", SDL_GetError());
++		std::fprintf(stderr, "NOVA_AUDIO: open failed: %s\n", SDL_GetError());
+ 		SDL_QuitSubSystem(SDL_INIT_AUDIO);
+ 		return false;
+ 	}
+diff --git a/src/libs/guestPrintf.cpp b/src/libs/guestPrintf.cpp
+index afc61624..5ea3e7e2 100644
+--- a/src/libs/guestPrintf.cpp
++++ b/src/libs/guestPrintf.cpp
+@@ -7,6 +7,8 @@
+ 
+ #include "libs/guestPrintf.h"
+ 
++#include <string>
++
+ #include "common/abi.h"
+ #include "common/assert.h"
+ #include "common/common.h"
+@@ -443,7 +445,7 @@ static size_t _strnlen_s(const Char* str, size_t maxsize) {
+ 
+ // NOLINTNEXTLINE(readability-function-cognitive-complexity)
+ static int kyty_printf_internal(bool sn, char* sn_s, size_t sn_n, const char* format,
+-                                VaList* va_list) {
++                                VaList* va_list, std::string* result = nullptr) {
+ 	std::vector<char> buffer;
+ 
+ 	uint32_t flags     = 0;
+@@ -772,6 +774,10 @@ static int kyty_printf_internal(bool sn, char* sn_s, size_t sn_n, const char* fo
+ 	// termination
+ 	out(static_cast<char>(0), &buffer, idx < maxlen ? idx : maxlen - 1U, maxlen);
+ 
++	if (result != nullptr) {
++		*result = buffer.data();
++		return static_cast<int>(idx);
++	}
+ 	if (sn) {
+ 		int s = snprintf(sn_s, sn_n, "%s", buffer.data());
+ 		EXIT_NOT_IMPLEMENTED(static_cast<size_t>(s) >= sn_n);
+@@ -819,6 +825,12 @@ guest_snprintf_ctx_func_t GetGuestSnprintfCtxFunc() {
+ 	return kyty_snprintf_ctx;
+ }
+ 
++std::string GuestVformat(const char* format, VaList* va_list) {
++	std::string result;
++	kyty_printf_internal(false, nullptr, 0, format, va_list, &result);
++	return result;
++}
++
+ guest_vprintf_func_t GetGuestVprintfFunc() {
+ 	return kyty_vprintf;
+ }
+diff --git a/src/libs/guestPrintf.h b/src/libs/guestPrintf.h
+index 0e71438e..f447c227 100644
+--- a/src/libs/guestPrintf.h
++++ b/src/libs/guestPrintf.h
+@@ -4,6 +4,8 @@
+ #include "common/abi.h"
+ #include "common/common.h"
+ 
++#include <string>
++
+ namespace Libs {
+ 
+ struct VaContext;
+@@ -20,6 +22,9 @@ guest_printf_ctx_func_t   GetGuestPrintfCtxFunc();
+ guest_snprintf_ctx_func_t GetGuestSnprintfCtxFunc();
+ guest_vprintf_func_t      GetGuestVprintfFunc();
+ 
++// Formats with a guest (x86-64 SysV) va_list; used where the host va_list ABI differs.
++std::string GuestVformat(const char* format, VaList* va_list);
++
+ } // namespace Libs
+ 
+ #endif /* EMULATOR_INCLUDE_EMULATOR_LIBS_GUEST_PRINTF_H_ */
+diff --git a/src/libs/libC.cpp b/src/libs/libC.cpp
+index acff2c8c..3c87dc39 100644
+--- a/src/libs/libC.cpp
++++ b/src/libs/libC.cpp
+@@ -1515,30 +1515,67 @@ static KYTY_SYSV_ABI wint_t nova_ungetwc(wint_t a0, void* a1) {
+ 	if (GuestFd(a1) >= 0) return WEOF; return std::ungetwc(a0, static_cast<FILE*>(a1));
+ }
+ 
+-static KYTY_SYSV_ABI int nova_vfprintf(void* a0, const char* a1, NovaVaList a2) {
++[[maybe_unused]] static int nova_host_vfprintf(void* a0, const char* a1, va_list a2) {
+ 	if (GuestFd(a0) >= 0) { char* text = nullptr; const int n = ::vasprintf(&text, a1, a2); if (n < 0) return -1; const auto written = GuestWrite(a0, text, static_cast<size_t>(n)); std::free(text); return written < 0 ? -1 : n; } return std::vfprintf(static_cast<FILE*>(a0), a1, a2);
+ }
+ 
+-static KYTY_SYSV_ABI int nova_vsnprintf(char* a0, size_t a1, const char* a2, NovaVaList a3) {
++[[maybe_unused]] static int nova_host_vsnprintf(char* a0, size_t a1, const char* a2, va_list a3) {
+ 	return std::vsnprintf(a0, a1, a2, a3);
+ }
+ 
+-static KYTY_SYSV_ABI int nova_vsprintf(char* a0, const char* a1, NovaVaList a2) {
++[[maybe_unused]] static int nova_host_vsprintf(char* a0, const char* a1, va_list a2) {
+ 	return std::vsprintf(a0, a1, a2);
+ }
+ 
+-static KYTY_SYSV_ABI int nova_vasprintf(char** a0, const char* a1, NovaVaList a2) {
++[[maybe_unused]] static int nova_host_vasprintf(char** a0, const char* a1, va_list a2) {
+ 	return ::vasprintf(a0, a1, a2);
+ }
+ 
+-static KYTY_SYSV_ABI int nova_vsscanf(const char* a0, const char* a1, NovaVaList a2) {
++[[maybe_unused]] static int nova_host_vsscanf(const char* a0, const char* a1, va_list a2) {
+ 	return std::vsscanf(a0, a1, a2);
+ }
+ 
++#if defined(__aarch64__)
++// Native AArch64 host: the guest passes an x86-64 SysV va_list (pointer to its register save
++// area record). Format it with Kyty's guest printf engine, then write the result.
++static KYTY_SYSV_ABI int nova_vfprintf(void* a0, const char* a1, Libs::VaList* a2) {
++	const auto text = Libs::GuestVformat(a1, a2);
++	if (GuestFd(a0) >= 0) { const auto written = GuestWrite(a0, text.data(), text.size()); return written < 0 ? -1 : static_cast<int>(text.size()); }
++	return std::fputs(text.c_str(), static_cast<FILE*>(a0)) < 0 ? -1 : static_cast<int>(text.size());
++}
++static KYTY_SYSV_ABI int nova_vsnprintf(char* a0, size_t a1, const char* a2, Libs::VaList* a3) {
++	const auto text = Libs::GuestVformat(a2, a3);
++	if (a1 != 0) { const auto n = std::min(a1 - 1, text.size()); std::memcpy(a0, text.data(), n); a0[n] = 0; }
++	return static_cast<int>(text.size());
++}
++static KYTY_SYSV_ABI int nova_vsprintf(char* a0, const char* a1, Libs::VaList* a2) {
++	const auto text = Libs::GuestVformat(a1, a2);
++	std::memcpy(a0, text.c_str(), text.size() + 1);
++	return static_cast<int>(text.size());
++}
++static KYTY_SYSV_ABI int nova_vasprintf(char** a0, const char* a1, Libs::VaList* a2) {
++	const auto text = Libs::GuestVformat(a1, a2);
++	*a0 = static_cast<char*>(std::malloc(text.size() + 1));
++	if (*a0 == nullptr) return -1;
++	std::memcpy(*a0, text.c_str(), text.size() + 1);
++	return static_cast<int>(text.size());
++}
++static KYTY_SYSV_ABI int nova_vsscanf(const char* /*a0*/, const char* a1, Libs::VaList* /*a2*/) {
++	LOGF("LibcNova: vsscanf(\"%s\") with a guest va_list is not supported on AArch64\n", a1);
++	return 0;
++}
++#else
++static KYTY_SYSV_ABI int nova_vfprintf(void* a0, const char* a1, NovaVaList a2) { return nova_host_vfprintf(a0, a1, a2); }
++static KYTY_SYSV_ABI int nova_vsnprintf(char* a0, size_t a1, const char* a2, NovaVaList a3) { return nova_host_vsnprintf(a0, a1, a2, a3); }
++static KYTY_SYSV_ABI int nova_vsprintf(char* a0, const char* a1, NovaVaList a2) { return nova_host_vsprintf(a0, a1, a2); }
++static KYTY_SYSV_ABI int nova_vasprintf(char** a0, const char* a1, NovaVaList a2) { return nova_host_vasprintf(a0, a1, a2); }
++static KYTY_SYSV_ABI int nova_vsscanf(const char* a0, const char* a1, NovaVaList a2) { return nova_host_vsscanf(a0, a1, a2); }
++#endif
++
+ static KYTY_SYSV_ABI int nova_fprintf_v(void* a0, const char* a1, ...) {
+ 	va_list ap;
+ 	va_start(ap, a1);
+-	const int r = nova_vfprintf(a0, a1, ap);
++	const int r = nova_host_vfprintf(a0, a1, ap);
+ 	va_end(ap);
+ 	return r;
+ }
+@@ -1546,7 +1583,7 @@ static KYTY_SYSV_ABI int nova_fprintf_v(void* a0, const char* a1, ...) {
+ static KYTY_SYSV_ABI int nova_sprintf_v(char* a0, const char* a1, ...) {
+ 	va_list ap;
+ 	va_start(ap, a1);
+-	const int r = nova_vsprintf(a0, a1, ap);
++	const int r = nova_host_vsprintf(a0, a1, ap);
+ 	va_end(ap);
+ 	return r;
+ }
+@@ -1554,7 +1591,7 @@ static KYTY_SYSV_ABI int nova_sprintf_v(char* a0, const char* a1, ...) {
+ static KYTY_SYSV_ABI int nova_asprintf_v(char** a0, const char* a1, ...) {
+ 	va_list ap;
+ 	va_start(ap, a1);
+-	const int r = nova_vasprintf(a0, a1, ap);
++	const int r = nova_host_vasprintf(a0, a1, ap);
+ 	va_end(ap);
+ 	return r;
+ }
+@@ -1562,7 +1599,7 @@ static KYTY_SYSV_ABI int nova_asprintf_v(char** a0, const char* a1, ...) {
+ static KYTY_SYSV_ABI int nova_sscanf_v(const char* a0, const char* a1, ...) {
+ 	va_list ap;
+ 	va_start(ap, a1);
+-	const int r = nova_vsscanf(a0, a1, ap);
++	const int r = nova_host_vsscanf(a0, a1, ap);
+ 	va_end(ap);
+ 	return r;
+ }
 diff --git a/src/libs/libKernel.cpp b/src/libs/libKernel.cpp
 index 7f75f2bb..54207c3c 100644
 --- a/src/libs/libKernel.cpp
