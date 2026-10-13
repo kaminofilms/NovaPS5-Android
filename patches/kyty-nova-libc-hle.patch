@@ -1,0 +1,796 @@
+diff --git a/src/libs/libC.cpp b/src/libs/libC.cpp
+index 20b44706..9d34e811 100644
+--- a/src/libs/libC.cpp
++++ b/src/libs/libC.cpp
+@@ -16,6 +16,13 @@
+ #include "loader/symbolDatabase.h"
+ 
+ #include <algorithm>
++#include <malloc.h>
++#include <clocale>
++#include <cwctype>
++#include <cwchar>
++#include <cstdio>
++#include <cstdarg>
++#include <csetjmp>
+ #include <cctype>
+ #include <chrono>
+ #include <cinttypes>
+@@ -672,6 +679,11 @@ static void InitializeSdkStdio() {
+ 	(void)initialized;
+ }
+ 
++void* NovaGuestStream(int index) {
++	InitializeSdkStdio();
++	return &g_sdk_files[index];
++}
++
+ static int FlushSdkOutput(void* stream) {
+ 	return FlushBsdOutput(stream,
+ 	    [](const void* pointer, size_t size, bool write) {
+@@ -904,10 +916,765 @@ LIB_DEFINE(InitLibcInternal_1) {
+ 
+ } // namespace LibcInternal
+ 
++// Nova: host-forwarded C library for titles that import firmware LibcInternal symbols
++// directly (homebrew built with the open PS5 SDK). Retail games ship their own libc.prx.
++// Linux only: guest and host share the SysV x86-64 ABI, so arguments, va_list and FILE*
++// for host-opened files pass through unchanged. Guest standard streams map to Kyty's
++// descriptors (pipes/dup2 included). wchar_t is the FreeBSD 32-bit type.
++#if KYTY_PLATFORM == KYTY_PLATFORM_LINUX
++namespace LibcNova {
++
++LIB_VERSION("LibcInternal", 1, "LibcInternal", 1, 1);
++
++using NovaCompare = int (*)(const void*, const void*);
++using NovaVaList  = va_list;
++static int g_nova_isthreaded = 1;
++
++static int GuestFd(void* file) {
++	if (file == LibcInternal::NovaGuestStream(0) || file == stdin) return 0;
++	if (file == LibcInternal::NovaGuestStream(1) || file == stdout) return 1;
++	if (file == LibcInternal::NovaGuestStream(2) || file == stderr) return 2;
++	return -1;
++}
++
++static int64_t GuestWrite(void* file, const void* data, size_t size) {
++	return LibKernel::FileSystem::KernelWrite(GuestFd(file), data, size);
++}
++
++static KYTY_SYSV_ABI float nova_acosf(float a0) {
++	return ::acosf(a0);
++}
++
++static KYTY_SYSV_ABI float nova_expf(float a0) {
++	return ::expf(a0);
++}
++
++static KYTY_SYSV_ABI float nova_exp2f(float a0) {
++	return ::exp2f(a0);
++}
++
++static KYTY_SYSV_ABI float nova_log10f(float a0) {
++	return ::log10f(a0);
++}
++
++static KYTY_SYSV_ABI float nova_log2f(float a0) {
++	return ::log2f(a0);
++}
++
++static KYTY_SYSV_ABI float nova_tanf(float a0) {
++	return ::tanf(a0);
++}
++
++static KYTY_SYSV_ABI float nova_tanhf(float a0) {
++	return ::tanhf(a0);
++}
++
++static KYTY_SYSV_ABI float nova_atan2f(float a0, float a1) {
++	return ::atan2f(a0, a1);
++}
++
++static KYTY_SYSV_ABI float nova_fmodf(float a0, float a1) {
++	return ::fmodf(a0, a1);
++}
++
++static KYTY_SYSV_ABI float nova_hypotf(float a0, float a1) {
++	return ::hypotf(a0, a1);
++}
++
++static KYTY_SYSV_ABI float nova_powf(float a0, float a1) {
++	return ::powf(a0, a1);
++}
++
++static KYTY_SYSV_ABI float nova_remainderf(float a0, float a1) {
++	return ::remainderf(a0, a1);
++}
++
++static KYTY_SYSV_ABI double nova_exp(double a0) {
++	return ::exp(a0);
++}
++
++static KYTY_SYSV_ABI double nova_exp2(double a0) {
++	return ::exp2(a0);
++}
++
++static KYTY_SYSV_ABI double nova_log(double a0) {
++	return ::log(a0);
++}
++
++static KYTY_SYSV_ABI double nova_log10(double a0) {
++	return ::log10(a0);
++}
++
++static KYTY_SYSV_ABI double nova_log2(double a0) {
++	return ::log2(a0);
++}
++
++static KYTY_SYSV_ABI double nova_tanh(double a0) {
++	return ::tanh(a0);
++}
++
++static KYTY_SYSV_ABI double nova_pow(double a0, double a1) {
++	return ::pow(a0, a1);
++}
++
++static KYTY_SYSV_ABI double nova_frexp(double a0, int* a1) {
++	return ::frexp(a0, a1);
++}
++
++static KYTY_SYSV_ABI float nova_frexpf(float a0, int* a1) {
++	return ::frexpf(a0, a1);
++}
++
++static KYTY_SYSV_ABI double nova_ldexp(double a0, int a1) {
++	return ::ldexp(a0, a1);
++}
++
++static KYTY_SYSV_ABI float nova_ldexpf(float a0, int a1) {
++	return ::ldexpf(a0, a1);
++}
++
++static KYTY_SYSV_ABI long long nova_llround(double a0) {
++	return ::llround(a0);
++}
++
++static KYTY_SYSV_ABI long nova_lroundf(float a0) {
++	return ::lroundf(a0);
++}
++
++static KYTY_SYSV_ABI int nova_isfinite(double a0) {
++	return std::isfinite(a0) ? 1 : 0;
++}
++
++static KYTY_SYSV_ABI int nova_isfinitef(float a0) {
++	return std::isfinite(a0) ? 1 : 0;
++}
++
++static KYTY_SYSV_ABI int nova_isinff(float a0) {
++	return std::isinf(a0) ? (a0 < 0 ? -1 : 1) : 0;
++}
++
++static KYTY_SYSV_ABI int nova_isnormal(double a0) {
++	return std::isnormal(a0) ? 1 : 0;
++}
++
++static KYTY_SYSV_ABI int nova_isnormalf(float a0) {
++	return std::isnormal(a0) ? 1 : 0;
++}
++
++static KYTY_SYSV_ABI int nova_isalnum(int a0) {
++	return ::isalnum(a0);
++}
++
++static KYTY_SYSV_ABI int nova_isprint(int a0) {
++	return ::isprint(a0);
++}
++
++static KYTY_SYSV_ABI int nova_isspace(int a0) {
++	return ::isspace(a0);
++}
++
++static KYTY_SYSV_ABI int nova_isxdigit(int a0) {
++	return ::isxdigit(a0);
++}
++
++static KYTY_SYSV_ABI int nova_tolower(int a0) {
++	return ::tolower(a0);
++}
++
++static KYTY_SYSV_ABI int nova_toupper(int a0) {
++	return ::toupper(a0);
++}
++
++static KYTY_SYSV_ABI int nova_iswalnum(wint_t a0) {
++	return ::iswalnum(a0);
++}
++
++static KYTY_SYSV_ABI int nova_iswalpha(wint_t a0) {
++	return ::iswalpha(a0);
++}
++
++static KYTY_SYSV_ABI int nova_iswblank(wint_t a0) {
++	return ::iswblank(a0);
++}
++
++static KYTY_SYSV_ABI int nova_iswcntrl(wint_t a0) {
++	return ::iswcntrl(a0);
++}
++
++static KYTY_SYSV_ABI int nova_iswdigit(wint_t a0) {
++	return ::iswdigit(a0);
++}
++
++static KYTY_SYSV_ABI int nova_iswgraph(wint_t a0) {
++	return ::iswgraph(a0);
++}
++
++static KYTY_SYSV_ABI int nova_iswlower(wint_t a0) {
++	return ::iswlower(a0);
++}
++
++static KYTY_SYSV_ABI int nova_iswprint(wint_t a0) {
++	return ::iswprint(a0);
++}
++
++static KYTY_SYSV_ABI int nova_iswpunct(wint_t a0) {
++	return ::iswpunct(a0);
++}
++
++static KYTY_SYSV_ABI int nova_iswspace(wint_t a0) {
++	return ::iswspace(a0);
++}
++
++static KYTY_SYSV_ABI int nova_iswupper(wint_t a0) {
++	return ::iswupper(a0);
++}
++
++static KYTY_SYSV_ABI int nova_iswxdigit(wint_t a0) {
++	return ::iswxdigit(a0);
++}
++
++static KYTY_SYSV_ABI wint_t nova_towlower(wint_t a0) {
++	return ::towlower(a0);
++}
++
++static KYTY_SYSV_ABI wint_t nova_towupper(wint_t a0) {
++	return ::towupper(a0);
++}
++
++static KYTY_SYSV_ABI wctype_t nova_wctype(const char* a0) {
++	return ::wctype(a0);
++}
++
++static KYTY_SYSV_ABI int nova_iswctype(wint_t a0, wctype_t a1) {
++	return ::iswctype(a0, a1);
++}
++
++static KYTY_SYSV_ABI wint_t nova_btowc(int a0) {
++	return ::btowc(a0);
++}
++
++static KYTY_SYSV_ABI int nova_wctob(wint_t a0) {
++	return ::wctob(a0);
++}
++
++static KYTY_SYSV_ABI const void* nova_memchr(const void* a0, int a1, size_t a2) {
++	return ::memchr(a0, a1, a2);
++}
++
++static KYTY_SYSV_ABI int nova_strcasecmp(const char* a0, const char* a1) {
++	return ::strcasecmp(a0, a1);
++}
++
++static KYTY_SYSV_ABI int nova_strcoll(const char* a0, const char* a1) {
++	return ::strcoll(a0, a1);
++}
++
++static KYTY_SYSV_ABI char* nova_strcpy(char* a0, const char* a1) {
++	return ::strcpy(a0, a1);
++}
++
++static KYTY_SYSV_ABI size_t nova_strcspn(const char* a0, const char* a1) {
++	return ::strcspn(a0, a1);
++}
++
++static KYTY_SYSV_ABI size_t nova_strspn(const char* a0, const char* a1) {
++	return ::strspn(a0, a1);
++}
++
++static KYTY_SYSV_ABI char* nova_strdup(const char* a0) {
++	return ::strdup(a0);
++}
++
++static KYTY_SYSV_ABI char* nova_strndup(const char* a0, size_t a1) {
++	return ::strndup(a0, a1);
++}
++
++static KYTY_SYSV_ABI size_t nova_strnlen(const char* a0, size_t a1) {
++	return ::strnlen(a0, a1);
++}
++
++static KYTY_SYSV_ABI char* nova_strncat(char* a0, const char* a1, size_t a2) {
++	return ::strncat(a0, a1, a2);
++}
++
++static KYTY_SYSV_ABI const char* nova_strpbrk(const char* a0, const char* a1) {
++	return ::strpbrk(a0, a1);
++}
++
++static KYTY_SYSV_ABI char* nova_strtok(char* a0, const char* a1) {
++	return ::strtok(a0, a1);
++}
++
++static KYTY_SYSV_ABI size_t nova_strxfrm(char* a0, const char* a1, size_t a2) {
++	return ::strxfrm(a0, a1, a2);
++}
++
++static KYTY_SYSV_ABI char* nova_strerror(int a0) {
++	return ::strerror(a0);
++}
++
++static KYTY_SYSV_ABI int nova_strerror_r(int a0, char* a1, size_t a2) {
++	if (a1 == nullptr || a2 == 0) return 34; std::snprintf(a1, a2, "%s", std::strerror(a0)); return 0;
++}
++
++static KYTY_SYSV_ABI double nova_atof(const char* a0) {
++	return ::atof(a0);
++}
++
++static KYTY_SYSV_ABI double nova_strtod(const char* a0, char** a1) {
++	return ::strtod(a0, a1);
++}
++
++static KYTY_SYSV_ABI float nova_strtof(const char* a0, char** a1) {
++	return ::strtof(a0, a1);
++}
++
++static KYTY_SYSV_ABI long double nova_strtold(const char* a0, char** a1) {
++	return ::strtold(a0, a1);
++}
++
++static KYTY_SYSV_ABI long long nova_strtoll(const char* a0, char** a1, int a2) {
++	return ::strtoll(a0, a1, a2);
++}
++
++static KYTY_SYSV_ABI unsigned long long nova_strtoull(const char* a0, char** a1, int a2) {
++	return ::strtoull(a0, a1, a2);
++}
++
++static KYTY_SYSV_ABI size_t nova_wcslen(const wchar_t* a0) {
++	return ::wcslen(a0);
++}
++
++static KYTY_SYSV_ABI int nova_wcscoll(const wchar_t* a0, const wchar_t* a1) {
++	return ::wcscoll(a0, a1);
++}
++
++static KYTY_SYSV_ABI size_t nova_wcsxfrm(wchar_t* a0, const wchar_t* a1, size_t a2) {
++	return ::wcsxfrm(a0, a1, a2);
++}
++
++static KYTY_SYSV_ABI double nova_wcstod(const wchar_t* a0, wchar_t** a1) {
++	return ::wcstod(a0, a1);
++}
++
++static KYTY_SYSV_ABI float nova_wcstof(const wchar_t* a0, wchar_t** a1) {
++	return ::wcstof(a0, a1);
++}
++
++static KYTY_SYSV_ABI long double nova_wcstold(const wchar_t* a0, wchar_t** a1) {
++	return ::wcstold(a0, a1);
++}
++
++static KYTY_SYSV_ABI long nova_wcstol(const wchar_t* a0, wchar_t** a1, int a2) {
++	return ::wcstol(a0, a1, a2);
++}
++
++static KYTY_SYSV_ABI long long nova_wcstoll(const wchar_t* a0, wchar_t** a1, int a2) {
++	return ::wcstoll(a0, a1, a2);
++}
++
++static KYTY_SYSV_ABI unsigned long nova_wcstoul(const wchar_t* a0, wchar_t** a1, int a2) {
++	return ::wcstoul(a0, a1, a2);
++}
++
++static KYTY_SYSV_ABI unsigned long long nova_wcstoull(const wchar_t* a0, wchar_t** a1, int a2) {
++	return ::wcstoull(a0, a1, a2);
++}
++
++static KYTY_SYSV_ABI const wchar_t* nova_wmemchr(const wchar_t* a0, wchar_t a1, size_t a2) {
++	return ::wmemchr(a0, a1, a2);
++}
++
++static KYTY_SYSV_ABI int nova_wmemcmp(const wchar_t* a0, const wchar_t* a1, size_t a2) {
++	return ::wmemcmp(a0, a1, a2);
++}
++
++static KYTY_SYSV_ABI size_t nova_wcrtomb(char* a0, wchar_t a1, mbstate_t* a2) {
++	return ::wcrtomb(a0, a1, a2);
++}
++
++static KYTY_SYSV_ABI size_t nova_mbrlen(const char* a0, size_t a1, mbstate_t* a2) {
++	return ::mbrlen(a0, a1, a2);
++}
++
++static KYTY_SYSV_ABI size_t nova_mbrtowc(wchar_t* a0, const char* a1, size_t a2, mbstate_t* a3) {
++	return ::mbrtowc(a0, a1, a2, a3);
++}
++
++static KYTY_SYSV_ABI size_t nova_mbsrtowcs(wchar_t* a0, const char** a1, size_t a2, mbstate_t* a3) {
++	return ::mbsrtowcs(a0, a1, a2, a3);
++}
++
++static KYTY_SYSV_ABI int nova_mbtowc(wchar_t* a0, const char* a1, size_t a2) {
++	return ::mbtowc(a0, a1, a2);
++}
++
++static KYTY_SYSV_ABI void* nova_calloc(size_t a0, size_t a1) {
++	return ::calloc(a0, a1);
++}
++
++static KYTY_SYSV_ABI void* nova_malloc(size_t a0) {
++	return ::malloc(a0);
++}
++
++static KYTY_SYSV_ABI void* nova_realloc(void* a0, size_t a1) {
++	return ::realloc(a0, a1);
++}
++
++static KYTY_SYSV_ABI void nova_free(void* a0) {
++	::free(a0);
++}
++
++static KYTY_SYSV_ABI int nova_posix_memalign(void** a0, size_t a1, size_t a2) {
++	return ::posix_memalign(a0, a1, a2);
++}
++
++static KYTY_SYSV_ABI size_t nova_malloc_usable_size(void* a0) {
++	return ::malloc_usable_size(a0);
++}
++
++static KYTY_SYSV_ABI void* nova_bsearch(const void* a0, const void* a1, size_t a2, size_t a3, NovaCompare a4) {
++	return ::bsearch(a0, a1, a2, a3, a4);
++}
++
++static KYTY_SYSV_ABI void nova_qsort(void* a0, size_t a1, size_t a2, NovaCompare a3) {
++	::qsort(a0, a1, a2, a3);
++}
++
++static KYTY_SYSV_ABI int nova_rand() {
++	return ::rand();
++}
++
++static KYTY_SYSV_ABI char* nova_ctime(const time_t* a0) {
++	return ::ctime(a0);
++}
++
++static KYTY_SYSV_ABI const char* nova_getprogname() {
++	return "eboot.bin";
++}
++
++static KYTY_SYSV_ABI const char* nova_setlocale(int a0, const char* a1) {
++	return (a1 == nullptr || a1[0] == 0 || std::strcmp(a1, "C") == 0 || std::strcmp(a1, "POSIX") == 0) ? "C" : nullptr;
++}
++
++static KYTY_SYSV_ABI const char* nova_getenv(const char* a0) {
++	(void)a0; return nullptr; // the guest environment is empty
++}
++
++static KYTY_SYSV_ABI int nova_unsetenv(const char* a0) {
++	(void)a0; return 0;
++}
++
++static KYTY_SYSV_ABI FILE* nova_fopen(const char* a0, const char* a1) {
++	if (a0 == nullptr || a1 == nullptr) return nullptr; const auto real = LibKernel::FileSystem::GetRealFilename(a0); auto* f = std::fopen(real.empty() ? a0 : real.c_str(), a1); if (f == nullptr) *Posix::GetErrorAddr() = Posix::POSIX_ENOENT; return f;
++}
++
++static KYTY_SYSV_ABI FILE* nova_fdopen(int a0, const char* a1) {
++	(void)a0; (void)a1; *Posix::GetErrorAddr() = Posix::POSIX_EINVAL; return nullptr;
++}
++
++static KYTY_SYSV_ABI int nova_fclose(void* a0) {
++	if (GuestFd(a0) >= 0) return 0; return std::fclose(static_cast<FILE*>(a0));
++}
++
++static KYTY_SYSV_ABI size_t nova_fwrite(const void* a0, size_t a1, size_t a2, void* a3) {
++	if (GuestFd(a3) >= 0) { const auto total = a1 * a2; return total == 0 ? 0 : static_cast<size_t>(std::max<int64_t>(0, GuestWrite(a3, a0, total))) / a1; } return std::fwrite(a0, a1, a2, static_cast<FILE*>(a3));
++}
++
++static KYTY_SYSV_ABI size_t nova_fread(void* a0, size_t a1, size_t a2, void* a3) {
++	if (GuestFd(a3) >= 0) return 0; return std::fread(a0, a1, a2, static_cast<FILE*>(a3));
++}
++
++static KYTY_SYSV_ABI int nova_fputs(const char* a0, void* a1) {
++	if (GuestFd(a1) >= 0) return GuestWrite(a1, a0, std::strlen(a0)) < 0 ? EOF : 0; return std::fputs(a0, static_cast<FILE*>(a1));
++}
++
++static KYTY_SYSV_ABI int nova_fputc(int a0, void* a1) {
++	if (GuestFd(a1) >= 0) { const char c = static_cast<char>(a0); return GuestWrite(a1, &c, 1) == 1 ? (a0 & 0xff) : EOF; } return std::fputc(a0, static_cast<FILE*>(a1));
++}
++
++static KYTY_SYSV_ABI int nova_putchar(int a0) {
++	const char c = static_cast<char>(a0); return LibKernel::FileSystem::KernelWrite(1, &c, 1) == 1 ? (a0 & 0xff) : EOF;
++}
++
++static KYTY_SYSV_ABI char* nova_fgets(char* a0, int a1, void* a2) {
++	if (GuestFd(a2) >= 0) return nullptr; return std::fgets(a0, a1, static_cast<FILE*>(a2));
++}
++
++static KYTY_SYSV_ABI int nova_fgetc(void* a0) {
++	if (GuestFd(a0) >= 0) return EOF; return std::fgetc(static_cast<FILE*>(a0));
++}
++
++static KYTY_SYSV_ABI int nova_getc(void* a0) {
++	if (GuestFd(a0) >= 0) return EOF; return std::getc(static_cast<FILE*>(a0));
++}
++
++static KYTY_SYSV_ABI int nova_ungetc(int a0, void* a1) {
++	if (GuestFd(a1) >= 0) return EOF; return std::ungetc(a0, static_cast<FILE*>(a1));
++}
++
++static KYTY_SYSV_ABI int nova_fseek(void* a0, long a1, int a2) {
++	if (GuestFd(a0) >= 0) { *Posix::GetErrorAddr() = Posix::POSIX_ESPIPE; return -1; } return std::fseek(static_cast<FILE*>(a0), a1, a2);
++}
++
++static KYTY_SYSV_ABI int nova_fseeko(void* a0, int64_t a1, int a2) {
++	if (GuestFd(a0) >= 0) { *Posix::GetErrorAddr() = Posix::POSIX_ESPIPE; return -1; } return ::fseeko(static_cast<FILE*>(a0), a1, a2);
++}
++
++static KYTY_SYSV_ABI long nova_ftell(void* a0) {
++	if (GuestFd(a0) >= 0) { *Posix::GetErrorAddr() = Posix::POSIX_ESPIPE; return -1; } return std::ftell(static_cast<FILE*>(a0));
++}
++
++static KYTY_SYSV_ABI int64_t nova_ftello(void* a0) {
++	if (GuestFd(a0) >= 0) { *Posix::GetErrorAddr() = Posix::POSIX_ESPIPE; return -1; } return ::ftello(static_cast<FILE*>(a0));
++}
++
++static KYTY_SYSV_ABI void nova_rewind(void* a0) {
++	if (GuestFd(a0) < 0) std::rewind(static_cast<FILE*>(a0));
++}
++
++static KYTY_SYSV_ABI int nova_feof(void* a0) {
++	if (GuestFd(a0) >= 0) return GuestFd(a0) == 0 ? 1 : 0; return std::feof(static_cast<FILE*>(a0));
++}
++
++static KYTY_SYSV_ABI int nova_ferror(void* a0) {
++	if (GuestFd(a0) >= 0) return 0; return std::ferror(static_cast<FILE*>(a0));
++}
++
++static KYTY_SYSV_ABI int nova_fileno(void* a0) {
++	const int fd = GuestFd(a0); return fd >= 0 ? fd : ::fileno(static_cast<FILE*>(a0));
++}
++
++static KYTY_SYSV_ABI int nova_setvbuf(void* a0, char* a1, int a2, size_t a3) {
++	if (GuestFd(a0) >= 0) return 0; return std::setvbuf(static_cast<FILE*>(a0), a1, a2 == 0 ? _IOFBF : a2 == 1 ? _IOLBF : _IONBF, a3); // FreeBSD _IOFBF=0 _IOLBF=1 _IONBF=2
++}
++
++static KYTY_SYSV_ABI int nova_remove(const char* a0) {
++	if (a0 == nullptr) return -1; const auto real = LibKernel::FileSystem::GetRealFilename(a0); return std::remove(real.empty() ? a0 : real.c_str());
++}
++
++static KYTY_SYSV_ABI wint_t nova_fputwc(wchar_t a0, void* a1) {
++	char buffer[8]; std::mbstate_t state {}; const auto n = std::wcrtomb(buffer, a0, &state); if (n == static_cast<size_t>(-1)) return WEOF; if (GuestFd(a1) >= 0) return GuestWrite(a1, buffer, n) == static_cast<int64_t>(n) ? static_cast<wint_t>(a0) : WEOF; return std::fwrite(buffer, 1, n, static_cast<FILE*>(a1)) == n ? static_cast<wint_t>(a0) : WEOF;
++}
++
++static KYTY_SYSV_ABI wint_t nova_fgetwc(void* a0) {
++	if (GuestFd(a0) >= 0) return WEOF; return std::fgetwc(static_cast<FILE*>(a0));
++}
++
++static KYTY_SYSV_ABI wint_t nova_ungetwc(wint_t a0, void* a1) {
++	if (GuestFd(a1) >= 0) return WEOF; return std::ungetwc(a0, static_cast<FILE*>(a1));
++}
++
++static KYTY_SYSV_ABI int nova_vfprintf(void* a0, const char* a1, NovaVaList a2) {
++	if (GuestFd(a0) >= 0) { char* text = nullptr; const int n = ::vasprintf(&text, a1, a2); if (n < 0) return -1; const auto written = GuestWrite(a0, text, static_cast<size_t>(n)); std::free(text); return written < 0 ? -1 : n; } return std::vfprintf(static_cast<FILE*>(a0), a1, a2);
++}
++
++static KYTY_SYSV_ABI int nova_vsnprintf(char* a0, size_t a1, const char* a2, NovaVaList a3) {
++	return std::vsnprintf(a0, a1, a2, a3);
++}
++
++static KYTY_SYSV_ABI int nova_vsprintf(char* a0, const char* a1, NovaVaList a2) {
++	return std::vsprintf(a0, a1, a2);
++}
++
++static KYTY_SYSV_ABI int nova_vasprintf(char** a0, const char* a1, NovaVaList a2) {
++	return ::vasprintf(a0, a1, a2);
++}
++
++static KYTY_SYSV_ABI int nova_vsscanf(const char* a0, const char* a1, NovaVaList a2) {
++	return std::vsscanf(a0, a1, a2);
++}
++
++static KYTY_SYSV_ABI int nova_fprintf_v(void* a0, const char* a1, ...) {
++	va_list ap;
++	va_start(ap, a1);
++	const int r = nova_vfprintf(a0, a1, ap);
++	va_end(ap);
++	return r;
++}
++
++static KYTY_SYSV_ABI int nova_sprintf_v(char* a0, const char* a1, ...) {
++	va_list ap;
++	va_start(ap, a1);
++	const int r = nova_vsprintf(a0, a1, ap);
++	va_end(ap);
++	return r;
++}
++
++static KYTY_SYSV_ABI int nova_asprintf_v(char** a0, const char* a1, ...) {
++	va_list ap;
++	va_start(ap, a1);
++	const int r = nova_vasprintf(a0, a1, ap);
++	va_end(ap);
++	return r;
++}
++
++static KYTY_SYSV_ABI int nova_sscanf_v(const char* a0, const char* a1, ...) {
++	va_list ap;
++	va_start(ap, a1);
++	const int r = nova_vsscanf(a0, a1, ap);
++	va_end(ap);
++	return r;
++}
++
++LIB_DEFINE(InitLibcNova_1) {
++	LIB_FUNC("QI-x0SL8jhw", nova_acosf); // acosf
++	LIB_FUNC("8zsu04XNsZ4", nova_expf); // expf
++	LIB_FUNC("wuAQt-j+p4o", nova_exp2f); // exp2f
++	LIB_FUNC("lhpd6Wk6ccs", nova_log10f); // log10f
++	LIB_FUNC("hsi9drzHR2k", nova_log2f); // log2f
++	LIB_FUNC("ZE6RNL+eLbk", nova_tanf); // tanf
++	LIB_FUNC("SAd0Z3wKwLA", nova_tanhf); // tanhf
++	LIB_FUNC("EH-x713A99c", nova_atan2f); // atan2f
++	LIB_FUNC("88Vv-AzHVj8", nova_fmodf); // fmodf
++	LIB_FUNC("iz2shAGFIxc", nova_hypotf); // hypotf
++	LIB_FUNC("1D0H2KNjshE", nova_powf); // powf
++	LIB_FUNC("eS+MVq+Lltw", nova_remainderf); // remainderf
++	LIB_FUNC("NVadfnzQhHQ", nova_exp); // exp
++	LIB_FUNC("dnaeGXbjP6E", nova_exp2); // exp2
++	LIB_FUNC("rtV7-jWC6Yg", nova_log); // log
++	LIB_FUNC("WuMbPBKN1TU", nova_log10); // log10
++	LIB_FUNC("Y5DhuDKGlnQ", nova_log2); // log2
++	LIB_FUNC("JM4EBvWT9rc", nova_tanh); // tanh
++	LIB_FUNC("9LCjpWyQ5Zc", nova_pow); // pow
++	LIB_FUNC("kA-TdiOCsaY", nova_frexp); // frexp
++	LIB_FUNC("aaDMGGkXFxo", nova_frexpf); // frexpf
++	LIB_FUNC("JrwFIMzKNr0", nova_ldexp); // ldexp
++	LIB_FUNC("kn0yiYeExgA", nova_ldexpf); // ldexpf
++	LIB_FUNC("w-BvXF4O6xo", nova_llround); // llround
++	LIB_FUNC("C6gWCWJKM+U", nova_lroundf); // lroundf
++	LIB_FUNC("dhK16CKwhQg", nova_isfinite); // __isfinite
++	LIB_FUNC("Q8pvJimUWis", nova_isfinitef); // __isfinitef
++	LIB_FUNC("rDMyAf1Jhug", nova_isinff); // __isinff
++	LIB_FUNC("fGPRa6T+Cu8", nova_isnormal); // __isnormal
++	LIB_FUNC("WkYnBHFsmW4", nova_isnormalf); // __isnormalf
++	LIB_FUNC("4uJJNi+C9wk", nova_isalnum); // isalnum
++	LIB_FUNC("eGkOpTojJl4", nova_isprint); // isprint
++	LIB_FUNC("wazw2x2m3DQ", nova_isspace); // isspace
++	LIB_FUNC("srzSVSbKn7M", nova_isxdigit); // isxdigit
++	LIB_FUNC("PqF+kHW-2WQ", nova_tolower); // tolower
++	LIB_FUNC("TYE4irxSmko", nova_toupper); // toupper
++	LIB_FUNC("wDmL2EH0CBs", nova_iswalnum); // iswalnum
++	LIB_FUNC("D-qDARDb1aM", nova_iswalpha); // iswalpha
++	LIB_FUNC("p6DbM0OAHNo", nova_iswblank); // iswblank
++	LIB_FUNC("6A+1YZ79qFk", nova_iswcntrl); // iswcntrl
++	LIB_FUNC("n0kT+8Eeizs", nova_iswdigit); // iswdigit
++	LIB_FUNC("wjG0GyCyaP0", nova_iswgraph); // iswgraph
++	LIB_FUNC("Ok8KPy3nFls", nova_iswlower); // iswlower
++	LIB_FUNC("U7IhU4VEB-0", nova_iswprint); // iswprint
++	LIB_FUNC("AEPvEZkaLsU", nova_iswpunct); // iswpunct
++	LIB_FUNC("vqtytrxgLMs", nova_iswspace); // iswspace
++	LIB_FUNC("1QcrrL9UDRQ", nova_iswupper); // iswupper
++	LIB_FUNC("cjmSjRlnMAs", nova_iswxdigit); // iswxdigit
++	LIB_FUNC("J3J1T9fjUik", nova_towlower); // towlower
++	LIB_FUNC("1uf1SQsj5go", nova_towupper); // towupper
++	LIB_FUNC("+3PtYiUxl-U", nova_wctype); // wctype
++	LIB_FUNC("45E7omS0vvc", nova_iswctype); // iswctype
++	LIB_FUNC("LEvm25Sxi7I", nova_btowc); // btowc
++	LIB_FUNC("CL7VJxznu6g", nova_wctob); // wctob
++	LIB_FUNC("8u8lPzUEq+U", nova_memchr); // memchr
++	LIB_FUNC("AV6ipCNa4Rw", nova_strcasecmp); // strcasecmp
++	LIB_FUNC("gjbmYpP-XJQ", nova_strcoll); // strcoll
++	LIB_FUNC("kiZSXIWd9vg", nova_strcpy); // strcpy
++	LIB_FUNC("q0F6yS-rCms", nova_strcspn); // strcspn
++	LIB_FUNC("-kU6bB4M-+k", nova_strspn); // strspn
++	LIB_FUNC("g7zzzLDYGw0", nova_strdup); // strdup
++	LIB_FUNC("XGnuIBmEmyk", nova_strndup); // strndup
++	LIB_FUNC("5jNubw4vlAA", nova_strnlen); // strnlen
++	LIB_FUNC("kHg45qPC6f0", nova_strncat); // strncat
++	LIB_FUNC("kDZvoVssCgQ", nova_strpbrk); // strpbrk
++	LIB_FUNC("oVkZ8W8-Q8A", nova_strtok); // strtok
++	LIB_FUNC("zogPrkd46DY", nova_strxfrm); // strxfrm
++	LIB_FUNC("RIa6GnWp+iU", nova_strerror); // strerror
++	LIB_FUNC("RBcs3uut1TA", nova_strerror_r); // strerror_r
++	LIB_FUNC("SRI6S9B+-a4", nova_atof); // atof
++	LIB_FUNC("2vDqwBlpF-o", nova_strtod); // strtod
++	LIB_FUNC("xENtRue8dpI", nova_strtof); // strtof
++	LIB_FUNC("nW9JRkciRk4", nova_strtold); // strtold
++	LIB_FUNC("VOBg+iNwB-4", nova_strtoll); // strtoll
++	LIB_FUNC("5OqszGpy7Mg", nova_strtoull); // strtoull
++	LIB_FUNC("WkkeywLJcgU", nova_wcslen); // wcslen
++	LIB_FUNC("fV2xHER+bKE", nova_wcscoll); // wcscoll
++	LIB_FUNC("VuMMb5CfpEw", nova_wcsxfrm); // wcsxfrm
++	LIB_FUNC("7-a7sBHeUQ8", nova_wcstod); // wcstod
++	LIB_FUNC("7SXNu+0KBYQ", nova_wcstof); // wcstof
++	LIB_FUNC("LEbYWl9rBc8", nova_wcstold); // wcstold
++	LIB_FUNC("d3dMyWORw8A", nova_wcstol); // wcstol
++	LIB_FUNC("34nH7v2xvNQ", nova_wcstoll); // wcstoll
++	LIB_FUNC("5AYcEn7aoro", nova_wcstoul); // wcstoul
++	LIB_FUNC("DAbZ-Vfu6lQ", nova_wcstoull); // wcstoull
++	LIB_FUNC("fnUEjBCNRVU", nova_wmemchr); // wmemchr
++	LIB_FUNC("QJ5xVfKkni0", nova_wmemcmp); // wmemcmp
++	LIB_FUNC("y9OoA+P5cjk", nova_wcrtomb); // wcrtomb
++	LIB_FUNC("j6OnScWpu7k", nova_mbrlen); // mbrlen
++	LIB_FUNC("qVHpv0PxouI", nova_mbrtowc); // mbrtowc
++	LIB_FUNC("8hygs6D9KBY", nova_mbsrtowcs); // mbsrtowcs
++	LIB_FUNC("6eU9xX9oEdQ", nova_mbtowc); // mbtowc
++	LIB_FUNC("2X5agFjKxMc", nova_calloc); // calloc
++	LIB_FUNC("gQX+4GDQjpM", nova_malloc); // malloc
++	LIB_FUNC("Y7aJ1uydPMo", nova_realloc); // realloc
++	LIB_FUNC("tIhsqj0qsFE", nova_free); // free
++	LIB_FUNC("cVSk9y8URbc", nova_posix_memalign); // posix_memalign
++	LIB_FUNC("NDcSfcYZRC8", nova_malloc_usable_size); // malloc_usable_size
++	LIB_FUNC("NesIgTmfF0Q", nova_bsearch); // bsearch
++	LIB_FUNC("AEJdIVZTEmo", nova_qsort); // qsort
++	LIB_FUNC("cpCOXWMgha0", nova_rand); // rand
++	LIB_FUNC("0uAUs3hYuG4", nova_ctime); // ctime
++	LIB_FUNC("7Psx1DlAyE4", nova_getprogname); // getprogname
++	LIB_FUNC("PtsB1Q9wsFA", nova_setlocale); // setlocale
++	LIB_FUNC("smbQukfxYJM", nova_getenv); // getenv
++	LIB_FUNC("CRJcH8CnPSI", nova_unsetenv); // unsetenv
++	LIB_FUNC("xeYO4u7uyJ0", nova_fopen); // fopen
++	LIB_FUNC("qdlHjTa9hQ4", nova_fdopen); // fdopen
++	LIB_FUNC("uodLYyUip20", nova_fclose); // fclose
++	LIB_FUNC("MpxhMh8QFro", nova_fwrite); // fwrite
++	LIB_FUNC("lbB+UlZqVG0", nova_fread); // fread
++	LIB_FUNC("QrZZdJ8XsX0", nova_fputs); // fputs
++	LIB_FUNC("aZK8lNei-Qw", nova_fputc); // fputc
++	LIB_FUNC("m5wN+SwZOR4", nova_putchar); // putchar
++	LIB_FUNC("KdP-nULpuGw", nova_fgets); // fgets
++	LIB_FUNC("AEuF3F2f8TA", nova_fgetc); // fgetc
++	LIB_FUNC("8Q60JLJ6Rv4", nova_getc); // getc
++	LIB_FUNC("-LFO7jhD5CE", nova_ungetc); // ungetc
++	LIB_FUNC("rQFVBXp-Cxg", nova_fseek); // fseek
++	LIB_FUNC("pkYiKw09PRA", nova_fseeko); // fseeko
++	LIB_FUNC("Qazy8LmXTvw", nova_ftell); // ftell
++	LIB_FUNC("5qP1iVQkdck", nova_ftello); // ftello
++	LIB_FUNC("3QIPIh-GDjw", nova_rewind); // rewind
++	LIB_FUNC("LxcEU+ICu8U", nova_feof); // feof
++	LIB_FUNC("AHxyhN96dy4", nova_ferror); // ferror
++	LIB_FUNC("Fm-dmyywH9Q", nova_fileno); // fileno
++	LIB_FUNC("QMFyLoqNxIg", nova_setvbuf); // setvbuf
++	LIB_FUNC("MZO7FXyAPU8", nova_remove); // remove
++	LIB_FUNC("1QJWxoB6pCo", nova_fputwc); // fputwc
++	LIB_FUNC("bzbQ5zQ2Y3g", nova_fgetwc); // fgetwc
++	LIB_FUNC("Nz7J62MvgQs", nova_ungetwc); // ungetwc
++	LIB_FUNC("pDBDcY6uLSA", nova_vfprintf); // vfprintf
++	LIB_FUNC("Q2V+iqvjgC0", nova_vsnprintf); // vsnprintf
++	LIB_FUNC("jbz9I9vkqkk", nova_vsprintf); // vsprintf
++	LIB_FUNC("qjBlw2cVMAM", nova_vasprintf); // vasprintf
++	LIB_FUNC("UTrpOVLcoOA", nova_vsscanf); // vsscanf
++	LIB_FUNC("fffwELXNVFA", nova_fprintf_v); // fprintf
++	LIB_FUNC("tcVi5SivF7Q", nova_sprintf_v); // sprintf
++	LIB_FUNC("cOYia2dE0Ik", nova_asprintf_v); // asprintf
++	LIB_FUNC("1Pk0qZQGeWo", nova_sscanf_v); // sscanf
++	LIB_OBJECT("q1OvUam0BJU", &g_nova_isthreaded); // __isthreaded
++	LIB_FUNC("sjpkrhugvVI", ::_setjmp); // _setjmp: guest jmp_buf (96 bytes) holds glibc's 72-byte layout
++	LIB_FUNC("gNQ1V2vfXDE", ::_setjmp); // setjmp: guest jmp_buf (96 bytes) holds glibc's 72-byte layout
++	LIB_FUNC("lKEN2IebgJ0", ::longjmp); // longjmp: guest jmp_buf (96 bytes) holds glibc's 72-byte layout
++	LIB_FUNC("+F+9hhi6k9Q", ::longjmp); // _longjmp: guest jmp_buf (96 bytes) holds glibc's 72-byte layout
++}
++
++} // namespace LibcNova
++#endif
++
+ namespace LibC {
+ 
+ LIB_DEFINE(InitLibC_1) {
+ 	LibcInternal::InitLibcInternal_1(s);
++#if KYTY_PLATFORM == KYTY_PLATFORM_LINUX
++	LibcNova::InitLibcNova_1(s);
++#endif
+ 
+ 	LIB_OBJECT("P330P3dFF68", &LibC::g_need_flag);
+ 
