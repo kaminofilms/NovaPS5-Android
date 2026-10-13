@@ -13,6 +13,7 @@ import zipfile
 CORE_SHA = 'd7cc6f357216fdb02f7f3a6fc50c450ffbe7a64c53a55130bebd9888eb0898dc'
 RELEASE = 'Lcom/droiddeck/launcher/runtime/LinuxRuntimeInstaller$Release;'
 CTOR = '<init>(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;J)V'
+ACTIVITY_INHERITED = {'dispatchTouchEvent(Landroid/view/MotionEvent;)Z'}
 
 
 class Dex:
@@ -107,6 +108,10 @@ def main():
         assert all(name.startswith('Lcom/kaminofilms/novaps5/') for name in nova.classes), 'Compile-only backend stubs were packaged'
         for owner, signature in nova.references:
             if owner.startswith('Lcom/droiddeck/'):
+                # Public android.app.Activity methods that SessionActivity inherits without overriding
+                # resolve to the framework at runtime (super calls from NovaSessionActivity).
+                if owner == 'Lcom/droiddeck/launcher/SessionActivity;' and (owner, signature) not in definitions and signature in ACTIVITY_INHERITED:
+                    continue
                 assert (owner, signature) in definitions, 'Unresolved platform method: ' + owner + signature
                 # NovaSessionActivity is a subclass, so protected lifecycle calls
                 # are legal; all other external platform calls must be public.
