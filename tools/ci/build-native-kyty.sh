@@ -65,6 +65,10 @@ ldd "$out/ci/kyty_emulator" | awk '/=> \// {print $3} /ld-linux/ {print $1}' | s
     [[ $(basename "$lib") == libnovafex.so ]] && continue
     cp -L "$lib" "$out/native/$(basename "$lib")"
 done
+# DroidDeck's touch overlay and hardware pads are fake evdev nodes (FAKE_EVDEV_MEMFD_PATHS);
+# its reader is preloaded so SDL sees them as gamepads. Native AArch64 build of the same source.
+g++ -shared -fPIC -O2 -w -pthread -std=c++17 -static-libstdc++ -static-libgcc -Wl,--exclude-libs,ALL \
+    -o "$out/native/libfakeinput.so" "$repo/vendor/droiddeck-0.1.7/app/src/main/cpp/fakeinput_steam.cpp" -ldl
 patchelf --set-rpath '$ORIGIN' "$out/ci/kyty_emulator"
 patchelf --set-rpath '$ORIGIN' --set-interpreter "$INSTALL_DIR/ld-linux-aarch64.so.1" "$out/native/kyty_emulator"
 "$out/ci/kyty_emulator" --help > "$out/logs/cli-preflight.txt" 2>&1 || true

@@ -176,7 +176,7 @@ def main():
                 assert native[:6]==b'\x7fELF\x02\x01' and struct.unpack_from('<H',native,18)[0]==183
                 assert b'/opt/novaps5/linux-runtime/native/ld-linux-aarch64.so.1' in native
                 assert runtime.getmember('native/kyty_emulator').mode&0o111
-                for name in ['libnovafex.so','ld-linux-aarch64.so.1','libc.so.6','libstdc++.so.6']:
+                for name in ['libnovafex.so','libfakeinput.so','ld-linux-aarch64.so.1','libc.so.6','libstdc++.so.6']:
                     assert 'native/'+name in manifest['files'],name
             assert b'"$native/kyty_emulator" --game "$game"' in linux_launcher
 

@@ -35,13 +35,21 @@ if [[ -x "$native/kyty_emulator" && "${NOVA_ENGINE:-native}" != fex ]]; then
     if [[ -r "$game/sce_module/libc.prx" ]] && sha256sum "$game/sce_module/libc.prx" | grep -q '^e6ff45d16adf687855cc3b33b0c8a4132b6504360b221e0a34c7e99fb3ba0036 '; then
         NOVA_LIBC_HLE=1; echo 'NOVA_LAUNCH: open-SDK homebrew libc stub detected; Kyty host C library enabled'
     fi
-    [[ -n "${FAKE_EVDEV_MEMFD_PATHS:-}" ]] && echo "NOVA_INPUT: gamepad rings $FAKE_EVDEV_MEMFD_PATHS via the ARM64 DroidDeck preload" || echo 'NOVA_INPUT: no DroidDeck gamepad rings'
+    native_preload=${LD_PRELOAD:-}
+    if [[ -n "${FAKE_EVDEV_MEMFD_PATHS:-}" && -r "$native/libfakeinput.so" ]]; then
+        # Touch overlay / pads appear to SDL as an Xbox 360 gamepad (no mouse emulation).
+        native_preload="$native/libfakeinput.so${native_preload:+:$native_preload}"
+        export FAKE_EVDEV_IDENTITY=xbox360 SDL_JOYSTICK_HIDAPI=0
+        echo "NOVA_INPUT: gamepad rings $FAKE_EVDEV_MEMFD_PATHS -> native fakeinput preload"
+    else
+        echo 'NOVA_INPUT: no DroidDeck gamepad rings'
+    fi
     stage F 'PS5 loader UNVERIFIED (see Kyty output below)'
     stage G 'First rendered frame UNVERIFIED'
     echo "NOVA_LAUNCH: native AArch64 Kyty game=$game relaxed_vulkan=$NOVA_RELAXED_VULKAN"
     cd "$native"
     # Bundled glibc/libstdc++ first (the executable's interpreter is the bundled loader).
-    LD_LIBRARY_PATH="$native:/usr/lib/aarch64-linux-gnu:/lib/aarch64-linux-gnu" \
+    LD_PRELOAD="$native_preload" LD_LIBRARY_PATH="$native:/usr/lib/aarch64-linux-gnu:/lib/aarch64-linux-gnu" \
         "$native/kyty_emulator" --game "$game" --screen-width 1280 --screen-height 720 --vblank-frequency 60 --present-mode Fifo --fullscreen --hide-cursor --no-splash --vulkan-validation false --network-connected false
     exit $?
 fi
