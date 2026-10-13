@@ -1,0 +1,67 @@
+diff --git a/src/kernel/memoryAddressSpace.inc b/src/kernel/memoryAddressSpace.inc
+index 47e916f3..6951f933 100644
+--- a/src/kernel/memoryAddressSpace.inc
++++ b/src/kernel/memoryAddressSpace.inc
+@@ -1140,10 +1140,61 @@ private:
+ 	}
+ #endif
+ 
++#if KYTY_PLATFORM == KYTY_PLATFORM_LINUX && !defined(__APPLE__)
++	// Nova: Android ARM64 kernels commonly provide a 39-bit (512 GiB) user address space,
++	// which FEX passes through to the x86-64 guest. Reserving the whole PS5 user window
++	// [64 GiB, 1008 GiB) is then impossible, and reserving everything that is reachable would
++	// leave no address space for FEX, the host Vulkan driver or malloc. Detect the ceiling and
++	// keep the top quarter (at least 64 GiB) for the host. On 47/48-bit hosts nothing changes.
++	static uint64_t NovaHostAddressCeiling() {
++		// Test hook: emulate a smaller host (e.g. NOVA_HOST_VA_BITS=39) on a 47/48-bit machine.
++		if (const char* value = std::getenv("NOVA_HOST_VA_BITS"); value != nullptr) {
++			const auto bits = std::strtoul(value, nullptr, 10);
++			if (bits >= 36 && bits <= 48) {
++				return uint64_t {1} << bits;
++			}
++		}
++		for (int bit = 48; bit >= 36; bit--) {
++			void* want = reinterpret_cast<void*>(uint64_t {1} << (bit - 1));
++			void* ptr  = mmap(want, 0x10000, PROT_NONE,
++			                  MAP_PRIVATE | MAP_ANON | MAP_NORESERVE | MAP_FIXED_NOREPLACE, -1, 0);
++			if (ptr != MAP_FAILED) {
++				munmap(ptr, 0x10000);
++			}
++			if (ptr == want) {
++				return uint64_t {1} << bit;
++			}
++		}
++		return uint64_t {1} << 47;
++	}
++
++	static uint64_t NovaUserRegionEnd() {
++		const uint64_t ceiling = NovaHostAddressCeiling();
++		uint64_t       headroom = std::max<uint64_t>(ceiling / 4, uint64_t {64} << 30);
++		if (const char* value = std::getenv("NOVA_HOST_HEADROOM_GB"); value != nullptr) {
++			headroom = std::strtoull(value, nullptr, 10) << 30;
++		}
++		const uint64_t limit = ceiling > headroom ? ceiling - headroom : 0;
++		const uint64_t end   = std::min<uint64_t>(HOST_USER_MAX + 1u, limit);
++		if (end < HOST_USER_MAX + 1u) {
++			printf("NOVA_MEMORY: host VA ceiling 0x%016" PRIx64 "; guest user window clamped to "
++			       "[0x%016" PRIx64 ", 0x%016" PRIx64 "); extended memory at 0x%016" PRIx64
++			       " unavailable\n",
++			       ceiling, HOST_USER_MIN, std::max<uint64_t>(end, HOST_USER_MIN), kExtendedMemoryBase);
++		}
++		return std::max<uint64_t>(end, HOST_USER_MIN);
++	}
++#endif
++
+ 	void ReserveGuestRegions() {
++#if KYTY_PLATFORM == KYTY_PLATFORM_LINUX && !defined(__APPLE__)
++		const uint64_t user_end = NovaUserRegionEnd();
++#else
++		const uint64_t user_end = HOST_USER_MAX + 1u;
++#endif
+ 		const std::array<std::pair<uint64_t, uint64_t>, 3> regions {{
+ 		    {HOST_SYSTEM_MANAGED_MIN, HOST_SYSTEM_RESERVED_MAX + 1u},
+-		    {HOST_USER_MIN, HOST_USER_MAX + 1u},
++		    {HOST_USER_MIN, user_end},
+ 		    {kExtendedMemoryBase, kExtendedMemoryBase + kExtendedMemorySize},
+ 		}};
+ 

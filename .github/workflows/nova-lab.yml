@@ -151,7 +151,7 @@ jobs:
           nova_fex_setup "$PWD/build/runtime" "$PWD/build/fex-config"
           export -f nova_fex_run; export nova_fex nova_loader nova_guest_libs
           export VK_DRIVER_FILES="$(find /usr/share/vulkan/icd.d -maxdepth 1 -name 'lvp_icd*.json' -print -quit)"
-          export FEX_TSOENABLED=1 NOVA_RELAXED_VULKAN=1
+          export FEX_TSOENABLED=1 NOVA_RELAXED_VULKAN=1 NOVA_HOST_VA_BITS=39
           mkdir -p out/arm64/cwd && cd out/arm64/cwd
           bash "$GITHUB_WORKSPACE/tools/lab/run-kyty-lab.sh" fex "$GITHUB_WORKSPACE/build/core/kyty_emulator" "$GITHUB_WORKSPACE/build/PPSA59322" "$GITHUB_WORKSPACE/out/arm64" 600
           tail -60 "$GITHUB_WORKSPACE/out/arm64/kyty.txt"
