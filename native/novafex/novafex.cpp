@@ -32,8 +32,8 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-extern "C" void nova_call_native(void* block);
-extern "C" void nova_guest_bridge_entry();
+extern "C" __attribute__((visibility("hidden"))) void nova_call_native(void* block);
+extern "C" __attribute__((visibility("hidden"))) void nova_guest_bridge_entry();
 
 namespace NovaFex {
 namespace {
@@ -509,7 +509,7 @@ bool HandleHostFault(int signal, siginfo_t* info, void* ucontext) {
 
 // Called by nova_guest_bridge_entry with the target and the saved AAPCS argument registers:
 // regs[0..7] = x0..x7, then q0..q7 (16 bytes each). Writes x0,x1,q0,q1 back.
-extern "C" void nova_bridge_call(uint64_t target, uint64_t* regs) {
+extern "C" __attribute__((visibility("hidden"))) void nova_bridge_call(uint64_t target, uint64_t* regs) {
 	NovaFex::CallArgs args;
 	for (int i = 0; i < 8; i++) {
 		args.gpr[i] = regs[i];

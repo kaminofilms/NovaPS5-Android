@@ -9,6 +9,7 @@
 //   xmm0..7 -> q0..q7. Stores x0,x1,q0,q1 back as rax,rdx,xmm0,xmm1.
 // GateBlock: gpr 0x00, xmm 0x30, stack_args 0xb0, target 0xb8, ret_gpr 0xc0, ret_xmm 0xd0.
 	.globl nova_call_native
+	.hidden nova_call_native
 	.type nova_call_native, %function
 	.p2align 4
 nova_call_native:
@@ -48,6 +49,7 @@ nova_call_native:
 // Entered (via the SIGSEGV handler) when host code branched into guest code: x16 holds the
 // guest target, x30 the host return address, x0-x7/q0-q7 the AAPCS arguments.
 	.globl nova_guest_bridge_entry
+	.hidden nova_guest_bridge_entry
 	.type nova_guest_bridge_entry, %function
 	.p2align 4
 nova_guest_bridge_entry:
