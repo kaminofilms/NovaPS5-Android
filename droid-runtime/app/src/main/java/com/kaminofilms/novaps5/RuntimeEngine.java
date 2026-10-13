@@ -126,13 +126,20 @@ final class RuntimeEngine {
             // The session service handles the stop on this (main) thread, so never block here:
             // poll from the main looper and start the game once the old session has gone.
             final long deadline=android.os.SystemClock.uptimeMillis()+30000;
+            final long forceAt=android.os.SystemClock.uptimeMillis()+4000;
             // Only the most recent request survives: tapping several games while the old session
             // closes must not start all of them at once.
             if(pendingLaunch!=null)LAUNCH_HANDLER.removeCallbacks(pendingLaunch);
             android.widget.Toast.makeText(context,"Closing the previous game…",android.widget.Toast.LENGTH_SHORT).show();
             final android.os.Handler handler=LAUNCH_HANDLER;
-            pendingLaunch=new Runnable(){public void run(){
+            pendingLaunch=new Runnable(){boolean forced=false;public void run(){
                 if(!SessionState.INSTANCE.getRunning()){pendingLaunch=null;start(game,name);return;}
+                if(!forced&&android.os.SystemClock.uptimeMillis()>forceAt){
+                    // The session service did not let go (seen on device: minutes). End every process
+                    // of the old session ourselves and clear its running flag.
+                    forced=true;BootLog.write(context,"Previous session still running after 4 s; ending its processes");
+                    forceEndSession();
+                }
                 if(android.os.SystemClock.uptimeMillis()>deadline){pendingLaunch=null;BootLog.write(context,"Previous session did not stop within 30 s");android.widget.Toast.makeText(context,"The previous game is still closing. Try again in a moment.",android.widget.Toast.LENGTH_LONG).show();return;}
                 handler.postDelayed(this,200);
             }};
@@ -141,7 +148,22 @@ final class RuntimeEngine {
         }
         start(game,name);
     }
+    void forceEndSession(){
+        final int me=android.os.Process.myPid();final int uid=android.os.Process.myUid();int killed=0;
+        File[] entries=new File("/proc").listFiles();
+        if(entries!=null)for(File entry:entries){
+            String n=entry.getName();if(!n.matches("\\d+"))continue;int pid=Integer.parseInt(n);if(pid==me)continue;
+            try{for(String line:Files.readAllLines(new File(entry,"status").toPath(),StandardCharsets.UTF_8)){
+                if(line.startsWith("Uid:")){String[] f=line.substring(4).trim().split("\\s+");if(Integer.parseInt(f[0])==uid){android.os.Process.killProcess(pid);killed++;}break;}
+            }}catch(Exception ignored){}
+        }
+        try{SessionState.class.getMethod("setRunning",boolean.class).invoke(SessionState.INSTANCE,false);}catch(Exception x){BootLog.write(context,"Cannot clear session flag: "+x);}
+        BootLog.write(context,"Ended "+killed+" leftover session processes");
+    }
     void start(String game,String name){
+        // Keep the game running while Nova is in the background so it can be resumed; the default
+        // policy froze the whole session and it did not come back.
+        context.getSharedPreferences("session",0).edit().putString("suspendPolicy.steam","never").apply();
         BootLog.write(context,"Starting Linux Kyty/FEX session for "+name);context.getSharedPreferences("nova",0).edit().remove("last_engine_error").apply();
         context.getSharedPreferences("session",0).edit().putInt("resolutionCap.run",720).putString("fexPreset","COMPATIBILITY").apply();
         Intent intent=new Intent(context,NovaSessionActivity.class);intent.putExtra(SessionService.EXTRA_MODE,SessionService.MODE_RUN);intent.putExtra(SessionService.EXTRA_PROGRAM,"/opt/novaps5/launch.sh");intent.putExtra(SessionService.EXTRA_PROGRAM_ARGS,new String[]{game});intent.putExtra("nova_game_path",game);intent.putExtra("nova_game_name",name);context.startActivity(intent);

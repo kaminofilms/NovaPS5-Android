@@ -326,7 +326,9 @@ void Watchdog() {
 		sleep(static_cast<unsigned>(seconds));
 		const auto gates = g_total_gates.load();
 		const auto calls = g_total_calls.load();
-		stalled = (gates == last_gates && calls == last_calls) ? stalled + 1 : 0;
+		// "Stalled" = (almost) no guest->host traffic: a game blocked on a wait still makes a
+		// few calls per second, so a hard zero would miss it.
+		stalled = (gates - last_gates < 2000 && calls - last_calls < 50) ? stalled + 1 : 0;
 		last_calls = calls;
 		if (stalled >= 3 && !dumped) {
 			dumped = true;
