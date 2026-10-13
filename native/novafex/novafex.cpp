@@ -430,9 +430,9 @@ void Watchdog() {
 }
 
 #if defined(__aarch64__)
-// Android's app seccomp policy answers system calls it does not allow with SIGSYS. Outside proot
-// that would end the process on a call glibc only probes (clone3, for one); answer ENOSYS instead
-// so the C library falls back, as it does on an older kernel.
+// Android's app seccomp policy answers system calls it does not allow with SIGSYS, which would end
+// the process. Answer ENOSYS instead, as an older kernel would; callers that probe for a newer
+// call then fall back. (glibc blocks signals around clone3 and is unaffected either way.)
 void SigsysHandler(int, siginfo_t* info, void* context) {
 	auto* uc = static_cast<ucontext_t*>(context);
 	uc->uc_mcontext.regs[0] = static_cast<uint64_t>(-ENOSYS);

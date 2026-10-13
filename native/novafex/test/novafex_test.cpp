@@ -3,6 +3,7 @@
 #include "novafex.h"
 
 #include <atomic>
+#include <cerrno>
 #include <chrono>
 #include <cinttypes>
 #include <cmath>
@@ -125,13 +126,13 @@ double NsPer(uint64_t count, F&& fn) {
 }
 
 // Android's app seccomp policy traps (SIGSYS) syscalls it does not allow. libnovafex answers
-// those with ENOSYS; glibc's pthread_create then falls back from clone3 to clone.
-bool SeccompClone3Fallback() {
+// those with ENOSYS so the caller sees an ordinary "not implemented" error.
+bool SeccompTrapToEnosys() {
 	const pid_t child = fork();
 	if (child == 0) {
 		sock_filter filter[] = {
 		    BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(seccomp_data, nr)),
-		    BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_clone3, 0, 1),
+		    BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_sched_getattr, 0, 1),
 		    BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_TRAP),
 		    BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
 		};
@@ -139,9 +140,10 @@ bool SeccompClone3Fallback() {
 		if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0 || prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog) != 0) {
 			_exit(3);
 		}
-		std::atomic<int> ran {0};
-		std::thread([&] { ran = 1; }).join();
-		_exit(ran == 1 ? 0 : 4);
+		uint8_t attr[128] {};
+		errno = 0;
+		const long r = syscall(__NR_sched_getattr, 0, attr, sizeof(attr), 0);
+		_exit(r == -1 && errno == ENOSYS ? 0 : 4);
 	}
 	int status = 0;
 	waitpid(child, &status, 0);
@@ -151,7 +153,7 @@ bool SeccompClone3Fallback() {
 } // namespace
 
 int main() {
-	Check("seccomp SIGSYS -> ENOSYS (clone3 fallback)", SeccompClone3Fallback());
+	Check("seccomp SIGSYS -> ENOSYS", SeccompTrapToEnosys());
 
 	struct sigaction sa {};
 	sa.sa_sigaction = FaultHandler;
