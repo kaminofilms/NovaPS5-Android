@@ -1,0 +1,52 @@
+diff --git a/FEXCore/Source/Utils/AllocatorHooks.cpp b/FEXCore/Source/Utils/AllocatorHooks.cpp
+index e85f09a09..571367266 100644
+--- a/FEXCore/Source/Utils/AllocatorHooks.cpp
++++ b/FEXCore/Source/Utils/AllocatorHooks.cpp
+@@ -214,7 +214,11 @@ void* memalign(size_t align, size_t s) {
+   return ::memalign(align, s);
+ }
+ void* valloc(size_t size) {
++#ifdef __ANDROID__
++  return ::memalign(4096, size);
++#else
+   return ::valloc(size);
++#endif
+ }
+ int posix_memalign(void** r, size_t a, size_t s) {
+   return ::posix_memalign(r, a, s);
+diff --git a/FEXCore/Source/Utils/FileUtils.cpp b/FEXCore/Source/Utils/FileUtils.cpp
+index d3e62cacd..606a4c046 100644
+--- a/FEXCore/Source/Utils/FileUtils.cpp
++++ b/FEXCore/Source/Utils/FileUtils.cpp
+@@ -9,6 +9,13 @@
+ #include <dirent.h>
+ #include <fcntl.h>
+ #include <unistd.h>
++#ifdef __ANDROID__
++#include <sys/syscall.h>
++// bionic has no getdents64() wrapper.
++static ssize_t getdents64(int fd, void* buffer, size_t size) {
++  return syscall(SYS_getdents64, fd, buffer, size);
++}
++#endif
+ #else
+ #include <windows.h>
+ #include <winnt.h>
+diff --git a/FEXCore/include/FEXCore/fextl/functional.h b/FEXCore/include/FEXCore/fextl/functional.h
+index 8e8ed659a..641e268bb 100644
+--- a/FEXCore/include/FEXCore/fextl/functional.h
++++ b/FEXCore/include/FEXCore/fextl/functional.h
+@@ -52,9 +52,13 @@ public:
+ 
+       // Third, assign the result to std::function, ensuring it's indeed
+       // allocation-free by checking for nothrow-constructibility
++#ifndef __ANDROID__
++      // (The NDK's libc++ does not declare this assignment noexcept; a single-pointer capture fits
++      // its small buffer, so it does not allocate there either.)
+       static_assert(noexcept(internal = std::move(wrapped_lambda)), "This implementation of std::function "
+                                                                     "does not support implementing "
+                                                                     "fextl::move_only_function");
++#endif
+       internal = std::move(wrapped_lambda);
+ 
+       // Finally, if a destructor must be called, generate a pointer to its destructor

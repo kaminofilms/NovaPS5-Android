@@ -74,7 +74,7 @@ jobs:
           git remote add origin "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git"
           if git fetch -q --depth 1 origin lab-logs; then git checkout -q -b lab-logs FETCH_HEAD; else git checkout -q --orphan lab-logs; fi
           mkdir -p "$dest"
-          find ../out -type f \( -name '*.txt' -o -name '*.json' -o -name '*.log' \) -size -20M -exec cp --parents {} "$dest/" \; 2>/dev/null || true
+          (cd ../out && find . -type f \( -name '*.txt' -o -name '*.json' -o -name '*.log' \) -size -20M -exec cp --parents {} "../logs/$dest/" \;) || true
           printf '%s android novafex=%s test=%s\n' "$dest" "${{ needs.novafex.result }}" "${{ needs.novafex-test.result }}" >> INDEX.txt
           git add -A
           git -c user.name=nova-lab -c user.email=nova-lab@users.noreply.github.com commit -qm "android logs $dest"
