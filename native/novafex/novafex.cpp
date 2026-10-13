@@ -256,6 +256,19 @@ ThreadData& Current() {
 				t.guest_stack_top = reinterpret_cast<uint64_t>(p) + kStack;
 			}
 		}
+		// Call-ret prediction stack (FEX's Linux frontend allocates it per thread). Mapped RW with a
+		// page of slack on both sides so a short underflow/overflow stays inside the mapping.
+		{
+			constexpr size_t kSize = FEXCore::Core::InternalThreadState::CALLRET_STACK_SIZE;
+			constexpr size_t kSlack = 0x10000;
+			void* p = mmap(nullptr, kSize + 2 * kSlack, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+			if (p == MAP_FAILED) {
+				std::fprintf(stderr, "NOVA_FEX: call-ret stack allocation failed\n");
+				std::abort();
+			}
+			t.fex->CallRetStackBase = static_cast<uint8_t*>(p) + kSlack;
+			t.fex->CurrentFrame->State.callret_sp = reinterpret_cast<uint64_t>(t.fex->CallRetStackBase) + kSize / 4;
+		}
 		// ExecuteThread() normally sets this; Nova only ever enters through callbacks.
 		t.fex->CurrentFrame->Pointers.ThunkCallbackRet = g_arena.callback_ret;
 		auto& s = t.fex->CurrentFrame->State;
