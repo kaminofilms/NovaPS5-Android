@@ -52,7 +52,14 @@ def main():
     # Preserve licenses and exact upstream package provenance in the distributable.
     (work/'dependencies.json').write_text(json.dumps(pins,indent=2)+'\n')
     subprocess.run(['gcc','-O2',str(ROOT/'probe.c'),'-ldl','-o',str(guest/'nova-probe')],check=True)
-    for path,machine in [(guest/'nova-probe',62),(host/'usr/bin/FEX',183),(host/'usr/bin/FEXServer',183),(host/'usr/share/fex-emu/GuestThunks/libvulkan-guest.so',62),(host/'usr/lib/aarch64-linux-gnu/fex-emu/HostThunks/libvulkan-host.so',183)]:
+    # DroidDeck's on-screen and hardware pads are fake evdev nodes backed by shared-memory rings
+    # (FAKE_EVDEV_MEMFD_PATHS). Its preload that serves them is ARM64; Kyty is an x86-64 guest, so
+    # build the same source for x86-64 and preload it into the guest. Static C++ runtime, hidden.
+    (guest/'usr/lib/nova').mkdir(parents=True,exist_ok=True)
+    subprocess.run(['g++','-shared','-fPIC','-O2','-w','-pthread','-std=c++17','-static-libstdc++','-static-libgcc',
+                    '-Wl,--exclude-libs,ALL','-o',str(guest/'usr/lib/nova/libfakeinput.so'),
+                    str(ROOT.parent/'vendor/droiddeck-0.1.7/app/src/main/cpp/fakeinput_steam.cpp'),'-ldl'],check=True)
+    for path,machine in [(guest/'nova-probe',62),(guest/'usr/lib/nova/libfakeinput.so',62),(host/'usr/bin/FEX',183),(host/'usr/bin/FEXServer',183),(host/'usr/share/fex-emu/GuestThunks/libvulkan-guest.so',62),(host/'usr/lib/aarch64-linux-gnu/fex-emu/HostThunks/libvulkan-host.so',183)]:
         data=path.read_bytes();assert data[:6]==b'\x7fELF\x02\x01' and int.from_bytes(data[18:20],'little')==machine,str(path)
     (work/'Config.json').write_text(json.dumps({'Config':{'Env':'LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu'}})+'\n')
     (work/'thunks.json').write_text(json.dumps({'ThunksDB':{'Vulkan':1,'asound':1,'WaylandClient':1}})+'\n')
@@ -67,7 +74,7 @@ def main():
                     if info.isfile():
                         with path.open('rb') as stream:out.addfile(info,stream)
                     else:out.addfile(info)
-    manifest={'revision':'linux-fex-2610-r4','archive_sha256':digest(a.output),'core_sha256':a.core_sha,'files':{p.relative_to(work).as_posix():digest(p) for p in work.rglob('*') if p.is_file() and not p.is_symlink()}}
+    manifest={'revision':'linux-fex-2610-r5','archive_sha256':digest(a.output),'core_sha256':a.core_sha,'files':{p.relative_to(work).as_posix():digest(p) for p in work.rglob('*') if p.is_file() and not p.is_symlink()}}
     a.output.with_suffix('.json').write_text(json.dumps(manifest,indent=2)+'\n')
     print('Linux runtime:',a.output,a.output.stat().st_size,manifest['archive_sha256'])
 if __name__=='__main__':main()

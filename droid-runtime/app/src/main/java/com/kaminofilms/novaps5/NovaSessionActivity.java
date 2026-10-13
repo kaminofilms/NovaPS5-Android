@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ScrollView;
@@ -77,6 +78,34 @@ public final class NovaSessionActivity extends SessionActivity {
         TextView text=new TextView(this);text.setText(logTail);text.setTextSize(12);text.setTextIsSelectable(true);text.setPadding(20,12,20,12);
         ScrollView scroll=new ScrollView(this);scroll.addView(text,new ViewGroup.LayoutParams(-1,-2));
         new AlertDialog.Builder(this).setTitle("Kyty boot log").setView(scroll).setPositiveButton("Close",null).show();
+    }
+
+    // Quick menu: swipe in from the left edge (as in Nova Nx). The swipe is consumed so it never
+    // reaches the game; any other touch goes to DroidDeck's controls and the session as before.
+    private float edgeStartX=-1,edgeStartY;private boolean edgeOpen;
+    @Override public boolean dispatchTouchEvent(MotionEvent e){
+        float density=getResources().getDisplayMetrics().density;
+        switch(e.getActionMasked()){
+            case MotionEvent.ACTION_DOWN:edgeOpen=false;edgeStartX=e.getX()<=24*density?e.getX():-1;edgeStartY=e.getY();break;
+            case MotionEvent.ACTION_MOVE:
+                if(edgeStartX>=0&&!edgeOpen&&e.getX()-edgeStartX>90*density&&Math.abs(e.getY()-edgeStartY)<120*density){edgeOpen=true;quickMenu();}
+                break;
+            case MotionEvent.ACTION_UP:case MotionEvent.ACTION_CANCEL:if(edgeOpen||edgeStartX>=0){boolean consumed=edgeOpen;edgeStartX=-1;edgeOpen=false;if(consumed)return true;}break;
+        }
+        if(edgeOpen)return true;
+        return super.dispatchTouchEvent(e);
+    }
+    private void quickMenu(){
+        new AlertDialog.Builder(this).setTitle("Nova PS5").setItems(new String[]{"Resume game","Boot log","Exit game"},(d,w)->{
+            if(w==1)showLog();
+            else if(w==2)exitGame();
+        }).show();
+    }
+    private void exitGame(){
+        BootLog.write(this,"Exit requested from the quick menu");
+        try{startService(new Intent(this,com.droiddeck.launcher.session.SessionService.class).setAction(getPackageName()+".STOP_SESSION"));}catch(Exception x){BootLog.write(this,"Session stop failed: "+x);}
+        Intent home=new Intent(this,MainActivity.class);home.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        startActivity(home);finish();
     }
 
     @Override protected void onDestroy(){monitor.shutdownNow();ui.removeCallbacksAndMessages(null);super.onDestroy();}

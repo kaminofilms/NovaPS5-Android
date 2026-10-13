@@ -16,7 +16,7 @@ permissions:
   contents: write
   actions: read
 env:
-  APK: NovaPS5-0.3.3-linux-fex-arm64.apk
+  APK: NovaPS5-0.3.4-linux-fex-arm64.apk
   KYTY_COMMIT: df5b9b92be7dfd463b47756b707d6d356a9f0550
 jobs:
   core:
@@ -247,9 +247,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          tag="v0.3.3-linux-fex-${GITHUB_SHA::7}"
+          tag="v0.3.4-linux-fex-${GITHUB_SHA::7}"
           gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
-            --title "Nova PS5 0.3.3 Linux/FEX ARM64 (CI ${GITHUB_SHA::7}, device test build)" \
+            --title "Nova PS5 0.3.4 Linux/FEX ARM64 (CI ${GITHUB_SHA::7}, device test build)" \
             --notes "CI-signed device test build. Vulkan thunks verified on ARM64 CI with lavapipe; Adreno driver, PS5 game boot and frame presentation are UNVERIFIED until tested on hardware. Workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
             "dist/$APK" dist/SHA256SUMS.txt dist/verification.json dist/kyty-core.json dist/arm64-fex-preflight.txt
   logs:

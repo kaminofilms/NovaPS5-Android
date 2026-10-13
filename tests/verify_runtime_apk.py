@@ -146,7 +146,7 @@ def main():
             with tarfile.open(fileobj=io.BytesIO(payload),mode='r:gz') as runtime:
                 for path,expected in manifest['files'].items():
                     assert hashlib.sha256(runtime.extractfile(path).read()).hexdigest()==expected,path
-                for path,machine in [('host/usr/bin/FEX',183),('host/usr/bin/FEXServer',183),('guest/nova-probe',62),('host/usr/lib/aarch64-linux-gnu/fex-emu/HostThunks/libvulkan-host.so',183),('host/usr/share/fex-emu/GuestThunks/libvulkan-guest.so',62)]:
+                for path,machine in [('host/usr/bin/FEX',183),('host/usr/bin/FEXServer',183),('guest/nova-probe',62),('guest/usr/lib/nova/libfakeinput.so',62),('host/usr/lib/aarch64-linux-gnu/fex-emu/HostThunks/libvulkan-host.so',183),('host/usr/share/fex-emu/GuestThunks/libvulkan-guest.so',62)]:
                     raw=runtime.extractfile(path).read();assert raw[:6]==b'\x7fELF\x02\x01' and struct.unpack_from('<H',raw,18)[0]==machine
                     if path.endswith(('FEX','FEXServer','nova-probe')):assert runtime.getmember(path).mode&0o111
             linux_launcher=archive.read('assets/engine/launch.sh')
@@ -218,7 +218,7 @@ def main():
                 report['packageMetadata'] = line
         assert "name='com.kaminofilms.novaps5'" in badging
         if args.linux_core:
-            assert "versionName='0.3.3-linux-fex'" in badging and "versionCode='13'" in badging and "native-code: 'arm64-v8a'" in badging
+            assert "versionName='0.3.4-linux-fex'" in badging and "versionCode='14'" in badging and "native-code: 'arm64-v8a'" in badging
         subprocess.run([str(bt / 'zipalign'), '-c', '-P', '16', '4', str(args.apk)], check=True)
     if args.json_output:
         args.json_output.parent.mkdir(parents=True, exist_ok=True)

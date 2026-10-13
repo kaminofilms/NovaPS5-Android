@@ -92,6 +92,14 @@ cd "$base/linux-kyty"
 echo "NOVA_LAUNCH: Linux Kyty game=$game relaxed_vulkan=$relaxed"
 step 'F Linux Kyty attempting selected game'
 export NOVA_RELAXED_VULKAN=$relaxed
+# Controllers: DroidDeck's touch overlay and hardware pads are fake evdev nodes. Preload the x86-64
+# build of its reader into Kyty so SDL sees them as gamepads (Xbox 360 identity -> SDL mapping).
+if [[ -n "${FAKE_EVDEV_MEMFD_PATHS:-}" && -r "$guest/usr/lib/nova/libfakeinput.so" ]]; then
+    export FEX_ENV="LD_PRELOAD=$guest/usr/lib/nova/libfakeinput.so" FAKE_EVDEV_IDENTITY=xbox360
+    echo "NOVA_INPUT: gamepad rings $FAKE_EVDEV_MEMFD_PATHS -> Kyty (x86-64 fakeinput preload)"
+else
+    echo "NOVA_INPUT: no DroidDeck gamepad rings in this session (FAKE_EVDEV_MEMFD_PATHS unset)"
+fi
 # Homebrew built with the open PS5 SDK ships a generated stub libc.prx (PS5_Vulkan runtime,
 # SHA-256 below) and imports the firmware C library directly; Kyty then needs its host libc.
 # Retail games ship Sony's libc.prx and must keep using it.
