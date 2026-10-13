@@ -35,3 +35,4 @@ runs/novafex-38412652323-db1c03e2 novafex job=success
 runs/native-38412652330-db1c03e2 native job=failure
 runs/native-38415872400-471606c8 native job=failure
 release/38415969151-82a45bc2 core=success apk=failure arm64=skipped
+release/38418738911-0a41f1ff core=success apk=skipped arm64=skipped
