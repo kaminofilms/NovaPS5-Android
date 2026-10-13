@@ -212,7 +212,7 @@ index 154d621d..de24c788 100644
  		case Mode::NoAccess:
  		default: protect = PROT_NONE; break;
 diff --git a/src/graphics/shader/recompiler/ir/passes/SrtWalker.cpp b/src/graphics/shader/recompiler/ir/passes/SrtWalker.cpp
-index 06731ee7..7701ecaf 100644
+index 06731ee7..0ce2c79b 100644
 --- a/src/graphics/shader/recompiler/ir/passes/SrtWalker.cpp
 +++ b/src/graphics/shader/recompiler/ir/passes/SrtWalker.cpp
 @@ -432,6 +432,10 @@ void CompileSrtWalker(ResourcePlan& program) {
@@ -222,10 +222,18 @@ index 06731ee7..7701ecaf 100644
 +#if defined(__aarch64__)
 +	// The generated walker is x86-64 code; the AArch64 host uses the interpreted path.
 +	return;
-+#endif
++#else
  	program.srt_code = std::make_unique<Xbyak::CodeGenerator>(4096, Xbyak::AutoGrow);
  	auto& code = *program.srt_code;
  	Xbyak::Label failed, finished;
+@@ -487,6 +491,7 @@ void CompileSrtWalker(ResourcePlan& program) {
+ 	code.ret();
+ 	code.readyRE();
+ 	EXIT_IF(Xbyak::GetError() != 0);
++#endif
+ }
+ 
+ SrtWalker::SrtWalker(const ResourcePlan& program, const SrtRuntime& runtime,
 diff --git a/src/kernel/memoryAddressSpace.inc b/src/kernel/memoryAddressSpace.inc
 index 6951f933..aadee503 100644
 --- a/src/kernel/memoryAddressSpace.inc
