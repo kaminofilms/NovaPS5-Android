@@ -38,13 +38,14 @@ def main():
     # thunk overlays and RootFS paths with openat2(), so there the overlay silently fails and the
     # guest gets the real x86-64 Vulkan loader (no ICD -> vkCreateInstance=-9). Make the guest's
     # libvulkan.so.1 *be* the FEX guest thunk, so no path redirection is needed at all.
+    # The same applies to ALSA: the x86-64 alsa-lib has no route to DroidDeck's PulseAudio, so the
+    # guest libasound.so.2 is the asound thunk and sound goes through the ARM64 host alsa-lib.
     libdir=guest/'usr/lib/x86_64-linux-gnu'
-    thunk=host/'usr/share/fex-emu/GuestThunks/libvulkan-guest.so'
-    for name in ['libvulkan.so.1','libvulkan.so']:
-        target=libdir/name
-        if target.is_symlink() or target.exists(): target.unlink()
-    for real in libdir.glob('libvulkan.so.1.*'): real.unlink()
-    shutil.copyfile(thunk, libdir/'libvulkan.so.1')
+    for soname,stem,thunk_name in [('libvulkan.so.1','libvulkan.so','libvulkan-guest.so'),('libasound.so.2','libasound.so','libasound-guest.so')]:
+        thunk=host/'usr/share/fex-emu/GuestThunks'/thunk_name
+        for target in [libdir/soname, libdir/stem, *libdir.glob(soname+'.*')]:
+            if target.is_symlink() or target.exists(): target.unlink()
+        shutil.copyfile(thunk, libdir/soname)
     # Mask host-only ARM64 preload entries in the x86-64 rootfs.
     (guest/'etc').mkdir(exist_ok=True)
     (guest/'etc/ld.so.preload').write_text('')
@@ -74,7 +75,7 @@ def main():
                     if info.isfile():
                         with path.open('rb') as stream:out.addfile(info,stream)
                     else:out.addfile(info)
-    manifest={'revision':'linux-fex-2610-r5','archive_sha256':digest(a.output),'core_sha256':a.core_sha,'files':{p.relative_to(work).as_posix():digest(p) for p in work.rglob('*') if p.is_file() and not p.is_symlink()}}
+    manifest={'revision':'linux-fex-2610-r6','archive_sha256':digest(a.output),'core_sha256':a.core_sha,'files':{p.relative_to(work).as_posix():digest(p) for p in work.rglob('*') if p.is_file() and not p.is_symlink()}}
     a.output.with_suffix('.json').write_text(json.dumps(manifest,indent=2)+'\n')
     print('Linux runtime:',a.output,a.output.stat().st_size,manifest['archive_sha256'])
 if __name__=='__main__':main()
