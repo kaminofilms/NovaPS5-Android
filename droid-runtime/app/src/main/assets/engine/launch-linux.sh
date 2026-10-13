@@ -44,7 +44,7 @@ if [[ -x "$native/kyty_emulator" && "${NOVA_ENGINE:-native}" != fex ]]; then
     else
         echo 'NOVA_INPUT: no DroidDeck gamepad rings'
     fi
-    echo "NOVA_AUDIO_ENV: PULSE_SERVER=${PULSE_SERVER:-unset} XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-unset} SDL_AUDIO_DRIVER=${SDL_AUDIO_DRIVER:-auto} libs: $(ls /usr/lib/aarch64-linux-gnu/libpulse.so.0 /usr/lib/aarch64-linux-gnu/libasound.so.2 /usr/lib/aarch64-linux-gnu/libpipewire-0.3.so.0 2>/dev/null | xargs -n1 basename 2>/dev/null | tr '\n' ' ')"
+    echo "NOVA_AUDIO_ENV: PULSE_SERVER=${PULSE_SERVER:-unset} XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-unset} SDL_AUDIO_DRIVER=${SDL_AUDIO_DRIVER:-auto} libs: $(ls /usr/lib/libpulse.so.0 /usr/lib/libasound.so.2 /usr/lib/libpipewire-0.3.so.0 2>/dev/null | xargs -n1 basename 2>/dev/null | tr '\n' ' ')"
     stage F 'PS5 loader UNVERIFIED (see Kyty output below)'
     stage G 'First rendered frame UNVERIFIED'
     echo "NOVA_LAUNCH: native AArch64 Kyty game=$game relaxed_vulkan=$NOVA_RELAXED_VULKAN"
@@ -53,8 +53,8 @@ if [[ -x "$native/kyty_emulator" && "${NOVA_ENGINE:-native}" != fex ]]; then
     # only two cores. Kyty, the embedded FEX JIT and the game's 30+ threads need all of them.
     all_cores="0-$(( $(nproc --all) - 1 ))"
     taskset -cp "$all_cores" $$ >/dev/null 2>&1 && echo "NOVA_CPU: cores $all_cores (was $(cat /proc/self/status | sed -n 's/^Cpus_allowed_list:\s*//p'))" || true
-    # Bundled glibc/libstdc++ first (the executable's interpreter is the bundled loader).
-    LD_PRELOAD="$native_preload" LD_LIBRARY_PATH="$native:/usr/lib/aarch64-linux-gnu:/lib/aarch64-linux-gnu" \
+    # System glibc/libstdc++ (newer than the build host's); Nova's libraries come from $native.
+    LD_PRELOAD="$native_preload" LD_LIBRARY_PATH="$native" \
         "$native/kyty_emulator" --game "$game" --screen-width 1280 --screen-height 720 --vblank-frequency 60 --present-mode Fifo --fullscreen --hide-cursor --no-splash --vulkan-validation false --network-connected false &
     kyty_pid=$!
     # Exit game / session stop: guest threads parked in emulated waits can keep Kyty alive after

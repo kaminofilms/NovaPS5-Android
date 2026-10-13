@@ -174,9 +174,9 @@ def main():
                 # 0.4: native AArch64 Kyty with embedded FEXCore and its bundled loader.
                 native=runtime.extractfile('native/kyty_emulator').read()
                 assert native[:6]==b'\x7fELF\x02\x01' and struct.unpack_from('<H',native,18)[0]==183
-                assert b'/opt/novaps5/linux-runtime/native/ld-linux-aarch64.so.1' in native
+                assert b'/lib/ld-linux-aarch64.so.1' in native
                 assert runtime.getmember('native/kyty_emulator').mode&0o111
-                for name in ['libnovafex.so','libfakeinput.so','ld-linux-aarch64.so.1','libc.so.6','libstdc++.so.6']:
+                for name in ['libnovafex.so','libfakeinput.so']:
                     assert 'native/'+name in manifest['files'],name
             assert b'"$native/kyty_emulator" --game "$game"' in linux_launcher
 
@@ -232,7 +232,7 @@ def main():
                 report['packageMetadata'] = line
         assert "name='com.kaminofilms.novaps5'" in badging
         if args.linux_core:
-            assert "versionName='0.4.7-native'" in badging and "versionCode='22'" in badging and "native-code: 'arm64-v8a'" in badging
+            assert "versionName='0.4.8-native'" in badging and "versionCode='23'" in badging and "native-code: 'arm64-v8a'" in badging
         subprocess.run([str(bt / 'zipalign'), '-c', '-P', '16', '4', str(args.apk)], check=True)
     if args.json_output:
         args.json_output.parent.mkdir(parents=True, exist_ok=True)

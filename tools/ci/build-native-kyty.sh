@@ -59,18 +59,15 @@ for dir in "$out/native" "$out/ci"; do
     cp "$core" "$dir/kyty_emulator"
     cp novafex-dist/lib/libnovafex.so "$dir/"
 done
-# Bundle every shared library the core needs from this (Ubuntu 24.04) host, plus the loader.
+# The DroidDeck rootfs ships a newer glibc/libstdc++ than this build host (its libasound needs
+# GLIBC_2.43), so the core uses the system C runtime; only Nova's own libraries are bundled.
 ldd "$out/ci/kyty_emulator" | tee "$out/logs/ldd.txt"
-ldd "$out/ci/kyty_emulator" | awk '/=> \// {print $3} /ld-linux/ {print $1}' | sort -u | while read -r lib; do
-    [[ $(basename "$lib") == libnovafex.so ]] && continue
-    cp -L "$lib" "$out/native/$(basename "$lib")"
-done
 # DroidDeck's touch overlay and hardware pads are fake evdev nodes (FAKE_EVDEV_MEMFD_PATHS);
 # its reader is preloaded so SDL sees them as gamepads. Native AArch64 build of the same source.
 g++ -shared -fPIC -O2 -w -pthread -std=c++17 -static-libstdc++ -static-libgcc -Wl,--exclude-libs,ALL \
     -o "$out/native/libfakeinput.so" "$repo/vendor/droiddeck-0.1.7/app/src/main/cpp/fakeinput_steam.cpp" -ldl
 patchelf --set-rpath '$ORIGIN' "$out/ci/kyty_emulator"
-patchelf --set-rpath '$ORIGIN' --set-interpreter "$INSTALL_DIR/ld-linux-aarch64.so.1" "$out/native/kyty_emulator"
+patchelf --set-rpath '$ORIGIN' "$out/native/kyty_emulator"
 "$out/ci/kyty_emulator" --help > "$out/logs/cli-preflight.txt" 2>&1 || true
 python3 - "$repo" "$out" "$KYTY_COMMIT" <<'PY'
 import hashlib, json, sys
