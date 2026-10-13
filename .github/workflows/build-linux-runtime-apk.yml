@@ -17,7 +17,7 @@ permissions:
   contents: write
   actions: read
 env:
-  APK: NovaPS5-0.4.1-native-arm64.apk
+  APK: NovaPS5-0.4.2-native-arm64.apk
   KYTY_COMMIT: df5b9b92be7dfd463b47756b707d6d356a9f0550
 jobs:
   core:
@@ -288,9 +288,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          tag="v0.4.1-native-${GITHUB_SHA::7}"
+          tag="v0.4.2-native-${GITHUB_SHA::7}"
           gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
-            --title "Nova PS5 0.4.1 native ARM64 Kyty (CI ${GITHUB_SHA::7}, device test build)" \
+            --title "Nova PS5 0.4.2 native ARM64 Kyty (CI ${GITHUB_SHA::7}, device test build)" \
             --notes "CI-signed device test build. Kyty runs natively on ARM64 with an embedded FEXCore translating only game code (NOVA_ENGINE=fex selects the previous full-FEX path). PS5 game boot and frame presentation on Adreno are UNVERIFIED until tested on hardware. Workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
             "dist/$APK" dist/SHA256SUMS.txt dist/verification.json dist/kyty-core.json dist/native-core.json dist/arm64-fex-preflight.txt
   logs:

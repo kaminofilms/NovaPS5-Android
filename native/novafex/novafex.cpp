@@ -29,6 +29,10 @@
 #include <ucontext.h>
 #include <unordered_map>
 #include <unordered_set>
+#include <thread>
+#include <vector>
+#include <cxxabi.h>
+#include <dlfcn.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -68,6 +72,12 @@ constexpr uint8_t kGateKey[32] = {'N', 'O', 'V', 'A', 'P', 'S', '5', '-', 'G', '
 
 struct ThreadData {
 	FEXCore::Core::InternalThreadState* fex = nullptr;
+	// Heartbeat diagnostics (read racily by the watchdog thread).
+	std::atomic<uint64_t> gates {0};
+	std::atomic<uint64_t> in_host {0};   // host function currently executing, 0 = guest code
+	std::atomic<uint64_t> last_host {0};
+	int tid = 0;
+	~ThreadData();
 	uint64_t guest_stack_top = 0;
 	uint64_t fs_base = 0;
 	uint64_t gate_stack_args = 0;
@@ -186,14 +196,23 @@ void EmitGate(uint8_t* p, const void* host_function) {
 	}
 }
 
+std::atomic<uint64_t> g_total_gates {0};
+std::atomic<uint64_t> g_total_calls {0};
+
 void GateDispatch(void* block_pointer) {
 	auto* block = static_cast<GateBlock*>(block_pointer);
 	auto& t = t_thread;
+	t.gates.fetch_add(1, std::memory_order_relaxed);
+	g_total_gates.fetch_add(1, std::memory_order_relaxed);
+	const auto saved_in_host = t.in_host.load(std::memory_order_relaxed);
+	t.in_host.store(block->target, std::memory_order_relaxed);
+	t.last_host.store(block->target, std::memory_order_relaxed);
 	const auto saved_args = t.gate_stack_args;
 	const auto saved_rsp = t.gate_rsp;
 	t.gate_stack_args = block->stack_args;
 	t.gate_rsp = reinterpret_cast<uint64_t>(block) - 8;
 	nova_call_native(block);
+	t.in_host.store(saved_in_host, std::memory_order_relaxed);
 	t.gate_stack_args = saved_args;
 	t.gate_rsp = saved_rsp;
 }
@@ -246,9 +265,62 @@ NovaThunkHandler g_thunks;
 NovaSignalDelegator g_signals;
 NovaSyscallHandler g_syscalls;
 
+std::mutex g_threads_mutex;
+std::vector<ThreadData*> g_threads;
+
+ThreadData::~ThreadData() {
+	if (tid != 0) {
+		std::lock_guard lock(g_threads_mutex);
+		std::erase(g_threads, this);
+	}
+}
+
+void Watchdog() {
+	const char* env = getenv("NOVA_FEX_HEARTBEAT");
+	const int seconds = env != nullptr ? atoi(env) : 5;
+	if (seconds <= 0) return;
+	uint64_t last_gates = 0;
+	for (;;) {
+		sleep(static_cast<unsigned>(seconds));
+		const auto gates = g_total_gates.load();
+		std::fprintf(stderr, "NOVA_FEX: heartbeat gates=%llu (+%llu) guest_calls=%llu\n", (unsigned long long)gates,
+		             (unsigned long long)(gates - last_gates), (unsigned long long)g_total_calls.load());
+		last_gates = gates;
+		std::lock_guard lock(g_threads_mutex);
+		for (auto* t: g_threads) {
+			const auto in_host = t->in_host.load();
+			const auto shown = in_host != 0 ? in_host : t->last_host.load();
+			Dl_info info {};
+			const char* name = "?";
+			char* demangled = nullptr;
+			if (shown != 0 && dladdr(reinterpret_cast<void*>(shown), &info) != 0 && info.dli_sname != nullptr) {
+				int status = 0;
+				demangled = abi::__cxa_demangle(info.dli_sname, nullptr, nullptr, &status);
+				name = demangled != nullptr ? demangled : info.dli_sname;
+			}
+			char thread_name[32] = "";
+			char path[64];
+			std::snprintf(path, sizeof(path), "/proc/self/task/%d/comm", t->tid);
+			if (FILE* f = std::fopen(path, "r")) {
+				if (std::fgets(thread_name, sizeof(thread_name), f) == nullptr) thread_name[0] = 0;
+				std::fclose(f);
+				thread_name[strcspn(thread_name, "\n")] = 0;
+			}
+			std::fprintf(stderr, "NOVA_FEX:   tid %d %-15s gates=%llu %s %.120s\n", t->tid, thread_name,
+			             (unsigned long long)t->gates.load(), in_host != 0 ? "IN HOST" : "guest (last host)", name);
+			std::free(demangled);
+		}
+	}
+}
+
 ThreadData& Current() {
 	auto& t = t_thread;
 	if (t.fex == nullptr) {
+		t.tid = static_cast<int>(gettid());
+		{
+			std::lock_guard lock(g_threads_mutex);
+			g_threads.push_back(&t);
+		}
 		t.fex = g_ctx->CreateThread(nullptr);
 		if (t.guest_stack_top == 0) {
 			constexpr size_t kStack = 2u << 20;
@@ -375,6 +447,7 @@ bool Init() {
 		return false;
 	}
 	g_initialized = true;
+	std::thread(Watchdog).detach();
 	return true;
 }
 
@@ -418,6 +491,7 @@ void CallGuest(uint64_t target, CallArgs* args) {
 	s.fs_cached = t.fs_base;
 
 	t.depth++;
+	g_total_calls.fetch_add(1, std::memory_order_relaxed);
 	g_ctx->HandleCallback(t.fex, target);
 	t.depth--;
 
