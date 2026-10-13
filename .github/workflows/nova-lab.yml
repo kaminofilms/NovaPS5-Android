@@ -183,4 +183,4 @@ jobs:
           printf '%s x86=%s arm64=%s\n' "$dest" "${{ needs.x86.result }}" "${{ needs.arm64.result }}" >> INDEX.txt
           git add -A
           git -c user.name=nova-lab -c user.email=nova-lab@users.noreply.github.com commit -qm "lab logs $dest"
-          git push -q origin HEAD:lab-logs
+          for i in 1 2 3; do git push -q origin HEAD:lab-logs && break; git pull -q --rebase origin lab-logs; done

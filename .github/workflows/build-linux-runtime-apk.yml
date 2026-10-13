@@ -239,3 +239,33 @@ jobs:
             --title "Nova PS5 0.3.2 Linux/FEX ARM64 (CI ${GITHUB_SHA::7}, device test build)" \
             --notes "CI-signed device test build. Vulkan thunks verified on ARM64 CI with lavapipe; Adreno driver, PS5 game boot and frame presentation are UNVERIFIED until tested on hardware. Workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
             "dist/$APK" dist/SHA256SUMS.txt dist/verification.json dist/kyty-core.json dist/arm64-fex-preflight.txt
+  logs:
+    # CI logs are also committed to the lab-logs branch so they can be read with plain git.
+    needs: [core, linux-apk, arm64-fex-preflight]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: NovaPS5-Linux-FEX-Preflight-${{ github.sha }}
+          path: out
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: NovaPS5-Linux-FEX-APK-${{ github.sha }}
+          path: apk
+      - name: Commit logs to lab-logs
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          cp apk/verification.json apk/SHA256SUMS.txt apk/kyty-core.json out/ 2>/dev/null || true
+          dest="release/${GITHUB_RUN_ID}-${GITHUB_SHA::8}"
+          git init -q logs && cd logs
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q --depth 1 origin lab-logs; then git checkout -q -b lab-logs FETCH_HEAD; else git checkout -q --orphan lab-logs; fi
+          mkdir -p "$dest"; cp -r ../out/. "$dest/" || true
+          printf '%s core=%s apk=%s arm64=%s\n' "$dest" "${{ needs.core.result }}" "${{ needs.linux-apk.result }}" "${{ needs.arm64-fex-preflight.result }}" >> INDEX.txt
+          git add -A
+          git -c user.name=nova-ci -c user.email=nova-ci@users.noreply.github.com commit -qm "release logs $dest"
+          for i in 1 2 3; do git push -q origin HEAD:lab-logs && break; git pull -q --rebase origin lab-logs; done
