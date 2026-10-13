@@ -12,7 +12,48 @@ concurrency:
   group: nova-lab
   cancel-in-progress: true
 jobs:
+  kyty:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install headless Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang lld ninja-build cmake git glslang-tools python3 pkg-config ccache libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev libxfixes-dev libxi-dev libxrandr-dev libxss-dev libxtst-dev libxkbcommon-dev libasound2-dev libpulse-dev libudev-dev libdbus-1-dev libwayland-dev wayland-protocols
+      - name: Checkout pinned Kyty source
+        uses: actions/checkout@v4
+        with:
+          repository: KytyPS5/KytyPS5
+          ref: df5b9b92be7dfd463b47756b707d6d356a9f0550
+          submodules: recursive
+          path: linux-kyty
+      - name: Apply Nova Kyty patches
+        run: |
+          set -euo pipefail
+          for p in patches/kyty-nova-*.patch; do echo "apply $p"; git -C linux-kyty apply --verbose "$GITHUB_WORKSPACE/$p"; done
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: kyty-ccache-df5b9b9-${{ hashFiles('patches/kyty-nova-*.patch') }}
+          restore-keys: kyty-ccache-df5b9b9-
+      - name: Build
+        run: |
+          set -euo pipefail
+          export CCACHE_DIR=~/.cache/ccache CCACHE_MAXSIZE=2G
+          cmake -S linux-kyty -B build/linux-kyty -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DKYTY_BUILD_LAUNCHER=OFF -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build build/linux-kyty --target kyty_emulator --parallel 4
+          ccache -s
+          mkdir -p build-override
+          cp "$(find build/linux-kyty -type f -name kyty_emulator -perm /111 | head -n 1)" build-override/kyty_emulator
+          sha256sum build-override/kyty_emulator
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kyty-patched
+          path: build-override/kyty_emulator
+          retention-days: 7
   x86:
+    needs: kyty
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
@@ -21,6 +62,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libvulkan-dev mesa-vulkan-drivers vulkan-tools xvfb imagemagick
+      - uses: actions/download-artifact@v4
+        with:
+          name: kyty-patched
+          path: build-override
       - name: Inputs
         env:
           GH_TOKEN: ${{ github.token }}
@@ -42,6 +87,8 @@ jobs:
           gcc -O2 runtime-linux/probe.c -ldl -o build/probe
           { build/probe --memory; build/probe --vulkan; vulkaninfo --summary; } > out/x86/vulkan.txt 2>&1 || true
       - name: Boot ccleste with native x86-64 Linux Kyty
+        env:
+          NOVA_RELAXED_VULKAN: '1'
         run: |
           mkdir -p out/x86/cwd && cd out/x86/cwd
           bash "$GITHUB_WORKSPACE/tools/lab/run-kyty-lab.sh" native "$GITHUB_WORKSPACE/build/core/kyty_emulator" "$GITHUB_WORKSPACE/build/PPSA59322" "$GITHUB_WORKSPACE/out/x86" 240
@@ -93,8 +140,8 @@ jobs:
           { nova_fex_run "$PWD/build/runtime/guest/nova-probe" --memory
             nova_fex_run "$PWD/build/runtime/guest/nova-probe" --vulkan; echo "probe exit $?"
             echo '--- loader debug ---'
-            VK_LOADER_DEBUG=error,warn,info FEX_OUTPUTLOG=stderr FEX_SILENTLOG=0 nova_fex_run "$PWD/build/runtime/guest/nova-probe" --vulkan 2>&1 | head -150
-          } >> out/arm64/vulkan.txt 2>&1
+            VK_LOADER_DEBUG=error,warn,info FEX_OUTPUTLOG=stderr FEX_SILENTLOG=0 nova_fex_run "$PWD/build/runtime/guest/nova-probe" --vulkan 2>&1 | head -150 || true
+          } >> out/arm64/vulkan.txt 2>&1 || true
           cat out/arm64/vulkan.txt
       - name: Boot ccleste with Linux Kyty under FEX
         shell: bash
@@ -104,7 +151,7 @@ jobs:
           nova_fex_setup "$PWD/build/runtime" "$PWD/build/fex-config"
           export -f nova_fex_run; export nova_fex nova_loader nova_guest_libs
           export VK_DRIVER_FILES="$(find /usr/share/vulkan/icd.d -maxdepth 1 -name 'lvp_icd*.json' -print -quit)"
-          export FEX_TSOENABLED=1
+          export FEX_TSOENABLED=1 NOVA_RELAXED_VULKAN=1
           mkdir -p out/arm64/cwd && cd out/arm64/cwd
           bash "$GITHUB_WORKSPACE/tools/lab/run-kyty-lab.sh" fex "$GITHUB_WORKSPACE/build/core/kyty_emulator" "$GITHUB_WORKSPACE/build/PPSA59322" "$GITHUB_WORKSPACE/out/arm64" 600
           tail -60 "$GITHUB_WORKSPACE/out/arm64/kyty.txt"
@@ -115,7 +162,7 @@ jobs:
           path: out
           retention-days: 3
   publish:
-    needs: [x86, arm64]
+    needs: [kyty, x86, arm64]
     if: always()
     runs-on: ubuntu-24.04
     steps:

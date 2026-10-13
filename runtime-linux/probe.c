@@ -37,7 +37,7 @@ static int vulkan_probe(void) {
   VkResult result = vkCreateInstance(&create, 0, &instance);
   if (result) { fprintf(stderr, "NOVA_ERROR: vkCreateInstance=%d%s\n", result, result == VK_ERROR_INCOMPATIBLE_DRIVER ? " (no usable ICD reached by the guest loader)" : ""); return 73; }
   G(vkEnumeratePhysicalDevices); G(vkDestroyInstance); G(vkGetPhysicalDeviceProperties);
-  G(vkGetPhysicalDeviceFeatures2); G(vkEnumerateDeviceExtensionProperties);
+  G(vkGetPhysicalDeviceFeatures2); G(vkEnumerateDeviceExtensionProperties); G(vkGetPhysicalDeviceProperties2);
   uint32_t count = 0;
   result = vkEnumeratePhysicalDevices(instance, &count, 0);
   printf("NOVA_VULKAN: vkEnumeratePhysicalDevices=%d devices=%u\n", result, count);
@@ -50,6 +50,12 @@ static int vulkan_probe(void) {
     VkPhysicalDeviceProperties p; vkGetPhysicalDeviceProperties(devices[d], &p);
     printf("NOVA_VULKAN: device %u: %s api=%u.%u.%u driver=0x%x vendor=0x%x\n", d, p.deviceName,
            VK_VERSION_MAJOR(p.apiVersion), VK_VERSION_MINOR(p.apiVersion), VK_VERSION_PATCH(p.apiVersion), p.driverVersion, p.vendorID);
+    if (vkGetPhysicalDeviceProperties2 && p.apiVersion >= VK_API_VERSION_1_2) {
+      VkPhysicalDeviceDriverProperties drv = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES};
+      VkPhysicalDeviceProperties2 p2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &drv};
+      vkGetPhysicalDeviceProperties2(devices[d], &p2);
+      printf("NOVA_VULKAN: device %u driver id=%d name=\"%s\" info=\"%s\"\n", d, drv.driverID, drv.driverName, drv.driverInfo);
+    }
     VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR bary = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_KHR};
     VkPhysicalDeviceImageViewMinLodFeaturesEXT minlod = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_VIEW_MIN_LOD_FEATURES_EXT, &bary};
     VkPhysicalDeviceColorWriteEnableFeaturesEXT cwe = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COLOR_WRITE_ENABLE_FEATURES_EXT, &minlod};
