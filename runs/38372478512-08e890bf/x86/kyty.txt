@@ -1,0 +1,16 @@
+Initialized: Config
+Initialized: Log
+Initialized: Timer
+Initialized: Pthread
+Initialized: Profiler
+Initialized: Network
+Initialized: Memory
+Initialized: FileSystem
+Initialized: Controller
+Initialized: Audio
+--- Build ---
+Source build df5b9b9
+--- Error ---
+Could not find suitable device:
+  llvmpipe (LLVM 20.1.2, 256 bits): image view minLod is not supported; fragmentShaderBarycentric is not supported; depthBounds is not supported in /home/runner/work/NovaPS5-Android/NovaPS5-Android/linux-kyty/src/graphics/presentation/window/vulkanWindow.cpp:985
+NOVA_LAB: mode=native exit=65 elapsed=15s (124 = still running at timeout)

@@ -1,0 +1,29 @@
+NOVA_LOADER: /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 --inhibit-cache --library-path /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu
+NOVA_LIBC: -rwxr-xr-x 1 runner runner 2129424 Jan  1  1970 /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu/libc.so.6
+total 20
+drwxr-xr-x 2 runner runner 4096 Oct 13 08:55 .
+drwxr-xr-x 6 runner runner 4096 Oct 13 08:55 ..
+-rw-r--r-- 1 runner runner  134 Oct 13 08:55 Config.json
+-rw-r--r-- 1 runner runner 5097 Oct 13 08:55 ThunksDB.json
+NOVA_PROBE: x86-64 Linux process; page_size=4096 pid=3258
+NOVA_MEMORY: guest user VA is 47-bit (Kyty arena window [0xA000000000,0xFC00000000) reachable)
+NOVA_MEMORY: guest map base 0x200000000 size 0x400000000 PASS errno=0 (ok)
+Linking address 0x7ffff77d2c94 to host invoker 0x7ffff7ee9940
+Linking address 0x7ffff76580f4 to host invoker 0x7ffff7eeb390
+Linking address 0x7ffff7654d60 to host invoker 0x7ffff7ee9d60
+Linking address 0x7ffff7657d80 to host invoker 0x7ffff7ee9d40
+Linking address 0x7ffff7651254 to host invoker 0x7ffff7ee9e30
+Linking address 0x7ffff7654134 to host invoker 0x7ffff7eeb550
+Linking address 0x7ffff7654ca0 to host invoker 0x7ffff7ee9f30
+NOVA_PROBE: x86-64 Linux process; page_size=4096 pid=3261
+NOVA_VULKAN: guest libvulkan.so.1 resolved to /home/runner/work/NovaPS5-Android/NovaPS5-Android/build/runtime/guest/usr/lib/x86_64-linux-gnu/libvulkan.so.1
+NOVA_VULKAN: loader instance version 1.3.275
+NOVA_VULKAN: vkEnumeratePhysicalDevices=0 devices=1
+NOVA_VULKAN: device 0: llvmpipe (LLVM 20.1.2, 128 bits) api=1.4.318 driver=0x6402008 vendor=0x10005
+NOVA_KYTY_REQ: device 0 FEATURE MISSING imageViewMinLod
+NOVA_KYTY_REQ: device 0 FEATURE MISSING fragmentShaderBarycentric
+NOVA_KYTY_REQ: device 0 FEATURE MISSING depthBounds
+NOVA_KYTY_REQ: device 0 EXTENSION MISSING VK_EXT_image_view_min_lod
+NOVA_KYTY_REQ: device 0 EXTENSION MISSING VK_KHR_fragment_shader_barycentric
+NOVA_KYTY_REQ: device 0 FAIL (5 missing of 42 checks)
+NOVA_VULKAN: instance and device enumeration PASS; Kyty device requirements FAIL; frame presentation UNVERIFIED
