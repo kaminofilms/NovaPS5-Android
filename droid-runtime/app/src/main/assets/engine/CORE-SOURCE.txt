@@ -1,0 +1,4 @@
+KytyPS5 GPL-2.0-only
+Source: https://github.com/KytyPS5/KytyPS5/tree/df5b9b92be7dfd463b47756b707d6d356a9f0550
+Linux build workflow: .github/workflows/build-linux-kyty.yml
+Linux executable SHA256: e594d71bb9c60ff47d2ac1e1ee4b9c21eca7ad1ba949d1943a7644eabc2f846c

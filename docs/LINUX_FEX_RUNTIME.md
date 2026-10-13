@@ -15,3 +15,11 @@ The supplied Linux core's memory implementation scans occupied mappings and atte
 CI verifies the APK and runs FEX A-D on an ARM64 Linux runner. This is not Android hardware evidence. Neither Dead Cells guest execution nor gameplay is claimed. On the Red Magic device, select the extracted PPSA15552 folder, press Play, then export Diagnostics and the session boot log after the first attempt. Preserve the first failure and all prior NOVA_STAGE lines.
 
 The CI APK uses a new temporary development signing identity. Back up app data before uninstalling an existing differently signed build; existing runtime installation may otherwise be lost. Future releases should use the user's persistent signing secret when available.
+
+## Loader inspection
+
+The supplied core already contains SELF/ELF validation, segment mapping, PT_TLS handling, relocation and NID fallback resolution, main-thread initialization and a guest-entry call. Execute: Main is logged before RunEntry, so that line alone does not prove executed guest instructions. A reported machine 62/type 0xfe10 header is only an input validation clue. The actual Dead Cells files are unavailable in CI.
+
+Public references examined: ps5-payload-dev/sdk (dynamic linking against actual PS5 services), shadps4-emu/shadPS4 src/core/linker.cpp (PS4 module relocation and TLS architecture), and Coder787-source/KytyPlus README (experimental boot compatibility, no playability guarantee). These are architectural references; no firmware implementation or unrelated emulator core was substituted. Device logs must identify the first failing stage before a title-specific HLE, relocation or memory patch can be justified.
+
+The APK includes Kyty's GPL-2.0 COPYING text. Corresponding pinned upstream source is https://github.com/KytyPS5/KytyPS5/tree/df5b9b92be7dfd463b47756b707d6d356a9f0550; Android integration source remains in this repository.

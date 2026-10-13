@@ -143,6 +143,6 @@ final class RuntimeEngine {
             else throw new IOException("Unsupported runtime archive member");
         }}
     }
-    static void clear(File f)throws IOException {if(!f.exists())return;if(java.nio.file.Files.isSymbolicLink(f.toPath())){if(!f.delete())throw new IOException("Cannot remove stale runtime link");return;}if(f.isDirectory()){File[] files=f.listFiles();if(files!=null)for(File child:files)clear(child);}if(!f.delete())throw new IOException("Cannot remove stale runtime staging file");}
+    static void clear(File f)throws IOException {if(java.nio.file.Files.isSymbolicLink(f.toPath())){if(!f.delete())throw new IOException("Cannot remove stale runtime link");return;}if(!f.exists())return;if(f.isDirectory()){File[] files=f.listFiles();if(files!=null)for(File child:files)clear(child);}if(!f.delete())throw new IOException("Cannot remove stale runtime staging file");}
 }
 

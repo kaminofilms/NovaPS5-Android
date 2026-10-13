@@ -104,6 +104,22 @@ jobs:
             timeout 60s FEX "$PWD/build/kyty_emulator" --help
             timeout 60s FEX /nova-probe --memory
           } 2>&1 | tee dist/arm64-fex-preflight.txt
+      - name: Verify Vulkan thunk using the ARM64 software ICD
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libvulkan1 mesa-vulkan-drivers
+          export FEX_ROOTFS="$PWD/build/runtime/guest"
+          export FEX_APP_CONFIG_LOCATION="$PWD/build/runtime"
+          export FEX_PORTABLE=1
+          export FEX_THUNKHOSTLIBS="$PWD/build/runtime/host/usr/lib/aarch64-linux-gnu/fex-emu/HostThunks"
+          export FEX_THUNKGUESTLIBS="$PWD/build/runtime/host/usr/share/fex-emu/GuestThunks"
+          export FEX_THUNKCONFIG="$PWD/build/runtime/thunks.json"
+          export VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.aarch64.json
+          test -r "$VK_DRIVER_FILES"
+          echo 'CI Vulkan uses software rendering; no Adreno or presented game frame claim' | tee -a dist/arm64-fex-preflight.txt
+          timeout 90s build/runtime/host/usr/bin/FEX /nova-probe --vulkan 2>&1 | tee -a dist/arm64-fex-preflight.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
