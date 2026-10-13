@@ -25,8 +25,11 @@ source "$base/fex-linux.sh"
 nova_fex_setup "$runtime" "$base/fex-config"
 export -f nova_fex_run
 export nova_fex nova_loader nova_guest_libs
-export FEX_TSOENABLED=1 FEX_VECTORTSOENABLED=1 FEX_MEMCPYSETTSOENABLED=1
-export FEX_X87REDUCEDPRECISION=0
+# FEX's own defaults (as used by Proton/Steam on ARM): TSO for scalar memory, half-barrier
+# vector/memcpy ordering. Forcing full vector and memcpy TSO cost a large share of the frame time.
+# Set NOVA_FEX_STRICT_TSO=1 in Download/droiddeck-env to restore the strict mode for a game.
+export FEX_TSOENABLED=1 FEX_X87REDUCEDPRECISION=0 FEX_MULTIBLOCK=1
+if [[ "${NOVA_FEX_STRICT_TSO:-0}" == 1 ]]; then export FEX_VECTORTSOENABLED=1 FEX_MEMCPYSETTSOENABLED=1; echo 'NOVA_FEX: strict vector/memcpy TSO'; fi
 export SDL_VIDEODRIVER=x11
 export XDG_CONFIG_HOME=/root/.config XDG_DATA_HOME=/root/.local/share
 mkdir -p /root/.config/kyty /root/.local/share/kyty /root/.cache/kyty
