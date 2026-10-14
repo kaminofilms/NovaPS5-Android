@@ -94,8 +94,10 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
             if (guestVa) BootLog.write(this, "Guest address translation on (addresses above 512 GB)");
             boolean unreal = unrealGame(new File(game), 0);
             // With guest address translation the game's own libc heap (512/768 GB arena) works as on
-            // the console, so it is the default; the emulator heap stays available as a setting.
-            boolean heapHle = unreal && (!guestVa || getSharedPreferences("nova", 0).getBoolean("unreal_heap_hle", false));
+            // the console. The emulator heap is only for titles without translation: under translation
+            // it broke both Unreal test games in 0.9.6 (Meat Boy: out of memory at 32 MiB, Luna: crash
+            // at start), so the old setting is ignored here.
+            boolean heapHle = unreal && !guestVa;
             Os.setenv("NOVA_HEAP_HLE", heapHle ? "1" : "0", true);
             if (unreal) BootLog.write(this, heapHle ? "Unreal Engine title: the emulator serves its libc heap"
                     : "Unreal Engine title: the game's own libc heap (translated addresses)");

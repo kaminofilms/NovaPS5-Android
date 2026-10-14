@@ -1,57 +1,46 @@
 # MASTER PROMPT — continue Nova PS5 (paste all of this)
 
-You are continuing work on **Nova PS5**, my port of the KytyPS5 PS5 emulator to native Android. Read everything below before acting. Before you change anything, re-check the reference resources listed in "Resources" for how they solve the same problem, and cite them.
+You are continuing work on **Nova PS5**, my port of the KytyPS5 PS5 emulator to native Android. Read everything below before acting.
 
-## Hard rules (always)
+## Hard rules
 1. Never download copyrighted games, firmware or keys. No Wine/Proton/Steam/DroidDeck. Don't touch my separate Nova Switch emulator.
-2. Never claim a game boots/works without device-log evidence from me. Never fake CI or weaken tests. If you're unsure, say so.
-3. Sign every APK with `tools/ci/novaps5-ci-test.keystore`, alias `novaps5dev`, password `android` (so updates install over each other).
-4. Ask me before starting a new APK build. I prefer larger, tested, batched releases over micro-fixes (I have usage limits).
-5. Research root causes first (resources below + Unity/Unreal/PS5 dev forums + Reddit). End every research answer with a **Sources** list. Ignore rpcs5.com (fake: empty file, no source).
+2. Never claim a game boots without my device log showing it (`game_fps` > 0 in the heartbeat). Never fake CI or weaken tests. Say when you are unsure.
+3. Sign every APK with `tools/ci/novaps5-ci-test.keystore`, alias `novaps5dev`, password `android`, so updates install over each other.
+4. Ask me before starting a new APK build. I prefer larger, tested, batched releases (I have usage limits).
+5. Research root causes first (resources below + Unreal/Unity/PS5 dev forums + Reddit) and end research answers with a **Sources** list. Ignore rpcs5.com (fake).
 6. Keep messages short.
 
-## Resources (check these first)
-- PS5SDK: https://github.com/PS5Dev/PS5SDK
-- ps5-payload-sdk: https://github.com/john-tornblom/ps5-payload-sdk
-- AnyPS5 (GPL-2.0, same licence as ours; licence in `LICENSES/AnyPS5-GPL-2.0.txt`): https://github.com/boykopovar/AnyPS5 — its `docs/dev/debt/*.md` documents what real games (incl. Unity titles) call; its NGS2 mixer is already ported into Kyty.
-- sharpemu (Unity notes: user id 0x10000000, sceKernelRaiseException on target thread, NpCppWebApi stubs): https://github.com/sharpemu/sharpemu
-- prosper (libc 512 GiB heap, HLE refs): https://github.com/mattias800/prosper
-- FEX-Emu (our CPU translator): https://github.com/FEX-Emu/FEX (pinned commit 14c92681f4d62cf84d901460e0358de09c8847a7)
-- Kyty upstream: https://github.com/KytyPS5/KytyPS5
+## Resources
+- PS5SDK https://github.com/PS5Dev/PS5SDK · ps5-payload-sdk https://github.com/john-tornblom/ps5-payload-sdk
+- AnyPS5 (GPL-2.0, licence in `LICENSES/AnyPS5-GPL-2.0.txt`) https://github.com/boykopovar/AnyPS5 — `docs/dev/debt/*.md` lists what real games call; its NGS2 mixer is already ported.
+- sharpemu (Unity notes, NpCppWebApi stubs) https://github.com/sharpemu/sharpemu · prosper (libc heap, HLE) https://github.com/mattias800/prosper
+- shadPS4 (Kyty's renderer design: buffer cache / BDA page table / page manager) https://github.com/shadps4-emu/shadPS4
+- FEX-Emu (CPU translator, pinned 14c92681f4d62cf84d901460e0358de09c8847a7) https://github.com/FEX-Emu/FEX · Kyty upstream https://github.com/KytyPS5/KytyPS5
 
-## Project layout
-- Repo github.com/kaminofilms/NovaPS5-Android, branch `android-native`. All builds in GitHub Actions `.github/workflows/android-native.yml` (jobs: novafex → novafex-test → ffmpeg → kyty → apk → logs). Release tag `v<ver>-android-<sha7>` with the APK. Logs mirrored to a lab-logs repo `runs/android-<runid>-<sha>/` (kyty build log: `android-kyty/logs/kyty-android-build.txt`).
-- Kyty is applied as ONE patch: `patches/kyty-nova-arm64.patch` = `git diff 6d76a5c4 HEAD` of my Kyty fork. To change Kyty: apply patch to Kyty base 6d76a5c4, edit, regenerate the patch.
-- `native/novafex/novafex.{h,cpp}` = embedded FEXCore bridge (libnovafex.so). Tests `native/novafex/test/novafex_test.cpp` run on an arm64 runner; must print `NOVAFEX_TEST: ALL PASS`.
-- Java launcher `nova-android/src/com/kaminofilms/novaps5/` (MainActivity session log with "Key lines" summary, GameActivity sets env like NOVA_HEAP_HLE, GameStore, Art = SteamGridDB backgrounds, HomeView).
-- Version bump: workflow `--version-name/--version-code` + defaults in `tests/verify_native_apk.py`. Current: **0.8.4 / versionCode 42**.
-- Device: Red Magic 11 Pro (nubia NX809J, SM8850, Android 16), system Vulkan. Address space is 39-bit (host VA ceiling 0x80_0000_0000); guest user window clamped to [0x10_0000_0000, 0x60_0000_0000). Guest modules load near 0x9_0000_0000.
+## Layout and build
+- Repo github.com/kaminofilms/NovaPS5-Android. **Current work branch: `feature/guest-va`** (stable: `android-native`). CI: `.github/workflows/android-native.yml` (jobs novafex → novafex-test → ffmpeg → kyty → apk → logs); run it with `gh workflow run android-native.yml --ref feature/guest-va`. Release tag `v<ver>-android-<sha7>` with the APK. About 10–20 min with ccache.
+- Kyty = KytyPS5 commit df5b9b9 + `patches/linux-core.series` (5 small patches, then `patches/kyty-nova-arm64.patch`). To change Kyty: apply the series to df5b9b9, commit after the first five ("base5"), edit, then regenerate `kyty-nova-arm64.patch` = `git diff base5 HEAD`. `tests/test_native_startup.py <patched kyty>` runs in CI before the build and must print two `ALL PASS` lines.
+- `native/novafex/novafex.{h,cpp}` = embedded FEXCore bridge (libnovafex.so); `patches/fex-android/0002-nova-guest-va.patch` = FEX guest-VA translation. Bridge tests must print `NOVAFEX_TEST: ALL PASS`.
+- Java launcher `nova-android/src/com/kaminofilms/novaps5/` (GameActivity sets env: NOVA_GUEST_VA, NOVA_HEAP_HLE…; MainActivity = settings and the session log with "Key lines").
+- Version: workflow `--version-name/--version-code` + defaults in `tests/verify_native_apk.py`. **Current: 0.9.7 / 55.**
+- Device: Red Magic 11 Pro (nubia NX809J, SM8850 / Adreno 840, Android 16), 39-bit address space (host VA ceiling 0x80_0000_0000), guest window [0x10_0000_0000, 0x60_0000_0000), guest modules at 0x9_0000_0000.
 
-## How the emulator works (key internals)
-- Guest x86-64 runs in FEX with 1:1 addresses. Guest→host calls go through x86 "gates" (`MakeGate`, `GateDispatch`); host→guest via `NovaFex::CallGuest`.
-- `NovaFex::InvalidateGuestCode` MUST hold `GetCodeInvalidationMutex()` (FEX's assert macro evaluates try_lock() even in release; fixed in 0.8.3 — it deadlocked before).
-- New in 0.8.3: `NovaFex::GetGuestCallContext` (guest regs at the current host call), `SetGateExitHook/ArmGateExitHook` (safe point when a host call returns).
-- NIDs = base64(reverse(SHA1(name + hex 518d64a635ded8c1e6b039b1c3e55230)[0:8])), '/'→'-'. e.g. malloc = gQX+4GDQjpM.
-- Diagnostics in logs: NOVA_FREEZE (no frame 4 s: per-thread host function/gates/wchan, GPU queue, flips, NOVA_WAIT waiters), NOVA_FAULT (guest regs, last 16 host calls, stack annotated with module exports), NOVA_MEMORY, NOVA_HEAP, NOVA_SIGNAL, NOVA_AUDIO.
+## How it works
+- Guest x86-64 runs in FEX; host (Kyty, native arm64) and guest connect through gates (`MakeGate`) and `NovaFex::CallGuest`.
+- **Guest VA translation (on for every title except Dead Cells):** guest addresses ≥ 2^39 are rebased per 1 GiB slot (`NovaFex::TranslateGuestVA`; slot windows come from the guest window, `NovaEnsureVASlots` in memory.cpp). Unreal/libc reserve 512–768 GiB at guest 0x80_0000_0000. Host (emulator) code must translate before touching such memory: `src/common/guestMemory.h` (`GuestMemory::Ptr/Read/Write/Copy/Fill32`) and `common/novaFex.h` `NovaGuest::*`. Untranslated host accesses still work, but each one is a SIGSEGV emulated in `EmulateHighAccess` (slow); they are counted as `hostemu` in the heartbeat with the busiest call sites.
+- GPU address domain on aarch64: `regionDefinitions.h` LOWER_ADDRESS_SIZE = 1.5 TiB, no extended memory (covers the translated arenas).
+- GPU page-tracking faults on slot host windows are mapped back to guest addresses (`NovaHostToGuestVA` in `HandleGpuFault`); the SIGSEGV handler uses SA_NODEFER (depth-limited).
+- Diagnostics: heartbeat every 15 s (`fps` = presenter, `game_fps` = real game flips, `hostemu`), `NOVA_FREEZE: no game frame after 20/45 s` (all threads, GPU queues, flips), NOVA_FAULT, NOVA_ABORT (Unreal fatal text), NOVA_MEMTRACE, NOVA_GPU_WAIT, NOVA_WAIT.
 
-## Game status (evidence = my device logs)
-- **Dead Cells (PPSA15552)** — WORKS (~58-60 fps, audio OK via AnyPS5 NGS2). Done.
-- **ccleste homebrew (PPSA59322)** — has NEVER booted on Android-native (an earlier claim it ran was wrong). Crash at startup: `MapDirect failed 0x80020016 addr=0x400004000 len=0x200000 flags=0x10` (fixed mapping refused, EINVAL), then null deref at guest rip 0x900b8d5c1. In `src/kernel/memory.cpp` MapDirectMemoryImpl, a fixed map returns EINVAL if `in_addr % alignment != 0` (0x400004000 isn't 2 MB aligned) — and the address is also below the clamped guest window. Next: find which check fails, compare with how AnyPS5/sharpemu handle fixed direct maps, honour the request (e.g. ignore alignment for MAP_FIXED, allow fixed maps below the window when the host range is free).
-- **Luna Abyss (PPSA36257, Unreal)** — libc.prx reserves 512 GiB and puts its heap at the top (impossible in 39-bit). Approach: NovaHeap (`src/libs/novaHeap.cpp`, TLSF heap, enabled by NOVA_HEAP_HLE=1 which the launcher sets for Unreal games) + `PatchLibc()` rewrites libc.prx allocator exports to `FF 25 00000000 <gate>`.
-  - 0.8.2: hung (FEX invalidation lock bug) → fixed 0.8.3.
-  - 0.8.3: crashed inside libc `free` with a NovaHeap pointer, because libc free/realloc/reallocalign/malloc_usable_size are wrappers `55 48 89 e5 ff 15 <disp32> 5d c3` (call through a pointer slot) and weren't redirected.
-  - **0.8.4 (just built, UNTESTED)**: `BuildOriginalTrampoline` now relocates `call/jmp [rip+disp]` (via r11) so these four are redirected and the original stays callable for old pointers. Check the log for `NOVA_HEAP: 11 libc.prx allocator entry points…` and no "cannot be relocated" lines.
-  - If Unreal still can't work this way: fallback "option 3" = give the guest its own translated address space in FEXCore (big job; I approved it if needed).
-- **EverForward (PPSA04703, Unity)** — 0.8.2 froze because Kyty ran Unity's GC suspend signal (sceKernelRaiseException SIGUSR1) on the calling thread. 0.8.3 delivers it on the target thread (logs show `NOVA_SIGNAL … (delivered)`), default user id now 0x10000000. Now: black screen, 0 flips, ~60 threads mostly waiting (Unity EventFlag / semaphores); thread "Loading.Preload" spins with millions of host calls (KernelWaitSema). 4 unresolved NpCppWebApi imports (Y295ygEccqk, 8x++mBOUeso, UYPxv8MIzGo = Common::initialize, 52AlYvq+dmk) already return 0 like sharpemu — not the blocker. Next: find what Loading.Preload waits for (likely a file/AIO, GPU or async-read completion); check AnyPS5 docs for Unity loading paths (`--module-dir`, Media/Plugins modules loaded with sceKernelLoadStartModule).
-- A known gap: a guest thread spinning in pure guest code with no host calls never receives a raised signal.
+## Status (evidence = my device logs)
+- **Dead Cells (PPSA15552)** — works (~60 fps).
+- **Super Meat Boy 3D (PPSA31162, Unreal)** — 0.9.5 crashed in VideoOutRegisterBuffers2 (buffer at 0x13FC0000000, above the GPU's old 1 TiB domain); fixed in 0.9.6 (it got past it). The 0.9.6 test ran with the "emulator heap" setting ON and hit Unreal's fatal "Ran out of memory allocating 32 MiB" right after mapping the first 32 MiB display buffer.
+- **Luna Abyss (PPSA36257, Unreal)** — 0.9.5: black screen; the GPU ran 8 compute + 1 vertex shader and `AgcEqueue` (EOP ids 0 and 32) waited > 4 s. 0.9.6 with the emulator heap ON: guest null deref at rip 0x90108af2f (linked-list walk) right after `cxa_atexit`.
+- **0.9.7**: the emulator heap is forced OFF for translated titles (setting removed; it broke both games). So 0.9.7 = 0.9.5 baseline + the 0.9.6 GPU fixes. No 0.9.7 device log yet.
+- EverForward (Unity): black screen (see AnyPS5/sharpemu notes). ccleste homebrew: never booted.
 
-## 0.9.6 (branch feature/guest-va, built on request 2026-10-14)
-- Meat Boy 3D crashed in VideoOutRegisterBuffers2: buffer at guest 0x13fc0000000 (768 GiB arena at 2^39 ends at 1.25 TiB) was outside the GPU's 1 TiB domain. On aarch64 `regionDefinitions.h` now uses LOWER_ADDRESS_SIZE = 1.5 TiB and GPU_EXTENDED_SIZE = 0 (same BDA table size; Android has no extended memory).
-- Luna black screen: GPU front end read high-arena command buffers/shaders/labels/uploads via per-access fault emulation. New `src/common/guestMemory.h` (Ptr/Read/Write/Copy/Fill32) translates in graphicsRun (HostCommands at Submit/SubmitCompute/ProcessIndirectBuffer, WaitRegMem, EOP, WriteData), pm4Handlers, bufferCache, shader.cpp (ShaderParams::guest_base keeps Base() guest), SrtWalker, renderCompute/renderDraw. Backing read/write split per slot (memory.cpp NovaForEachHostPiece).
-- GPU-tracked faults on slot host windows map back to guest (memory.cpp NovaHostToGuestVA in HandleGpuFault); SIGSEGV handler uses SA_NODEFER (depth-limited) so an emulated store into a tracked page can be handled.
-- novafex: NoteGameFrame(); watchdog reports `NOVA_FREEZE: no game frame after 20/45 s`; heartbeat every 15 s shows game_fps and `hostemu` count + busiest call sites.
-- Agc command builders (AgcDcb*/AgcCb*) still write guest command buffers through emulation if those are high; check `hostemu` sites in the next logs.
-
-## Immediate next steps
-1. Give me the 0.8.4 link (already built): https://github.com/kaminofilms/NovaPS5-Android/releases/download/v0.8.4-android-2df4742/NovaPS5-0.8.4-android-arm64.apk — wait for my Luna / EverForward / ccleste logs.
-2. Research + fix ccleste's fixed MapDirect, EverForward's loading stall, and whatever 0.8.4 shows for Luna. Batch them into one tested build (0.8.5) and ask me before building.
+## Next steps
+1. Get my 0.9.7 logs for Meat Boy and Luna (let each run ≥ 45 s). Read `game_fps`, the `NOVA_FREEZE: no game frame` report (which thread waits on what, GPU queue state, flips), the `hostemu` call sites, and any NOVA_FAULT/NOVA_ABORT.
+2. If `hostemu` is high, translate that call site with `GuestMemory::*` (likely candidates: Agc command builders in `src/libs/agc.cpp` writing PM4 through `CommandBuffer::AllocateDW`, HLE memcpy/memset paths).
+3. If Unreal aborts again, the NOVA_ABORT text names the Unreal source file and line; research it and fix the HLE it depends on.
+4. Batch fixes into one tested build and ask me before building.
