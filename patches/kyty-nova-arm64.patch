@@ -1255,7 +1255,7 @@ index 8641e8a9..8c9aef6b 100644
  			const auto external_wait = micros != 0 ? micros - elapsed : UINT32_MAX;
  			m_cond_var.WaitFor(&m_mutex,
 diff --git a/src/kernel/memory.cpp b/src/kernel/memory.cpp
-index febbd49a..bc18f134 100644
+index febbd49a..6775c312 100644
 --- a/src/kernel/memory.cpp
 +++ b/src/kernel/memory.cpp
 @@ -1,6 +1,8 @@
@@ -1473,7 +1473,7 @@ index febbd49a..bc18f134 100644
  int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags, size_t alignment) {
  	PRINT_NAME();
  
-@@ -3545,12 +3677,65 @@ int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags,
+@@ -3545,12 +3677,76 @@ int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags,
  	} else {
  		alignment = (alignment != 0 ? alignment : PAGE_SIZE);
  		out_addr  = FindGuestFreeRange(in_addr, len, alignment);
@@ -1490,24 +1490,35 @@ index febbd49a..bc18f134 100644
 +			const uint64_t ceiling  = NovaProbeHostCeiling();
 +			const uint64_t top_need = len - 0x40000000ull + 0x4000000ull;
 +			const uint64_t arena_align = std::max<uint64_t>(alignment, 0x200000ull);
-+			constexpr uint64_t kBottom = 0x400000000ull;
 +			constexpr uint64_t kSlack  = 0x400000ull;
 +			if (len > 0x40000000ull && top_need < ceiling && len <= ceiling + 0x40000000ull) {
 +				const uint64_t max_base = ceiling - top_need;
-+				const uint64_t base = NovaFindFreeIn(HOST_SYSTEM_MANAGED_MIN, max_base + kBottom + kSlack,
-+				                                     kBottom + kSlack, arena_align);
-+				if (base != 0 && base <= max_base) {
++				// The low gigabyte is shared with the host (ART's Java heap usually starts at
++				// 0x12c00000), so take the largest bottom part that fits below max_base.
++				static constexpr uint64_t kBottoms[] = {0x400000000ull, 0x100000000ull, 0x40000000ull,
++				                                        0x10000000ull,  0x8000000ull,   0x4000000ull};
++				for (const uint64_t bottom: kBottoms) {
++					const uint64_t base = NovaFindFreeIn(HOST_SYSTEM_MANAGED_MIN, max_base + bottom + kSlack,
++					                                     bottom + kSlack, arena_align);
++					if (base == 0 || base > max_base) {
++						continue;
++					}
 +					out_addr         = base;
 +					g_nova_big_base  = base;
 +					g_nova_big_asked = len;
-+					g_nova_big_got   = kBottom;
++					g_nova_big_got   = bottom;
 +					std::fprintf(stderr, "NOVA_MEMORY: ReserveVirtualRange len=0x%llx does not fit; arena at 0x%llx "
 +					             "(bottom 0x%llx reserved, top at 0x%llx below the 0x%llx ceiling)\n",
 +					             static_cast<unsigned long long>(len), static_cast<unsigned long long>(base),
-+					             static_cast<unsigned long long>(kBottom),
++					             static_cast<unsigned long long>(bottom),
 +					             static_cast<unsigned long long>(base + len - 0x40000000ull),
 +					             static_cast<unsigned long long>(ceiling));
-+					len = kBottom;
++					len = bottom;
++					break;
++				}
++				if (out_addr == 0) {
++					std::fprintf(stderr, "NOVA_MEMORY: no low arena base below 0x%llx for len=0x%llx; using the shrunk reservation\n",
++					             static_cast<unsigned long long>(max_base), static_cast<unsigned long long>(len));
 +				}
 +			}
 +		}
