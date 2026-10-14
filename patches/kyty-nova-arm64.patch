@@ -1255,7 +1255,7 @@ index 8641e8a9..8c9aef6b 100644
  			const auto external_wait = micros != 0 ? micros - elapsed : UINT32_MAX;
  			m_cond_var.WaitFor(&m_mutex,
 diff --git a/src/kernel/memory.cpp b/src/kernel/memory.cpp
-index febbd49a..a5eac18f 100644
+index febbd49a..46d450ad 100644
 --- a/src/kernel/memory.cpp
 +++ b/src/kernel/memory.cpp
 @@ -1,6 +1,8 @@
@@ -1408,7 +1408,7 @@ index febbd49a..a5eac18f 100644
  		if (no_overwrite && g_virtual_ranges->HasOverlap(in_addr, len)) {
  			return KERNEL_ERROR_ENOMEM;
  		}
-@@ -3102,6 +3183,17 @@ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
+@@ -3102,6 +3183,34 @@ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
  			if (!reserved_target && ReplaceFixedRangeWithReserved(in_addr, len)) {
  				reserved_target = true;
  			}
@@ -1422,11 +1422,28 @@ index febbd49a..a5eac18f 100644
 +				std::fprintf(stderr, "NOVA_MEMORY: arena tail 0x%llx len=0x%llx taken from the host range\n",
 +				             static_cast<unsigned long long>(in_addr), static_cast<unsigned long long>(len));
 +			}
++			// The exact address is beyond what the host can address (39-bit Android: the top of a
++			// 512/768 GiB arena). Mapping it elsewhere and returning that address beats failing:
++			// callers that use the returned address keep working, the rest fail as they did before.
++			if (!reserved_target && NovaInBigArenaTail(in_addr, len)) {
++				void*     other = nullptr;
++				const int r     = MapDirectMemoryImpl(&other, len, prot, flags & ~(GUEST_MAP_FIXED | GUEST_MAP_NO_OVERWRITE),
++				                                      direct_memory_start, alignment, name, type);
++				std::fprintf(stderr, "NOVA_MEMORY: arena tail 0x%llx len=0x%llx is beyond the host; %s 0x%llx\n",
++				             static_cast<unsigned long long>(in_addr), static_cast<unsigned long long>(len),
++				             r == OK ? "relocated to" : "relocation failed, result",
++				             r == OK ? static_cast<unsigned long long>(reinterpret_cast<uint64_t>(other))
++				                     : static_cast<unsigned long long>(static_cast<uint32_t>(r)));
++				if (r == OK) {
++					*addr = other;
++					return OK;
++				}
++			}
 +#endif
  			if (!reserved_target) {
  				return KERNEL_ERROR_ENOMEM;
  			}
-@@ -3504,6 +3596,83 @@ static bool ReplaceFixedRangeWithReserved(uint64_t start, uint64_t size) {
+@@ -3504,6 +3613,83 @@ static bool ReplaceFixedRangeWithReserved(uint64_t start, uint64_t size) {
  	return true;
  }
  
@@ -1510,7 +1527,7 @@ index febbd49a..a5eac18f 100644
  int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags, size_t alignment) {
  	PRINT_NAME();
  
-@@ -3545,12 +3714,76 @@ int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags,
+@@ -3545,12 +3731,79 @@ int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags,
  	} else {
  		alignment = (alignment != 0 ? alignment : PAGE_SIZE);
  		out_addr  = FindGuestFreeRange(in_addr, len, alignment);
@@ -1532,8 +1549,11 @@ index febbd49a..a5eac18f 100644
 +				const uint64_t max_base = ceiling - top_need;
 +				// The low gigabyte is shared with the host (ART's Java heap usually starts at
 +				// 0x12c00000), so take the largest bottom part that fits below max_base.
++				// Device evidence (NX809J): ART's heap and JIT caches fill 0x2000000-0x6f67c000, leaving
++				// only Kyty's own 0x44000-0x2000000 below max_base, so the smallest bottoms matter.
 +				static constexpr uint64_t kBottoms[] = {0x400000000ull, 0x100000000ull, 0x40000000ull,
-+				                                        0x10000000ull,  0x8000000ull,   0x4000000ull};
++				                                        0x10000000ull,  0x4000000ull,   0x1000000ull,
++				                                        0x800000ull};
 +				for (const uint64_t bottom: kBottoms) {
 +					const uint64_t base = NovaFindLowArena(max_base, bottom + kSlack, arena_align);
 +					if (base == 0 || base > max_base) {
@@ -6076,10 +6096,70 @@ index 704d2b29..a82e113f 100644
  
  } // namespace LibNgs2
 diff --git a/src/libs/libC.cpp b/src/libs/libC.cpp
-index acff2c8c..e695bd82 100644
+index acff2c8c..06e24009 100644
 --- a/src/libs/libC.cpp
 +++ b/src/libs/libC.cpp
-@@ -1515,30 +1515,67 @@ static KYTY_SYSV_ABI wint_t nova_ungetwc(wint_t a0, void* a1) {
+@@ -37,6 +37,7 @@
+ #include <mutex>
+ #include <unordered_map>
+ #include <vector>
++#include <cstdint>
+ 
+ namespace Libs {
+ 
+@@ -1339,16 +1340,48 @@ static KYTY_SYSV_ABI size_t nova_mbrlen(const char* a0, size_t a1, mbstate_t* a2
+ 	return ::mbrlen(a0, a1, a2);
+ }
+ 
++// The PS5 toolchain (clang's PS4/PS5 targets) uses a 16-bit wchar_t; the host's is 32-bit.
++// Writing a host wchar_t into a guest wchar_t smashes the two bytes after it (ccleste PPSA59322
++// crashed right after mbtowc wrote into a 2-byte-aligned stack slot). Convert through a host
++// temporary and store 16 bits (code points above U+FFFF are truncated).
++using GuestWchar = uint16_t;
++
+ static KYTY_SYSV_ABI size_t nova_mbrtowc(wchar_t* a0, const char* a1, size_t a2, mbstate_t* a3) {
+-	return ::mbrtowc(a0, a1, a2, a3);
++	wchar_t    wc = 0;
++	const auto r  = ::mbrtowc(a0 != nullptr ? &wc : nullptr, a1, a2, a3);
++	if (a0 != nullptr && r != static_cast<size_t>(-1) && r != static_cast<size_t>(-2)) {
++		*reinterpret_cast<GuestWchar*>(a0) = static_cast<GuestWchar>(wc);
++	}
++	return r;
+ }
+ 
+ static KYTY_SYSV_ABI size_t nova_mbsrtowcs(wchar_t* a0, const char** a1, size_t a2, mbstate_t* a3) {
+-	return ::mbsrtowcs(a0, a1, a2, a3);
++	if (a0 == nullptr) {
++		return ::mbsrtowcs(nullptr, a1, a2, a3);
++	}
++	std::vector<wchar_t> tmp(a2 + 1);
++	const auto           r = ::mbsrtowcs(tmp.data(), a1, a2, a3);
++	if (r != static_cast<size_t>(-1)) {
++		auto* out = reinterpret_cast<GuestWchar*>(a0);
++		for (size_t i = 0; i < r; i++) {
++			out[i] = static_cast<GuestWchar>(tmp[i]);
++		}
++		if (r < a2 && a1 != nullptr && *a1 == nullptr) {
++			out[r] = 0;
++		}
++	}
++	return r;
+ }
+ 
+ static KYTY_SYSV_ABI int nova_mbtowc(wchar_t* a0, const char* a1, size_t a2) {
+-	return ::mbtowc(a0, a1, a2);
++	wchar_t   wc = 0;
++	const int r  = ::mbtowc(a0 != nullptr ? &wc : nullptr, a1, a2);
++	if (a0 != nullptr && r > 0) {
++		*reinterpret_cast<GuestWchar*>(a0) = static_cast<GuestWchar>(wc);
++	} else if (a0 != nullptr && r == 0 && a1 != nullptr) {
++		*reinterpret_cast<GuestWchar*>(a0) = 0;
++	}
++	return r;
+ }
+ 
+ static KYTY_SYSV_ABI void* nova_calloc(size_t a0, size_t a1) {
+@@ -1515,30 +1548,67 @@ static KYTY_SYSV_ABI wint_t nova_ungetwc(wint_t a0, void* a1) {
  	if (GuestFd(a1) >= 0) return WEOF; return std::ungetwc(a0, static_cast<FILE*>(a1));
  }
  
@@ -6153,7 +6233,7 @@ index acff2c8c..e695bd82 100644
  	va_end(ap);
  	return r;
  }
-@@ -1546,7 +1583,7 @@ static KYTY_SYSV_ABI int nova_fprintf_v(void* a0, const char* a1, ...) {
+@@ -1546,7 +1616,7 @@ static KYTY_SYSV_ABI int nova_fprintf_v(void* a0, const char* a1, ...) {
  static KYTY_SYSV_ABI int nova_sprintf_v(char* a0, const char* a1, ...) {
  	va_list ap;
  	va_start(ap, a1);
@@ -6162,7 +6242,7 @@ index acff2c8c..e695bd82 100644
  	va_end(ap);
  	return r;
  }
-@@ -1554,7 +1591,7 @@ static KYTY_SYSV_ABI int nova_sprintf_v(char* a0, const char* a1, ...) {
+@@ -1554,7 +1624,7 @@ static KYTY_SYSV_ABI int nova_sprintf_v(char* a0, const char* a1, ...) {
  static KYTY_SYSV_ABI int nova_asprintf_v(char** a0, const char* a1, ...) {
  	va_list ap;
  	va_start(ap, a1);
@@ -6171,7 +6251,7 @@ index acff2c8c..e695bd82 100644
  	va_end(ap);
  	return r;
  }
-@@ -1562,7 +1599,7 @@ static KYTY_SYSV_ABI int nova_asprintf_v(char** a0, const char* a1, ...) {
+@@ -1562,7 +1632,7 @@ static KYTY_SYSV_ABI int nova_asprintf_v(char** a0, const char* a1, ...) {
  static KYTY_SYSV_ABI int nova_sscanf_v(const char* a0, const char* a1, ...) {
  	va_list ap;
  	va_start(ap, a1);
@@ -6180,7 +6260,7 @@ index acff2c8c..e695bd82 100644
  	va_end(ap);
  	return r;
  }
-@@ -1724,6 +1761,10 @@ LIB_DEFINE(InitLibcNova_1) {
+@@ -1724,6 +1794,10 @@ LIB_DEFINE(InitLibcNova_1) {
  } // namespace LibcNova
  #endif
  
@@ -6191,7 +6271,7 @@ index acff2c8c..e695bd82 100644
  namespace LibC {
  
  LIB_DEFINE(InitLibC_1) {
-@@ -1733,6 +1774,8 @@ LIB_DEFINE(InitLibC_1) {
+@@ -1733,6 +1807,8 @@ LIB_DEFINE(InitLibC_1) {
  	// after checking its hash). Retail titles keep resolving to Sony's own libc.prx.
  	if (const char* hle = std::getenv("NOVA_LIBC_HLE"); hle != nullptr && hle[0] == '1') {
  		LibcNova::InitLibcNova_1(s);
