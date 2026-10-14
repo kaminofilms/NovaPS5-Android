@@ -1,0 +1,9 @@
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+V3.0 Signer: certificate DN: CN=NovaPs5 CI Test Signing
+V3.0 Signer: certificate SHA-256 digest: 21882443635874231d80b57100a172d2f090b25047e6fa068edc29734cda2ae0
+V3.0 Signer: certificate SHA-1 digest: ac683ab08138765068140dbffd554fde8d7b65b3
+V3.0 Signer: certificate MD5 digest: 113543b0742e955e8532016c2cfb6187
+build-tools 37.0.0 platform android-37.2
+APK /home/runner/work/NovaPS5-Android/NovaPS5-Android/dist/apk/NovaPS5-0.7.1-android-arm64.apk
+SHA256 050589e2c5da5d26783a91565597e9921b7b4b29a2763c52f9991c269e24cc95

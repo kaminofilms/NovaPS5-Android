@@ -98,3 +98,4 @@ runs/android-38495310876-5a177155 android novafex=success test=success ffmpeg=su
 runs/apk-38497500796-b705a72f apk-only apk=failure
 runs/android-38497498591-b705a72f android novafex=success test=success ffmpeg=success kyty=success apk=failure
 runs/apk-38497869782-4325697f apk-only apk=failure
+runs/android-38498055594-a32a925b android novafex=success test=success ffmpeg=success kyty=success apk=failure
