@@ -1,0 +1,149 @@
+FAILED: [code=1] CMakeFiles/kyty_emulator.dir/src/libs/anyNgs2Exports.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/General.hpp:16:2: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Ngs2Internal.hpp:194:38: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyNgs2Exports.cpp:68:2: error: cannot use 'try' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyNgs2Exports.cpp:76:2: error: cannot use 'try' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyNgs2Exports.cpp:84:2: error: cannot use 'try' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyNgs2Exports.cpp:92:2: error: cannot use 'try' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyNgs2Exports.cpp:100:2: error: cannot use 'try' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyNgs2Exports.cpp:108:2: error: cannot use 'try' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyNgs2Exports.cpp:116:2: error: cannot use 'try' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyNgs2Exports.cpp:124:2: error: cannot use 'try' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyNgs2Exports.cpp:132:2: error: cannot use 'try' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyNgs2Exports.cpp:140:2: error: cannot use 'try' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyNgs2Exports.cpp:148:2: error: cannot use 'try' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyNgs2Exports.cpp:156:2: error: cannot use 'try' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyNgs2Exports.cpp:164:2: error: cannot use 'try' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyNgs2Exports.cpp:172:2: error: cannot use 'try' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyNgs2Exports.cpp:180:2: error: cannot use 'try' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyNgs2Exports.cpp:188:2: error: cannot use 'try' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyNgs2Exports.cpp:196:2: error: cannot use 'try' with exceptions disabled
+fatal error: too many errors emitted, stopping now [-ferror-limit=]
+FAILED: [code=1] CMakeFiles/kyty_emulator.dir/src/libs/anyngs2/Atrac9.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/General.hpp:16:2: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Ngs2Internal.hpp:194:38: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Atrac9.cpp:52:43: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Atrac9.cpp:69:99: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Atrac9.cpp:87:17: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Atrac9.cpp:94:21: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Atrac9.cpp:98:17: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Atrac9.cpp:129:13: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Atrac9.cpp:198:9: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Atrac9.cpp:276:21: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Atrac9.cpp:279:9: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Atrac9.cpp:335:102: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Atrac9.cpp:362:5: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Atrac9.cpp:386:16: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Atrac9.cpp:395:101: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Atrac9.cpp:413:65: error: cannot use 'throw' with exceptions disabled
+FAILED: [code=1] CMakeFiles/kyty_emulator.dir/src/libs/anyngs2/Custom.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/General.hpp:16:2: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Ngs2Internal.hpp:194:38: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Custom.cpp:16:34: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Custom.cpp:17:119: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Custom.cpp:21:103: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Custom.cpp:22:73: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Custom.cpp:23:114: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Custom.cpp:25:91: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Custom.cpp:26:102: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Custom.cpp:28:13: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Custom.cpp:32:51: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Custom.cpp:62:40: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Custom.cpp:74:40: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Custom.cpp:80:27: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Custom.cpp:81:64: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Custom.cpp:82:94: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Custom.cpp:87:39: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Custom.cpp:89:44: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Custom.cpp:91:96: error: cannot use 'throw' with exceptions disabled
+fatal error: too many errors emitted, stopping now [-ferror-limit=]
+FAILED: [code=1] CMakeFiles/kyty_emulator.dir/src/libs/anyngs2/Geom.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/General.hpp:16:2: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Ngs2Internal.hpp:194:38: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Geom.cpp:10:27: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Geom.cpp:12:21: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Geom.cpp:14:9: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Geom.cpp:17:9: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Geom.cpp:18:118: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Geom.cpp:19:75: error: cannot use 'throw' with exceptions disabled
+FAILED: [code=1] CMakeFiles/kyty_emulator.dir/src/libs/anyngs2/Pan.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/General.hpp:16:2: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Ngs2Internal.hpp:194:38: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Pan.cpp:58:26: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Pan.cpp:59:64: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Pan.cpp:61:28: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Pan.cpp:76:36: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Pan.cpp:78:46: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Pan.cpp:82:40: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Pan.cpp:83:46: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Pan.cpp:94:47: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Pan.cpp:96:95: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Pan.cpp:98:136: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Pan.cpp:100:80: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Pan.cpp:116:34: error: cannot use 'throw' with exceptions disabled
+FAILED: [code=1] CMakeFiles/kyty_emulator.dir/src/libs/anyngs2/Rack.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/General.hpp:16:2: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Ngs2Internal.hpp:194:38: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Rack.cpp:32:18: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Rack.cpp:38:9: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Rack.cpp:93:31: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Rack.cpp:98:9: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Rack.cpp:103:9: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Rack.cpp:175:33: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Rack.cpp:183:108: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Rack.cpp:190:32: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Rack.cpp:207:42: error: cannot use 'throw' with exceptions disabled
+FAILED: [code=1] CMakeFiles/kyty_emulator.dir/src/libs/anyngs2/Render.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/General.hpp:16:2: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Ngs2Internal.hpp:194:38: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Render.cpp:206:18: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Render.cpp:236:26: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Render.cpp:260:5: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Render.cpp:269:42: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Render.cpp:272:88: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Render.cpp:274:9: error: cannot use 'throw' with exceptions disabled
+FAILED: [code=1] CMakeFiles/kyty_emulator.dir/src/libs/anyngs2/Reverb.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/General.hpp:16:2: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Ngs2Internal.hpp:194:38: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Reverb.cpp:221:35: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Reverb.cpp:359:9: error: cannot use 'throw' with exceptions disabled
+FAILED: [code=1] CMakeFiles/kyty_emulator.dir/src/libs/anyngs2/System.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/General.hpp:16:2: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Ngs2Internal.hpp:194:38: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/System.cpp:61:9: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/System.cpp:64:9: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/System.cpp:75:108: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/System.cpp:80:32: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/System.cpp:95:51: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/System.cpp:96:29: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/System.cpp:99:9: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/System.cpp:131:33: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/System.cpp:185:77: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/System.cpp:194:27: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/System.cpp:199:21: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/System.cpp:220:31: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/System.cpp:243:57: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/System.cpp:249:28: error: cannot use 'throw' with exceptions disabled
+FAILED: [code=1] CMakeFiles/kyty_emulator.dir/src/libs/anyngs2/Unimplemented.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/General.hpp:16:2: error: cannot use 'throw' with exceptions disabled
+FAILED: [code=1] CMakeFiles/kyty_emulator.dir/src/libs/anyngs2/Voice.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/General.hpp:16:2: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Ngs2Internal.hpp:194:38: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Voice.cpp:46:18: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Voice.cpp:93:37: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Voice.cpp:99:9: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Voice.cpp:107:88: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Voice.cpp:113:35: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Voice.cpp:125:9: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Voice.cpp:150:41: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Voice.cpp:162:18: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Voice.cpp:170:9: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Voice.cpp:172:63: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Voice.cpp:173:105: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Voice.cpp:184:31: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Voice.cpp:195:65: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Voice.cpp:201:13: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Voice.cpp:210:43: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Voice.cpp:211:111: error: cannot use 'throw' with exceptions disabled
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/libs/anyngs2/Voice.cpp:213:41: error: cannot use 'throw' with exceptions disabled
+fatal error: too many errors emitted, stopping now [-ferror-limit=]
