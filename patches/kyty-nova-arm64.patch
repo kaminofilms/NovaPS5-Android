@@ -1255,7 +1255,7 @@ index 8641e8a9..8c9aef6b 100644
  			const auto external_wait = micros != 0 ? micros - elapsed : UINT32_MAX;
  			m_cond_var.WaitFor(&m_mutex,
 diff --git a/src/kernel/memory.cpp b/src/kernel/memory.cpp
-index febbd49a..46d450ad 100644
+index febbd49a..10d5ff0f 100644
 --- a/src/kernel/memory.cpp
 +++ b/src/kernel/memory.cpp
 @@ -1,6 +1,8 @@
@@ -1275,13 +1275,38 @@ index febbd49a..46d450ad 100644
  #include <algorithm>
  #include <array>
  #include <atomic>
-@@ -832,6 +835,29 @@ static std::recursive_mutex g_memory_operation_mutex;
+@@ -832,6 +835,54 @@ static std::recursive_mutex g_memory_operation_mutex;
  // heap below it), so hint-less searches must not fall back to the low system-managed range.
  static constexpr uint64_t GUEST_DEFAULT_MAP_BASE = 0x200000000ull;
  
 +// Nova: an oversized reservation that was shrunk to fit ([base, base+asked), real part [base, base+got)).
 +static uint64_t g_nova_big_base = 0, g_nova_big_asked = 0, g_nova_big_got = 0;
 +// True when [a, a+len) lies inside the oversized arena but outside the part reserved for it.
++#if defined(KYTY_NOVA_FEX)
++static uint64_t FindGuestFreeRange(uint64_t search_addr, uint64_t size, uint64_t alignment);
++// Backs every 1 GiB guest slot of [vaddr, vaddr+size) that lies above 2^39 with a host window
++// taken from the guest user window (marked reserved so the guest never gets it).
++static void NovaEnsureVASlots(uint64_t vaddr, uint64_t size) {
++	static std::recursive_mutex mutex;
++	std::lock_guard            lock(mutex);
++	constexpr uint64_t         kSlot = uint64_t {1} << 30;
++	const uint64_t             end   = vaddr + (size != 0 ? size : 1);
++	for (uint64_t slot = vaddr & ~(kSlot - 1); slot < end; slot += kSlot) {
++		if (slot < (uint64_t {1} << 39) || NovaFex::TranslateGuestVA(slot) != slot) {
++			continue;
++		}
++		const uint64_t host = FindGuestFreeRange(HOST_USER_MIN, kSlot, 0x200000);
++		if (host == 0 || !g_virtual_ranges->Add(host, kSlot, 0, 0, 0, VirtualRangeType::Reserved, "nova_va_slot")) {
++			std::fprintf(stderr, "NOVA_MEMORY: no host window for guest slot 0x%llx\n", static_cast<unsigned long long>(slot));
++			continue;
++		}
++		NovaFex::MapGuestVASlot(slot, host);
++		std::fprintf(stderr, "NOVA_MEMORY: guest slot 0x%llx -> host 0x%llx\n", static_cast<unsigned long long>(slot),
++		             static_cast<unsigned long long>(host));
++	}
++}
++#endif
++
 +[[maybe_unused]] static bool NovaInBigArenaTail(uint64_t a, uint64_t len) {
 +	return g_nova_big_asked != 0 && a >= g_nova_big_base + g_nova_big_got &&
 +	       a + len <= g_nova_big_base + g_nova_big_asked;
@@ -1305,7 +1330,7 @@ index febbd49a..46d450ad 100644
  static uint64_t FindGuestFreeRange(uint64_t search_addr, uint64_t size, uint64_t alignment) {
  	EXIT_IF(g_guest_address_space == nullptr || g_virtual_ranges == nullptr);
  
-@@ -857,7 +883,11 @@ static uint64_t FindGuestFreeRange(uint64_t search_addr, uint64_t size, uint64_t
+@@ -857,7 +908,11 @@ static uint64_t FindGuestFreeRange(uint64_t search_addr, uint64_t size, uint64_t
  	};
  
  	if (search_addr != 0) {
@@ -1318,7 +1343,17 @@ index febbd49a..46d450ad 100644
  	}
  	auto addr = find_in(GUEST_DEFAULT_MAP_BASE, HOST_SYSTEM_MANAGED_MAX + 1u);
  	if (addr == 0) {
-@@ -2257,8 +2287,18 @@ static bool UnmapPooledBackingTransactional(const std::vector<PooledMemory::Mapp
+@@ -1012,6 +1067,9 @@ void Initialize() {
+ 	g_flexible_memory_size_frozen = true;
+ 	VirtualMemory::Init();
+ 	g_guest_address_space = std::make_unique<GuestAddressSpace>(PhysicalMemory::TotalSize());
++#if defined(KYTY_NOVA_FEX)
++	g_nova_va_ensure = NovaEnsureVASlots;
++#endif
+ 	g_physical_memory     = std::make_unique<PhysicalMemory>();
+ 	g_flexible_memory     = std::make_unique<FlexibleMemory>();
+ 	g_pooled_memory       = std::make_unique<PooledMemory>();
+@@ -2257,8 +2315,18 @@ static bool UnmapPooledBackingTransactional(const std::vector<PooledMemory::Mapp
  }
  
  // The ABI entry points and batch operations hold g_memory_operation_mutex.
@@ -1337,7 +1372,7 @@ index febbd49a..46d450ad 100644
  	EXIT_NOT_IMPLEMENTED(addr_in_out == nullptr);
  
  	constexpr size_t   PAGE_SIZE                = 0x4000;
-@@ -2331,6 +2371,14 @@ static int MapFlexibleMemory(void** addr_in_out, size_t len, int prot, int flags
+@@ -2331,6 +2399,14 @@ static int MapFlexibleMemory(void** addr_in_out, size_t len, int prot, int flags
  			reserved_target = true;
  			out_addr        = in_addr;
  		}
@@ -1352,7 +1387,7 @@ index febbd49a..46d450ad 100644
  	} else {
  		const auto search_addr = (in_addr != 0 ? in_addr : DEFAULT_PS5_BASE);
  		out_addr               = FindGuestFreeRange(search_addr, len, map_alignment);
-@@ -2979,9 +3027,28 @@ int KYTY_SYSV_ABI KernelCheckedReleaseDirectMemory(int64_t start, size_t len) {
+@@ -2979,9 +3055,28 @@ int KYTY_SYSV_ABI KernelCheckedReleaseDirectMemory(int64_t start, size_t len) {
  }
  
  // The ABI entry points and batch operations hold g_memory_operation_mutex.
@@ -1381,7 +1416,7 @@ index febbd49a..46d450ad 100644
  	if (addr == nullptr) {
  		return KERNEL_ERROR_EFAULT;
  	}
-@@ -3038,10 +3105,24 @@ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
+@@ -3038,10 +3133,24 @@ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
  		MapGpuRange(in_addr, len);
  	};
  	if (fixed) {
@@ -1408,7 +1443,7 @@ index febbd49a..46d450ad 100644
  		if (no_overwrite && g_virtual_ranges->HasOverlap(in_addr, len)) {
  			return KERNEL_ERROR_ENOMEM;
  		}
-@@ -3102,6 +3183,34 @@ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
+@@ -3102,6 +3211,34 @@ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
  			if (!reserved_target && ReplaceFixedRangeWithReserved(in_addr, len)) {
  				reserved_target = true;
  			}
@@ -1443,7 +1478,7 @@ index febbd49a..46d450ad 100644
  			if (!reserved_target) {
  				return KERNEL_ERROR_ENOMEM;
  			}
-@@ -3504,6 +3613,83 @@ static bool ReplaceFixedRangeWithReserved(uint64_t start, uint64_t size) {
+@@ -3504,6 +3641,83 @@ static bool ReplaceFixedRangeWithReserved(uint64_t start, uint64_t size) {
  	return true;
  }
  
@@ -1527,7 +1562,7 @@ index febbd49a..46d450ad 100644
  int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags, size_t alignment) {
  	PRINT_NAME();
  
-@@ -3545,12 +3731,79 @@ int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags,
+@@ -3545,12 +3759,98 @@ int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags,
  	} else {
  		alignment = (alignment != 0 ? alignment : PAGE_SIZE);
  		out_addr  = FindGuestFreeRange(in_addr, len, alignment);
@@ -1536,6 +1571,25 @@ index febbd49a..46d450ad 100644
 +		// smaller than the PS5's. Engines (Unreal's libc heap, for example) reserve a huge range
 +		// up front and only ever commit a small part of it from the bottom. Reserve as much as
 +		// fits and return its base; the unbacked tail is never reached in practice.
++#if defined(KYTY_NOVA_FEX)
++		// Option 2: with guest VA translation the whole arena lives above the host's 2^39
++		// limit, at the addresses the game computes; slots get host memory on first use.
++		if (out_addr == 0 && len > 0x1000000000ull && NovaFex::GuestVAEnabled()) {
++			const uint64_t align = std::max<uint64_t>(alignment, 0x200000ull);
++			uint64_t       base  = uint64_t {1} << 39;
++			while (base < (uint64_t {1} << 47) - len && g_virtual_ranges->HasOverlap(base, len)) {
++				base = (base + len + align - 1) & ~(align - 1);
++			}
++			if (base < (uint64_t {1} << 47) - len) {
++				out_addr         = base;
++				g_nova_big_base  = base;
++				g_nova_big_asked = len;
++				g_nova_big_got   = len;
++				std::fprintf(stderr, "NOVA_MEMORY: ReserveVirtualRange len=0x%llx placed at guest 0x%llx (translated guest VA)\n",
++				             static_cast<unsigned long long>(len), static_cast<unsigned long long>(base));
++			}
++		}
++#endif
 +		if (out_addr == 0 && len > 0x1000000000ull) {
 +			// Engines place structures relative to both ends of the arena (Unreal's libc maps
 +			// its large-block region at base + len - 1 GiB). Put the base low enough that this
@@ -1608,10 +1662,37 @@ index febbd49a..46d450ad 100644
  	}
  
 diff --git a/src/kernel/memoryAddressSpace.inc b/src/kernel/memoryAddressSpace.inc
-index 6951f933..5879274d 100644
+index 6951f933..0530278b 100644
 --- a/src/kernel/memoryAddressSpace.inc
 +++ b/src/kernel/memoryAddressSpace.inc
-@@ -635,15 +635,21 @@ private:
+@@ -1,6 +1,26 @@
+ // Internal memory address-space helpers included by memory.cpp.
+ // Kept in the same translation unit because they depend on memory.cpp-local helpers.
+ 
++#if defined(KYTY_NOVA_FEX)
++// Nova guest VA (option 2): guest addresses at or above 2^39 do not exist on a 39-bit Android
++// host. FEX translates them per 1 GiB slot; host memory operations here use the translated
++// address. memory.cpp installs the hook that backs a slot with a host window on first use.
++using NovaVAEnsureFunc = void (*)(uint64_t vaddr, uint64_t size);
++static NovaVAEnsureFunc g_nova_va_ensure = nullptr;
++static uint64_t NovaHostVA(uint64_t vaddr, uint64_t size) {
++	if (vaddr < (uint64_t {1} << 39) || !NovaFex::GuestVAEnabled()) {
++		return vaddr;
++	}
++	if (g_nova_va_ensure != nullptr) {
++		g_nova_va_ensure(vaddr, size);
++	}
++	return NovaFex::TranslateGuestVA(vaddr);
++}
++#define NOVA_HOST_VA(vaddr, size) vaddr = NovaHostVA(vaddr, size)
++#else
++#define NOVA_HOST_VA(vaddr, size) (void)0
++#endif
++
+ static constexpr uint64_t HOST_SYSTEM_MANAGED_MIN  = 0x0000040000ull;
+ static constexpr uint64_t HOST_SYSTEM_MANAGED_MAX  = 0x07ffffbfffull;
+ #if defined(__APPLE__) && (defined(__x86_64__) || defined(_M_X64))
+@@ -635,15 +655,21 @@ private:
  #elif KYTY_PLATFORM == KYTY_PLATFORM_LINUX
  	[[nodiscard]] static uint64_t GetMappableTestSize() { return 0x4000; }
  
@@ -1636,7 +1717,57 @@ index 6951f933..5879274d 100644
  			case VirtualMemory::Mode::NoAccess:
  			default: return PROT_NONE;
  		}
-@@ -883,6 +889,35 @@ public:
+@@ -766,14 +792,17 @@ public:
+ 	}
+ 
+ 	bool TryWriteBacking(uint64_t vaddr, const void* data, uint64_t size) {
++		NOVA_HOST_VA(vaddr, size);
+ 		return m_backing->TryWriteBacking(vaddr, data, size);
+ 	}
+ 
+ 	bool TryReadBacking(uint64_t vaddr, void* data, uint64_t size) {
++		NOVA_HOST_VA(vaddr, size);
+ 		return m_backing->TryReadBacking(vaddr, data, size);
+ 	}
+ 
+ 	bool TryReadSparseBacking(uint64_t vaddr, void* data, uint64_t size) {
++		NOVA_HOST_VA(vaddr, size);
+ 		if (!Owns(vaddr, size)) {
+ 			return false;
+ 		}
+@@ -794,6 +823,7 @@ public:
+ 	bool BackingContains(uint64_t vaddr, uint64_t size) { return m_backing->Contains(vaddr, size); }
+ 
+ 	bool Protect(uint64_t vaddr, uint64_t size, VirtualMemory::Mode mode) {
++		NOVA_HOST_VA(vaddr, size);
+ 		if (size == 0 || UINT64_MAX - vaddr < size) {
+ 			return false;
+ 		}
+@@ -802,6 +832,7 @@ public:
+ 	}
+ 
+ 	bool ProtectTransient(uint64_t vaddr, uint64_t size, VirtualMemory::Mode mode) {
++		NOVA_HOST_VA(vaddr, size);
+ 		if (size == 0 || UINT64_MAX - vaddr < size) {
+ 			return false;
+ 		}
+@@ -813,6 +844,7 @@ public:
+ 	bool MapBacking(uint64_t vaddr, uint64_t size, uint64_t backing_offset,
+ 	                VirtualMemory::Mode               mode,
+ 	                GuestBackingStore::FailureReason* failure_reason = nullptr) {
++		NOVA_HOST_VA(vaddr, size);
+ 		std::lock_guard lock(m_mutex);
+ #if KYTY_PLATFORM == KYTY_PLATFORM_LINUX
+ 		const bool replacing = ContainsMappedUnlocked(vaddr, size, MappingType::Backing);
+@@ -841,6 +873,7 @@ public:
+ 	}
+ 
+ 	bool UnmapBacking(uint64_t vaddr, uint64_t size) {
++		NOVA_HOST_VA(vaddr, size);
+ 		std::lock_guard lock(m_mutex);
+ 		if (!ContainsMappedUnlocked(vaddr, size, MappingType::Backing)) {
+ 			return false;
+@@ -883,7 +916,37 @@ public:
  		return FindFreeAlignedUnlocked(search_start, search_end, size, alignment);
  	}
  
@@ -1670,8 +1801,32 @@ index 6951f933..5879274d 100644
 +#endif
 +
  	bool ReserveFixed(uint64_t vaddr, uint64_t size) {
++		NOVA_HOST_VA(vaddr, size);
  		if (vaddr == 0 || size == 0 || !IsPageAligned(vaddr) || !IsPageAligned(size)) {
  			return false;
+ 		}
+@@ -899,11 +962,13 @@ public:
+ #endif
+ 
+ 	bool ReleaseFree(uint64_t vaddr, uint64_t size) {
++		NOVA_HOST_VA(vaddr, size);
+ 		std::lock_guard lock(m_mutex);
+ 		return FindContaining(vaddr, size) != m_free.end();
+ 	}
+ 
+ 	bool Commit(uint64_t vaddr, uint64_t size, VirtualMemory::Mode mode) {
++		NOVA_HOST_VA(vaddr, size);
+ 		std::lock_guard lock(m_mutex);
+ 		if (!ConsumeUnlocked(vaddr, size)) {
+ 			return false;
+@@ -936,6 +1001,7 @@ public:
+ 	}
+ 
+ 	bool ReleaseCommitted(uint64_t vaddr, uint64_t size) {
++		NOVA_HOST_VA(vaddr, size);
+ 		if (vaddr == 0 || size == 0 || !IsPageAligned(vaddr) || !IsPageAligned(size)) {
+ 			return false;
+ 		}
 diff --git a/src/kernel/novaMemoryCompatibility.h b/src/kernel/novaMemoryCompatibility.h
 new file mode 100644
 index 00000000..ea937e62

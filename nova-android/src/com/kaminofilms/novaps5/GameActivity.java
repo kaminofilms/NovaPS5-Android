@@ -87,6 +87,11 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
             Os.setenv("TMPDIR", getCacheDir().getPath(), true);
             Os.setenv("NOVA_RELAXED_VULKAN", "1", true);
             Os.setenv("NOVA_LIBC_HLE", homebrewLibc() ? "1" : "0", true);
+            // Guest addresses above the phone's 39-bit (512 GB) address space are translated in
+            // FEX (libc's 512/768 GB arena). Dead Cells does not need it and keeps the direct path.
+            boolean guestVa = !"PPSA15552".equals(titleId(new File(game)));
+            Os.setenv("NOVA_GUEST_VA", guestVa ? "1" : "0", true);
+            if (guestVa) BootLog.write(this, "Guest address translation on (addresses above 512 GB)");
             boolean unreal = unrealGame(new File(game), 0);
             Os.setenv("NOVA_HEAP_HLE", unreal ? "1" : "0", true);
             if (unreal) BootLog.write(this, "Unreal Engine title: the emulator serves its libc heap");

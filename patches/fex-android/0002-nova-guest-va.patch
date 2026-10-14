@@ -12,7 +12,7 @@ index dd8e4aa24..c84dc126e 100644
    Utils/Telemetry.cpp
    Utils/Threads.cpp
 diff --git a/FEXCore/Source/Interface/Core/JIT/MemoryOps.cpp b/FEXCore/Source/Interface/Core/JIT/MemoryOps.cpp
-index d7b716cab..2d5f57762 100644
+index d7b716cab..9014ad6b2 100644
 --- a/FEXCore/Source/Interface/Core/JIT/MemoryOps.cpp
 +++ b/FEXCore/Source/Interface/Core/JIT/MemoryOps.cpp
 @@ -5,6 +5,7 @@ tags: backend|arm64
@@ -44,7 +44,7 @@ index d7b716cab..2d5f57762 100644
 +  (void)Bind(&High);
 +  ubfx(ARMEmitter::Size::i64Bit, TMP1, Src, FEXCore::Nova::kGuestVASlotShift, 17);
 +  LoadConstant(ARMEmitter::Size::i64Bit, TMP2, reinterpret_cast<uint64_t>(&FEXCore::Nova::GuestVATable[0]));
-+  ldr(TMP1.X(), ARMEmitter::ExtendedMemOperand(TMP2.X(), TMP1.X(), ARMEmitter::ExtendedType::LSL_64, 3));
++  ldr(TMP1, ARMEmitter::ExtendedMemOperand(TMP2, TMP1, ARMEmitter::ExtendedType::LSL_64, 3));
 +  add(ARMEmitter::Size::i64Bit, Dst, Src, TMP1);
 +  (void)Bind(&Done);
 +}
