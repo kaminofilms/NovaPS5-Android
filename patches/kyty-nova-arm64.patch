@@ -1633,7 +1633,7 @@ index ebc72e43..05cb8332 100644
  	static uint64_t GetSize() { return 0x1000; }
  
 diff --git a/src/loader/runtimeLinker.cpp b/src/loader/runtimeLinker.cpp
-index f267da60..2624644c 100644
+index f267da60..2e5f392b 100644
 --- a/src/loader/runtimeLinker.cpp
 +++ b/src/loader/runtimeLinker.cpp
 @@ -22,6 +22,8 @@
@@ -1733,7 +1733,17 @@ index f267da60..2624644c 100644
  		// Replace:
  		//   66 66 66
  		//   mov <reg>, qword ptr fs:[0x00]
-@@ -1719,6 +1756,13 @@ void RuntimeLinker::LoadProgramToMemory(Program* program) {
+@@ -1170,6 +1207,9 @@ Program* RuntimeLinker::LoadProgram(const std::filesystem::path& elf_name) {
+ 	KYTY_PROFILER_FUNCTION();
+ 
+ 	Common::LockGuard lock(m_mutex);
++#if defined(KYTY_NOVA_FEX)
++	g_nova_programs = &m_programs;
++#endif
+ 
+ 	static int32_t id_seq = 0;
+ 
+@@ -1719,6 +1759,12 @@ void RuntimeLinker::LoadProgramToMemory(Program* program) {
  		LOGF("tls_handler_size       = 0x%016" PRIx64 "\n", tls_handler_size);
  	}
  
@@ -1742,7 +1752,6 @@ index f267da60..2624644c 100644
 +		EXIT("NovaFex (embedded FEXCore) failed to initialize\n");
 +	}
 +	NovaFex::SetFsBaseProvider(&NovaGuestFsBase);
-+	g_nova_programs = &m_programs;
 +#endif
  	if (!Common::HostException::InstallHandler(KytyExceptionHandler)) {
  		EXIT("Failed to install the required vectored exception handler\n");
