@@ -19,7 +19,7 @@ index f3cdf3a9..ca8d2e5a 100644
  	# SDL's built-in iconv fallback does not support CP932.
  	set(SDL_SYSTEM_ICONV ON CACHE BOOL "Use system iconv for CP932 conversion" FORCE)
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 213dd35b..2eb21b3a 100644
+index 213dd35b..f872fc83 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -35,6 +35,13 @@ set(KYTY_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty")
@@ -134,6 +134,15 @@ index 213dd35b..2eb21b3a 100644
  configure_macos_guest_address_space(kyty_emulator)
  
  set(KYTY_TROPHY_UNLOCK_SOUND "${CMAKE_CURRENT_SOURCE_DIR}/assets/sounds/trophy-unlock.wav")
+@@ -778,7 +824,7 @@ endif()
+ if (KYTY_CLANG_CL)
+ 	target_link_libraries(kyty_emulator onecore)
+ endif()
+-if (CLANG AND NOT KYTY_CLANG_CL)
++if (CLANG AND NOT KYTY_CLANG_CL AND NOT KYTY_ANDROID)
+ 	target_link_libraries(kyty_emulator pthread)
+ endif()
+ # dlopen/dlsym/dladdr for RenderDoc.
 diff --git a/src/common/abi.h b/src/common/abi.h
 index 621ed610..e8be1765 100644
 --- a/src/common/abi.h
