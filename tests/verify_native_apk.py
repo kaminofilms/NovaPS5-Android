@@ -14,8 +14,8 @@ p = argparse.ArgumentParser()
 p.add_argument('apk')
 p.add_argument('--sdk', required=True)
 p.add_argument('--ndk', default=os.environ.get('ANDROID_NDK_LATEST_HOME') or os.environ.get('ANDROID_NDK_HOME'))
-p.add_argument('--version-name', default='0.7.1-android')
-p.add_argument('--version-code', default='29')
+p.add_argument('--version-name', default='0.7.2-android')
+p.add_argument('--version-code', default='30')
 a = p.parse_args()
 root = pathlib.Path(__file__).resolve().parents[1]
 sdk = pathlib.Path(a.sdk)
@@ -80,6 +80,8 @@ with tempfile.TemporaryDirectory() as tmp, zipfile.ZipFile(a.apk) as z:
         segments = out(readelf, '-lW', path)
         aligns = [int(m, 16) for m in re.findall(r'^\s+LOAD\s+.*\s(0x[0-9a-f]+)$', segments, re.M)]
         check(f'{path.name} 16 KB page aligned', bool(aligns) and min(aligns) >= 0x4000, str(aligns))
+    check('libmain exports the FPS counter entry',
+          'Java_com_kaminofilms_novaps5_NovaPad_nativeFrames' in exports.get('libmain.so', set()))
     check('libmain exports SDL_main', 'SDL_main' in exports.get('libmain.so', set()))
     check('libmain exports the touch controller entry',
           'Java_com_kaminofilms_novaps5_NovaPad_nativeState' in exports.get('libmain.so', set()))

@@ -23,6 +23,11 @@ final class NovaPad extends View {
     static final int L2 = 1 << 20, R2 = 1 << 21;
 
     static native void nativeState(int buttons, float lx, float ly, float rx, float ry, float l2, float r2);
+    static native long nativeFrames();
+
+    static long frames() {
+        try { return nativeFrames(); } catch (UnsatisfiedLinkError e) { return 0; }
+    }
 
     interface Listener { void openMenu(); }
 

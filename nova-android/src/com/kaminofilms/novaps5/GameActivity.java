@@ -27,6 +27,21 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
     private String game = "";
     private NovaPad pad;
     private AlertDialog menu;
+    private android.widget.TextView fps;
+    private final android.os.Handler ticker = new android.os.Handler(android.os.Looper.getMainLooper());
+    private long lastFrames, lastTime;
+    private final Runnable fpsTick = new Runnable() {
+        public void run() {
+            long now = android.os.SystemClock.uptimeMillis(), frames = NovaPad.frames();
+            if (lastTime != 0 && now > lastTime) {
+                float rate = (frames - lastFrames) * 1000f / (now - lastTime);
+                fps.setText(String.format(java.util.Locale.US, "%.0f FPS", rate));
+            }
+            lastFrames = frames;
+            lastTime = now;
+            ticker.postDelayed(this, 500);
+        }
+    };
 
     @Override protected void onCreate(Bundle state) {
         BootLog.install(this);
@@ -39,6 +54,17 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
         pad.opacity = getSharedPreferences("nova", 0).getInt("opacity", 70) / 100f;
         pad.visible = getSharedPreferences("nova", 0).getBoolean("touch_controls", true) && !physicalGamepad();
         addContentView(pad, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        fps = new android.widget.TextView(this);
+        fps.setTextColor(0xff7dff9a);
+        fps.setTextSize(14);
+        fps.setTypeface(android.graphics.Typeface.MONOSPACE, android.graphics.Typeface.BOLD);
+        fps.setShadowLayer(4, 0, 0, 0xff000000);
+        fps.setPadding(24, 12, 24, 12);
+        fps.setText("-- FPS");
+        android.widget.FrameLayout.LayoutParams at = new android.widget.FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, android.view.Gravity.TOP | android.view.Gravity.END);
+        addContentView(fps, at);
+        showFps(getSharedPreferences("nova", 0).getBoolean("show_fps", true));
         BootLog.write(this, "Game started: " + game);
     }
 
@@ -142,20 +168,32 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
                 "--vulkan-validation", "false", "--network-connected", "false"};
     }
 
+    private void showFps(boolean on) {
+        fps.setVisibility(on ? android.view.View.VISIBLE : android.view.View.GONE);
+        ticker.removeCallbacks(fpsTick);
+        lastTime = 0;
+        if (on) ticker.post(fpsTick);
+    }
+
     @Override public void openMenu() {
         runOnUiThread(() -> {
             if (menu != null && menu.isShowing()) return;
             String controls = pad.visible ? "Hide touch controls" : "Show touch controls";
+            boolean fpsOn = getSharedPreferences("nova", 0).getBoolean("show_fps", true);
+            String fpsItem = fpsOn ? "Hide FPS counter" : "Show FPS counter";
             menu = new AlertDialog.Builder(this)
                     .setTitle(getIntent().getStringExtra(EXTRA_NAME) == null ? "Game" : getIntent().getStringExtra(EXTRA_NAME))
-                    .setItems(new String[] {"Resume", controls, "Controller opacity", "Exit game"}, (d, which) -> {
+                    .setItems(new String[] {"Resume", controls, fpsItem, "Controller opacity", "Exit game"}, (d, which) -> {
                         if (which == 1) {
                             pad.visible = !pad.visible;
                             pad.release();
                             getSharedPreferences("nova", 0).edit().putBoolean("touch_controls", pad.visible).apply();
                         } else if (which == 2) {
-                            opacityDialog();
+                            getSharedPreferences("nova", 0).edit().putBoolean("show_fps", !fpsOn).apply();
+                            showFps(!fpsOn);
                         } else if (which == 3) {
+                            opacityDialog();
+                        } else if (which == 4) {
                             exitGame();
                         }
                     })

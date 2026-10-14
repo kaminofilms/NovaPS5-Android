@@ -263,6 +263,10 @@ public final class MainActivity extends Activity {
         touch.setText("Show the touch controller in games (hidden automatically with a gamepad)");
         touch.setChecked(prefs.getBoolean("touch_controls", true));
         box.addView(touch);
+        CheckBox showFps = new CheckBox(this);
+        showFps.setText("Show the FPS counter in games");
+        showFps.setChecked(prefs.getBoolean("show_fps", true));
+        box.addView(showFps);
         Button driver = new Button(this);
         driver.setAllCaps(false);
         driver.setText("GPU driver: " + Drivers.label(this));
@@ -288,7 +292,7 @@ public final class MainActivity extends Activity {
         about.setPadding(0, 18, 0, 0);
         box.addView(about);
         new AlertDialog.Builder(this).setTitle("Settings").setView(box)
-                .setPositiveButton("Save", (d, w) -> prefs.edit().putInt("opacity", opacity.getProgress() + 15).putBoolean("touch_controls", touch.isChecked()).apply())
+                .setPositiveButton("Save", (d, w) -> prefs.edit().putInt("opacity", opacity.getProgress() + 15).putBoolean("touch_controls", touch.isChecked()).putBoolean("show_fps", showFps.isChecked()).apply())
                 .setNegativeButton("Close", null).show();
     }
 

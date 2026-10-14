@@ -577,18 +577,21 @@ index d56b629b..b1a7b913 100644
  	m_driver_cache_path     = std::filesystem::path("_PipelineCache") / (title_id + ".bin");
  	const auto path         = Common::PathToString(m_driver_cache_path);
 diff --git a/src/graphics/presentation/window/swapchain.cpp b/src/graphics/presentation/window/swapchain.cpp
-index 07c74012..e648dd07 100644
+index 07c74012..9ce70128 100644
 --- a/src/graphics/presentation/window/swapchain.cpp
 +++ b/src/graphics/presentation/window/swapchain.cpp
-@@ -2,6 +2,7 @@
+@@ -2,6 +2,10 @@
  #include "common/common.h"
  #include "common/emulatorConfig.h"
  #include "common/logging/log.h"
 +#include "common/novaFex.h"
++#if defined(KYTY_ANDROID)
++void NovaAndroidNoteFrame();
++#endif
  #include "common/profiler.h"
  #include "common/threads.h"
  #include "gpu_blit_shaders/gpu_blit_fs_triangle_spv.h"
-@@ -420,6 +421,14 @@ void Swapchain::Create() {
+@@ -420,6 +424,14 @@ void Swapchain::Create() {
  		    std::clamp(m_window_extent.height, surface.capabilities.minImageExtent.height,
  		               surface.capabilities.maxImageExtent.height);
  	}
@@ -603,7 +606,7 @@ index 07c74012..e648dd07 100644
  	uint32_t image_count = surface.capabilities.minImageCount + 1;
  	if (surface.capabilities.maxImageCount != 0) {
  		image_count = std::min(image_count, surface.capabilities.maxImageCount);
-@@ -609,8 +618,14 @@ Swapchain::Status Swapchain::AcquireNextImage(CommandScheduler& scheduler) {
+@@ -609,8 +621,14 @@ Swapchain::Status Swapchain::AcquireNextImage(CommandScheduler& scheduler) {
  	switch (result) {
  		case vk::Result::eSuccess: break;
  		case vk::Result::eSuboptimalKHR:
@@ -618,7 +621,7 @@ index 07c74012..e648dd07 100644
  		case vk::Result::eErrorOutOfDateKHR:
  			LOGF("vkAcquireNextImageKHR returned vk::Result::eErrorOutOfDateKHR\n");
  			return Status::Recreate;
-@@ -897,8 +912,14 @@ Swapchain::Status Swapchain::Present() {
+@@ -897,8 +915,14 @@ Swapchain::Status Swapchain::Present() {
  	switch (result) {
  		case vk::Result::eSuccess: break;
  		case vk::Result::eSuboptimalKHR:
@@ -633,12 +636,15 @@ index 07c74012..e648dd07 100644
  		case vk::Result::eErrorOutOfDateKHR:
  			LOGF("vkQueuePresentKHR returned vk::Result::eErrorOutOfDateKHR\n");
  			return Status::Recreate;
-@@ -908,6 +929,9 @@ Swapchain::Status Swapchain::Present() {
+@@ -908,6 +932,12 @@ Swapchain::Status Swapchain::Present() {
  		default: EXIT("vkQueuePresentKHR failed: %s\n", vk::to_string(result).c_str());
  	}
  	m_frame_index = (m_frame_index + 1u) % static_cast<uint32_t>(m_images.size());
 +#if defined(KYTY_NOVA_FEX)
 +	NovaFex::NoteFrame();
++#endif
++#if defined(KYTY_ANDROID)
++	NovaAndroidNoteFrame();
 +#endif
  	return Status::Success;
  }
@@ -1467,10 +1473,10 @@ index a9610102..892e7405 100644
  int main(int argc, char* argv[]) {
 diff --git a/src/novaAndroid.cpp b/src/novaAndroid.cpp
 new file mode 100644
-index 00000000..0add1b25
+index 00000000..25ee33b0
 --- /dev/null
 +++ b/src/novaAndroid.cpp
-@@ -0,0 +1,166 @@
+@@ -0,0 +1,177 @@
 +// Nova PS5 on Android: process setup and the on-screen PS5 controller.
 +#if defined(KYTY_ANDROID)
 +
@@ -1490,6 +1496,7 @@ index 00000000..0add1b25
 +#include <cstdio>
 +#include <cstdlib>
 +#include <ctime>
++#include <atomic>
 +#include <mutex>
 +
 +void NovaAndroidStartup() {
@@ -1518,7 +1525,17 @@ index 00000000..0add1b25
 +
 +namespace {
 +PFN_vkGetInstanceProcAddr g_gipa = nullptr;
++std::atomic<long long>    g_frames {0};
 +} // namespace
++
++// Presented frames, for the app's FPS overlay.
++void NovaAndroidNoteFrame() {
++	g_frames.fetch_add(1, std::memory_order_relaxed);
++}
++
++extern "C" JNIEXPORT jlong JNICALL Java_com_kaminofilms_novaps5_NovaPad_nativeFrames(JNIEnv*, jclass) {
++	return static_cast<jlong>(g_frames.load(std::memory_order_relaxed));
++}
 +
 +// The Vulkan driver: a Turnip build loaded through adrenotools when the app selected one
 +// (NOVA_TURNIP_DIR/NOVA_TURNIP_LIB, hook libraries in NOVA_HOOK_DIR), otherwise the system driver.
