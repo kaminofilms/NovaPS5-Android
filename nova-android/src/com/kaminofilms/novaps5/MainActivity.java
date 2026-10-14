@@ -234,18 +234,19 @@ public final class MainActivity extends Activity {
     static String keyLines(File file) {
         if (!file.isFile()) return "(none)";
         StringBuilder out = new StringBuilder();
-        int count = 0, errorLines = 0;
+        int count = 0, errorLines = 0, waits = 0;
         try (java.io.BufferedReader in = new java.io.BufferedReader(new java.io.InputStreamReader(new java.io.FileInputStream(file), StandardCharsets.UTF_8))) {
             String line;
-            while ((line = in.readLine()) != null && count < 400) {
+            while ((line = in.readLine()) != null && count < 600) {
                 boolean keep = errorLines > 0;
                 if (keep) errorLines--;
                 if (line.startsWith("Title ID") || line.startsWith("NOVA_WAIT") || line.startsWith("NOVA_GPU") || line.startsWith("NOVA_AUDIO")
-                        || line.startsWith("NOVA_AAUDIO") || line.startsWith("NOVA_FAULT") || line.startsWith("NOVA_FREEZE: no frame")
+                        || line.startsWith("NOVA_AAUDIO") || line.startsWith("NOVA_FAULT") || line.startsWith("NOVA_ABORT") || line.startsWith("NOVA_MEMTRACE") || line.startsWith("NOVA_FREEZE: no frame")
                         || line.startsWith("Unresolved import") || line.contains("AAudio") || line.contains("AAUDIO")
                         || (line.startsWith("NOVA_MEMORY") && (line.contains("fail") || line.contains("BEYOND") || line.contains("fit")))
                         || (line.startsWith("NOVA_ANDROID") && !line.contains("touch"))) keep = true;
                 if (line.startsWith("--- Error ---")) { keep = true; errorLines = 2; }
+                if (keep && line.startsWith("NOVA_WAIT") && ++waits > 30) keep = false;
                 if (keep) { out.append(line).append('\n'); count++; }
             }
         } catch (Exception x) {
@@ -302,7 +303,11 @@ public final class MainActivity extends Activity {
     }
 
     void diagnostics() {
-        String value = fullReport();
+        File logs = new File(getFilesDir(), "logs");
+        String value = "NovaPs5 " + VERSION + " (native Android)\n" + gpu
+                + "\nGPU driver: " + Drivers.label(this)
+                + "\n\nKey lines (latest game):\n" + keyLines(new File(logs, "kyty-session.log"))
+                + "\n\nLatest game log (end):\n" + tail(new File(logs, "kyty-session.log"), 30000);
         TextView text = new TextView(this);
         text.setText(value.length() > 60000 ? value.substring(0, 60000) + "\n\n(… use Export for the full log)" : value);
         text.setTextSize(12);

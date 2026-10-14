@@ -1255,7 +1255,7 @@ index 8641e8a9..8c9aef6b 100644
  			const auto external_wait = micros != 0 ? micros - elapsed : UINT32_MAX;
  			m_cond_var.WaitFor(&m_mutex,
 diff --git a/src/kernel/memory.cpp b/src/kernel/memory.cpp
-index febbd49a..e36f82c1 100644
+index febbd49a..13eb3784 100644
 --- a/src/kernel/memory.cpp
 +++ b/src/kernel/memory.cpp
 @@ -1,6 +1,8 @@
@@ -1275,7 +1275,49 @@ index febbd49a..e36f82c1 100644
  #include <algorithm>
  #include <array>
  #include <atomic>
-@@ -832,6 +835,62 @@ static std::recursive_mutex g_memory_operation_mutex;
+@@ -53,6 +56,41 @@ namespace Libs::LibKernel::Memory {
+ 
+ namespace VirtualMemory = Common::VirtualMemory;
+ 
++// NOVA: ring of the most recent kernel memory calls, printed with NOVA_FAULT / NOVA_ABORT.
++struct NovaMemTraceEntry {
++	const char* what;
++	uint64_t    in, len, x, y, out;
++	int         result;
++	int         tid;
++};
++static NovaMemTraceEntry     g_nova_mem_trace[64];
++static std::atomic<uint64_t> g_nova_mem_trace_n {0};
++static void NovaMemTrace(const char* what, uint64_t in, uint64_t len, uint64_t x, uint64_t y, uint64_t out, int result) {
++	const auto i = g_nova_mem_trace_n.fetch_add(1) % 64;
++	g_nova_mem_trace[i] = {what, in, len, x, y, out, result, static_cast<int>(gettid())};
++	const bool high = in >= (uint64_t {1} << 39) || out >= (uint64_t {1} << 39) || in + len > (uint64_t {1} << 39);
++	static std::atomic<uint32_t> fails {0};
++	if (result != 0 && high && fails.fetch_add(1) < 48) {
++		std::fprintf(stderr, "NOVA_MEMORY: %s failed 0x%x in=0x%llx len=0x%llx x=0x%llx y=0x%llx\n", what, static_cast<unsigned>(result),
++		             static_cast<unsigned long long>(in), static_cast<unsigned long long>(len), static_cast<unsigned long long>(x),
++		             static_cast<unsigned long long>(y));
++	}
++}
++void NovaDumpMemoryTrace() {
++	const auto n     = g_nova_mem_trace_n.load();
++	const auto first = n > 48 ? n - 48 : 0;
++	std::fprintf(stderr, "NOVA_MEMTRACE: last %llu of %llu kernel memory calls (oldest first)\n",
++	             static_cast<unsigned long long>(n - first), static_cast<unsigned long long>(n));
++	for (auto k = first; k < n; k++) {
++		const auto& e = g_nova_mem_trace[k % 64];
++		if (e.what == nullptr) continue;
++		std::fprintf(stderr, "NOVA_MEMTRACE: t%d %s in=0x%llx len=0x%llx x=0x%llx y=0x%llx -> 0x%x out=0x%llx\n", e.tid, e.what,
++		             static_cast<unsigned long long>(e.in), static_cast<unsigned long long>(e.len), static_cast<unsigned long long>(e.x),
++		             static_cast<unsigned long long>(e.y), static_cast<unsigned>(e.result), static_cast<unsigned long long>(e.out));
++	}
++	std::fflush(stderr);
++}
++
+ LIB_NAME("libkernel", "libkernel");
+ 
+ constexpr int PROT_CPU_READ  = 0x01;
+@@ -832,6 +870,63 @@ static std::recursive_mutex g_memory_operation_mutex;
  // heap below it), so hint-less searches must not fall back to the low system-managed range.
  static constexpr uint64_t GUEST_DEFAULT_MAP_BASE = 0x200000000ull;
  
@@ -1301,7 +1343,8 @@ index febbd49a..e36f82c1 100644
 +			continue;
 +		}
 +		NovaFex::MapGuestVASlot(slot, host);
-+		std::fprintf(stderr, "NOVA_MEMORY: guest slot 0x%llx -> host 0x%llx\n", static_cast<unsigned long long>(slot),
++		static std::atomic<uint32_t> shown {0};
++		if (shown.fetch_add(1) < 24) std::fprintf(stderr, "NOVA_MEMORY: guest slot 0x%llx -> host 0x%llx\n", static_cast<unsigned long long>(slot),
 +		             static_cast<unsigned long long>(host));
 +	}
 +}
@@ -1323,7 +1366,7 @@ index febbd49a..e36f82c1 100644
 +	} else if (result == 0 && in_big && a - g_nova_big_base >= 0x40000000ull) {
 +		// Everything above the first GiB of an oversized arena (rare, and where the trouble is).
 +		static std::atomic<uint32_t> far {0};
-+		if (far.fetch_add(1) < 256) {
++		if (far.fetch_add(1) < 32) {
 +			std::fprintf(stderr, "NOVA_MEMORY: %s in big reservation +0x%llx len=0x%llx (guest 0x%llx)\n", what,
 +			             static_cast<unsigned long long>(a - g_nova_big_base), static_cast<unsigned long long>(len),
 +			             static_cast<unsigned long long>(a));
@@ -1338,7 +1381,7 @@ index febbd49a..e36f82c1 100644
  static uint64_t FindGuestFreeRange(uint64_t search_addr, uint64_t size, uint64_t alignment) {
  	EXIT_IF(g_guest_address_space == nullptr || g_virtual_ranges == nullptr);
  
-@@ -857,7 +916,11 @@ static uint64_t FindGuestFreeRange(uint64_t search_addr, uint64_t size, uint64_t
+@@ -857,7 +952,11 @@ static uint64_t FindGuestFreeRange(uint64_t search_addr, uint64_t size, uint64_t
  	};
  
  	if (search_addr != 0) {
@@ -1351,7 +1394,7 @@ index febbd49a..e36f82c1 100644
  	}
  	auto addr = find_in(GUEST_DEFAULT_MAP_BASE, HOST_SYSTEM_MANAGED_MAX + 1u);
  	if (addr == 0) {
-@@ -1012,6 +1075,9 @@ void Initialize() {
+@@ -1012,6 +1111,9 @@ void Initialize() {
  	g_flexible_memory_size_frozen = true;
  	VirtualMemory::Init();
  	g_guest_address_space = std::make_unique<GuestAddressSpace>(PhysicalMemory::TotalSize());
@@ -1361,7 +1404,7 @@ index febbd49a..e36f82c1 100644
  	g_physical_memory     = std::make_unique<PhysicalMemory>();
  	g_flexible_memory     = std::make_unique<FlexibleMemory>();
  	g_pooled_memory       = std::make_unique<PooledMemory>();
-@@ -2257,8 +2323,18 @@ static bool UnmapPooledBackingTransactional(const std::vector<PooledMemory::Mapp
+@@ -2257,8 +2359,18 @@ static bool UnmapPooledBackingTransactional(const std::vector<PooledMemory::Mapp
  }
  
  // The ABI entry points and batch operations hold g_memory_operation_mutex.
@@ -1380,7 +1423,7 @@ index febbd49a..e36f82c1 100644
  	EXIT_NOT_IMPLEMENTED(addr_in_out == nullptr);
  
  	constexpr size_t   PAGE_SIZE                = 0x4000;
-@@ -2331,6 +2407,14 @@ static int MapFlexibleMemory(void** addr_in_out, size_t len, int prot, int flags
+@@ -2331,6 +2443,14 @@ static int MapFlexibleMemory(void** addr_in_out, size_t len, int prot, int flags
  			reserved_target = true;
  			out_addr        = in_addr;
  		}
@@ -1395,13 +1438,60 @@ index febbd49a..e36f82c1 100644
  	} else {
  		const auto search_addr = (in_addr != 0 ? in_addr : DEFAULT_PS5_BASE);
  		out_addr               = FindGuestFreeRange(search_addr, len, map_alignment);
-@@ -2618,7 +2702,19 @@ static int UnmapMemory(uint64_t vaddr, size_t len) {
+@@ -2383,14 +2503,30 @@ static int MapFlexibleMemory(void** addr_in_out, size_t len, int prot, int flags
+ 	return OK;
+ }
+ 
++static int32_t KYTY_SYSV_ABI KernelMapNamedFlexibleMemoryNovaT(void** addr_in_out, size_t len, int prot,
++                                                   int flags, const char* name);
+ int32_t KYTY_SYSV_ABI KernelMapNamedFlexibleMemory(void** addr_in_out, size_t len, int prot,
+                                                    int flags, const char* name) {
++	const uint64_t nova_in = (addr_in_out != nullptr ? reinterpret_cast<uint64_t>(*addr_in_out) : 0);
++	const auto     nova_r  = KernelMapNamedFlexibleMemoryNovaT(addr_in_out, len, prot, flags, name);
++	NovaMemTrace("MapNamedFlexibleMemory", nova_in, static_cast<uint64_t>(len), static_cast<uint64_t>(flags), static_cast<uint64_t>(prot), nova_r == 0 ? (addr_in_out != nullptr ? reinterpret_cast<uint64_t>(*addr_in_out) : 0) : 0, nova_r);
++	return nova_r;
++}
++static int32_t KYTY_SYSV_ABI KernelMapNamedFlexibleMemoryNovaT(void** addr_in_out, size_t len, int prot,
++                                                   int flags, const char* name) {
+ 	PRINT_NAME();
+ 	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
+ 	return MapFlexibleMemory(addr_in_out, len, prot, flags, name);
+ }
+ 
++static int KYTY_SYSV_ABI KernelMapFlexibleMemoryNovaT(void** addr_in_out, size_t len, int prot, int flags);
+ int KYTY_SYSV_ABI KernelMapFlexibleMemory(void** addr_in_out, size_t len, int prot, int flags) {
++	const uint64_t nova_in = (addr_in_out != nullptr ? reinterpret_cast<uint64_t>(*addr_in_out) : 0);
++	const auto     nova_r  = KernelMapFlexibleMemoryNovaT(addr_in_out, len, prot, flags);
++	NovaMemTrace("MapFlexibleMemory", nova_in, static_cast<uint64_t>(len), static_cast<uint64_t>(flags), static_cast<uint64_t>(prot), nova_r == 0 ? (addr_in_out != nullptr ? reinterpret_cast<uint64_t>(*addr_in_out) : 0) : 0, nova_r);
++	return nova_r;
++}
++static int KYTY_SYSV_ABI KernelMapFlexibleMemoryNovaT(void** addr_in_out, size_t len, int prot, int flags) {
+ 	PRINT_NAME();
+ 	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
+ 	return MapFlexibleMemory(addr_in_out, len, prot, flags, "");
+@@ -2474,7 +2610,14 @@ int KYTY_SYSV_ABI KernelGetPrtAperture(int index, void** addr, size_t* len) {
+ 	return OK;
+ }
+ 
++static int KYTY_SYSV_ABI KernelSetVirtualRangeNameNovaT(const void* addr, uint64_t len, const char* name);
+ int KYTY_SYSV_ABI KernelSetVirtualRangeName(const void* addr, uint64_t len, const char* name) {
++	const uint64_t nova_in = reinterpret_cast<uint64_t>(addr);
++	const auto     nova_r  = KernelSetVirtualRangeNameNovaT(addr, len, name);
++	NovaMemTrace("SetVirtualRangeName", nova_in, static_cast<uint64_t>(len), static_cast<uint64_t>(0), static_cast<uint64_t>(0), nova_r == 0 ? 0 : 0, nova_r);
++	return nova_r;
++}
++static int KYTY_SYSV_ABI KernelSetVirtualRangeNameNovaT(const void* addr, uint64_t len, const char* name) {
+ 	PRINT_NAME();
+ 
+ 	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
+@@ -2618,7 +2761,20 @@ static int UnmapMemory(uint64_t vaddr, size_t len) {
  	return UnmapMemoryRange(vaddr, len);
  }
  
 +static int KYTY_SYSV_ABI KernelMunmapImpl(uint64_t vaddr, size_t len);
  int KYTY_SYSV_ABI KernelMunmap(uint64_t vaddr, size_t len) {
 +	const int result = KernelMunmapImpl(vaddr, len);
++	NovaMemTrace("Munmap", vaddr, len, 0, 0, 0, result);
 +	if (result != OK && vaddr >= (uint64_t {1} << 39)) {
 +		static std::atomic<int> n {0};
 +		if (n.fetch_add(1) < 32) {
@@ -1415,7 +1505,7 @@ index febbd49a..e36f82c1 100644
  	PRINT_NAME();
  	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
  	return UnmapMemory(vaddr, len);
-@@ -2979,9 +3075,28 @@ int KYTY_SYSV_ABI KernelCheckedReleaseDirectMemory(int64_t start, size_t len) {
+@@ -2979,9 +3135,28 @@ int KYTY_SYSV_ABI KernelCheckedReleaseDirectMemory(int64_t start, size_t len) {
  }
  
  // The ABI entry points and batch operations hold g_memory_operation_mutex.
@@ -1444,7 +1534,7 @@ index febbd49a..e36f82c1 100644
  	if (addr == nullptr) {
  		return KERNEL_ERROR_EFAULT;
  	}
-@@ -3038,10 +3153,24 @@ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
+@@ -3038,10 +3213,24 @@ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
  		MapGpuRange(in_addr, len);
  	};
  	if (fixed) {
@@ -1471,7 +1561,7 @@ index febbd49a..e36f82c1 100644
  		if (no_overwrite && g_virtual_ranges->HasOverlap(in_addr, len)) {
  			return KERNEL_ERROR_ENOMEM;
  		}
-@@ -3102,6 +3231,34 @@ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
+@@ -3102,6 +3291,34 @@ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
  			if (!reserved_target && ReplaceFixedRangeWithReserved(in_addr, len)) {
  				reserved_target = true;
  			}
@@ -1506,7 +1596,77 @@ index febbd49a..e36f82c1 100644
  			if (!reserved_target) {
  				return KERNEL_ERROR_ENOMEM;
  			}
-@@ -3504,6 +3661,83 @@ static bool ReplaceFixedRangeWithReserved(uint64_t start, uint64_t size) {
+@@ -3208,15 +3425,33 @@ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
+ 	return OK;
+ }
+ 
++static int KYTY_SYSV_ABI KernelMapDirectMemoryNovaT(void** addr, size_t len, int prot, int flags,
++                                        int64_t direct_memory_start, size_t alignment);
+ int KYTY_SYSV_ABI KernelMapDirectMemory(void** addr, size_t len, int prot, int flags,
+                                         int64_t direct_memory_start, size_t alignment) {
++	const uint64_t nova_in = (addr != nullptr ? reinterpret_cast<uint64_t>(*addr) : 0);
++	const auto     nova_r  = KernelMapDirectMemoryNovaT(addr, len, prot, flags, direct_memory_start, alignment);
++	NovaMemTrace("MapDirectMemory", nova_in, static_cast<uint64_t>(len), static_cast<uint64_t>(flags), static_cast<uint64_t>(static_cast<uint64_t>(direct_memory_start)), nova_r == 0 ? (addr != nullptr ? reinterpret_cast<uint64_t>(*addr) : 0) : 0, nova_r);
++	return nova_r;
++}
++static int KYTY_SYSV_ABI KernelMapDirectMemoryNovaT(void** addr, size_t len, int prot, int flags,
++                                        int64_t direct_memory_start, size_t alignment) {
+ 	PRINT_NAME();
+ 	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
+ 	return MapDirectMemory(addr, len, prot, flags, direct_memory_start, alignment, "");
+ }
+ 
++static int KYTY_SYSV_ABI KernelMapDirectMemory2NovaT(void** addr, size_t len, int type, int prot, int flags,
++                                         int64_t direct_memory_start, size_t alignment);
+ int KYTY_SYSV_ABI KernelMapDirectMemory2(void** addr, size_t len, int type, int prot, int flags,
+                                          int64_t direct_memory_start, size_t alignment) {
++	const uint64_t nova_in = (addr != nullptr ? reinterpret_cast<uint64_t>(*addr) : 0);
++	const auto     nova_r  = KernelMapDirectMemory2NovaT(addr, len, type, prot, flags, direct_memory_start, alignment);
++	NovaMemTrace("MapDirectMemory2", nova_in, static_cast<uint64_t>(len), static_cast<uint64_t>(flags), static_cast<uint64_t>(static_cast<uint64_t>(direct_memory_start)), nova_r == 0 ? (addr != nullptr ? reinterpret_cast<uint64_t>(*addr) : 0) : 0, nova_r);
++	return nova_r;
++}
++static int KYTY_SYSV_ABI KernelMapDirectMemory2NovaT(void** addr, size_t len, int type, int prot, int flags,
++                                         int64_t direct_memory_start, size_t alignment) {
+ 	PRINT_NAME();
+ 	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
+ 	return MapDirectMemory(addr, len, prot, flags, direct_memory_start, alignment, "", type);
+@@ -3252,9 +3487,20 @@ int MapAutomaticMemory(uint64_t vaddr, size_t size, int type, int prot) {
+ 	return OK;
+ }
+ 
++static int KYTY_SYSV_ABI KernelMapNamedDirectMemoryNovaT(void** addr, size_t len, int prot, int flags,
++                                             int64_t direct_memory_start, size_t alignment,
++                                             const char* name);
+ int KYTY_SYSV_ABI KernelMapNamedDirectMemory(void** addr, size_t len, int prot, int flags,
+                                              int64_t direct_memory_start, size_t alignment,
+                                              const char* name) {
++	const uint64_t nova_in = (addr != nullptr ? reinterpret_cast<uint64_t>(*addr) : 0);
++	const auto     nova_r  = KernelMapNamedDirectMemoryNovaT(addr, len, prot, flags, direct_memory_start, alignment, name);
++	NovaMemTrace("MapNamedDirectMemory", nova_in, static_cast<uint64_t>(len), static_cast<uint64_t>(flags), static_cast<uint64_t>(static_cast<uint64_t>(direct_memory_start)), nova_r == 0 ? (addr != nullptr ? reinterpret_cast<uint64_t>(*addr) : 0) : 0, nova_r);
++	return nova_r;
++}
++static int KYTY_SYSV_ABI KernelMapNamedDirectMemoryNovaT(void** addr, size_t len, int prot, int flags,
++                                             int64_t direct_memory_start, size_t alignment,
++                                             const char* name) {
+ 	PRINT_NAME();
+ 
+ 	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
+@@ -3278,7 +3524,14 @@ int KYTY_SYSV_ABI KernelIsAddressSanitizerEnabled() {
+ 	return 0;
+ }
+ 
++static int KYTY_SYSV_ABI KernelQueryMemoryProtectionNovaT(void* addr, void** start, void** end, int* prot);
+ int KYTY_SYSV_ABI KernelQueryMemoryProtection(void* addr, void** start, void** end, int* prot) {
++	const uint64_t nova_in = reinterpret_cast<uint64_t>(addr);
++	const auto     nova_r  = KernelQueryMemoryProtectionNovaT(addr, start, end, prot);
++	NovaMemTrace("QueryMemoryProtection", nova_in, static_cast<uint64_t>(0), static_cast<uint64_t>(0), static_cast<uint64_t>((end != nullptr ? reinterpret_cast<uint64_t>(*end) : 0)), nova_r == 0 ? (start != nullptr ? reinterpret_cast<uint64_t>(*start) : 0) : 0, nova_r);
++	return nova_r;
++}
++static int KYTY_SYSV_ABI KernelQueryMemoryProtectionNovaT(void* addr, void** start, void** end, int* prot) {
+ 	PRINT_NAME();
+ 
+ 	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
+@@ -3504,7 +3757,91 @@ static bool ReplaceFixedRangeWithReserved(uint64_t start, uint64_t size) {
  	return true;
  }
  
@@ -1587,10 +1747,18 @@ index febbd49a..e36f82c1 100644
 +}
 +#endif
 +
++static int KYTY_SYSV_ABI KernelReserveVirtualRangeNovaT(void** addr, size_t len, int flags, size_t alignment);
  int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags, size_t alignment) {
++	const uint64_t nova_in = (addr != nullptr ? reinterpret_cast<uint64_t>(*addr) : 0);
++	const auto     nova_r  = KernelReserveVirtualRangeNovaT(addr, len, flags, alignment);
++	NovaMemTrace("ReserveVirtualRange", nova_in, static_cast<uint64_t>(len), static_cast<uint64_t>(flags), static_cast<uint64_t>(alignment), nova_r == 0 ? (addr != nullptr ? reinterpret_cast<uint64_t>(*addr) : 0) : 0, nova_r);
++	return nova_r;
++}
++static int KYTY_SYSV_ABI KernelReserveVirtualRangeNovaT(void** addr, size_t len, int flags, size_t alignment) {
  	PRINT_NAME();
  
-@@ -3545,12 +3779,98 @@ int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags,
+ 	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
+@@ -3545,12 +3882,98 @@ int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags,
  	} else {
  		alignment = (alignment != 0 ? alignment : PAGE_SIZE);
  		out_addr  = FindGuestFreeRange(in_addr, len, alignment);
@@ -1689,13 +1857,47 @@ index febbd49a..e36f82c1 100644
  		return KERNEL_ERROR_ENOMEM;
  	}
  
-@@ -3955,7 +4275,19 @@ static int ProtectMemory(const void* addr, size_t len, int prot) {
+@@ -3649,8 +4072,17 @@ bool TestGuestFreeRangeBounds() {
+ }
+ #endif
+ 
++static int KYTY_SYSV_ABI KernelVirtualQueryNovaT(const void* addr, int flags, VirtualQueryInfo* info,
++                                     uint64_t info_size);
+ int KYTY_SYSV_ABI KernelVirtualQuery(const void* addr, int flags, VirtualQueryInfo* info,
+                                      uint64_t info_size) {
++	const uint64_t nova_in = reinterpret_cast<uint64_t>(addr);
++	const auto     nova_r  = KernelVirtualQueryNovaT(addr, flags, info, info_size);
++	NovaMemTrace("VirtualQuery", nova_in, static_cast<uint64_t>(0), static_cast<uint64_t>(flags), static_cast<uint64_t>((info != nullptr ? static_cast<uint64_t>(info->end) : 0)), nova_r == 0 ? (info != nullptr ? static_cast<uint64_t>(info->start) : 0) : 0, nova_r);
++	return nova_r;
++}
++static int KYTY_SYSV_ABI KernelVirtualQueryNovaT(const void* addr, int flags, VirtualQueryInfo* info,
++                                     uint64_t info_size) {
+ 	PRINT_NAME();
+ 
+ 	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
+@@ -3703,7 +4135,14 @@ int KYTY_SYSV_ABI KernelVirtualQuery(const void* addr, int flags, VirtualQueryIn
+ 	return OK;
+ }
+ 
++static int KYTY_SYSV_ABI KernelIsStackNovaT(void* addr, void** start, void** end);
+ int KYTY_SYSV_ABI KernelIsStack(void* addr, void** start, void** end) {
++	const uint64_t nova_in = reinterpret_cast<uint64_t>(addr);
++	const auto     nova_r  = KernelIsStackNovaT(addr, start, end);
++	NovaMemTrace("IsStack", nova_in, static_cast<uint64_t>(0), static_cast<uint64_t>(0), static_cast<uint64_t>((end != nullptr ? reinterpret_cast<uint64_t>(*end) : 0)), nova_r == 0 ? (start != nullptr ? reinterpret_cast<uint64_t>(*start) : 0) : 0, nova_r);
++	return nova_r;
++}
++static int KYTY_SYSV_ABI KernelIsStackNovaT(void* addr, void** start, void** end) {
+ 	PRINT_NAME();
+ 
+ 	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
+@@ -3955,13 +4394,33 @@ static int ProtectMemory(const void* addr, size_t len, int prot) {
  	return OK;
  }
  
 +static int KYTY_SYSV_ABI KernelMprotectImpl(const void* addr, size_t len, int prot);
  int KYTY_SYSV_ABI KernelMprotect(const void* addr, size_t len, int prot) {
 +	const int result = KernelMprotectImpl(addr, len, prot);
++	NovaMemTrace("Mprotect", reinterpret_cast<uint64_t>(addr), len, static_cast<uint64_t>(prot), 0, 0, result);
 +	if (result != OK && reinterpret_cast<uint64_t>(addr) >= (uint64_t {1} << 39)) {
 +		static std::atomic<int> n {0};
 +		if (n.fetch_add(1) < 32) {
@@ -1709,6 +1911,79 @@ index febbd49a..e36f82c1 100644
  	PRINT_NAME();
  	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
  	return ProtectMemory(addr, len, prot);
+ }
+ 
++static int KYTY_SYSV_ABI KernelMtypeprotectNovaT(const void* addr, size_t len, int type, int prot);
+ int KYTY_SYSV_ABI KernelMtypeprotect(const void* addr, size_t len, int type, int prot) {
++	const uint64_t nova_in = reinterpret_cast<uint64_t>(addr);
++	const auto     nova_r  = KernelMtypeprotectNovaT(addr, len, type, prot);
++	NovaMemTrace("Mtypeprotect", nova_in, static_cast<uint64_t>(len), static_cast<uint64_t>(static_cast<uint64_t>(type)), static_cast<uint64_t>(static_cast<uint64_t>(prot)), nova_r == 0 ? 0 : 0, nova_r);
++	return nova_r;
++}
++static int KYTY_SYSV_ABI KernelMtypeprotectNovaT(const void* addr, size_t len, int type, int prot) {
+ 	PRINT_NAME();
+ 	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
+ 	LOGF("\t type = %d\n", type);
+@@ -4103,8 +4562,17 @@ int KYTY_SYSV_ABI KernelMemoryPoolExpand(int64_t search_start, int64_t search_en
+ 	return OK;
+ }
+ 
++static int KYTY_SYSV_ABI KernelMemoryPoolReserveNovaT(void* addr_in, size_t len, size_t alignment, int flags,
++                                          void** addr_out);
+ int KYTY_SYSV_ABI KernelMemoryPoolReserve(void* addr_in, size_t len, size_t alignment, int flags,
+                                           void** addr_out) {
++	const uint64_t nova_in = reinterpret_cast<uint64_t>(addr_in);
++	const auto     nova_r  = KernelMemoryPoolReserveNovaT(addr_in, len, alignment, flags, addr_out);
++	NovaMemTrace("MemoryPoolReserve", nova_in, static_cast<uint64_t>(len), static_cast<uint64_t>(flags), static_cast<uint64_t>(alignment), nova_r == 0 ? (addr_out != nullptr ? reinterpret_cast<uint64_t>(*addr_out) : 0) : 0, nova_r);
++	return nova_r;
++}
++static int KYTY_SYSV_ABI KernelMemoryPoolReserveNovaT(void* addr_in, size_t len, size_t alignment, int flags,
++                                          void** addr_out) {
+ 	PRINT_NAME();
+ 
+ 	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
+@@ -4150,7 +4618,14 @@ int KYTY_SYSV_ABI KernelMemoryPoolReserve(void* addr_in, size_t len, size_t alig
+ 	return ret;
+ }
+ 
++static int KYTY_SYSV_ABI KernelMemoryPoolCommitNovaT(void* addr, size_t len, int type, int prot, int flags);
+ int KYTY_SYSV_ABI KernelMemoryPoolCommit(void* addr, size_t len, int type, int prot, int flags) {
++	const uint64_t nova_in = reinterpret_cast<uint64_t>(addr);
++	const auto     nova_r  = KernelMemoryPoolCommitNovaT(addr, len, type, prot, flags);
++	NovaMemTrace("MemoryPoolCommit", nova_in, static_cast<uint64_t>(len), static_cast<uint64_t>(static_cast<uint64_t>(type)), static_cast<uint64_t>(static_cast<uint64_t>(prot)), nova_r == 0 ? 0 : 0, nova_r);
++	return nova_r;
++}
++static int KYTY_SYSV_ABI KernelMemoryPoolCommitNovaT(void* addr, size_t len, int type, int prot, int flags) {
+ 	PRINT_NAME();
+ 
+ 	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
+@@ -4281,7 +4756,14 @@ static int DecommitMemoryPoolRange(uint64_t vaddr, size_t len) {
+ 	return OK;
+ }
+ 
++static int KYTY_SYSV_ABI KernelMemoryPoolDecommitNovaT(void* addr, size_t len, int flags);
+ int KYTY_SYSV_ABI KernelMemoryPoolDecommit(void* addr, size_t len, int flags) {
++	const uint64_t nova_in = reinterpret_cast<uint64_t>(addr);
++	const auto     nova_r  = KernelMemoryPoolDecommitNovaT(addr, len, flags);
++	NovaMemTrace("MemoryPoolDecommit", nova_in, static_cast<uint64_t>(len), static_cast<uint64_t>(static_cast<uint64_t>(flags)), static_cast<uint64_t>(0), nova_r == 0 ? 0 : 0, nova_r);
++	return nova_r;
++}
++static int KYTY_SYSV_ABI KernelMemoryPoolDecommitNovaT(void* addr, size_t len, int flags) {
+ 	PRINT_NAME();
+ 
+ 	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
+diff --git a/src/kernel/memory.h b/src/kernel/memory.h
+index 4b82e41b..c63a93fa 100644
+--- a/src/kernel/memory.h
++++ b/src/kernel/memory.h
+@@ -128,6 +128,7 @@ int KYTY_SYSV_ABI KernelMapFlexibleMemory(void** addr_in_out, size_t len, int pr
+ int KYTY_SYSV_ABI KernelSetVirtualRangeName(const void* addr, uint64_t len, const char* name);
+ int KYTY_SYSV_ABI KernelClearVirtualRangeName(const void* addr, uint64_t len);
+ int KYTY_SYSV_ABI KernelMunmap(uint64_t vaddr, size_t len);
++void NovaDumpMemoryTrace();
+ size_t KYTY_SYSV_ABI KernelGetDirectMemorySize();
+ int KYTY_SYSV_ABI    KernelAvailableDirectMemorySize(int64_t search_start, int64_t search_end,
+                                                      size_t alignment, int64_t* phys_addr_out,
 diff --git a/src/kernel/memoryAddressSpace.inc b/src/kernel/memoryAddressSpace.inc
 index 6951f933..0530278b 100644
 --- a/src/kernel/memoryAddressSpace.inc
@@ -6299,10 +6574,28 @@ index 704d2b29..a82e113f 100644
  
  } // namespace LibNgs2
 diff --git a/src/libs/libC.cpp b/src/libs/libC.cpp
-index acff2c8c..06e24009 100644
+index acff2c8c..eca47230 100644
 --- a/src/libs/libC.cpp
 +++ b/src/libs/libC.cpp
-@@ -37,6 +37,7 @@
+@@ -7,6 +7,7 @@
+ #include "graphics/host_gpu/hostMemory.h"
+ #include "kernel/pthread.h"
+ #include "kernel/fileSystem.h"
++#include "kernel/memory.h"
+ #include "libs/errno.h"
+ #include "libs/guestPrintf.h"
+ #include "libs/guestStdio.h"
+@@ -14,6 +15,9 @@
+ #include "libs/vaContext.h"
+ #include "loader/runtimeLinker.h"
+ #include "loader/symbolDatabase.h"
++#if defined(KYTY_NOVA_FEX)
++#include "common/novaFex.h"
++#endif
+ 
+ #include <algorithm>
+ #include <malloc.h>
+@@ -37,6 +41,7 @@
  #include <mutex>
  #include <unordered_map>
  #include <vector>
@@ -6310,7 +6603,58 @@ index acff2c8c..06e24009 100644
  
  namespace Libs {
  
-@@ -1339,16 +1340,48 @@ static KYTY_SYSV_ABI size_t nova_mbrlen(const char* a0, size_t a1, mbstate_t* a2
+@@ -204,7 +209,49 @@ static void PrintAbortPointerArrayCandidate(const char* name, uint64_t addr) {
+ 	asm volatile("movq %%rsp, %0" : "=r"(rsp));
+ #endif
+ 
+-	const auto ret = reinterpret_cast<uint64_t>(__builtin_return_address(0));
++	auto ret = reinterpret_cast<uint64_t>(__builtin_return_address(0));
++#if defined(KYTY_NOVA_FEX)
++	{
++		NovaFex::GuestCallContext g {};
++		if (NovaFex::GetGuestCallContext(&g)) {
++			rbp = g.rbp;
++			rsp = g.rsp;
++			if (Graphics::HostMemoryIsReadable(rsp)) ret = *reinterpret_cast<const uint64_t*>(static_cast<uintptr_t>(rsp));
++		}
++		auto* lk = Common::Singleton<Loader::RuntimeLinker>::Instance();
++		std::fprintf(stderr, "NOVA_ABORT: guest abort() rsp=0x%llx rbp=0x%llx args=0x%llx 0x%llx 0x%llx\n",
++		             static_cast<unsigned long long>(rsp), static_cast<unsigned long long>(rbp), static_cast<unsigned long long>(arg0),
++		             static_cast<unsigned long long>(arg1), static_cast<unsigned long long>(arg2));
++		for (int i = 0; i < 2; i++) {
++			const uint64_t a = (i == 0 ? arg0 : arg1);
++			uint64_t       readable = 0;
++			if (a > 0x10000 && Graphics::HostMemoryQueryReadable(a, 256, readable) && readable > 0) {
++				char buf[257] {};
++				std::memcpy(buf, reinterpret_cast<const void*>(static_cast<uintptr_t>(a)), static_cast<size_t>(std::min<uint64_t>(readable, 256)));
++				bool printable = buf[0] != 0;
++				for (int k = 0; k < 256 && buf[k] != 0; k++) {
++					if ((buf[k] < 0x20 || buf[k] > 0x7e) && buf[k] != '\n' && buf[k] != '\t') printable = false;
++				}
++				if (printable) std::fprintf(stderr, "NOVA_ABORT: arg%d text \"%s\"\n", i, buf);
++			}
++		}
++		int shown = 0;
++		for (int i = 0; i < 512 && shown < 24 && rsp != 0; i++) {
++			const auto addr = rsp + static_cast<uint64_t>(i) * 8;
++			if (!Graphics::HostMemoryIsReadable(addr)) break;
++			const auto value   = *reinterpret_cast<const uint64_t*>(static_cast<uintptr_t>(addr));
++			auto*      program = lk->FindProgramByAddr(value);
++			if (program != nullptr) {
++				auto mn = Common::PathToString(program->file_name.filename());
++				std::fprintf(stderr, "NOVA_ABORT: stack[%03d] 0x%llx %s+0x%llx\n", i, static_cast<unsigned long long>(value), mn.c_str(),
++				             static_cast<unsigned long long>(value - program->base_vaddr));
++				shown++;
++			}
++		}
++		::Libs::LibKernel::Memory::NovaDumpMemoryTrace();
++		std::fflush(stderr);
++	}
++#endif
+ 
+ 	LOGF("Guest abort diagnostics:\n"
+ 	     "\t return = 0x%016" PRIx64 "\n"
+@@ -1339,16 +1386,48 @@ static KYTY_SYSV_ABI size_t nova_mbrlen(const char* a0, size_t a1, mbstate_t* a2
  	return ::mbrlen(a0, a1, a2);
  }
  
@@ -6362,7 +6706,7 @@ index acff2c8c..06e24009 100644
  }
  
  static KYTY_SYSV_ABI void* nova_calloc(size_t a0, size_t a1) {
-@@ -1515,30 +1548,67 @@ static KYTY_SYSV_ABI wint_t nova_ungetwc(wint_t a0, void* a1) {
+@@ -1515,30 +1594,67 @@ static KYTY_SYSV_ABI wint_t nova_ungetwc(wint_t a0, void* a1) {
  	if (GuestFd(a1) >= 0) return WEOF; return std::ungetwc(a0, static_cast<FILE*>(a1));
  }
  
@@ -6436,7 +6780,7 @@ index acff2c8c..06e24009 100644
  	va_end(ap);
  	return r;
  }
-@@ -1546,7 +1616,7 @@ static KYTY_SYSV_ABI int nova_fprintf_v(void* a0, const char* a1, ...) {
+@@ -1546,7 +1662,7 @@ static KYTY_SYSV_ABI int nova_fprintf_v(void* a0, const char* a1, ...) {
  static KYTY_SYSV_ABI int nova_sprintf_v(char* a0, const char* a1, ...) {
  	va_list ap;
  	va_start(ap, a1);
@@ -6445,7 +6789,7 @@ index acff2c8c..06e24009 100644
  	va_end(ap);
  	return r;
  }
-@@ -1554,7 +1624,7 @@ static KYTY_SYSV_ABI int nova_sprintf_v(char* a0, const char* a1, ...) {
+@@ -1554,7 +1670,7 @@ static KYTY_SYSV_ABI int nova_sprintf_v(char* a0, const char* a1, ...) {
  static KYTY_SYSV_ABI int nova_asprintf_v(char** a0, const char* a1, ...) {
  	va_list ap;
  	va_start(ap, a1);
@@ -6454,7 +6798,7 @@ index acff2c8c..06e24009 100644
  	va_end(ap);
  	return r;
  }
-@@ -1562,7 +1632,7 @@ static KYTY_SYSV_ABI int nova_asprintf_v(char** a0, const char* a1, ...) {
+@@ -1562,7 +1678,7 @@ static KYTY_SYSV_ABI int nova_asprintf_v(char** a0, const char* a1, ...) {
  static KYTY_SYSV_ABI int nova_sscanf_v(const char* a0, const char* a1, ...) {
  	va_list ap;
  	va_start(ap, a1);
@@ -6463,7 +6807,7 @@ index acff2c8c..06e24009 100644
  	va_end(ap);
  	return r;
  }
-@@ -1724,6 +1794,10 @@ LIB_DEFINE(InitLibcNova_1) {
+@@ -1724,6 +1840,10 @@ LIB_DEFINE(InitLibcNova_1) {
  } // namespace LibcNova
  #endif
  
@@ -6474,7 +6818,7 @@ index acff2c8c..06e24009 100644
  namespace LibC {
  
  LIB_DEFINE(InitLibC_1) {
-@@ -1733,6 +1807,8 @@ LIB_DEFINE(InitLibC_1) {
+@@ -1733,6 +1853,8 @@ LIB_DEFINE(InitLibC_1) {
  	// after checking its hash). Retail titles keep resolving to Sony's own libc.prx.
  	if (const char* hle = std::getenv("NOVA_LIBC_HLE"); hle != nullptr && hle[0] == '1') {
  		LibcNova::InitLibcNova_1(s);
@@ -9004,7 +9348,7 @@ index ebc72e43..05cb8332 100644
  	static uint64_t GetSize() { return 0x1000; }
  
 diff --git a/src/loader/runtimeLinker.cpp b/src/loader/runtimeLinker.cpp
-index f267da60..89e9a4c0 100644
+index f267da60..584d7387 100644
 --- a/src/loader/runtimeLinker.cpp
 +++ b/src/loader/runtimeLinker.cpp
 @@ -22,11 +22,14 @@
@@ -9103,7 +9447,7 @@ index f267da60..89e9a4c0 100644
  static bool KytyExceptionHandler(const Common::HostException::ExceptionInfo& exception_info) {
  	const auto* info = &exception_info;
  
-@@ -705,6 +752,37 @@ static bool KytyExceptionHandler(const Common::HostException::ExceptionInfo& exc
+@@ -705,6 +752,38 @@ static bool KytyExceptionHandler(const Common::HostException::ExceptionInfo& exc
  		}
  		std::fflush(stdout);
  	}
@@ -9128,6 +9472,7 @@ index f267da60..89e9a4c0 100644
 +			}
 +		}
 +	}
++	::Libs::LibKernel::Memory::NovaDumpMemoryTrace();
 +	if (g_nova_programs != nullptr) {
 +		for (const auto* p: *g_nova_programs) {
 +			std::fprintf(stderr, "NOVA_FAULT: module 0x%016llx-0x%016llx %s\n",
@@ -9141,7 +9486,7 @@ index f267da60..89e9a4c0 100644
  	EXIT("Unhandled host exception: type=%u code=%u pc=0x%016" PRIx64
  	     " access=%u address=0x%016" PRIx64 "\n",
  	     static_cast<unsigned>(info->type), info->native_code, info->exception_address,
-@@ -928,6 +1006,10 @@ static KYTY_MS_ABI uint8_t* TlsMainGetAddr() {
+@@ -928,6 +1007,10 @@ static KYTY_MS_ABI uint8_t* TlsMainGetAddr() {
  	return g_tls_cached_main_tcb;
  }
  
@@ -9152,7 +9497,7 @@ index f267da60..89e9a4c0 100644
  static void PatchProgram(Program* program, uint64_t address, uint64_t size) {
  	EXIT_IF(program == nullptr);
  	EXIT_IF(program->elf == nullptr);
-@@ -956,8 +1038,13 @@ static void PatchProgram(Program* program, uint64_t address, uint64_t size) {
+@@ -956,8 +1039,13 @@ static void PatchProgram(Program* program, uint64_t address, uint64_t size) {
  		}
  	}
  
@@ -9166,7 +9511,7 @@ index f267da60..89e9a4c0 100644
  		// Replace:
  		//   66 66 66
  		//   mov <reg>, qword ptr fs:[0x00]
-@@ -1170,6 +1257,9 @@ Program* RuntimeLinker::LoadProgram(const std::filesystem::path& elf_name) {
+@@ -1170,6 +1258,9 @@ Program* RuntimeLinker::LoadProgram(const std::filesystem::path& elf_name) {
  	KYTY_PROFILER_FUNCTION();
  
  	Common::LockGuard lock(m_mutex);
@@ -9176,7 +9521,7 @@ index f267da60..89e9a4c0 100644
  
  	static int32_t id_seq = 0;
  
-@@ -1270,6 +1360,9 @@ void RuntimeLinker::Execute(const std::filesystem::path& game_patch) {
+@@ -1270,6 +1361,9 @@ void RuntimeLinker::Execute(const std::filesystem::path& game_patch) {
  	if (libc != nullptr && libc->dynamic_info->init_vaddr != 0) {
  		StartModule(libc, 0, nullptr, nullptr);
  	}
@@ -9186,7 +9531,7 @@ index f267da60..89e9a4c0 100644
  
  	LOGF_COLOR(Log::Color::BrightYellow, "---\n--- Execute: %s\n---\n", "Main");
  
-@@ -1334,6 +1427,12 @@ void RuntimeLinker::Resolve(const std::string& name, SymbolType type, Program* p
+@@ -1334,6 +1428,12 @@ void RuntimeLinker::Resolve(const std::string& name, SymbolType type, Program* p
  		*bind_self = false;
  	}
  
@@ -9199,7 +9544,7 @@ index f267da60..89e9a4c0 100644
  	if (ids.size() == 3) {
  		const LibraryId* l = FindLibrary(*program, ids.at(1));
  		const ModuleId*  m = FindModule(*program, ids.at(2));
-@@ -1719,6 +1818,12 @@ void RuntimeLinker::LoadProgramToMemory(Program* program) {
+@@ -1719,6 +1819,12 @@ void RuntimeLinker::LoadProgramToMemory(Program* program) {
  		LOGF("tls_handler_size       = 0x%016" PRIx64 "\n", tls_handler_size);
  	}
  
@@ -9212,7 +9557,7 @@ index f267da60..89e9a4c0 100644
  	if (!Common::HostException::InstallHandler(KytyExceptionHandler)) {
  		EXIT("Failed to install the required vectored exception handler\n");
  	}
-@@ -2183,7 +2288,13 @@ void* RuntimeLinker::ApplicationHeapMemalign(uint64_t alignment, uint64_t size)
+@@ -2183,7 +2289,13 @@ void* RuntimeLinker::ApplicationHeapMemalign(uint64_t alignment, uint64_t size)
  
  	if (m_application_heap_posix_memalign != nullptr) {
  		void* ptr = nullptr;
@@ -9226,7 +9571,7 @@ index f267da60..89e9a4c0 100644
  	}
  
  	return nullptr;
-@@ -2192,7 +2303,12 @@ void* RuntimeLinker::ApplicationHeapMemalign(uint64_t alignment, uint64_t size)
+@@ -2192,7 +2304,12 @@ void* RuntimeLinker::ApplicationHeapMemalign(uint64_t alignment, uint64_t size)
  void* RuntimeLinker::ApplicationHeapMalloc(uint64_t size) {
  	Common::LockGuard lock(m_mutex);
  
