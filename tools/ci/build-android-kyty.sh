@@ -23,57 +23,41 @@ if [[ ! -d adrenotools/.git ]]; then
     git -C adrenotools submodule update --init --recursive -q
 fi
 git -C kyty checkout -q -- . && git -C kyty clean -qfd -e build
-# Apply the actual 0.9.9 patches. The generated large Kyty diff may contain
-# stale line counts in one or more @@ hunk headers; --recount recomputes those
-# counts from the patch content, preserving all 0.9.9 code rather than
-# substituting the 0.9.8 implementation.
+# Recover Kyty from the most recent successfully compiled Android base, preserving
+# its entire working runtime. The current monolithic 0.9.9 Kyty patch conflicts
+# with memory.cpp and MUST NOT be applied partially. 0.9.9 FEX/ARM64 fixes come
+# from the current branch; add the isolated EOP batching change below.
+base_sha=740c60496616f265e1edec54f0248ba728946a75
+base_patch="$work/kyty-nova-arm64-base.patch"
+git -C "$repo" fetch --no-tags --depth=1 origin "$base_sha"
+git -C "$repo" show "$base_sha:patches/kyty-nova-arm64.patch" > "$base_patch"
 while IFS= read -r p || [[ -n "$p" ]]; do
     [[ -z "$p" || "$p" == \#* ]] && continue
     patch_file="$repo/patches/$p"
-    echo "NOVA_PATCH: validate $p"
     if [[ "$p" == "kyty-nova-arm64.patch" ]]; then
-        # Git --recount repairs stale hunk lengths in modified-file diffs but can
-        # incorrectly classify new-file hunks as depending on existing content.
-        # Keep all 0.9.9 code: split at diff boundaries and apply new files
-        # without recounting their already-correct /dev/null hunks.
-        revised="$work/kyty-modified-files.patch"
-        created="$work/kyty-new-files.patch"
-        python3 - "$patch_file" "$revised" "$created" <<'PY'
-import pathlib, re, sys
-src = pathlib.Path(sys.argv[1]).read_bytes()
-parts = re.split(rb'(?=^diff --git )', src, flags=re.MULTILINE)
-modified, new_files = [], []
-for section in parts:
-    if not section.strip():
-        continue
-    if not section.startswith(b'diff --git '):
-        # Format-patch headers and leading comments are not source diffs.
-        if section is parts[0]:
-            print('NOVA_PATCH: skipping', len(section), 'bytes of patch preamble')
-            continue
-        raise SystemExit('NOVA_PATCH: unexpected text between diff sections')
-    if re.search(rb'^new file mode ', section, re.MULTILINE):
-        new_files.append(section)
-    else:
-        modified.append(section)
-if not modified or not new_files:
-    raise SystemExit('NOVA_PATCH: expected modified and new-file sections')
-pathlib.Path(sys.argv[2]).write_bytes(b''.join(modified))
-pathlib.Path(sys.argv[3]).write_bytes(b''.join(new_files))
-print('NOVA_PATCH: grouped', len(modified), 'modified-file diffs and',
-      len(new_files), 'new-file diffs')
+        patch_file="$base_patch"
+    fi
+    echo "NOVA_PATCH: validate $p"
+    git -C kyty apply --check "$patch_file" || { echo "NOVA_PATCH: $p check failed"; exit 1; }
+    git -C kyty apply "$patch_file" || { echo "NOVA_PATCH: $p apply failed"; exit 1; }
+    if [[ "$p" == "kyty-nova-arm64.patch" ]]; then
+        # This specific EOP condition was introduced by the 0.9.9 Kyty diff.
+        # Declare it BEFORE selector 3 is normalized to selector 2, so the
+        # following batching overlay only affects the combined write+interrupt
+        # form and never alters semantics of selector 1/2.
+        python3 - "$work/kyty/src/graphics/guest_gpu/command_processor/pm4Handlers.cpp" <<'PY'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1])
+s = p.read_text()
+anchor = 'uint32_t interrupt_context_id = buffer[6] & 0x07ffffffu;'
+if s.count(anchor) != 1 or 'nova_defer_release_flush' in s:
+    raise SystemExit('NOVA_GPU: unexpected RELEASE_MEM source; refusing unsafe edit')
+s = s.replace(anchor,
+              anchor + '\n\tconst bool nova_defer_release_flush = interrupt_selector == 0x03;',
+              1)
+p.write_text(s)
+print('NOVA_GPU: guarded selector-3 asynchronous EOP handling enabled')
 PY
-        git -C kyty apply --recount --check "$revised" || {
-            echo "NOVA_PATCH: modified-file patch validation failed"; exit 1;
-        }
-        git -C kyty apply --check "$created" || {
-            echo "NOVA_PATCH: new-file patch validation failed"; exit 1;
-        }
-        git -C kyty apply --recount "$revised"
-        git -C kyty apply "$created"
-    else
-        git -C kyty apply --check "$patch_file" || { echo "patch check failed: $p"; exit 1; }
-        git -C kyty apply "$patch_file" || { echo "patch failed: $p"; exit 1; }
     fi
 done < "$repo/patches/linux-core.series"
 # Execute the host regressions against the sources that are about to be compiled.
