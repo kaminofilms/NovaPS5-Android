@@ -50,6 +50,19 @@ public final class MainActivity extends Activity {
     @Override protected void onResume() { super.onResume(); immersive(); if (home != null) home.invalidate(); refreshLibrary(); }
 
     private long lastRefresh;
+
+    /** Downloads SteamGridDB backgrounds for games that do not have one yet. */
+    void fetchArt(boolean report) {
+        if (Art.key(this).isEmpty()) return;
+        try {
+            boolean any = store.fetchArt();
+            if (any) ui(() -> home.invalidate());
+            if (report) ui(() -> Toast.makeText(this, any ? "Game backgrounds updated" : "Backgrounds are up to date", Toast.LENGTH_SHORT).show());
+        } catch (Exception x) {
+            BootLog.write(this, "SteamGridDB: " + x.getMessage());
+            if (report) ui(() -> Toast.makeText(this, "SteamGridDB: " + x.getMessage(), Toast.LENGTH_LONG).show());
+        }
+    }
     /** Rescans the game folders so newly copied games show up without re-importing. */
     void refreshLibrary() {
         long now = android.os.SystemClock.elapsedRealtime();
@@ -59,6 +72,7 @@ public final class MainActivity extends Activity {
             try {
                 if (store.refresh()) { BootLog.write(this, "Library refreshed: " + store.snapshot().size() + " game(s)"); ui(() -> home.invalidate()); }
             } catch (Exception x) { BootLog.write(this, "Library refresh failed: " + x); }
+            fetchArt(false);
         });
     }
     @Override protected void onDestroy() { io.shutdownNow(); super.onDestroy(); }
@@ -304,6 +318,37 @@ public final class MainActivity extends Activity {
         showFps.setText("Show the FPS counter in games");
         showFps.setChecked(prefs.getBoolean("show_fps", true));
         box.addView(showFps);
+        TextView artLabel = new TextView(this);
+        artLabel.setText("SteamGridDB API key (full-screen game backgrounds)");
+        artLabel.setPadding(0, 16, 0, 0);
+        box.addView(artLabel);
+        LinearLayout artRow = new LinearLayout(this);
+        artRow.setOrientation(LinearLayout.HORIZONTAL);
+        EditText artKey = new EditText(this);
+        artKey.setSingleLine(true);
+        artKey.setHint("Paste your API key");
+        artKey.setText(prefs.getString("sgdb_key", ""));
+        artRow.addView(artKey, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        Button paste = new Button(this);
+        paste.setAllCaps(false);
+        paste.setText("Paste");
+        paste.setOnClickListener(v -> {
+            ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            if (cm != null && cm.hasPrimaryClip() && cm.getPrimaryClip().getItemCount() > 0) {
+                CharSequence t = cm.getPrimaryClip().getItemAt(0).coerceToText(this);
+                if (t != null) artKey.setText(t.toString().trim());
+            }
+        });
+        artRow.addView(paste);
+        box.addView(artRow);
+        Button getKey = new Button(this);
+        getKey.setAllCaps(false);
+        getKey.setText("Get a free key at steamgriddb.com");
+        getKey.setOnClickListener(v -> {
+            try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(Art.KEY_PAGE))); }
+            catch (Exception x) { Toast.makeText(this, Art.KEY_PAGE, Toast.LENGTH_LONG).show(); }
+        });
+        box.addView(getKey);
         Button driver = new Button(this);
         driver.setAllCaps(false);
         driver.setText("GPU driver: " + Drivers.label(this));
@@ -329,7 +374,12 @@ public final class MainActivity extends Activity {
         about.setPadding(0, 18, 0, 0);
         box.addView(about);
         new AlertDialog.Builder(this).setTitle("Settings").setView(box)
-                .setPositiveButton("Save", (d, w) -> prefs.edit().putInt("opacity", opacity.getProgress() + 15).putBoolean("touch_controls", touch.isChecked()).putBoolean("show_fps", showFps.isChecked()).apply())
+                .setPositiveButton("Save", (d, w) -> {
+                    String newKey = artKey.getText().toString().trim();
+                    boolean keyChanged = !newKey.equals(prefs.getString("sgdb_key", ""));
+                    prefs.edit().putInt("opacity", opacity.getProgress() + 15).putBoolean("touch_controls", touch.isChecked()).putBoolean("show_fps", showFps.isChecked()).putString("sgdb_key", newKey).apply();
+                    if (keyChanged && !newKey.isEmpty()) io.execute(() -> fetchArt(true));
+                })
                 .setNegativeButton("Close", null).show();
     }
 

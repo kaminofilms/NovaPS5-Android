@@ -56,7 +56,9 @@ final class GameStore {
         if(o.outWidth<1||o.outHeight<1||o.outWidth>32768||o.outHeight>32768)return null;o.inSampleSize=1;while(Math.max(o.outWidth,o.outHeight)/o.inSampleSize>maximum)o.inSampleSize*=2;o.inJustDecodeBounds=false;
         try(InputStream in=context.getContentResolver().openInputStream(Uri.parse(uri))){return BitmapFactory.decodeStream(in,null,o);}
     }catch(Exception e){return null;}}
-    void loadImages(){for(Entry e:snapshot()){if(e.cover==null)e.cover=image(e.icon,512);if(e.hero==null)e.hero=image(e.background,1280);}}
+    void loadImages(){for(Entry e:snapshot()){if(e.cover==null)e.cover=image(e.icon,512);if(e.hero==null){e.hero=Art.load(context,e,2560);if(e.hero==null)e.hero=image(e.background,1920);}}}
+    /** Fetches missing SteamGridDB backgrounds; true if any new one was loaded. */
+    boolean fetchArt()throws Exception{boolean any=false;for(Entry e:snapshot()){if(Art.fetch(context,e)){Bitmap b=Art.load(context,e,2560);if(b!=null){e.hero=b;any=true;}}}return any;}
 
     static void meta(Entry e,byte[] json)throws Exception{
         JSONObject p=new JSONObject(new String(json,"UTF-8"));JSONObject localized=p.optJSONObject("localizedParameters");
