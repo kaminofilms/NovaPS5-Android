@@ -93,8 +93,12 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
             Os.setenv("NOVA_GUEST_VA", guestVa ? "1" : "0", true);
             if (guestVa) BootLog.write(this, "Guest address translation on (addresses above 512 GB)");
             boolean unreal = unrealGame(new File(game), 0);
-            Os.setenv("NOVA_HEAP_HLE", unreal ? "1" : "0", true);
-            if (unreal) BootLog.write(this, "Unreal Engine title: the emulator serves its libc heap");
+            // With guest address translation the game's own libc heap (512/768 GB arena) works as on
+            // the console, so it is the default; the emulator heap stays available as a setting.
+            boolean heapHle = unreal && (!guestVa || getSharedPreferences("nova", 0).getBoolean("unreal_heap_hle", false));
+            Os.setenv("NOVA_HEAP_HLE", heapHle ? "1" : "0", true);
+            if (unreal) BootLog.write(this, heapHle ? "Unreal Engine title: the emulator serves its libc heap"
+                    : "Unreal Engine title: the game's own libc heap (translated addresses)");
             Drivers.Driver driver = Drivers.current(this);
             if (driver != null) {
                 Os.setenv("NOVA_TURNIP_DIR", driver.dir.getPath() + "/", true);

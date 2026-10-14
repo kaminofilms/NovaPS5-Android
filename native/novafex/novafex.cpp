@@ -932,15 +932,22 @@ void ReportGuestFault(void* ucontext) {
 	if (t_thread.fex != nullptr) {
 		const auto& st = t_thread.fex->CurrentFrame->State;
 		std::fprintf(stderr, "NOVA_FAULT: guest block rip=0x%llx\n", (unsigned long long)st.rip);
-		// Guest code of the faulting block (x86-64), read safely, for offline disassembly.
+		// Precise guest instruction from the JIT's per-instruction RIP table.
+		uint64_t rip = st.rip;
+		if (in_jit) {
+			const uint64_t exact = g_ctx->RestoreRIPFromHostPC(t_thread.fex, pc);
+			if (exact != 0) rip = exact;
+			std::fprintf(stderr, "NOVA_FAULT: guest rip=0x%llx (exact)\n", (unsigned long long)exact);
+		}
+		// Guest code around the faulting instruction (x86-64, from rip-0x40), read safely.
 		uint8_t code[160] {};
 		iovec local {code, sizeof(code)};
-		iovec remote {reinterpret_cast<void*>(TranslateGuestVA(st.rip)), sizeof(code)};
+		iovec remote {reinterpret_cast<void*>(TranslateGuestVA(rip - 0x40)), sizeof(code)};
 		if (process_vm_readv(getpid(), &local, 1, &remote, 1, 0) == static_cast<ssize_t>(sizeof(code))) {
 			for (size_t off = 0; off < sizeof(code); off += 32) {
 				char line[3 * 32 + 1] {};
 				for (size_t i = 0; i < 32; i++) std::snprintf(line + 3 * i, 4, "%02x ", code[off + i]);
-				std::fprintf(stderr, "NOVA_FAULT: guest code +0x%02zx: %s\n", off, line);
+				std::fprintf(stderr, "NOVA_FAULT: guest code rip%+lld: %s\n", static_cast<long long>(off) - 0x40, line);
 			}
 		}
 	}

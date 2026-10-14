@@ -2346,7 +2346,7 @@ index 00000000..ea937e62
 +
 +} // namespace Libs::LibKernel::Memory
 diff --git a/src/kernel/pthread.cpp b/src/kernel/pthread.cpp
-index 673a7dc7..0e9c4057 100644
+index 673a7dc7..19cf00d6 100644
 --- a/src/kernel/pthread.cpp
 +++ b/src/kernel/pthread.cpp
 @@ -47,6 +47,10 @@
@@ -2360,7 +2360,27 @@ index 673a7dc7..0e9c4057 100644
  
  #if KYTY_PLATFORM == KYTY_PLATFORM_WINDOWS
  #include <fmt/format.h>
-@@ -135,6 +139,11 @@ static uint64_t GetHostThreadId() {
+@@ -68,6 +72,19 @@
+ #undef pthread_attr_getguardsize
+ #endif
+ 
++
++#if defined(KYTY_NOVA_FEX)
++// Guest sync objects can live above 2^39 (translated guest VA): use the host view directly
++// instead of emulating every access in the fault handler.
++#define NOVA_XLAT_PTR(p) \
++	do { \
++		if ((p) != nullptr && reinterpret_cast<uint64_t>(p) >= NovaGuest::kLow) \
++			(p) = reinterpret_cast<decltype(p)>(NovaGuest::Host(reinterpret_cast<uint64_t>(p))); \
++	} while (false)
++#else
++#define NOVA_XLAT_PTR(p) ((void)0)
++#endif
++
+ namespace Libs {
+ 
+ namespace LibcInternalExt {
+@@ -135,6 +152,11 @@ static uint64_t GetHostThreadId() {
  static uint64_t KernelReadTscNative() {
  #if defined(_M_X64) || defined(__x86_64__)
  	return __rdtsc();
@@ -2372,7 +2392,7 @@ index 673a7dc7..0e9c4057 100644
  #else
  	return Common::Timer::QueryPerformanceCounter();
  #endif
-@@ -172,6 +181,10 @@ static uint64_t KernelGetTscFrequencyNative() {
+@@ -172,6 +194,10 @@ static uint64_t KernelGetTscFrequencyNative() {
  		freq = (mod >= ROUND_TO / 2 ? freq - mod + ROUND_TO : freq - mod);
  
  		return freq != 0 ? freq : host_frequency;
@@ -2383,7 +2403,7 @@ index 673a7dc7..0e9c4057 100644
  #else
  		return Common::Timer::QueryPerformanceFrequency();
  #endif
-@@ -810,6 +823,11 @@ bool TestGuestStackOwnerLifecycle(uint64_t* first_address, uint64_t* second_addr
+@@ -810,6 +836,11 @@ bool TestGuestStackOwnerLifecycle(uint64_t* first_address, uint64_t* second_addr
  }
  #endif
  
@@ -2395,7 +2415,7 @@ index 673a7dc7..0e9c4057 100644
  static KYTY_SYSV_ABI void* RunOnGuestStack(void* arg, pthread_entry_func_t func, void* stack_top) {
  #if defined(__x86_64__) || defined(_M_X64)
  	void*      ret = nullptr;
-@@ -929,6 +947,22 @@ static KYTY_SYSV_ABI void* RunOnGuestStack(void* arg, pthread_entry_func_t func,
+@@ -929,6 +960,22 @@ static KYTY_SYSV_ABI void* RunOnGuestStack(void* arg, pthread_entry_func_t func,
  	}
  
  	return ret;
@@ -2418,7 +2438,155 @@ index 673a7dc7..0e9c4057 100644
  #else
  	(void)stack_top;
  	return func(arg);
-@@ -3515,7 +3549,14 @@ int KYTY_SYSV_ABI PthreadSetprio(Pthread thread, int prio) {
+@@ -1699,10 +1746,12 @@ static int PthreadMutexInitNamed(PthreadMutex* mutex, const PthreadMutexattr* at
+ 
+ int KYTY_SYSV_ABI PthreadMutexInit(PthreadMutex* mutex, const PthreadMutexattr* attr,
+                                    const char* name) {
++	NOVA_XLAT_PTR(mutex);
+ 	return PthreadMutexInitNamed(mutex, attr, name);
+ }
+ 
+ int KYTY_SYSV_ABI PthreadMutexDestroy(PthreadMutex* mutex) {
++	NOVA_XLAT_PTR(mutex);
+ 	// Hot path for Python/Ren'Py startup; keep this quiet unless it fails.
+ 
+ 	if (mutex == nullptr || *mutex == nullptr) {
+@@ -1732,6 +1781,7 @@ int KYTY_SYSV_ABI PthreadMutexDestroy(PthreadMutex* mutex) {
+ }
+ 
+ int KYTY_SYSV_ABI PthreadMutexLock(PthreadMutex* mutex) {
++	NOVA_XLAT_PTR(mutex);
+ 	// PRINT_NAME();
+ 
+ 	auto* pthread_static_objects = g_pthread_context->GetPthreadStaticObjects();
+@@ -1759,6 +1809,7 @@ int KYTY_SYSV_ABI PthreadMutexLock(PthreadMutex* mutex) {
+ }
+ 
+ int KYTY_SYSV_ABI PthreadMutexTrylock(PthreadMutex* mutex) {
++	NOVA_XLAT_PTR(mutex);
+ 	// PRINT_NAME();
+ 
+ 	auto* pthread_static_objects = g_pthread_context->GetPthreadStaticObjects();
+@@ -1812,6 +1863,7 @@ int KYTY_SYSV_ABI PthreadMutexTimedlock(PthreadMutex* mutex, KernelUseconds usec
+ }
+ 
+ int KYTY_SYSV_ABI PthreadMutexUnlock(PthreadMutex* mutex) {
++	NOVA_XLAT_PTR(mutex);
+ 	// PRINT_NAME();
+ 
+ 	auto* pthread_static_objects = g_pthread_context->GetPthreadStaticObjects();
+@@ -2245,6 +2297,7 @@ int KYTY_SYSV_ABI PthreadAttrSetstacksize(PthreadAttr* attr, size_t stack_size)
+ }
+ 
+ int KYTY_SYSV_ABI PthreadRwlockDestroy(PthreadRwlock* rwlock) {
++	NOVA_XLAT_PTR(rwlock);
+ 	PRINT_NAME();
+ 
+ 	if (rwlock == nullptr) {
+@@ -2294,6 +2347,7 @@ static int PthreadRwlockInitNamed(PthreadRwlock* rwlock, const PthreadRwlockattr
+ 
+ int KYTY_SYSV_ABI PthreadRwlockInit(PthreadRwlock* rwlock, const PthreadRwlockattr* attr,
+                                     const char* name) {
++	NOVA_XLAT_PTR(rwlock);
+ 	return PthreadRwlockInitNamed(rwlock, attr, name);
+ }
+ 
+@@ -2406,6 +2460,7 @@ static int RwlockLockCooperative(PthreadRwlock rwlock, bool write, KernelUsecond
+ }
+ 
+ int KYTY_SYSV_ABI PthreadRwlockRdlock(PthreadRwlock* rwlock) {
++	NOVA_XLAT_PTR(rwlock);
+ 	// Hot path for some PS5 titles; per-call name logging can dominate runtime.
+ 
+ 	auto* pthread_static_objects = g_pthread_context->GetPthreadStaticObjects();
+@@ -2457,6 +2512,7 @@ int KYTY_SYSV_ABI PthreadRwlockTimedwrlock(PthreadRwlock* rwlock, KernelUseconds
+ }
+ 
+ int KYTY_SYSV_ABI PthreadRwlockTryrdlock(PthreadRwlock* rwlock) {
++	NOVA_XLAT_PTR(rwlock);
+ 	PRINT_NAME();
+ 
+ 	auto* pthread_static_objects = g_pthread_context->GetPthreadStaticObjects();
+@@ -2489,6 +2545,7 @@ int KYTY_SYSV_ABI PthreadRwlockTryrdlock(PthreadRwlock* rwlock) {
+ }
+ 
+ int KYTY_SYSV_ABI PthreadRwlockTrywrlock(PthreadRwlock* rwlock) {
++	NOVA_XLAT_PTR(rwlock);
+ 	PRINT_NAME();
+ 
+ 	if (rwlock == nullptr) {
+@@ -2518,6 +2575,7 @@ int KYTY_SYSV_ABI PthreadRwlockTrywrlock(PthreadRwlock* rwlock) {
+ }
+ 
+ int KYTY_SYSV_ABI PthreadRwlockUnlock(PthreadRwlock* rwlock) {
++	NOVA_XLAT_PTR(rwlock);
+ 	// PRINT_NAME();
+ 
+ 	auto* pthread_static_objects = g_pthread_context->GetPthreadStaticObjects();
+@@ -2557,6 +2615,7 @@ int KYTY_SYSV_ABI PthreadRwlockUnlock(PthreadRwlock* rwlock) {
+ }
+ 
+ int KYTY_SYSV_ABI PthreadRwlockWrlock(PthreadRwlock* rwlock) {
++	NOVA_XLAT_PTR(rwlock);
+ 	// PRINT_NAME();
+ 
+ 	auto* pthread_static_objects = g_pthread_context->GetPthreadStaticObjects();
+@@ -2705,6 +2764,7 @@ int KYTY_SYSV_ABI PthreadCondattrSetclock(PthreadCondattr* attr, KernelClockid c
+ }
+ 
+ int KYTY_SYSV_ABI PthreadCondBroadcast(PthreadCond* cond) {
++	NOVA_XLAT_PTR(cond);
+ 	// PRINT_NAME();
+ 
+ 	auto* pthread_static_objects = g_pthread_context->GetPthreadStaticObjects();
+@@ -2728,6 +2788,7 @@ int KYTY_SYSV_ABI PthreadCondBroadcast(PthreadCond* cond) {
+ }
+ 
+ int KYTY_SYSV_ABI PthreadCondDestroy(PthreadCond* cond) {
++	NOVA_XLAT_PTR(cond);
+ 	PRINT_NAME();
+ 
+ 	if (cond == nullptr) {
+@@ -2791,10 +2852,12 @@ static int PthreadCondInitNamed(PthreadCond* cond, const PthreadCondattr* attr,
+ 
+ int KYTY_SYSV_ABI PthreadCondInit(PthreadCond* cond, const PthreadCondattr* attr,
+                                   const char* name) {
++	NOVA_XLAT_PTR(cond);
+ 	return PthreadCondInitNamed(cond, attr, name);
+ }
+ 
+ int KYTY_SYSV_ABI PthreadCondSignal(PthreadCond* cond) {
++	NOVA_XLAT_PTR(cond);
+ 	// PRINT_NAME();
+ 
+ 	auto* pthread_static_objects = g_pthread_context->GetPthreadStaticObjects();
+@@ -2814,6 +2877,7 @@ int KYTY_SYSV_ABI PthreadCondSignal(PthreadCond* cond) {
+ }
+ 
+ int KYTY_SYSV_ABI PthreadCondSignalto(PthreadCond* cond, Pthread thread) {
++	NOVA_XLAT_PTR(cond);
+ 	// PRINT_NAME();
+ 
+ 	auto* pthread_static_objects = g_pthread_context->GetPthreadStaticObjects();
+@@ -2834,6 +2898,8 @@ int KYTY_SYSV_ABI PthreadCondSignalto(PthreadCond* cond, Pthread thread) {
+ 
+ int KYTY_SYSV_ABI PthreadCondTimedwait(PthreadCond* cond, PthreadMutex* mutex,
+                                        KernelUseconds usec) {
++	NOVA_XLAT_PTR(mutex);
++	NOVA_XLAT_PTR(cond);
+ 	// PRINT_NAME();
+ 
+ 	auto* pthread_static_objects = g_pthread_context->GetPthreadStaticObjects();
+@@ -2999,6 +3065,8 @@ int KYTY_SYSV_ABI PthreadCondTimedwaitAbs(PthreadCond* cond, PthreadMutex* mutex
+ }
+ 
+ int KYTY_SYSV_ABI PthreadCondWait(PthreadCond* cond, PthreadMutex* mutex) {
++	NOVA_XLAT_PTR(mutex);
++	NOVA_XLAT_PTR(cond);
+ 	PRINT_NAME();
+ 
+ 	auto* pthread_static_objects = g_pthread_context->GetPthreadStaticObjects();
+@@ -3515,7 +3583,14 @@ int KYTY_SYSV_ABI PthreadSetprio(Pthread thread, int prio) {
  void KYTY_SYSV_ABI PthreadTestcancel() {
  	PRINT_NAME();
  
@@ -2433,7 +2601,7 @@ index 673a7dc7..0e9c4057 100644
  }
  
  void KYTY_SYSV_ABI PthreadExit(void* value) {
-@@ -3556,6 +3597,11 @@ void KYTY_SYSV_ABI PthreadExit(void* value) {
+@@ -3556,6 +3631,11 @@ void KYTY_SYSV_ABI PthreadExit(void* value) {
  			__builtin_unreachable();
  		}
  	}
@@ -6790,7 +6958,7 @@ index 704d2b29..a82e113f 100644
  
  } // namespace LibNgs2
 diff --git a/src/libs/libC.cpp b/src/libs/libC.cpp
-index acff2c8c..7dd2b064 100644
+index acff2c8c..99b833e5 100644
 --- a/src/libs/libC.cpp
 +++ b/src/libs/libC.cpp
 @@ -7,6 +7,7 @@
@@ -6817,7 +6985,7 @@ index acff2c8c..7dd2b064 100644
  
  namespace Libs {
  
-@@ -204,7 +207,49 @@ static void PrintAbortPointerArrayCandidate(const char* name, uint64_t addr) {
+@@ -204,7 +207,72 @@ static void PrintAbortPointerArrayCandidate(const char* name, uint64_t addr) {
  	asm volatile("movq %%rsp, %0" : "=r"(rsp));
  #endif
  
@@ -6835,18 +7003,41 @@ index acff2c8c..7dd2b064 100644
 +		std::fprintf(stderr, "NOVA_ABORT: guest abort() rsp=0x%llx rbp=0x%llx args=0x%llx 0x%llx 0x%llx\n",
 +		             static_cast<unsigned long long>(rsp), static_cast<unsigned long long>(rbp), static_cast<unsigned long long>(arg0),
 +		             static_cast<unsigned long long>(arg1), static_cast<unsigned long long>(arg2));
-+		for (int i = 0; i < 2; i++) {
-+			const uint64_t a = (i == 0 ? arg0 : arg1);
-+			uint64_t       readable = 0;
-+			if (a > 0x10000 && Graphics::HostMemoryQueryReadable(a, 256, readable) && readable > 0) {
-+				char buf[257] {};
-+				std::memcpy(buf, reinterpret_cast<const void*>(static_cast<uintptr_t>(a)), static_cast<size_t>(std::min<uint64_t>(readable, 256)));
-+				bool printable = buf[0] != 0;
-+				for (int k = 0; k < 256 && buf[k] != 0; k++) {
-+					if ((buf[k] < 0x20 || buf[k] > 0x7e) && buf[k] != '\n' && buf[k] != '\t') printable = false;
-+				}
-+				if (printable) std::fprintf(stderr, "NOVA_ABORT: arg%d text \"%s\"\n", i, buf);
++		// Print any text the abort arguments or the guest stack point to: 8-bit or UTF-16
++		// (Unreal's TCHAR is 16-bit on PS5; its fatal-error text is "...[File:x] [Line: n]...").
++		auto print_text = [&](const char* what, uint64_t a) {
++			uint64_t readable = 0;
++			if (a < 0x10000 || !Graphics::HostMemoryQueryReadable(a, 1024, readable) || readable < 8) return false;
++			uint8_t raw[1024] {};
++			NovaGuest::Copy(raw, reinterpret_cast<const void*>(a), std::min<uint64_t>(readable, sizeof(raw)));
++			char        out[513] {};
++			int         n    = 0;
++			const bool  wide = raw[1] == 0 && raw[0] >= 0x20 && raw[0] < 0x7f;
++			const int   step = wide ? 2 : 1;
++			for (int k = 0; k + step - 1 < static_cast<int>(sizeof(raw)) && n < 512; k += step) {
++				const uint8_t c = raw[k];
++				if (c == 0 || (wide && raw[k + 1] != 0)) break;
++				out[n++] = (c >= 0x20 && c < 0x7f) || c == '\n' || c == '\t' ? static_cast<char>(c) : '?';
 +			}
++			if (n < 4) return false;
++			std::fprintf(stderr, "NOVA_ABORT: %s text%s \"%s\"\n", what, wide ? " (utf16)" : "", out);
++			return true;
++		};
++		print_text("arg0", arg0);
++		print_text("arg1", arg1);
++		print_text("arg2", arg2);
++		if (rsp != 0) {
++			// Scan backwards a little too: the message buffer often sits just below the frame.
++			int texts = 0;
++			for (int i = 0; i < 1024 && texts < 6; i++) {
++				const auto addr = rsp + static_cast<uint64_t>(i) * 8;
++				if (!Graphics::HostMemoryIsReadable(addr)) break;
++				uint64_t value = 0;
++				NovaGuest::Copy(&value, reinterpret_cast<const void*>(addr), 8);
++				if (lk->FindProgramByAddr(value) != nullptr) continue;
++				if (print_text(fmt::format("stack[{:03d}]", i).c_str(), value)) texts++;
++			}
++			print_text("rsp-buffer", rsp + 0x10);
 +		}
 +		int shown = 0;
 +		for (int i = 0; i < 512 && shown < 24 && rsp != 0; i++) {
@@ -6868,7 +7059,7 @@ index acff2c8c..7dd2b064 100644
  
  	LOGF("Guest abort diagnostics:\n"
  	     "\t return = 0x%016" PRIx64 "\n"
-@@ -749,19 +794,45 @@ int KYTY_SYSV_ABI fflush(FILE* stream) {
+@@ -749,19 +817,45 @@ int KYTY_SYSV_ABI fflush(FILE* stream) {
  void* KYTY_SYSV_ABI memset(void* s, int c, size_t n) {
  	PRINT_NAME();
  
@@ -6914,7 +7105,7 @@ index acff2c8c..7dd2b064 100644
  }
  
  int KYTY_SYSV_ABI strcmp(const char* s1, const char* s2) {
-@@ -1339,16 +1410,48 @@ static KYTY_SYSV_ABI size_t nova_mbrlen(const char* a0, size_t a1, mbstate_t* a2
+@@ -1339,16 +1433,48 @@ static KYTY_SYSV_ABI size_t nova_mbrlen(const char* a0, size_t a1, mbstate_t* a2
  	return ::mbrlen(a0, a1, a2);
  }
  
@@ -6966,7 +7157,7 @@ index acff2c8c..7dd2b064 100644
  }
  
  static KYTY_SYSV_ABI void* nova_calloc(size_t a0, size_t a1) {
-@@ -1515,30 +1618,67 @@ static KYTY_SYSV_ABI wint_t nova_ungetwc(wint_t a0, void* a1) {
+@@ -1515,30 +1641,67 @@ static KYTY_SYSV_ABI wint_t nova_ungetwc(wint_t a0, void* a1) {
  	if (GuestFd(a1) >= 0) return WEOF; return std::ungetwc(a0, static_cast<FILE*>(a1));
  }
  
@@ -7040,7 +7231,7 @@ index acff2c8c..7dd2b064 100644
  	va_end(ap);
  	return r;
  }
-@@ -1546,7 +1686,7 @@ static KYTY_SYSV_ABI int nova_fprintf_v(void* a0, const char* a1, ...) {
+@@ -1546,7 +1709,7 @@ static KYTY_SYSV_ABI int nova_fprintf_v(void* a0, const char* a1, ...) {
  static KYTY_SYSV_ABI int nova_sprintf_v(char* a0, const char* a1, ...) {
  	va_list ap;
  	va_start(ap, a1);
@@ -7049,7 +7240,7 @@ index acff2c8c..7dd2b064 100644
  	va_end(ap);
  	return r;
  }
-@@ -1554,7 +1694,7 @@ static KYTY_SYSV_ABI int nova_sprintf_v(char* a0, const char* a1, ...) {
+@@ -1554,7 +1717,7 @@ static KYTY_SYSV_ABI int nova_sprintf_v(char* a0, const char* a1, ...) {
  static KYTY_SYSV_ABI int nova_asprintf_v(char** a0, const char* a1, ...) {
  	va_list ap;
  	va_start(ap, a1);
@@ -7058,7 +7249,7 @@ index acff2c8c..7dd2b064 100644
  	va_end(ap);
  	return r;
  }
-@@ -1562,7 +1702,7 @@ static KYTY_SYSV_ABI int nova_asprintf_v(char** a0, const char* a1, ...) {
+@@ -1562,7 +1725,7 @@ static KYTY_SYSV_ABI int nova_asprintf_v(char** a0, const char* a1, ...) {
  static KYTY_SYSV_ABI int nova_sscanf_v(const char* a0, const char* a1, ...) {
  	va_list ap;
  	va_start(ap, a1);
@@ -7067,7 +7258,7 @@ index acff2c8c..7dd2b064 100644
  	va_end(ap);
  	return r;
  }
-@@ -1724,6 +1864,10 @@ LIB_DEFINE(InitLibcNova_1) {
+@@ -1724,6 +1887,10 @@ LIB_DEFINE(InitLibcNova_1) {
  } // namespace LibcNova
  #endif
  
@@ -7078,7 +7269,7 @@ index acff2c8c..7dd2b064 100644
  namespace LibC {
  
  LIB_DEFINE(InitLibC_1) {
-@@ -1733,6 +1877,8 @@ LIB_DEFINE(InitLibC_1) {
+@@ -1733,6 +1900,8 @@ LIB_DEFINE(InitLibC_1) {
  	// after checking its hash). Retail titles keep resolving to Sony's own libc.prx.
  	if (const char* hle = std::getenv("NOVA_LIBC_HLE"); hle != nullptr && hle[0] == '1') {
  		LibcNova::InitLibcNova_1(s);

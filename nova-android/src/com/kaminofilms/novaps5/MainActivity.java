@@ -354,6 +354,10 @@ public final class MainActivity extends Activity {
         showFps.setText("Show the FPS counter in games");
         showFps.setChecked(prefs.getBoolean("show_fps", true));
         box.addView(showFps);
+        CheckBox heapHle = new CheckBox(this);
+        heapHle.setText("Unreal games: emulator heap instead of the game's own libc heap (try if an Unreal game crashes at start)");
+        heapHle.setChecked(prefs.getBoolean("unreal_heap_hle", false));
+        box.addView(heapHle);
         TextView artLabel = new TextView(this);
         artLabel.setText("SteamGridDB API key (full-screen game backgrounds)");
         artLabel.setPadding(0, 16, 0, 0);
@@ -412,7 +416,7 @@ public final class MainActivity extends Activity {
                 .setPositiveButton("Save", (d, w) -> {
                     String newKey = artKey.getText().toString().trim();
                     boolean keyChanged = !newKey.equals(prefs.getString("sgdb_key", ""));
-                    prefs.edit().putInt("opacity", opacity.getProgress() + 15).putBoolean("touch_controls", touch.isChecked()).putBoolean("show_fps", showFps.isChecked()).putString("sgdb_key", newKey).apply();
+                    prefs.edit().putInt("opacity", opacity.getProgress() + 15).putBoolean("touch_controls", touch.isChecked()).putBoolean("show_fps", showFps.isChecked()).putBoolean("unreal_heap_hle", heapHle.isChecked()).putString("sgdb_key", newKey).apply();
                     if (keyChanged && !newKey.isEmpty()) io.execute(() -> fetchArt(true));
                 })
                 .setNegativeButton("Close", null).show();
