@@ -19,7 +19,7 @@ index f3cdf3a9..ca8d2e5a 100644
  	# SDL's built-in iconv fallback does not support CP932.
  	set(SDL_SYSTEM_ICONV ON CACHE BOOL "Use system iconv for CP932 conversion" FORCE)
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 213dd35b..5dadd86f 100644
+index 213dd35b..9c222724 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -35,6 +35,13 @@ set(KYTY_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty")
@@ -109,7 +109,7 @@ index 213dd35b..5dadd86f 100644
  target_include_directories(ces_tests PRIVATE ${inc_headers})
  
  add_executable(save_data_dialog_tests EXCLUDE_FROM_ALL
-@@ -756,7 +786,14 @@ if(APPLE AND (CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64" OR
+@@ -756,7 +786,21 @@ if(APPLE AND (CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64" OR
  	endif()
  endif()
  
@@ -119,6 +119,13 @@ index 213dd35b..5dadd86f 100644
 +	set_target_properties(kyty_emulator PROPERTIES OUTPUT_NAME main)
 +	target_link_options(kyty_emulator PRIVATE -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384 -Wl,--no-undefined)
 +	target_link_libraries(kyty_emulator android log)
++	# Turnip (or any custom Adreno driver) through libadrenotools, as Android Switch emulators do.
++	if(NOVA_ADRENOTOOLS_SRC)
++		add_subdirectory("${NOVA_ADRENOTOOLS_SRC}" "${CMAKE_CURRENT_BINARY_DIR}/adrenotools")
++		target_link_libraries(kyty_emulator adrenotools)
++		target_compile_definitions(kyty_emulator PRIVATE NOVA_ADRENOTOOLS=1)
++		add_dependencies(kyty_emulator main_hook file_redirect_hook gsl_alloc_hook hook_impl)
++	endif()
 +else()
 +	add_executable(kyty_emulator "${KYTY_SOURCE_DIR}/main.cpp" ${kyty_emulator_src})
 +endif()
@@ -485,10 +492,28 @@ index 07c74012..21606b8f 100644
  }
  
 diff --git a/src/graphics/presentation/window/vulkanWindow.cpp b/src/graphics/presentation/window/vulkanWindow.cpp
-index 95005f5a..e4124de6 100644
+index 95005f5a..fa8e060c 100644
 --- a/src/graphics/presentation/window/vulkanWindow.cpp
 +++ b/src/graphics/presentation/window/vulkanWindow.cpp
-@@ -167,6 +167,9 @@ static bool NovaRelaxable(const char* name) {
+@@ -38,6 +38,17 @@
+ 
+ #define KYTY_ENABLE_DEBUG_PRINTF
+ 
++#if defined(KYTY_ANDROID)
++// novaAndroid.cpp: the Vulkan loader (system or Turnip via adrenotools) and an Android surface
++// created through it (SDL's own helper would go through the system loader).
++PFN_vkGetInstanceProcAddr NovaAndroidVulkanLoader(PFN_vkGetInstanceProcAddr fallback);
++bool NovaAndroidCreateSurface(SDL_Window* window, VkInstance instance, const VkAllocationCallbacks* allocator,
++                              VkSurfaceKHR* surface);
++#define KYTY_NOVA_CREATE_SURFACE NovaAndroidCreateSurface
++#else
++#define KYTY_NOVA_CREATE_SURFACE SDL_Vulkan_CreateSurface
++#endif
++
+ namespace Libs::Graphics {
+ 
+ struct VulkanExtensions {
+@@ -167,6 +178,9 @@ static bool NovaRelaxable(const char* name) {
  }
  
  static bool g_nova_barycentric_enabled = true;
@@ -498,7 +523,7 @@ index 95005f5a..e4124de6 100644
  static bool g_nova_depth_bounds_enabled = true;
  
  static void VulkanFindPhysicalDevice(vk::Instance instance, vk::SurfaceKHR surface,
-@@ -263,7 +266,10 @@ static void VulkanFindPhysicalDevice(vk::Instance instance, vk::SurfaceKHR surfa
+@@ -263,7 +277,10 @@ static void VulkanFindPhysicalDevice(vk::Instance instance, vk::SurfaceKHR surfa
  			if (required == VK_TRUE && supported != VK_TRUE) {
  				if (NovaRelaxable(name)) {
  					LOGF("NOVA_RELAXED: %s is not supported; continuing without it\n", name);
@@ -510,6 +535,39 @@ index 95005f5a..e4124de6 100644
  					if (strcmp(name, "depthBounds") == 0) g_nova_depth_bounds_enabled = false;
  					return;
  				}
+@@ -881,8 +898,14 @@ void WindowContext::CreateVulkan() {
+ 	EXIT_IF(graphic_ctx.device != nullptr);
+ 	EXIT_IF(surface != nullptr);
+ 
++#if defined(KYTY_ANDROID)
++	// Nova PS5: a Turnip driver loaded through adrenotools, or the system driver through SDL.
++	auto get_instance_proc_addr = NovaAndroidVulkanLoader(
++	    reinterpret_cast<PFN_vkGetInstanceProcAddr>(SDL_Vulkan_GetVkGetInstanceProcAddr()));
++#else
+ 	auto get_instance_proc_addr =
+ 	    reinterpret_cast<PFN_vkGetInstanceProcAddr>(SDL_Vulkan_GetVkGetInstanceProcAddr());
++#endif
+ 	if (get_instance_proc_addr == nullptr) {
+ 		EXIT("Could not load Vulkan: %s\n", SDL_GetError());
+ 	}
+@@ -976,7 +999,7 @@ void WindowContext::CreateVulkan() {
+ 	}
+ 
+ 	vk::SurfaceKHR::CType native_surface = VK_NULL_HANDLE;
+-	if (!SDL_Vulkan_CreateSurface(window, static_cast<vk::Instance::CType>(graphic_ctx.instance),
++	if (!KYTY_NOVA_CREATE_SURFACE(window, static_cast<vk::Instance::CType>(graphic_ctx.instance),
+ 	                              nullptr, &native_surface)) {
+ 		EXIT("Could not create a Vulkan surface");
+ 	}
+@@ -1109,7 +1132,7 @@ void WindowContext::RecreateSurface() {
+ 		surface = nullptr;
+ 	}
+ 	vk::SurfaceKHR::CType native_surface = VK_NULL_HANDLE;
+-	if (!SDL_Vulkan_CreateSurface(window, static_cast<vk::Instance::CType>(graphic_ctx.instance),
++	if (!KYTY_NOVA_CREATE_SURFACE(window, static_cast<vk::Instance::CType>(graphic_ctx.instance),
+ 	                              nullptr, &native_surface)) {
+ 		EXIT("Could not recreate the Vulkan surface: %s\n", SDL_GetError());
+ 	}
 diff --git a/src/graphics/shader/recompiler/ir/passes/ShaderInfoCollection.cpp b/src/graphics/shader/recompiler/ir/passes/ShaderInfoCollection.cpp
 index 29aecffe..a27e7296 100644
 --- a/src/graphics/shader/recompiler/ir/passes/ShaderInfoCollection.cpp
@@ -1242,15 +1300,22 @@ index a9610102..892e7405 100644
  int main(int argc, char* argv[]) {
 diff --git a/src/novaAndroid.cpp b/src/novaAndroid.cpp
 new file mode 100644
-index 00000000..a6373a67
+index 00000000..0add1b25
 --- /dev/null
 +++ b/src/novaAndroid.cpp
-@@ -0,0 +1,104 @@
+@@ -0,0 +1,166 @@
 +// Nova PS5 on Android: process setup and the on-screen PS5 controller.
 +#if defined(KYTY_ANDROID)
 +
 +#include <SDL3/SDL.h>
 +#include <android/log.h>
++#include <android/native_window.h>
++#include <dlfcn.h>
++#define VK_USE_PLATFORM_ANDROID_KHR 1
++#include <vulkan/vulkan.h>
++#if defined(NOVA_ADRENOTOOLS)
++#include <adrenotools/driver.h>
++#endif
 +#include <fcntl.h>
 +#include <jni.h>
 +#include <unistd.h>
@@ -1282,6 +1347,61 @@ index 00000000..a6373a67
 +	std::fprintf(stderr, "NOVA_ANDROID: Kyty started in the app process (pid %d) %s", static_cast<int>(getpid()),
 +	             ctime(&now));
 +	__android_log_print(ANDROID_LOG_INFO, "NovaPS5", "Kyty started (pid %d)", static_cast<int>(getpid()));
++}
++
++namespace {
++PFN_vkGetInstanceProcAddr g_gipa = nullptr;
++} // namespace
++
++// The Vulkan driver: a Turnip build loaded through adrenotools when the app selected one
++// (NOVA_TURNIP_DIR/NOVA_TURNIP_LIB, hook libraries in NOVA_HOOK_DIR), otherwise the system driver.
++PFN_vkGetInstanceProcAddr NovaAndroidVulkanLoader(PFN_vkGetInstanceProcAddr fallback) {
++	if (g_gipa != nullptr) {
++		return g_gipa;
++	}
++#if defined(NOVA_ADRENOTOOLS)
++	const char* dir  = getenv("NOVA_TURNIP_DIR");
++	const char* lib  = getenv("NOVA_TURNIP_LIB");
++	const char* hook = getenv("NOVA_HOOK_DIR");
++	if (dir != nullptr && dir[0] != 0 && lib != nullptr && lib[0] != 0 && hook != nullptr) {
++		void* handle = adrenotools_open_libvulkan(RTLD_NOW, ADRENOTOOLS_DRIVER_CUSTOM, nullptr, hook, dir, lib,
++		                                          nullptr, nullptr);
++		if (handle != nullptr) {
++			g_gipa = reinterpret_cast<PFN_vkGetInstanceProcAddr>(dlsym(handle, "vkGetInstanceProcAddr"));
++		}
++		std::fprintf(stderr, "NOVA_ANDROID: GPU driver %s%s: %s\n", dir, lib,
++		             g_gipa != nullptr ? "loaded (adrenotools)" : "FAILED, using the system driver");
++	}
++#endif
++	if (g_gipa == nullptr) {
++		g_gipa = fallback;
++		std::fprintf(stderr, "NOVA_ANDROID: GPU driver: system Vulkan\n");
++	}
++	return g_gipa;
++}
++
++bool NovaAndroidCreateSurface(SDL_Window* window, VkInstance instance, const VkAllocationCallbacks* allocator,
++                              VkSurfaceKHR* surface) {
++	auto* native = static_cast<ANativeWindow*>(
++	    SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_ANDROID_WINDOW_POINTER, nullptr));
++	if (native == nullptr || g_gipa == nullptr) {
++		SDL_SetError("no Android window for Vulkan");
++		return false;
++	}
++	auto create = reinterpret_cast<PFN_vkCreateAndroidSurfaceKHR>(g_gipa(instance, "vkCreateAndroidSurfaceKHR"));
++	if (create == nullptr) {
++		SDL_SetError("vkCreateAndroidSurfaceKHR unavailable");
++		return false;
++	}
++	VkAndroidSurfaceCreateInfoKHR info {};
++	info.sType  = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
++	info.window = native;
++	const VkResult result = create(instance, &info, allocator, surface);
++	if (result != VK_SUCCESS) {
++		SDL_SetError("vkCreateAndroidSurfaceKHR failed: %d", static_cast<int>(result));
++		return false;
++	}
++	return true;
 +}
 +
 +namespace {

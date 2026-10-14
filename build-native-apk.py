@@ -16,6 +16,7 @@ p.add_argument('--keystore', required=True)
 p.add_argument('--output', required=True)
 p.add_argument('--version-name', required=True)
 p.add_argument('--version-code', required=True)
+p.add_argument('--assets', help='directory packaged as the APK assets')
 a = p.parse_args()
 
 root = pathlib.Path(__file__).resolve().parent
@@ -62,8 +63,12 @@ manifest.write_text((app / 'AndroidManifest.xml').read_text()
                     .replace('@NOVA_VERSION_CODE@', a.version_code).replace('@NOVA_VERSION_NAME@', a.version_name))
 
 run(bt / 'aapt2', 'compile', '--dir', app / 'res', '-o', build / 'resources.zip')
-run(bt / 'aapt2', 'link', '-o', build / 'unsigned.apk', '-I', platform, '--manifest', manifest, build / 'resources.zip',
-    '--min-sdk-version', '33', '--target-sdk-version', '33', '--version-code', a.version_code, '--version-name', a.version_name)
+link = [bt / 'aapt2', 'link', '-o', build / 'unsigned.apk', '-I', platform, '--manifest', manifest, build / 'resources.zip',
+        '--min-sdk-version', '33', '--target-sdk-version', '33', '--version-code', a.version_code, '--version-name', a.version_name]
+if a.assets:
+    # Driver zips are stored, not recompressed.
+    link += ['-A', a.assets, '-0', 'zip']
+run(*link)
 sources = sorted(str(x) for x in (build / 'src').rglob('*.java'))
 run('javac', '-nowarn', '-encoding', 'UTF-8', '-source', '8', '-target', '8', '-bootclasspath', platform,
     '-d', build / 'classes', *sources)
@@ -74,7 +79,7 @@ run(bt / 'd8', '--release', '--lib', platform, '--min-api', '33', '--output', bu
 
 libs = sorted(pathlib.Path(a.libs).glob('*.so'))
 names = {x.name for x in libs}
-for required in ['libSDL3.so', 'libmain.so', 'libnovafex.so']:
+for required in ['libSDL3.so', 'libmain.so', 'libnovafex.so', 'libhook_impl.so', 'libmain_hook.so']:
     if required not in names:
         raise SystemExit(f'missing native library {required}')
 with zipfile.ZipFile(build / 'unsigned.apk', 'a', compression=zipfile.ZIP_DEFLATED) as apk:

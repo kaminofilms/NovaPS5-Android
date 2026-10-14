@@ -124,10 +124,18 @@ jobs:
         with:
           name: android-kyty
           path: dist/kyty
+      - name: Bundled Turnip (Adreno 8xx, adrenotools build)
+        run: |
+          set -euo pipefail
+          mkdir -p dist/assets/drivers
+          curl -fsSL -o dist/assets/drivers/turnip-a8xx.zip \
+            https://github.com/The412Banner/Banners-Turnip/releases/download/v26.3.0-20260923/Turnip-v26.3.0-20260923-A8xx.zip
+          unzip -l dist/assets/drivers/turnip-a8xx.zip | tee dist/turnip-contents.txt
+          unzip -p dist/assets/drivers/turnip-a8xx.zip meta.json
       - name: Build and sign the APK
         run: |
           set -euo pipefail
-          python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java \
+          python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
             --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.7.0-android-arm64.apk" \
             --version-name 0.7.0-android --version-code 28 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK

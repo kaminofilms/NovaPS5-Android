@@ -60,6 +60,15 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
             Os.setenv("TMPDIR", getCacheDir().getPath(), true);
             Os.setenv("NOVA_RELAXED_VULKAN", "1", true);
             Os.setenv("NOVA_LIBC_HLE", homebrewLibc() ? "1" : "0", true);
+            Drivers.Driver driver = Drivers.current(this);
+            if (driver != null) {
+                Os.setenv("NOVA_TURNIP_DIR", driver.dir.getPath() + "/", true);
+                Os.setenv("NOVA_TURNIP_LIB", driver.library, true);
+                Os.setenv("NOVA_HOOK_DIR", getApplicationInfo().nativeLibraryDir + "/", true);
+            } else {
+                Os.unsetenv("NOVA_TURNIP_DIR");
+            }
+            BootLog.write(this, "GPU driver: " + (driver == null ? "system" : driver.label));
         } catch (Exception x) {
             BootLog.write(this, "Environment setup failed: " + x);
         }

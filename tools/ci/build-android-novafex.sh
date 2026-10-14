@@ -23,6 +23,8 @@ fi
 git -C fex checkout -q -- . && git -C fex clean -qfd -e build
 # FEX only knows "Linux"; Android is Linux with bionic.
 sed -i 's/elseif (NOT (WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux"))/elseif (NOT (WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Android"))/' fex/CMakeLists.txt
+# bionic has pthreads in libc; there is no libpthread.
+sed -i "s/^set(PTHREAD_LIB pthread)/if(CMAKE_SYSTEM_NAME STREQUAL \"Android\")\n  set(PTHREAD_LIB \"\")\nelse()\n  set(PTHREAD_LIB pthread)\nendif()/" fex/CMakeLists.txt
 for p in "$repo"/patches/fex-android/*.patch; do
     [[ -e $p ]] || continue
     git -C fex apply "$p" || { echo "FEX patch failed: $p"; exit 1; }

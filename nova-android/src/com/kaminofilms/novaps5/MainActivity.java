@@ -17,7 +17,7 @@ import java.util.concurrent.*;
 /** Nova PS5 front end: game library, launching, settings and logs. Games run in GameActivity. */
 public final class MainActivity extends Activity {
     static final String VERSION = "@NOVA_VERSION_NAME@";
-    static final int FOLDER = 10, EXPORT = 12;
+    static final int FOLDER = 10, EXPORT = 12, DRIVER = 13;
     final ExecutorService io = Executors.newSingleThreadExecutor();
     GameStore store;
     HomeView home;
@@ -36,7 +36,7 @@ public final class MainActivity extends Activity {
         home = new HomeView(this);
         setContentView(home);
         immersive();
-        io.execute(() -> { store.loadImages(); ui(() -> home.invalidate()); });
+        io.execute(() -> { Drivers.ensureBundled(this); store.loadImages(); ui(() -> home.invalidate()); });
         if (!Environment.isExternalStorageManager()) askFileAccess();
     }
 
@@ -116,6 +116,13 @@ public final class MainActivity extends Activity {
                 store.loadImages();
                 return found.size() + " game folder(s) found.";
             }, value -> { home.invalidate(); info("Library updated", value); });
+        } else if (request == DRIVER) {
+            String name = "Turnip.zip";
+            try (android.database.Cursor c = getContentResolver().query(uri, new String[] {android.provider.OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+                if (c != null && c.moveToFirst() && c.getString(0) != null) name = c.getString(0);
+            } catch (Exception ignored) {}
+            final String file = name;
+            busy("Importing GPU driver", () -> "Installed and selected: " + Drivers.importZip(this, uri, file), value -> info("GPU driver", value));
         } else if (request == EXPORT) {
             final String content = exportText;
             busy("Exporting log", () -> {
@@ -202,6 +209,7 @@ public final class MainActivity extends Activity {
         File logs = new File(getFilesDir(), "logs");
         return "NovaPs5 " + VERSION + " (native Android)\n" + gpu + "\nABIs: " + Arrays.toString(Build.SUPPORTED_ABIS)
                 + "\nAll files access: " + Environment.isExternalStorageManager()
+                + "\nGPU driver: " + Drivers.label(this)
                 + "\n\nLatest game log:\n" + tail(new File(logs, "kyty-session.log"), 400000)
                 + "\n\nPrevious game log (end):\n" + tail(new File(logs, "kyty-session.previous.log"), 60000)
                 + "\n\nApp log:\n" + BootLog.read(this);
@@ -245,6 +253,11 @@ public final class MainActivity extends Activity {
         touch.setText("Show the touch controller in games (hidden automatically with a gamepad)");
         touch.setChecked(prefs.getBoolean("touch_controls", true));
         box.addView(touch);
+        Button driver = new Button(this);
+        driver.setAllCaps(false);
+        driver.setText("GPU driver: " + Drivers.label(this));
+        driver.setOnClickListener(v -> gpuDriver());
+        box.addView(driver);
         File old = new File(getFilesDir(), "linuxfs");
         if (old.exists()) {
             Button clean = new Button(this);
@@ -266,6 +279,35 @@ public final class MainActivity extends Activity {
         box.addView(about);
         new AlertDialog.Builder(this).setTitle("Settings").setView(box)
                 .setPositiveButton("Save", (d, w) -> prefs.edit().putInt("opacity", opacity.getProgress() + 15).putBoolean("touch_controls", touch.isChecked()).apply())
+                .setNegativeButton("Close", null).show();
+    }
+
+    void gpuDriver() {
+        List<Drivers.Driver> drivers = Drivers.list(this);
+        String current = Drivers.selected(this);
+        String[] labels = new String[drivers.size() + 1];
+        String[] ids = new String[drivers.size() + 1];
+        labels[0] = "System Vulkan driver (Qualcomm)";
+        ids[0] = Drivers.SYSTEM;
+        int selected = 0;
+        for (int i = 0; i < drivers.size(); i++) {
+            labels[i + 1] = drivers.get(i).label;
+            ids[i + 1] = drivers.get(i).id;
+            if (ids[i + 1].equals(current)) selected = i + 1;
+        }
+        new AlertDialog.Builder(this).setTitle("GPU driver")
+                .setSingleChoiceItems(labels, selected, (d, w) -> {
+                    Drivers.select(this, ids[w]);
+                    BootLog.write(this, "GPU driver selected: " + labels[w]);
+                    d.dismiss();
+                    Toast.makeText(this, "Games will use: " + labels[w], Toast.LENGTH_SHORT).show();
+                })
+                .setPositiveButton("Import Turnip zip", (d, w) -> {
+                    Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                    i.addCategory(Intent.CATEGORY_OPENABLE);
+                    i.setType("*/*");
+                    startActivityForResult(i, DRIVER);
+                })
                 .setNegativeButton("Close", null).show();
     }
 
