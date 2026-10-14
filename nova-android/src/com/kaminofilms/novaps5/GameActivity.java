@@ -87,6 +87,10 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
             Os.setenv("TMPDIR", getCacheDir().getPath(), true);
             Os.setenv("NOVA_RELAXED_VULKAN", "1", true);
             Os.setenv("NOVA_LIBC_HLE", homebrewLibc() ? "1" : "0", true);
+            String titleId = titleId(new File(game));
+            boolean fixedPagePlacement = "PPSA59322".equals(titleId);
+            Os.setenv("NOVA_FIXED_DIRECT_PAGE_ALIGNMENT", fixedPagePlacement ? "1" : "0", true);
+            if (fixedPagePlacement) BootLog.write(this, "ccleste profile: fixed direct mappings use guest page alignment");
             boolean unreal = unrealGame(new File(game), 0);
             Os.setenv("NOVA_HEAP_HLE", unreal ? "1" : "0", true);
             if (unreal) BootLog.write(this, "Unreal Engine title: the emulator serves its libc heap");
@@ -126,6 +130,19 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
             if (children != null) for (File child : children) copyTree(child, new File(to, child.getName()));
         } else {
             Files.copy(from.toPath(), to.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    /** Profiles use the metadata title ID, never a folder name or display title. */
+    static String titleId(File directory) {
+        File metadata = new File(directory, "sce_sys/param.json");
+        if (!metadata.isFile() || metadata.length() > 1048576) return "";
+        try {
+            org.json.JSONObject json = new org.json.JSONObject(new String(Files.readAllBytes(metadata.toPath()),
+                    java.nio.charset.StandardCharsets.UTF_8));
+            return json.optString("titleId", "");
+        } catch (Exception ignored) {
+            return "";
         }
     }
 
@@ -257,3 +274,4 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
         super.onPause();
     }
 }
+
