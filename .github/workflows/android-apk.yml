@@ -46,7 +46,7 @@ jobs:
           name: android-apk-build-log
           path: dist/apk-build.txt
       - name: Verify the APK
-        run: python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.7.0-android-arm64.apk --sdk "$ANDROID_HOME" | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.7.0-android-arm64.apk --sdk "$ANDROID_HOME" | tee dist/apk/verify.txt
       - uses: actions/upload-artifact@v4
         with:
           name: android-apk

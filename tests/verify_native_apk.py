@@ -51,7 +51,7 @@ tree = out(bt / 'aapt', 'dump', 'xmltree', a.apk, 'AndroidManifest.xml')
 check('game activity in its own process', 'GameActivity' in tree and ':game' in tree)
 
 SYSTEM = {'libc.so', 'libm.so', 'libdl.so', 'liblog.so', 'libandroid.so', 'libvulkan.so', 'libOpenSLES.so',
-          'libaaudio.so', 'libGLESv2.so', 'libEGL.so', 'libnativewindow.so', 'libz.so', 'libjnigraphics.so',
+          'libaaudio.so', 'libGLESv1_CM.so', 'libGLESv2.so', 'libGLESv3.so', 'libEGL.so', 'libnativewindow.so', 'libz.so', 'libjnigraphics.so',
           'libmediandk.so', 'libamidi.so'}
 with tempfile.TemporaryDirectory() as tmp, zipfile.ZipFile(a.apk) as z:
     libs = [n for n in z.namelist() if n.startswith('lib/')]
@@ -83,7 +83,8 @@ with tempfile.TemporaryDirectory() as tmp, zipfile.ZipFile(a.apk) as z:
     check('libmain exports SDL_main', 'SDL_main' in exports.get('libmain.so', set()))
     check('libmain exports the touch controller entry',
           'Java_com_kaminofilms_novaps5_NovaPad_nativeState' in exports.get('libmain.so', set()))
-    check('libSDL3 exports its JNI entry', any(s.startswith('Java_org_libsdl_app_SDLActivity_') for s in exports.get('libSDL3.so', set())))
+    # SDL registers its natives from JNI_OnLoad (RegisterNatives).
+check('libSDL3 exports JNI_OnLoad', 'JNI_OnLoad' in exports.get('libSDL3.so', set()))
     check('libnovafex exports only its API', all(s.startswith('_ZN7NovaFex') or s in ('', 'Name')
                                                   for s in exports.get('libnovafex.so', set()) if not s.startswith('Java_')),
           ', '.join(sorted(s for s in exports.get('libnovafex.so', set()) if not s.startswith('_ZN7NovaFex'))[:10]))
