@@ -230,6 +230,30 @@ public final class MainActivity extends Activity {
                 .setNegativeButton("Close", null).show();
     }
 
+    /** The diagnostic lines of a game log, so they survive even when the log is cut. */
+    static String keyLines(File file) {
+        if (!file.isFile()) return "(none)";
+        StringBuilder out = new StringBuilder();
+        int count = 0, errorLines = 0;
+        try (java.io.BufferedReader in = new java.io.BufferedReader(new java.io.InputStreamReader(new java.io.FileInputStream(file), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = in.readLine()) != null && count < 400) {
+                boolean keep = errorLines > 0;
+                if (keep) errorLines--;
+                if (line.startsWith("Title ID") || line.startsWith("NOVA_WAIT") || line.startsWith("NOVA_GPU") || line.startsWith("NOVA_AUDIO")
+                        || line.startsWith("NOVA_AAUDIO") || line.startsWith("NOVA_FAULT") || line.startsWith("NOVA_FREEZE: no frame")
+                        || line.startsWith("Unresolved import") || line.contains("AAudio") || line.contains("AAUDIO")
+                        || (line.startsWith("NOVA_MEMORY") && (line.contains("fail") || line.contains("BEYOND") || line.contains("fit")))
+                        || (line.startsWith("NOVA_ANDROID") && !line.contains("touch"))) keep = true;
+                if (line.startsWith("--- Error ---")) { keep = true; errorLines = 2; }
+                if (keep) { out.append(line).append('\n'); count++; }
+            }
+        } catch (Exception x) {
+            return "(unreadable: " + x + ")";
+        }
+        return out.length() == 0 ? "(none)" : out.toString();
+    }
+
     static String tail(File file, int limit) {
         if (!file.isFile()) return "(none)";
         try (RandomAccessFile in = new RandomAccessFile(file, "r")) {
@@ -248,6 +272,7 @@ public final class MainActivity extends Activity {
         return "NovaPs5 " + VERSION + " (native Android)\n" + gpu + "\nABIs: " + Arrays.toString(Build.SUPPORTED_ABIS)
                 + "\nAll files access: " + Environment.isExternalStorageManager()
                 + "\nGPU driver: " + Drivers.label(this)
+                + "\n\nKey lines (latest game):\n" + keyLines(new File(logs, "kyty-session.log"))
                 + "\n\nLatest game log:\n" + tail(new File(logs, "kyty-session.log"), 400000)
                 + "\n\nPrevious game log (end):\n" + tail(new File(logs, "kyty-session.previous.log"), 60000)
                 + "\n\nApp log:\n" + BootLog.read(this)
@@ -279,13 +304,13 @@ public final class MainActivity extends Activity {
     void diagnostics() {
         String value = fullReport();
         TextView text = new TextView(this);
-        text.setText(value.length() > 60000 ? value.substring(value.length() - 60000) : value);
+        text.setText(value.length() > 60000 ? value.substring(0, 60000) + "\n\n(… use Export for the full log)" : value);
         text.setTextSize(12);
         text.setTextIsSelectable(true);
         text.setPadding(28, 20, 28, 20);
         ScrollView scroll = new ScrollView(this);
         scroll.addView(text);
-        scroll.post(() -> scroll.fullScroll(View.FOCUS_DOWN));
+        
         new AlertDialog.Builder(this).setTitle("Session log").setView(scroll)
                 .setNeutralButton("Export", (d, w) -> {
                     exportText = fullReport();

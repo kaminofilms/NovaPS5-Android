@@ -890,10 +890,16 @@ index 07c74012..9ce70128 100644
  }
  
 diff --git a/src/graphics/presentation/window/vulkanWindow.cpp b/src/graphics/presentation/window/vulkanWindow.cpp
-index 95005f5a..fa8e060c 100644
+index 95005f5a..a7907637 100644
 --- a/src/graphics/presentation/window/vulkanWindow.cpp
 +++ b/src/graphics/presentation/window/vulkanWindow.cpp
-@@ -38,6 +38,17 @@
+@@ -1,3 +1,5 @@
++#include <chrono>
++#include <thread>
+ #include <cstdlib>
+ #include <cstring>
+ #include <SDL3/SDL.h>
+@@ -38,6 +40,17 @@
  
  #define KYTY_ENABLE_DEBUG_PRINTF
  
@@ -911,7 +917,7 @@ index 95005f5a..fa8e060c 100644
  namespace Libs::Graphics {
  
  struct VulkanExtensions {
-@@ -167,6 +178,9 @@ static bool NovaRelaxable(const char* name) {
+@@ -167,6 +180,9 @@ static bool NovaRelaxable(const char* name) {
  }
  
  static bool g_nova_barycentric_enabled = true;
@@ -921,7 +927,7 @@ index 95005f5a..fa8e060c 100644
  static bool g_nova_depth_bounds_enabled = true;
  
  static void VulkanFindPhysicalDevice(vk::Instance instance, vk::SurfaceKHR surface,
-@@ -263,7 +277,10 @@ static void VulkanFindPhysicalDevice(vk::Instance instance, vk::SurfaceKHR surfa
+@@ -263,7 +279,10 @@ static void VulkanFindPhysicalDevice(vk::Instance instance, vk::SurfaceKHR surfa
  			if (required == VK_TRUE && supported != VK_TRUE) {
  				if (NovaRelaxable(name)) {
  					LOGF("NOVA_RELAXED: %s is not supported; continuing without it\n", name);
@@ -933,7 +939,7 @@ index 95005f5a..fa8e060c 100644
  					if (strcmp(name, "depthBounds") == 0) g_nova_depth_bounds_enabled = false;
  					return;
  				}
-@@ -881,8 +898,14 @@ void WindowContext::CreateVulkan() {
+@@ -881,8 +900,14 @@ void WindowContext::CreateVulkan() {
  	EXIT_IF(graphic_ctx.device != nullptr);
  	EXIT_IF(surface != nullptr);
  
@@ -948,7 +954,7 @@ index 95005f5a..fa8e060c 100644
  	if (get_instance_proc_addr == nullptr) {
  		EXIT("Could not load Vulkan: %s\n", SDL_GetError());
  	}
-@@ -976,7 +999,7 @@ void WindowContext::CreateVulkan() {
+@@ -976,7 +1001,7 @@ void WindowContext::CreateVulkan() {
  	}
  
  	vk::SurfaceKHR::CType native_surface = VK_NULL_HANDLE;
@@ -957,15 +963,30 @@ index 95005f5a..fa8e060c 100644
  	                              nullptr, &native_surface)) {
  		EXIT("Could not create a Vulkan surface");
  	}
-@@ -1109,7 +1132,7 @@ void WindowContext::RecreateSurface() {
+@@ -1109,10 +1134,22 @@ void WindowContext::RecreateSurface() {
  		surface = nullptr;
  	}
  	vk::SurfaceKHR::CType native_surface = VK_NULL_HANDLE;
 -	if (!SDL_Vulkan_CreateSurface(window, static_cast<vk::Instance::CType>(graphic_ctx.instance),
++#if defined(__ANDROID__)
++	// Nova: while the app is in the background Android has no window for us. Pause presenting
++	// until it comes back instead of ending the game.
++	for (int attempt = 0; !KYTY_NOVA_CREATE_SURFACE(window, static_cast<vk::Instance::CType>(graphic_ctx.instance),
++	                                                 nullptr, &native_surface); attempt++) {
++		if (attempt == 0) {
++			std::fprintf(stderr, "NOVA_ANDROID: no window (app in background?), presentation paused: %s\n", SDL_GetError());
++		}
++		std::this_thread::sleep_for(std::chrono::milliseconds(100));
++	}
++#else
 +	if (!KYTY_NOVA_CREATE_SURFACE(window, static_cast<vk::Instance::CType>(graphic_ctx.instance),
  	                              nullptr, &native_surface)) {
  		EXIT("Could not recreate the Vulkan surface: %s\n", SDL_GetError());
  	}
++#endif
+ 	surface = native_surface;
+ }
+ 
 diff --git a/src/graphics/shader/recompiler/ir/passes/ShaderInfoCollection.cpp b/src/graphics/shader/recompiler/ir/passes/ShaderInfoCollection.cpp
 index 29aecffe..a27e7296 100644
 --- a/src/graphics/shader/recompiler/ir/passes/ShaderInfoCollection.cpp
@@ -1375,7 +1396,7 @@ index 673a7dc7..0e9c4057 100644
  
  	pthread_exit(value);
 diff --git a/src/libs/audio.cpp b/src/libs/audio.cpp
-index 1aa13b2c..a87471ac 100644
+index 1aa13b2c..c976157b 100644
 --- a/src/libs/audio.cpp
 +++ b/src/libs/audio.cpp
 @@ -1,5 +1,10 @@
@@ -1415,25 +1436,37 @@ index 1aa13b2c..a87471ac 100644
  		SDL_QuitSubSystem(SDL_INIT_AUDIO);
  		return false;
  	}
-@@ -377,6 +392,51 @@ bool Audio::QueueSdlAudio(PortOut* port, const void* data, bool blocking, float
+@@ -377,6 +392,65 @@ bool Audio::QueueSdlAudio(PortOut* port, const void* data, bool blocking, float
  		return false;
  	}
  
 +#if defined(__ANDROID__)
-+	// Nova: periodic audio health line (is the game sending sound, is the device consuming it).
-+	static std::atomic<uint64_t> nova_puts {0};
-+	static std::atomic<uint64_t> nova_timeouts {0};
-+	static std::atomic<uint32_t> nova_peak {0};
-+	static std::atomic<int64_t>  nova_last_report {0};
-+	nova_puts.fetch_add(1, std::memory_order_relaxed);
++	// Nova: periodic audio health line per output port (is the game sending sound, is the device
++	// consuming it).
++	struct NovaPortStats {
++		const void*           port = nullptr;
++		std::atomic<uint64_t> puts {0};
++		std::atomic<uint64_t> timeouts {0};
++		std::atomic<uint32_t> peak {0};
++		std::atomic<int64_t>  last_report {0};
++	};
++	static NovaPortStats nova_stats[8];
++	NovaPortStats*       st = &nova_stats[7];
++	for (auto& candidate: nova_stats) {
++		if (candidate.port == port || candidate.port == nullptr) {
++			candidate.port = port;
++			st             = &candidate;
++			break;
++		}
++	}
++	st->puts.fetch_add(1, std::memory_order_relaxed);
 +	{
 +		uint32_t   peak  = 0;
 +		const auto count = static_cast<size_t>(port->samples_num) * static_cast<size_t>(port->channels_num);
 +		if (FormatIsFloat(port->format)) {
 +			const auto* f = static_cast<const float*>(data);
 +			for (size_t i = 0; i < count; i += 7) {
-+				const auto v = static_cast<uint32_t>(std::fabs(f[i]) * 32767.0f);
-+				peak         = std::max(peak, v);
++				peak = std::max(peak, static_cast<uint32_t>(std::fabs(f[i]) * 32767.0f));
 +			}
 +		} else {
 +			const auto* v16 = static_cast<const int16_t*>(data);
@@ -1441,25 +1474,27 @@ index 1aa13b2c..a87471ac 100644
 +				peak = std::max(peak, static_cast<uint32_t>(std::abs(static_cast<int>(v16[i]))));
 +			}
 +		}
-+		uint32_t prev = nova_peak.load(std::memory_order_relaxed);
-+		while (peak > prev && !nova_peak.compare_exchange_weak(prev, peak)) {
++		uint32_t prev = st->peak.load(std::memory_order_relaxed);
++		while (peak > prev && !st->peak.compare_exchange_weak(prev, peak)) {
 +		}
 +	}
 +	{
 +		const int64_t now  = static_cast<int64_t>(LibKernel::KernelGetProcessTime());
-+		int64_t       last = nova_last_report.load(std::memory_order_relaxed);
-+		if (now - last > 10000000 && nova_last_report.compare_exchange_strong(last, now)) {
++		int64_t       last = st->last_report.load(std::memory_order_relaxed);
++		if (now - last > 10000000 && st->last_report.compare_exchange_strong(last, now)) {
 +			const auto device = SDL_GetAudioStreamDevice(port->stream);
 +			std::fprintf(stderr,
-+			             "NOVA_AUDIO: puts=%llu timeouts=%llu queued=%d peak=%u device=%u paused=%d freq=%u ch=%d\n",
-+			             static_cast<unsigned long long>(nova_puts.exchange(0)),
-+			             static_cast<unsigned long long>(nova_timeouts.exchange(0)),
-+			             SDL_GetAudioStreamQueued(port->stream), nova_peak.exchange(0),
++			             "NOVA_AUDIO: port %d type=%d puts=%llu timeouts=%llu queued=%d peak=%u device=%u paused=%d freq=%u ch=%d gain=%.2f vol=%d/%d\n",
++			             static_cast<int>(st - nova_stats), port->type,
++			             static_cast<unsigned long long>(st->puts.exchange(0)),
++			             static_cast<unsigned long long>(st->timeouts.exchange(0)),
++			             SDL_GetAudioStreamQueued(port->stream), st->peak.exchange(0),
 +			             static_cast<unsigned>(device), device != 0 && SDL_AudioDevicePaused(device) ? 1 : 0,
-+			             port->freq, static_cast<int>(port->channels_num));
++			             port->freq, static_cast<int>(port->channels_num), static_cast<double>(gain),
++			             port->volume[0], port->volume[1]);
 +		}
 +	}
-+#define NOVA_AUDIO_TIMEOUT() nova_timeouts.fetch_add(1, std::memory_order_relaxed)
++#define NOVA_AUDIO_TIMEOUT() st->timeouts.fetch_add(1, std::memory_order_relaxed)
 +#else
 +#define NOVA_AUDIO_TIMEOUT() ((void)0)
 +#endif
@@ -1467,7 +1502,7 @@ index 1aa13b2c..a87471ac 100644
  	std::vector<uint8_t> prepared_buffer;
  	const void*          prepared_data = PrepareOutputBuffer(*port, data, &prepared_buffer, gain, gains);
  	const auto           output_channels = OutputChannels(*port);
-@@ -395,6 +455,7 @@ bool Audio::QueueSdlAudio(PortOut* port, const void* data, bool blocking, float
+@@ -395,6 +469,7 @@ bool Audio::QueueSdlAudio(PortOut* port, const void* data, bool blocking, float
  		auto       queued          = SDL_GetAudioStreamQueued(port->stream);
  		while (queued > static_cast<int>(min_queued_size)) {
  			if (LibKernel::KernelGetProcessTime() - wait_start > 200000) {
@@ -1732,6 +1767,56 @@ index d1220ed3..cdce1023 100644
  namespace Libs {
  
  // Keep the formatting path from inflating fiber functions' stack frames under LTO.
+diff --git a/src/libs/ngs2.cpp b/src/libs/ngs2.cpp
+index e92cfb9c..8955bdd0 100644
+--- a/src/libs/ngs2.cpp
++++ b/src/libs/ngs2.cpp
+@@ -1796,6 +1796,9 @@ static void Ngs2RenderVoice(Ngs2VoiceInternal& voice, const std::vector<Ngs2Voic
+ 		if (voice.has_samples) {
+ 			const auto& custom = voice.rack->option.custom_sampler.custom_rack_option;
+ 			for (size_t m = 0; m < voice.modules.size(); ++m) {
++				if (custom.module[m].module_id == 0x13) {
++					continue; // filter: applied with the sampler filters above
++				}
+ 				if (custom.module[m].module_id != 0x1f) {
+ 					if (!voice.modules[m].render_warned) {
+ 						Log::WriteToConsoleAndLog(fmt::sprintf(
+@@ -2390,6 +2393,35 @@ int KYTY_SYSV_ABI Ngs2VoiceControl(uintptr_t voice_handle, const Ngs2VoiceParamH
+ 				EXIT_NOT_IMPLEMENTED(!Ngs2RackIsCustom(voice->rack->type));
+ 				const auto index = param->id & 0x1fu;
+ 				EXIT_NOT_IMPLEMENTED(index >= voice->modules.size());
++				// Custom filter module (id 0x13): a biquad low-pass with level, the same filter
++				// the sampler rack offers. Behaviour follows AnyPS5's NGS2 (GPL-2.0,
++				// github.com/boykopovar/AnyPS5, core/libs/prx/libSceNgs2.native/src/Custom.cpp).
++				if ((param->id & 0xffffffe0u) == 0x40001300u &&
++				    voice->rack->option.custom_sampler.custom_rack_option.module[index].module_id == 0x13) {
++					struct CustomFilterParam {
++						uint32_t type;
++						uint32_t channel_mask;
++						float    frequency;
++						float    q;
++						float    level;
++					};
++					EXIT_NOT_IMPLEMENTED(param->size < sizeof(Ngs2VoiceParamHeader) + sizeof(CustomFilterParam));
++					const auto& custom = *reinterpret_cast<const CustomFilterParam*>(param + 1);
++					Ngs2SamplerFilterParam filter {};
++					filter.index        = index;
++					filter.location     = 1;
++					filter.type         = custom.type;
++					filter.channel_mask = custom.channel_mask;
++					filter.frequency    = custom.frequency;
++					filter.q            = custom.q;
++					filter.level        = custom.level;
++					if (voice->filters.size() <= index) {
++						voice->filters.resize(index + 1);
++					}
++					voice->filters[index].Configure(filter, voice->rack->ngs->option.sample_rate,
++					                                voice->channels);
++					break;
++				}
+ 				if ((param->id & 0xffffffe0u) != 0x40001f00u ||
+ 				    voice->rack->option.custom_sampler.custom_rack_option.module[index].module_id !=
+ 				        0x1f) {
 diff --git a/src/libs/vaContext.h b/src/libs/vaContext.h
 index 399d0cc0..b874ea50 100644
 --- a/src/libs/vaContext.h

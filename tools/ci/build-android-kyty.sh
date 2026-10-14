@@ -26,6 +26,23 @@ git -C kyty checkout -q -- . && git -C kyty clean -qfd -e build
 for p in $(grep -v '^#' "$repo/patches/linux-core.series"); do
     git -C kyty apply "$repo/patches/$p" || { echo "patch failed: $p"; exit 1; }
 done
+# SDL's AAudio backend: report stream errors, disconnects and underflows (debug LOGI is off
+# upstream) so the session log shows why audio stops.
+aaudio=kyty/3rdparty/SDL3/src/audio/aaudio/SDL_aaudio.c
+git -C kyty/3rdparty/SDL3 checkout -q -- src/audio/aaudio/SDL_aaudio.c
+python3 - "$aaudio" <<'PY'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+old = '#if 0\n#define LOGI(...) SDL_Log(__VA_ARGS__);'
+assert old in s, 'SDL_aaudio.c LOGI block not found'
+s = s.replace(old, '#if 1\n#define LOGI(...) SDL_Log(__VA_ARGS__);', 1)
+# The per-callback underflow line would flood the log; keep a count instead.
+s = s.replace('LOGI("Audio playback underflow, missed %zu frames", (callback_bytes - size) / framesize);',
+              '{ static int n = 0; if (n++ % 500 == 0) SDL_Log("NOVA_AAUDIO: playback underflow #%d (missed %zu frames)", n, (callback_bytes - size) / framesize); }', 1)
+s = s.replace('LOGI("SDL AAudioStream_requestStart OK");', '', 1)
+open(p, 'w').write(s)
+PY
 cmake -S kyty -B build-kyty-android -G Ninja -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" -DANDROID_ABI=arm64-v8a \
     -DANDROID_PLATFORM=android-$API -DANDROID_STL=c++_static \
