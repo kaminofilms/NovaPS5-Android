@@ -1038,7 +1038,7 @@ index 06731ee7..0ce2c79b 100644
  
  SrtWalker::SrtWalker(const ResourcePlan& program, const SrtRuntime& runtime,
 diff --git a/src/kernel/memory.cpp b/src/kernel/memory.cpp
-index febbd49a..f6ea7254 100644
+index febbd49a..29fdc93a 100644
 --- a/src/kernel/memory.cpp
 +++ b/src/kernel/memory.cpp
 @@ -10,6 +10,7 @@
@@ -1062,7 +1062,31 @@ index febbd49a..f6ea7254 100644
  	}
  	auto addr = find_in(GUEST_DEFAULT_MAP_BASE, HOST_SYSTEM_MANAGED_MAX + 1u);
  	if (addr == 0) {
-@@ -3551,6 +3556,9 @@ int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags,
+@@ -3545,12 +3550,33 @@ int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags,
+ 	} else {
+ 		alignment = (alignment != 0 ? alignment : PAGE_SIZE);
+ 		out_addr  = FindGuestFreeRange(in_addr, len, alignment);
++#if defined(__ANDROID__)
++		// Nova: Android gives apps a 39-bit (512 GB) address space, so the guest window is far
++		// smaller than the PS5's. Engines (Unreal's libc heap, for example) reserve a huge range
++		// up front and only ever commit a small part of it from the bottom. Reserve as much as
++		// fits and return its base; the unbacked tail is never reached in practice.
++		if (out_addr == 0 && len > 0x1000000000ull) {
++			for (uint64_t shrunk = std::min<uint64_t>(len, 0x2000000000ull) & ~(PAGE_SIZE - 1);
++			     shrunk >= 0x100000000ull && out_addr == 0; shrunk /= 2) {
++				out_addr = FindGuestFreeRange(0, shrunk, alignment);
++				if (out_addr != 0) {
++					std::fprintf(stderr, "NOVA_MEMORY: ReserveVirtualRange len=0x%llx does not fit; reserved 0x%llx at 0x%llx\n",
++					             static_cast<unsigned long long>(len), static_cast<unsigned long long>(shrunk),
++					             static_cast<unsigned long long>(out_addr));
++					len = shrunk;
++				}
++			}
++		}
++#endif
+ 		if (out_addr != 0) {
+ 			UnmapGpuRange(out_addr, len);
+ 		}
  	}
  
  	if (out_addr == 0) {
