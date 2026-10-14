@@ -1,0 +1,23 @@
+FAILED: [code=1] libmain.so 
+ld.lld: error: relocation R_AARCH64_ADR_PREL_PG_HI21 cannot be used against symbol 'ff_tx_tab_32_float'; recompile with -fPIC
+ld.lld: error: relocation R_AARCH64_ADD_ABS_LO12_NC cannot be used against symbol 'ff_tx_tab_32_float'; recompile with -fPIC
+ld.lld: error: relocation R_AARCH64_ADR_PREL_PG_HI21 cannot be used against symbol 'ff_tx_tab_32_float'; recompile with -fPIC
+ld.lld: error: relocation R_AARCH64_ADD_ABS_LO12_NC cannot be used against symbol 'ff_tx_tab_32_float'; recompile with -fPIC
+ld.lld: error: relocation R_AARCH64_ADR_PREL_PG_HI21 cannot be used against symbol 'ff_tx_tab_32_float'; recompile with -fPIC
+ld.lld: error: relocation R_AARCH64_ADD_ABS_LO12_NC cannot be used against symbol 'ff_tx_tab_32_float'; recompile with -fPIC
+ld.lld: error: relocation R_AARCH64_ADR_PREL_PG_HI21 cannot be used against symbol 'ff_tx_tab_64_float'; recompile with -fPIC
+ld.lld: error: relocation R_AARCH64_ADD_ABS_LO12_NC cannot be used against symbol 'ff_tx_tab_64_float'; recompile with -fPIC
+ld.lld: error: relocation R_AARCH64_ADR_PREL_PG_HI21 cannot be used against symbol 'ff_tx_tab_128_float'; recompile with -fPIC
+ld.lld: error: relocation R_AARCH64_ADD_ABS_LO12_NC cannot be used against symbol 'ff_tx_tab_128_float'; recompile with -fPIC
+ld.lld: error: relocation R_AARCH64_ADR_PREL_PG_HI21 cannot be used against symbol 'ff_tx_tab_256_float'; recompile with -fPIC
+ld.lld: error: relocation R_AARCH64_ADD_ABS_LO12_NC cannot be used against symbol 'ff_tx_tab_256_float'; recompile with -fPIC
+ld.lld: error: relocation R_AARCH64_ADR_PREL_PG_HI21 cannot be used against symbol 'ff_tx_tab_512_float'; recompile with -fPIC
+ld.lld: error: relocation R_AARCH64_ADD_ABS_LO12_NC cannot be used against symbol 'ff_tx_tab_512_float'; recompile with -fPIC
+ld.lld: error: relocation R_AARCH64_ADR_PREL_PG_HI21 cannot be used against symbol 'ff_tx_tab_1024_float'; recompile with -fPIC
+ld.lld: error: relocation R_AARCH64_ADD_ABS_LO12_NC cannot be used against symbol 'ff_tx_tab_1024_float'; recompile with -fPIC
+ld.lld: error: relocation R_AARCH64_ADR_PREL_PG_HI21 cannot be used against symbol 'ff_tx_tab_2048_float'; recompile with -fPIC
+ld.lld: error: relocation R_AARCH64_ADD_ABS_LO12_NC cannot be used against symbol 'ff_tx_tab_2048_float'; recompile with -fPIC
+ld.lld: error: relocation R_AARCH64_ADR_PREL_PG_HI21 cannot be used against symbol 'ff_tx_tab_4096_float'; recompile with -fPIC
+ld.lld: error: relocation R_AARCH64_ADD_ABS_LO12_NC cannot be used against symbol 'ff_tx_tab_4096_float'; recompile with -fPIC
+ld.lld: error: too many errors emitted, stopping now (use --error-limit=0 to see all errors)
+clang++: error: linker command failed with exit code 1 (use -v to see invocation)
