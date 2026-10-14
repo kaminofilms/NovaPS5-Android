@@ -91,6 +91,8 @@ struct ThreadData {
 	uint64_t fs_base = 0;
 	uint64_t gate_stack_args = 0;
 	uint64_t gate_rsp = 0;
+	const uint64_t* gate_saved = nullptr; // rbx rbp r12 r13 r14 r15 rflags at gate entry
+	const void*     gate_block = nullptr;
 	int      depth = 0;
 };
 
@@ -207,6 +209,8 @@ void EmitGate(uint8_t* p, const void* host_function) {
 
 std::atomic<uint64_t> g_total_gates {0};
 std::atomic<uint64_t> g_total_calls {0};
+std::atomic<void (*)()> g_gate_exit_hook {nullptr};
+std::atomic<int> g_gate_exit_armed {0};
 
 void GateDispatch(void* block_pointer) {
 	auto* block = static_cast<GateBlock*>(block_pointer);
@@ -218,15 +222,45 @@ void GateDispatch(void* block_pointer) {
 	t.last_host.store(block->target, std::memory_order_relaxed);
 	const auto saved_args = t.gate_stack_args;
 	const auto saved_rsp = t.gate_rsp;
+	const auto* saved_regs = t.gate_saved;
+	const auto* saved_block = t.gate_block;
+	uint64_t regs[7] = {};
+	if (t.fex != nullptr) {
+		// FEX spills the static registers to the frame before a thunk call.
+		const auto& st = t.fex->CurrentFrame->State;
+		regs[0] = st.gregs[REG_RBX];
+		regs[1] = st.gregs[REG_RBP];
+		regs[2] = st.gregs[REG_R12];
+		regs[3] = st.gregs[REG_R13];
+		regs[4] = st.gregs[REG_R14];
+		regs[5] = st.gregs[REG_R15];
+		regs[6] = 0x202;
+	}
+	t.gate_saved = regs;
+	t.gate_block = block;
 	t.gate_stack_args = block->stack_args;
 	t.gate_rsp = reinterpret_cast<uint64_t>(block) - 8;
 	auto& r = t.recent[t.recent_pos++ % 16];
 	r = {block->target, block->gpr[0], block->gpr[1], 0};
 	nova_call_native(block);
 	r.ret = block->ret_gpr[0];
+	if (g_gate_exit_armed.load(std::memory_order_relaxed) > 0) [[unlikely]] {
+		if (auto hook = g_gate_exit_hook.load(std::memory_order_acquire); hook != nullptr) {
+			// The hook may call guest code; the return values of this call must survive it.
+			uint64_t ret[2] = {block->ret_gpr[0], block->ret_gpr[1]};
+			Vec128 xret[2];
+			std::memcpy(xret, block->ret_xmm, sizeof(xret));
+			hook();
+			block->ret_gpr[0] = ret[0];
+			block->ret_gpr[1] = ret[1];
+			std::memcpy(block->ret_xmm, xret, sizeof(xret));
+		}
+	}
 	t.in_host.store(saved_in_host, std::memory_order_relaxed);
 	t.gate_stack_args = saved_args;
 	t.gate_rsp = saved_rsp;
+	t.gate_saved = saved_regs;
+	t.gate_block = saved_block;
 }
 
 class NovaThunkHandler final : public FEXCore::ThunkHandler {
@@ -779,6 +813,42 @@ uint64_t CurrentGateStackArgs() {
 
 uint64_t CurrentGuestRsp() {
 	return t_thread.gate_rsp;
+}
+
+bool GetGuestCallContext(GuestCallContext* out) {
+	const auto& t = t_thread;
+	if (out == nullptr || t.gate_block == nullptr || t.gate_saved == nullptr) {
+		return false;
+	}
+	const auto* block = static_cast<const GateBlock*>(t.gate_block);
+	const auto base = reinterpret_cast<uint64_t>(block);
+	*out = {};
+	out->rdi = block->gpr[0];
+	out->rsi = block->gpr[1];
+	out->rdx = block->gpr[2];
+	out->rcx = block->gpr[3];
+	out->r8 = block->gpr[4];
+	out->r9 = block->gpr[5];
+	out->rax = block->ret_gpr[0];
+	out->rbx = t.gate_saved[0];
+	out->rbp = t.gate_saved[1];
+	out->r12 = t.gate_saved[2];
+	out->r13 = t.gate_saved[3];
+	out->r14 = t.gate_saved[4];
+	out->r15 = t.gate_saved[5];
+	out->rflags = t.gate_saved[6];
+	// Gate frame: block (0x108 bytes) then the caller's return address.
+	std::memcpy(&out->rip, reinterpret_cast<const void*>(base + 0x108), 8);
+	out->rsp = base + 0x110;
+	return true;
+}
+
+void SetGateExitHook(void (*hook)()) {
+	g_gate_exit_hook.store(hook, std::memory_order_release);
+}
+
+void ArmGateExitHook(int delta) {
+	g_gate_exit_armed.fetch_add(delta, std::memory_order_acq_rel);
 }
 
 void InvalidateGuestCode(uint64_t start, uint64_t size) {

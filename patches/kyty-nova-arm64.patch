@@ -250,6 +250,21 @@ index 22cb3f27..7d9e9180 100644
  	return 1;
  }
  
+diff --git a/src/common/emulatorConfig.h b/src/common/emulatorConfig.h
+index c7d64187..ebd9a08d 100644
+--- a/src/common/emulatorConfig.h
++++ b/src/common/emulatorConfig.h
+@@ -33,7 +33,9 @@ using ControllerColor = std::array<uint8_t, 3>;
+ constexpr uint32_t DEFAULT_CONSOLE_LANGUAGE = 1;
+ constexpr uint32_t MAX_CONSOLE_LANGUAGE     = 29;
+ constexpr std::size_t MAX_USER_NAME_LENGTH = 16;
+-constexpr int32_t DEFAULT_USER_ID           = 1000;
++// Retail PS5 user ids carry the local user slot in the 0x10000000 range; Unity converts the id
++// to a slot and small ids become slot -1 (see sharpemu UserServiceExports).
++constexpr int32_t DEFAULT_USER_ID           = 0x10000000;
+ 
+ constexpr bool IsConfiguredUserIdValid(int32_t user_id) {
+ 	constexpr int32_t USER_ID_EVERYONE = 0xfe;
 diff --git a/src/common/hostException.cpp b/src/common/hostException.cpp
 index d44c623c..91e9eccb 100644
 --- a/src/common/hostException.cpp
@@ -5863,7 +5878,7 @@ index acff2c8c..e695bd82 100644
  #endif
  
 diff --git a/src/libs/libKernel.cpp b/src/libs/libKernel.cpp
-index 7f75f2bb..54207c3c 100644
+index 7f75f2bb..697865a3 100644
 --- a/src/libs/libKernel.cpp
 +++ b/src/libs/libKernel.cpp
 @@ -1,3 +1,4 @@
@@ -5891,15 +5906,121 @@ index 7f75f2bb..54207c3c 100644
  static SignalUcontext CreateCurrentGuestCallSignalUcontext(uint64_t rip) {
  	auto ctx = CreateSignalUcontext();
  
-@@ -746,6 +752,7 @@ static SignalUcontext CreateCurrentGuestCallSignalUcontext(uint64_t rip) {
+@@ -746,10 +752,50 @@ static SignalUcontext CreateCurrentGuestCallSignalUcontext(uint64_t rip) {
  
  	return ctx;
  }
 +#endif
  
  static bool IsGuestCodeAddress(uint64_t addr) {
++#if defined(KYTY_NOVA_FEX)
++	return NovaFex::IsGuestCode(addr);
++#else
  	return addr >= 0x0000000900000000ull && addr < 0x0000000980000000ull;
-@@ -3480,7 +3487,7 @@ static void AddLibkernelUnityFunc(Loader::SymbolDatabase* s, const char* nid, ui
++#endif
++}
++
++#if defined(KYTY_NOVA_FEX)
++// Guest view of the current thread at its innermost host call: rip is the guest return
++// address, rsp the guest stack, callee-saved registers exact. Unity's stop-the-world GC
++// scans the stack from rsp and the registers conservatively, so they must be real.
++static bool NovaFillGuestCallUcontext(SignalUcontext* ctx) {
++	NovaFex::GuestCallContext g {};
++	if (!NovaFex::GetGuestCallContext(&g)) {
++		return false;
++	}
++	auto& m  = ctx->uc_mcontext;
++	m.mc_rax = g.rax;
++	m.mc_rbx = g.rbx;
++	m.mc_rcx = g.rcx;
++	m.mc_rdx = g.rdx;
++	m.mc_rsi = g.rsi;
++	m.mc_rdi = g.rdi;
++	m.mc_rbp = g.rbp;
++	m.mc_rsp = g.rsp;
++	m.mc_r8  = g.r8;
++	m.mc_r9  = g.r9;
++	m.mc_r10 = g.r10;
++	m.mc_r11 = g.r11;
++	m.mc_r12 = g.r12;
++	m.mc_r13 = g.r13;
++	m.mc_r14 = g.r14;
++	m.mc_r15 = g.r15;
++	m.mc_rip = g.rip;
++	m.mc_rflags = g.rflags;
++	m.mc_cs  = 0x43;
++	m.mc_ss  = 0x3b;
++	m.mc_len = sizeof(SignalMcontext);
++	return true;
+ }
++#endif
+ 
+ static bool IsAddressInRange(uint64_t addr, uint64_t base, uint64_t size) {
+ 	return size != 0 && addr >= base && addr < base + size;
+@@ -1077,11 +1123,20 @@ void KernelDispatchPendingSignalForCurrentThread() {
+ 			continue;
+ 		}
+ 
++#if defined(KYTY_NOVA_FEX)
++		NovaFex::ArmGateExitHook(-1);
++#endif
+ 		auto* handler = reinterpret_cast<exception_handler_func_t>(g_exception_handlers[signum]);
+ 		if (handler != nullptr) {
+ 			SignalDispatchScope scope;
+ 			auto                ctx = CreateSignalUcontext();
++#if defined(KYTY_NOVA_FEX)
++			if (!NovaFillGuestCallUcontext(&ctx)) {
++				SanitizeNonGuestSignalUcontext(&ctx, current);
++			}
++#else
+ 			SanitizeNonGuestSignalUcontext(&ctx, current);
++#endif
+ 			handler(signum, &ctx);
+ 		}
+ 		return;
+@@ -1195,6 +1250,41 @@ static int KYTY_SYSV_ABI KernelRaiseException(Pthread thread, int signum) {
+ 		PthreadWakeForSignal(thread);
+ 		WaitForSignalDispatch(thread, signum);
+ 		return OK;
++#elif defined(KYTY_NOVA_FEX)
++		// Deliver on the target thread (Unity's IL2CPP stop-the-world GC suspends threads this
++		// way and then waits for each target to acknowledge from its own handler). The target
++		// runs the handler at its next safe point: a blocking wait/sleep (they poll every 10 ms)
++		// or the return of any host call (the FEX gate-exit hook).
++		static const bool hook_installed = [] {
++			NovaFex::SetGateExitHook(KernelDispatchPendingSignalForCurrentThread);
++			return true;
++		}();
++		(void)hook_installed;
++
++		if (thread == PthreadSelfOrNull()) {
++			SignalDispatchScope scope;
++			auto                ctx = CreateSignalUcontext();
++			if (!NovaFillGuestCallUcontext(&ctx)) {
++				SanitizeNonGuestSignalUcontext(&ctx, thread);
++			}
++			handler(signum, &ctx);
++			return OK;
++		}
++
++		if (!PthreadHasPendingSignal(thread, signum)) {
++			PthreadQueuePendingSignal(thread, signum);
++			NovaFex::ArmGateExitHook(1);
++		}
++		PthreadWakeForSignal(thread);
++		WaitForSignalDispatch(thread, signum);
++		{
++			static std::atomic<int> logged {0};
++			if (logged.fetch_add(1, std::memory_order_relaxed) < 8) {
++				::printf("NOVA_SIGNAL: sceKernelRaiseException(%d) queued for target thread%s\n",
++				         signum,
++				         PthreadHasPendingSignal(thread, signum) ? " (not yet delivered)" : " (delivered)");
++			}
++		}
+ #else
+ 		auto ctx = CreateSignalUcontext();
+ 		handler(signum, &ctx);
+@@ -3480,7 +3570,7 @@ static void AddLibkernelUnityFunc(Loader::SymbolDatabase* s, const char* nid, ui
  	sr.module_version_major = 1;
  	sr.module_version_minor = 1;
  	sr.type                 = Loader::SymbolType::Func;

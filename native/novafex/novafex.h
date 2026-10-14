@@ -85,6 +85,21 @@ NOVAFEX_API uint64_t CurrentGateStackArgs();
 // Guest RSP / RIP at the current gate call (for diagnostics and HLE helpers that need them).
 NOVAFEX_API uint64_t CurrentGuestRsp();
 
+// Guest register state at the gate call currently executing on this thread, as the guest will
+// see it right after the call returns (rip = return address, rsp = caller's rsp). Callee-saved
+// registers are exact; rdi..r9 are the call arguments. Returns false outside a gate call.
+struct GuestCallContext {
+	uint64_t rax, rbx, rcx, rdx, rsi, rdi, rbp, rsp;
+	uint64_t r8, r9, r10, r11, r12, r13, r14, r15;
+	uint64_t rip, rflags;
+};
+NOVAFEX_API bool GetGuestCallContext(GuestCallContext* out);
+// Safe-point hook run on a thread whenever one of its gate calls returns to guest code while
+// the hook is armed (arm count > 0). The emulator uses it to deliver asynchronous guest signals
+// (sceKernelRaiseException) to threads that are executing guest code.
+NOVAFEX_API void SetGateExitHook(void (*hook)());
+NOVAFEX_API void ArmGateExitHook(int delta);
+
 // Signal handler hook. Call first from the process SIGSEGV/SIGBUS handler. Returns true if
 // the fault was a host->guest call (or FEX alignment fault) and the context was redirected.
 NOVAFEX_API bool HandleHostFault(int signal, siginfo_t* info, void* ucontext);
