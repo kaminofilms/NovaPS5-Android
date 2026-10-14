@@ -1,0 +1,14 @@
+FAILED: [code=1] Source/Tools/NovaFex/CMakeFiles/novafex.dir/novafex.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/Source/Tools/NovaFex/novafex.cpp:231:22: error: use of undeclared identifier 'REG_RBX'
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/Source/Tools/NovaFex/novafex.cpp:232:22: error: use of undeclared identifier 'REG_RBP'; did you mean 'REG_RSP'?
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/Source/Tools/NovaFex/novafex.cpp:233:22: error: use of undeclared identifier 'REG_R12'
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/Source/Tools/NovaFex/novafex.cpp:234:22: error: use of undeclared identifier 'REG_R13'
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/Source/Tools/NovaFex/novafex.cpp:235:22: error: use of undeclared identifier 'REG_R14'
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/Source/Tools/NovaFex/novafex.cpp:236:22: error: use of undeclared identifier 'REG_R15'
+FAILED: [code=1] Source/Tools/NovaFex/CMakeFiles/novafex_test_static.dir/novafex.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/Source/Tools/NovaFex/novafex.cpp:231:22: error: use of undeclared identifier 'REG_RBX'
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/Source/Tools/NovaFex/novafex.cpp:232:22: error: use of undeclared identifier 'REG_RBP'; did you mean 'REG_RSP'?
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/Source/Tools/NovaFex/novafex.cpp:233:22: error: use of undeclared identifier 'REG_R12'
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/Source/Tools/NovaFex/novafex.cpp:234:22: error: use of undeclared identifier 'REG_R13'
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/Source/Tools/NovaFex/novafex.cpp:235:22: error: use of undeclared identifier 'REG_R14'
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/Source/Tools/NovaFex/novafex.cpp:236:22: error: use of undeclared identifier 'REG_R15'
