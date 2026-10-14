@@ -5878,7 +5878,7 @@ index acff2c8c..e695bd82 100644
  #endif
  
 diff --git a/src/libs/libKernel.cpp b/src/libs/libKernel.cpp
-index 7f75f2bb..697865a3 100644
+index 7f75f2bb..29b9541f 100644
 --- a/src/libs/libKernel.cpp
 +++ b/src/libs/libKernel.cpp
 @@ -1,3 +1,4 @@
@@ -5906,20 +5906,16 @@ index 7f75f2bb..697865a3 100644
  static SignalUcontext CreateCurrentGuestCallSignalUcontext(uint64_t rip) {
  	auto ctx = CreateSignalUcontext();
  
-@@ -746,10 +752,50 @@ static SignalUcontext CreateCurrentGuestCallSignalUcontext(uint64_t rip) {
+@@ -746,11 +752,47 @@ static SignalUcontext CreateCurrentGuestCallSignalUcontext(uint64_t rip) {
  
  	return ctx;
  }
 +#endif
  
  static bool IsGuestCodeAddress(uint64_t addr) {
-+#if defined(KYTY_NOVA_FEX)
-+	return NovaFex::IsGuestCode(addr);
-+#else
  	return addr >= 0x0000000900000000ull && addr < 0x0000000980000000ull;
-+#endif
-+}
-+
+ }
+ 
 +#if defined(KYTY_NOVA_FEX)
 +// Guest view of the current thread at its innermost host call: rip is the guest return
 +// address, rsp the guest stack, callee-saved registers exact. Unity's stop-the-world GC
@@ -5952,12 +5948,13 @@ index 7f75f2bb..697865a3 100644
 +	m.mc_ss  = 0x3b;
 +	m.mc_len = sizeof(SignalMcontext);
 +	return true;
- }
++}
 +#endif
- 
++
  static bool IsAddressInRange(uint64_t addr, uint64_t base, uint64_t size) {
  	return size != 0 && addr >= base && addr < base + size;
-@@ -1077,11 +1123,20 @@ void KernelDispatchPendingSignalForCurrentThread() {
+ }
+@@ -1077,11 +1119,20 @@ void KernelDispatchPendingSignalForCurrentThread() {
  			continue;
  		}
  
@@ -5978,7 +5975,7 @@ index 7f75f2bb..697865a3 100644
  			handler(signum, &ctx);
  		}
  		return;
-@@ -1195,6 +1250,41 @@ static int KYTY_SYSV_ABI KernelRaiseException(Pthread thread, int signum) {
+@@ -1195,6 +1246,41 @@ static int KYTY_SYSV_ABI KernelRaiseException(Pthread thread, int signum) {
  		PthreadWakeForSignal(thread);
  		WaitForSignalDispatch(thread, signum);
  		return OK;
@@ -6020,7 +6017,7 @@ index 7f75f2bb..697865a3 100644
  #else
  		auto ctx = CreateSignalUcontext();
  		handler(signum, &ctx);
-@@ -3480,7 +3570,7 @@ static void AddLibkernelUnityFunc(Loader::SymbolDatabase* s, const char* nid, ui
+@@ -3480,7 +3566,7 @@ static void AddLibkernelUnityFunc(Loader::SymbolDatabase* s, const char* nid, ui
  	sr.module_version_major = 1;
  	sr.module_version_minor = 1;
  	sr.type                 = Loader::SymbolType::Func;
@@ -6312,10 +6309,10 @@ index 00000000..e9b5a91c
 +#endif
 diff --git a/src/libs/novaHeap.cpp b/src/libs/novaHeap.cpp
 new file mode 100644
-index 00000000..b2df511c
+index 00000000..8f0d00a7
 --- /dev/null
 +++ b/src/libs/novaHeap.cpp
-@@ -0,0 +1,444 @@
+@@ -0,0 +1,580 @@
 +// Nova: an emulator-side libc heap (malloc family and C++ operator new/delete).
 +//
 +// Why: Sony's libc reserves the whole heap arena up front. Unreal Engine titles ask it for a
@@ -6647,6 +6644,134 @@ index 00000000..b2df511c
 +	return 0;
 +}
 +
++// Length of a ModRM operand (ModRM byte, SIB, displacement) at p, or 0 for RIP-relative.
++int ModRmLen(const uint8_t* p) {
++	const uint8_t modrm = p[0];
++	const int mod = modrm >> 6;
++	const int rm  = modrm & 7;
++	if (mod == 3) return 1;
++	int len = 1;
++	if (rm == 4) {
++		const uint8_t sib = p[1];
++		len++;
++		if (mod == 0 && (sib & 7) == 5) len += 4;
++	} else if (mod == 0 && rm == 5) {
++		return 0; // RIP-relative: not relocatable here
++	}
++	if (mod == 1) len += 1;
++	if (mod == 2) len += 4;
++	return len;
++}
++
++// Copies one instruction from src (guest address pc) to out, relocating relative branches.
++// Returns the source length, 0 if the instruction is not supported.
++int RelocateInsn(const uint8_t* src, uint64_t pc, std::vector<uint8_t>* out) {
++	const uint8_t* p = src;
++	if (p[0] == 0xF3 && p[1] == 0x0F && p[2] == 0x1E && p[3] == 0xFA) { // endbr64
++		out->insert(out->end(), p, p + 4);
++		return 4;
++	}
++	auto abs_jmp = [&](uint64_t target) {
++		const uint8_t j[6] = {0xFF, 0x25, 0, 0, 0, 0};
++		out->insert(out->end(), j, j + 6);
++		for (int i = 0; i < 8; i++) out->push_back(static_cast<uint8_t>(target >> (8 * i)));
++	};
++	// Relative branches.
++	if ((p[0] & 0xF0) == 0x70 || p[0] == 0xEB) {
++		const uint64_t target = pc + 2 + static_cast<int8_t>(p[1]);
++		if (p[0] == 0xEB) {
++			abs_jmp(target);
++		} else {
++			out->push_back(static_cast<uint8_t>(p[0] ^ 1)); // inverted condition skips the jump
++			out->push_back(14);
++			abs_jmp(target);
++		}
++		return 2;
++	}
++	if (p[0] == 0x0F && (p[1] & 0xF0) == 0x80) {
++		int32_t rel = 0;
++		std::memcpy(&rel, p + 2, 4);
++		out->push_back(static_cast<uint8_t>(0x70 | ((p[1] & 0x0F) ^ 1)));
++		out->push_back(14);
++		abs_jmp(pc + 6 + static_cast<int64_t>(rel));
++		return 6;
++	}
++	if (p[0] == 0xE9 || p[0] == 0xE8) {
++		int32_t rel = 0;
++		std::memcpy(&rel, p + 1, 4);
++		const uint64_t target = pc + 5 + static_cast<int64_t>(rel);
++		if (p[0] == 0xE9) {
++			abs_jmp(target);
++		} else {
++			// call [rip+2]; jmp +8; .quad target
++			const uint8_t k[8] = {0xFF, 0x15, 2, 0, 0, 0, 0xEB, 8};
++			out->insert(out->end(), k, k + 8);
++			for (int i = 0; i < 8; i++) out->push_back(static_cast<uint8_t>(target >> (8 * i)));
++		}
++		return 5;
++	}
++	// Position-independent instructions.
++	int  n   = 0;
++	bool rex_w = false;
++	if (p[0] == 0x66) n++;
++	if ((p[n] & 0xF0) == 0x40) {
++		rex_w = (p[n] & 0x08) != 0;
++		n++;
++	}
++	const uint8_t op = p[n];
++	int len = 0;
++	if ((op >= 0x50 && op <= 0x5F) || op == 0x90) {
++		len = n + 1;
++	} else if (op == 0x01 || op == 0x03 || op == 0x09 || op == 0x0B || op == 0x21 || op == 0x23 || op == 0x29 ||
++	           op == 0x2B || op == 0x31 || op == 0x33 || op == 0x39 || op == 0x3B || op == 0x84 || op == 0x85 ||
++	           op == 0x88 || op == 0x89 || op == 0x8A || op == 0x8B || op == 0x8D || op == 0x87 || op == 0x63) {
++		const int m = ModRmLen(p + n + 1);
++		if (m != 0) len = n + 1 + m;
++	} else if (op == 0x83 || op == 0xC6) {
++		const int m = ModRmLen(p + n + 1);
++		if (m != 0) len = n + 1 + m + 1;
++	} else if (op == 0x81 || op == 0xC7) {
++		const int m = ModRmLen(p + n + 1);
++		if (m != 0) len = n + 1 + m + (p[0] == 0x66 ? 2 : 4);
++	} else if (op >= 0xB8 && op <= 0xBF) {
++		len = n + 1 + (rex_w ? 8 : 4);
++	} else if (op == 0x0F && p[n + 1] == 0x1F) {
++		const int m = ModRmLen(p + n + 2);
++		if (m != 0) len = n + 2 + m;
++	}
++	if (len == 0) return 0;
++	out->insert(out->end(), p, p + len);
++	return len;
++}
++
++// Builds `<relocated first instructions of fn> ; jmp fn+N` so the original function stays
++// callable after its entry is overwritten. Returns 0 if the entry cannot be relocated.
++uint64_t BuildOriginalTrampoline(uint64_t fn, int min_bytes) {
++	std::vector<uint8_t> out;
++	int copied = 0;
++	while (copied < min_bytes) {
++		const int n = RelocateInsn(reinterpret_cast<const uint8_t*>(fn + copied), fn + copied, &out);
++		if (n == 0) return 0;
++		copied += n;
++	}
++	const uint64_t back = fn + copied;
++	const uint8_t j[6] = {0xFF, 0x25, 0, 0, 0, 0};
++	out.insert(out.end(), j, j + 6);
++	for (int i = 0; i < 8; i++) out.push_back(static_cast<uint8_t>(back >> (8 * i)));
++	static uint8_t* page = nullptr;
++	static size_t   used = 0;
++	if (page == nullptr || used + out.size() > 0x1000) {
++		void* m = ::mmap(nullptr, 0x1000, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
++		if (m == MAP_FAILED) return 0;
++		page = static_cast<uint8_t*>(m);
++		used = 0;
++	}
++	uint8_t* dst = page + used;
++	std::memcpy(dst, out.data(), out.size());
++	used = (used + out.size() + 15) & ~size_t {15};
++	return reinterpret_cast<uint64_t>(dst);
++}
++
 +bool Rewrite(uint64_t addr, uint64_t gate) {
 +	const uint64_t next = Loader::NovaNextModuleExport(addr);
 +	if (next != 0 && next - addr < 14) return false;
@@ -6688,10 +6813,18 @@ index 00000000..b2df511c
 +		if (addr == 0) continue;
 +		const auto* b = reinterpret_cast<const uint8_t*>(addr);
 +		if (e.kind != 0) {
-+			const uint64_t original = ThunkTarget(addr);
++			uint64_t original = ThunkTarget(addr);
 +			if (original == 0) {
-+				std::fprintf(stderr, "NOVA_HEAP: libc %s at 0x%llx is not a thunk (%02x %02x %02x %02x), left as is\n", e.nid,
-+				             static_cast<unsigned long long>(addr), b[0], b[1], b[2], b[3]);
++				// A real function: keep it callable for pointers libc handed out before the
++				// redirection, through a copy of its first instructions.
++				original = BuildOriginalTrampoline(addr, 14);
++			}
++			if (original == 0) {
++				std::fprintf(stderr,
++				             "NOVA_HEAP: libc %s at 0x%llx cannot be relocated (%02x %02x %02x %02x %02x %02x %02x %02x "
++				             "%02x %02x %02x %02x %02x %02x %02x %02x), left as is\n",
++				             e.nid, static_cast<unsigned long long>(addr), b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7],
++				             b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]);
 +				continue;
 +			}
 +			if (e.kind == 1) g_libc_free = original;

@@ -101,6 +101,19 @@ uint64_t HostStackArgs() {
 	return slots[0] + slots[1];
 }
 
+NovaFex::GuestCallContext g_ctx_seen {};
+bool g_ctx_ok = false;
+uint64_t HostContext() {
+	g_ctx_ok = NovaFex::GetGuestCallContext(&g_ctx_seen);
+	return 7;
+}
+std::atomic<int> g_hook_runs {0};
+uint64_t g_hook_guest = 0;
+void GateExitHook() {
+	// Runs guest code from the hook, as a signal handler would.
+	if (NovaFex::CallGuest(g_hook_guest, 2, 3) == 5) g_hook_runs.fetch_add(1);
+}
+
 // mov rax, imm64; call rax  ->  48 B8 <imm64> FF D0
 std::vector<uint8_t> CallAbs(uint64_t target) {
 	std::vector<uint8_t> v {0x48, 0xB8};
@@ -289,6 +302,67 @@ int main() {
 		}
 		for (auto& t: threads) t.join();
 		Check("4 host threads", ok == 4);
+	}
+	// Guest code modified after it ran: InvalidateGuestCode must take FEX's invalidation lock and
+	// release it (0.8.2 left it held, so the next block compile waited forever).
+	{
+		const uint64_t ret1 = code.Emit({0xB8, 1, 0, 0, 0, 0xC3}); // mov eax,1; ret
+		const uint64_t r1 = NovaFex::CallGuest(ret1);
+		reinterpret_cast<uint8_t*>(ret1)[1] = 2;
+		NovaFex::InvalidateGuestCode(ret1, 6);
+		std::atomic<int> state {0};
+		uint64_t r2 = 0, r3 = 0;
+		std::thread t([&] {
+			r2 = NovaFex::CallGuest(ret1);
+			const uint64_t fresh = code.Emit({0xB8, 9, 0, 0, 0, 0xC3});
+			r3 = NovaFex::CallGuest(fresh);
+			state = 1;
+		});
+		for (int i = 0; i < 500 && state == 0; i++) std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		const bool done = state == 1;
+		if (done) {
+			t.join();
+		} else {
+			t.detach();
+		}
+		Check("invalidate + recompile", done && r1 == 1 && r2 == 2 && r3 == 9, done ? "" : "(deadlock)");
+	}
+	// Guest register state seen from inside a gate call (signal context for the guest).
+	{
+		// push rbx; push r12; mov rbx,0x1111; mov r12,0x2222; call gate; pop r12; pop rbx; ret
+		std::vector<uint8_t> v {0x53, 0x41, 0x54, 0x48, 0xC7, 0xC3, 0x11, 0x11, 0, 0, 0x49, 0xC7, 0xC4, 0x22, 0x22, 0, 0};
+		auto c = CallAbs(NovaFex::MakeGate(reinterpret_cast<const void*>(&HostContext)));
+		v.insert(v.end(), c.begin(), c.end());
+		const size_t ret_off = v.size();
+		v.insert(v.end(), {0x41, 0x5C, 0x5B, 0xC3});
+		uint64_t f = EmitVec(code, v);
+		uint64_t r = NovaFex::CallGuest(f);
+		const bool ok = g_ctx_ok && r == 7 && g_ctx_seen.rbx == 0x1111 && g_ctx_seen.r12 == 0x2222 &&
+		                g_ctx_seen.rip == f + ret_off &&
+		                *reinterpret_cast<const uint64_t*>(g_ctx_seen.rsp - 8) == f + ret_off;
+		char d[128];
+		std::snprintf(d, sizeof(d), "(rbx=%llx r12=%llx rip=+%llx)", (unsigned long long)g_ctx_seen.rbx,
+		              (unsigned long long)g_ctx_seen.r12, (unsigned long long)(g_ctx_seen.rip - f));
+		Check("guest call context", ok, d);
+	}
+	// Gate-exit hook: armed -> runs once per returning gate call, may call guest code, and the
+	// gate's own return value survives it.
+	{
+		g_hook_guest = add;
+		NovaFex::SetGateExitHook(&GateExitHook);
+		auto v = std::vector<uint8_t> {0x48, 0x83, 0xEC, 0x08};
+		auto c = CallAbs(NovaFex::MakeGate(reinterpret_cast<const void*>(&HostMul)));
+		v.insert(v.end(), c.begin(), c.end());
+		v.insert(v.end(), {0x48, 0x83, 0xC4, 0x08, 0xC3});
+		uint64_t f = EmitVec(code, v);
+		const uint64_t before = NovaFex::CallGuest(f, 3, 4);
+		const int runs_before = g_hook_runs.load();
+		NovaFex::ArmGateExitHook(1);
+		const uint64_t armed = NovaFex::CallGuest(f, 5, 6);
+		NovaFex::ArmGateExitHook(-1);
+		const uint64_t after = NovaFex::CallGuest(f, 2, 2);
+		Check("gate exit hook", before == 12 && armed == 30 && after == 4 && runs_before == 0 && g_hook_runs.load() >= 1);
+		NovaFex::SetGateExitHook(nullptr);
 	}
 	// Overheads.
 	{

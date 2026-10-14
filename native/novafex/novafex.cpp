@@ -55,6 +55,12 @@ using FEXCore::X86State::REG_RDI;
 using FEXCore::X86State::REG_RDX;
 using FEXCore::X86State::REG_RSI;
 using FEXCore::X86State::REG_RSP;
+using FEXCore::X86State::REG_RBX;
+using FEXCore::X86State::REG_RBP;
+using FEXCore::X86State::REG_R12;
+using FEXCore::X86State::REG_R13;
+using FEXCore::X86State::REG_R14;
+using FEXCore::X86State::REG_R15;
 
 // Gate argument block, written by the x86 gate on the guest stack (see EmitGate).
 struct GateBlock {
@@ -853,6 +859,10 @@ void ArmGateExitHook(int delta) {
 
 void InvalidateGuestCode(uint64_t start, uint64_t size) {
 	if (g_ctx) {
+		// FEXCore requires the caller to hold the invalidation mutex exclusively; its check is a
+		// try_lock() that is evaluated even in release builds, so calling without the lock takes
+		// the mutex and never releases it (every later block compile then waits forever).
+		std::unique_lock lk(g_ctx->GetCodeInvalidationMutex());
 		g_ctx->InvalidateCodeBuffersCodeRange(start, size);
 	}
 }
