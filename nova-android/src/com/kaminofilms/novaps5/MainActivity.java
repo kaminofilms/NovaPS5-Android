@@ -328,6 +328,12 @@ public final class MainActivity extends Activity {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(40, 20, 40, 12);
+        // Driver selection must remain visible on short landscape screens.
+        Button driver = new Button(this);
+        driver.setAllCaps(false);
+        driver.setText("GPU driver: " + Drivers.label(this));
+        driver.setOnClickListener(v -> gpuDriver());
+        box.addView(driver);
         TextView opacityLabel = new TextView(this);
         opacityLabel.setText("Touch controller opacity");
         box.addView(opacityLabel);
@@ -374,11 +380,6 @@ public final class MainActivity extends Activity {
             catch (Exception x) { Toast.makeText(this, Art.KEY_PAGE, Toast.LENGTH_LONG).show(); }
         });
         box.addView(getKey);
-        Button driver = new Button(this);
-        driver.setAllCaps(false);
-        driver.setText("GPU driver: " + Drivers.label(this));
-        driver.setOnClickListener(v -> gpuDriver());
-        box.addView(driver);
         File old = new File(getFilesDir(), "linuxfs");
         if (old.exists()) {
             Button clean = new Button(this);
@@ -398,7 +399,11 @@ public final class MainActivity extends Activity {
         about.setText("NovaPs5 " + VERSION + "\nKyty and the x86-64 translator (FEXCore) run natively inside the app. In a game, swipe in from the left edge or press PS for the game menu.");
         about.setPadding(0, 18, 0, 0);
         box.addView(about);
-        new AlertDialog.Builder(this).setTitle("Settings").setView(box)
+        ScrollView settingsScroll = new ScrollView(this);
+        settingsScroll.setFillViewport(true);
+        settingsScroll.addView(box, new ScrollView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        new AlertDialog.Builder(this).setTitle("Settings").setView(settingsScroll)
                 .setPositiveButton("Save", (d, w) -> {
                     String newKey = artKey.getText().toString().trim();
                     boolean keyChanged = !newKey.equals(prefs.getString("sgdb_key", ""));
@@ -459,3 +464,4 @@ public final class MainActivity extends Activity {
         return super.dispatchKeyEvent(e);
     }
 }
+
