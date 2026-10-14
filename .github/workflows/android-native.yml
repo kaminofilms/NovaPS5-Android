@@ -146,7 +146,7 @@ jobs:
             --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.9-android-arm64.apk" \
             --version-name 0.9.9-android --version-code 57 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.9-android-arm64.apk --sdk "$ANDROID_HOME" | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.9-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.9-android --version-code 57 | tee dist/apk/verify.txt
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
