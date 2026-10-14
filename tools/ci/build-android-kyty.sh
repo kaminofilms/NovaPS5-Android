@@ -23,23 +23,25 @@ if [[ ! -d adrenotools/.git ]]; then
     git -C adrenotools submodule update --init --recursive -q
 fi
 git -C kyty checkout -q -- . && git -C kyty clean -qfd -e build
-# Apply the last known complete Kyty patch from the successful parent build.
-# The 0.9.9 branch patch is malformed; avoid silently using a truncated diff.
-# This is a temporary build recovery, not a restoration of the new Kyty changes.
-recovery_patch="$work/kyty-nova-arm64-recovered.patch"
-# Obtain the complete prior patch from the checked-out repository's Git history.
-# actions/checkout must fetch the parent commit before this step.
-git -C "$repo" fetch --no-tags --depth=1 origin 740c60496616f265e1edec54f0248ba728946a75
-if ! git -C "$repo" cat-file -e 740c60496616f265e1edec54f0248ba728946a75^{commit}; then
-    echo "NOVA: recovery commit unavailable"; exit 1
-fi
-git -C "$repo" show 740c60496616f265e1edec54f0248ba728946a75:patches/kyty-nova-arm64.patch > "$recovery_patch"
-for p in $(grep -v '^#' "$repo/patches/linux-core.series"); do
+# Apply the actual 0.9.9 patches. The generated large Kyty diff may contain
+# stale line counts in one or more @@ hunk headers; --recount recomputes those
+# counts from the patch content, preserving all 0.9.9 code rather than
+# substituting the 0.9.8 implementation.
+while IFS= read -r p || [[ -n "$p" ]]; do
+    [[ -z "$p" || "$p" == \#* ]] && continue
     patch_file="$repo/patches/$p"
-    if [[ "$p" == "kyty-nova-arm64.patch" ]]; then patch_file="$recovery_patch"; fi
-    git -C kyty apply --check "$patch_file" || { echo "patch check failed: $p"; exit 1; }
-    git -C kyty apply "$patch_file" || { echo "patch failed: $p"; exit 1; }
-done
+    echo "NOVA_PATCH: validate $p"
+    if [[ "$p" == "kyty-nova-arm64.patch" ]]; then
+        git -C kyty apply --recount --check "$patch_file" || {
+            echo "NOVA_PATCH: 0.9.9 Kyty patch validation failed: $p"
+            exit 1
+        }
+        git -C kyty apply --recount "$patch_file"
+    else
+        git -C kyty apply --check "$patch_file" || { echo "patch check failed: $p"; exit 1; }
+        git -C kyty apply "$patch_file" || { echo "patch failed: $p"; exit 1; }
+    fi
+done < "$repo/patches/linux-core.series"
 # Execute the host regressions against the sources that are about to be compiled.
 python3 "$repo/tests/test_native_startup.py" "$work/kyty"
 python3 "$repo/tests/test_release_mem.py" "$work/kyty"
