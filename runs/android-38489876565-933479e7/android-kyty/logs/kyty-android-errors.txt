@@ -1,0 +1,4 @@
+FAILED: [code=1] CMakeFiles/kyty_emulator.dir/src/kernel/pthread.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/kernel/pthread.cpp:1667:23: error: use of undeclared identifier 'PTHREAD_PRIO_PROTECT'
+FAILED: [code=1] CMakeFiles/kyty_emulator.dir/src/loader/loadExec.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/loader/loadExec.cpp:119:6: error: use of undeclared identifier 'close_range'
