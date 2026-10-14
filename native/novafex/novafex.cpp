@@ -25,6 +25,7 @@
 #include <cstdio>
 #include <cstring>
 #include <FEXCore/Core/NovaGuestVA.h>
+#include <asm/sigcontext.h>
 #include <map>
 #include <mutex>
 #include <shared_mutex>
@@ -991,6 +992,255 @@ void ReportGuestFault(void* ucontext) {
 	}
 }
 
+namespace {
+// ---- Host (emulator) accesses to translated guest addresses (guest VA >= 2^39) -------------
+// Emulator code that dereferences such a guest pointer faults: the address does not exist on
+// the host. The faulting load/store is emulated on the translated host address and skipped.
+
+uint64_t& XReg(ucontext_t* uc, uint32_t n) {
+	return uc->uc_mcontext.regs[n]; // n < 31
+}
+uint64_t ReadX(ucontext_t* uc, uint32_t n) {
+	return n == 31 ? 0 : uc->uc_mcontext.regs[n];
+}
+uint64_t ReadBase(ucontext_t* uc, uint32_t n) {
+	return n == 31 ? uc->uc_mcontext.sp : uc->uc_mcontext.regs[n];
+}
+void WriteBase(ucontext_t* uc, uint32_t n, uint64_t v) {
+	if (n == 31) {
+		uc->uc_mcontext.sp = v;
+	} else {
+		uc->uc_mcontext.regs[n] = v;
+	}
+}
+void WriteX(ucontext_t* uc, uint32_t n, uint64_t v) {
+	if (n != 31) uc->uc_mcontext.regs[n] = v;
+}
+uint8_t* VReg(ucontext_t* uc, uint32_t n) {
+	auto* head = reinterpret_cast<_aarch64_ctx*>(uc->uc_mcontext.__reserved);
+	while (head->magic != 0) {
+		if (head->magic == FPSIMD_MAGIC) {
+			return reinterpret_cast<uint8_t*>(&reinterpret_cast<fpsimd_context*>(head)->vregs[n]);
+		}
+		if (head->size == 0) break;
+		head = reinterpret_cast<_aarch64_ctx*>(reinterpret_cast<uint8_t*>(head) + head->size);
+	}
+	return nullptr;
+}
+uint8_t* HostOf(uint64_t guest) {
+	return reinterpret_cast<uint8_t*>(TranslateGuestVA(guest));
+}
+int64_t SignExtend(uint64_t v, unsigned bits) {
+	const uint64_t m = uint64_t {1} << (bits - 1);
+	v &= (bits == 64) ? ~uint64_t {0} : ((uint64_t {1} << bits) - 1);
+	return static_cast<int64_t>((v ^ m) - m);
+}
+uint64_t LoadN(const uint8_t* p, unsigned bytes) {
+	uint64_t v = 0;
+	std::memcpy(&v, p, bytes);
+	return v;
+}
+void StoreN(uint8_t* p, uint64_t v, unsigned bytes) {
+	std::memcpy(p, &v, bytes);
+}
+template<typename T>
+T AtomicOp(T* p, uint32_t op, T v) {
+	switch (op) {
+	case 0: return __atomic_fetch_add(p, v, __ATOMIC_SEQ_CST);
+	case 1: return __atomic_fetch_and(p, static_cast<T>(~v), __ATOMIC_SEQ_CST);
+	case 2: return __atomic_fetch_xor(p, v, __ATOMIC_SEQ_CST);
+	case 3: return __atomic_fetch_or(p, v, __ATOMIC_SEQ_CST);
+	default: return __atomic_exchange_n(p, v, __ATOMIC_SEQ_CST);
+	}
+}
+uint64_t AtomicSized(uint8_t* p, unsigned bytes, uint32_t op, uint64_t v) {
+	switch (bytes) {
+	case 1: return AtomicOp(reinterpret_cast<uint8_t*>(p), op, static_cast<uint8_t>(v));
+	case 2: return AtomicOp(reinterpret_cast<uint16_t*>(p), op, static_cast<uint16_t>(v));
+	case 4: return AtomicOp(reinterpret_cast<uint32_t*>(p), op, static_cast<uint32_t>(v));
+	default: return AtomicOp(reinterpret_cast<uint64_t*>(p), op, v);
+	}
+}
+
+// Returns true if the instruction at pc was emulated (pc advanced).
+bool EmulateHighAccess(ucontext_t* uc, uint64_t fault) {
+	if (!FEXCore::Nova::GuestVAEnabled || fault < FEXCore::Nova::kGuestVALowLimit || TranslateGuestVA(fault) == fault) {
+		return false;
+	}
+	const uint32_t insn = *reinterpret_cast<const uint32_t*>(uc->uc_mcontext.pc);
+	const uint32_t rt = insn & 31, rn = (insn >> 5) & 31;
+	const uint32_t size = insn >> 30;
+
+	// Load/store exclusive, ordered (LDAR/STLR/LDXR/STXR...) and CAS: xx 001000 ...
+	if ((insn & 0x3F000000) == 0x08000000) {
+		const bool o2 = (insn >> 23) & 1, l = (insn >> 22) & 1, o1 = (insn >> 21) & 1;
+		const uint32_t rs = (insn >> 16) & 31;
+		const unsigned bytes = 1u << size;
+		uint8_t* p = HostOf(ReadBase(uc, rn));
+		if (o2 && o1) { // CAS
+			uint64_t expected = ReadX(uc, rs);
+			const uint64_t desired = ReadX(uc, rt);
+			uint64_t observed = 0;
+			switch (bytes) {
+			case 1: { uint8_t e = expected; __atomic_compare_exchange_n(p, &e, static_cast<uint8_t>(desired), false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST); observed = e; break; }
+			case 2: { uint16_t e = expected; __atomic_compare_exchange_n(reinterpret_cast<uint16_t*>(p), &e, static_cast<uint16_t>(desired), false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST); observed = e; break; }
+			case 4: { uint32_t e = expected; __atomic_compare_exchange_n(reinterpret_cast<uint32_t*>(p), &e, static_cast<uint32_t>(desired), false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST); observed = e; break; }
+			default: { uint64_t e = expected; __atomic_compare_exchange_n(reinterpret_cast<uint64_t*>(p), &e, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST); observed = e; break; }
+			}
+			WriteX(uc, rs, observed);
+		} else if (o1) { // LDXP / STXP (pairs)
+			const unsigned eb = size == 3 ? 8 : 4;
+			const uint32_t rt2 = (insn >> 10) & 31;
+			__atomic_thread_fence(__ATOMIC_SEQ_CST);
+			if (l) {
+				WriteX(uc, rt, LoadN(p, eb));
+				WriteX(uc, rt2, LoadN(p + eb, eb));
+			} else {
+				StoreN(p, ReadX(uc, rt), eb);
+				StoreN(p + eb, ReadX(uc, rt2), eb);
+				WriteX(uc, rs, 0);
+			}
+			__atomic_thread_fence(__ATOMIC_SEQ_CST);
+		} else {
+			__atomic_thread_fence(__ATOMIC_SEQ_CST);
+			if (l) {
+				WriteX(uc, rt, LoadN(p, bytes));
+			} else {
+				StoreN(p, ReadX(uc, rt), bytes);
+				if (!o2) WriteX(uc, rs, 0); // STXR: exclusive store always succeeds
+			}
+			__atomic_thread_fence(__ATOMIC_SEQ_CST);
+		}
+		uc->uc_mcontext.pc += 4;
+		return true;
+	}
+
+	// LSE atomics: xx 111 0 00 A R 1 Rs o3 opc 00 Rn Rt
+	if ((insn & 0x3F200C00) == 0x38200000) {
+		const uint32_t rs = (insn >> 16) & 31;
+		const uint32_t o3 = (insn >> 15) & 1, opc = (insn >> 12) & 7;
+		if (opc > 3 && !o3) return false; // LDSMAX & co. not handled
+		const unsigned bytes = 1u << size;
+		const uint64_t old = AtomicSized(HostOf(ReadBase(uc, rn)), bytes, o3 ? 4 : opc, ReadX(uc, rs));
+		WriteX(uc, rt, old);
+		uc->uc_mcontext.pc += 4;
+		return true;
+	}
+
+	// Load/store pair: xx 101 V 0 idx(2) L imm7 Rt2 Rn Rt
+	if ((insn & 0x3A000000) == 0x28000000) {
+		const bool v = (insn >> 26) & 1, l = (insn >> 22) & 1;
+		const uint32_t idx = (insn >> 23) & 3, rt2 = (insn >> 10) & 31;
+		const uint32_t opc = insn >> 30;
+		unsigned bytes;
+		bool sign32 = false;
+		if (v) {
+			bytes = 4u << opc;
+		} else {
+			bytes = (opc & 2) ? 8 : 4;
+			sign32 = opc == 1; // LDPSW
+		}
+		const int64_t off = SignExtend((insn >> 15) & 0x7F, 7) * static_cast<int64_t>(bytes);
+		const uint64_t base = ReadBase(uc, rn);
+		const uint64_t ea = idx == 1 ? base : base + off;
+		uint8_t* p = HostOf(ea);
+		for (int k = 0; k < 2; k++) {
+			const uint32_t r = k == 0 ? rt : rt2;
+			uint8_t* q = p + k * bytes;
+			if (v) {
+				uint8_t* vr = VReg(uc, r);
+				if (vr == nullptr) return false;
+				if (l) {
+					std::memset(vr, 0, 16);
+					std::memcpy(vr, q, bytes);
+				} else {
+					std::memcpy(q, vr, bytes);
+				}
+			} else if (l) {
+				const uint64_t val = LoadN(q, bytes);
+				WriteX(uc, r, sign32 ? static_cast<uint64_t>(SignExtend(val, 32)) : val);
+			} else {
+				StoreN(q, ReadX(uc, r), bytes);
+			}
+		}
+		if (idx == 1 || idx == 3) WriteBase(uc, rn, base + off);
+		uc->uc_mcontext.pc += 4;
+		return true;
+	}
+
+	// Load/store register: xx 111 V 0x ...
+	if ((insn & 0x3A000000) == 0x38000000) {
+		const bool v = (insn >> 26) & 1;
+		const uint32_t opc = (insn >> 22) & 3;
+		const uint64_t base = ReadBase(uc, rn);
+		uint64_t ea = base;
+		bool writeback = false;
+		uint64_t wb = 0;
+		unsigned bytes = 1u << size;
+		if (v && (opc & 2)) bytes = 16; // Q register
+		if ((insn >> 24) & 1) { // unsigned scaled imm12
+			ea = base + (static_cast<uint64_t>((insn >> 10) & 0xFFF) * bytes);
+		} else if (((insn >> 21) & 1) && ((insn >> 10) & 3) == 2) { // register offset
+			const uint32_t rm = (insn >> 16) & 31, option = (insn >> 13) & 7;
+			const bool s = (insn >> 12) & 1;
+			uint64_t m = ReadX(uc, rm);
+			switch (option) {
+			case 2: m = static_cast<uint32_t>(m); break;                        // UXTW
+			case 6: m = static_cast<uint64_t>(SignExtend(m, 32)); break;         // SXTW
+			default: break;                                                      // LSL / SXTX
+			}
+			unsigned shift = 0;
+			while ((1u << shift) < bytes) shift++;
+			ea = base + (s ? (m << shift) : m);
+		} else if (!((insn >> 21) & 1)) { // imm9: unscaled / post / pre
+			const int64_t imm = SignExtend((insn >> 12) & 0x1FF, 9);
+			const uint32_t type = (insn >> 10) & 3;
+			if (type == 1) { // post-index
+				ea = base;
+				writeback = true;
+				wb = base + imm;
+			} else if (type == 3) { // pre-index
+				ea = base + imm;
+				writeback = true;
+				wb = ea;
+			} else {
+				ea = base + imm; // unscaled (LDUR/STUR) or unprivileged
+			}
+		} else {
+			return false;
+		}
+		uint8_t* p = HostOf(ea);
+		if (v) {
+			uint8_t* vr = VReg(uc, rt);
+			if (vr == nullptr) return false;
+			if (opc & 1) { // load
+				std::memset(vr, 0, 16);
+				std::memcpy(vr, p, bytes);
+			} else {
+				std::memcpy(p, vr, bytes);
+			}
+		} else {
+			if (size == 3 && opc == 2) { // PRFM
+				uc->uc_mcontext.pc += 4;
+				return true;
+			}
+			if (opc == 0) {
+				StoreN(p, ReadX(uc, rt), bytes);
+			} else {
+				uint64_t val = LoadN(p, bytes);
+				if (opc == 2) val = static_cast<uint64_t>(SignExtend(val, bytes * 8));          // to X
+				if (opc == 3) val = static_cast<uint32_t>(SignExtend(val, bytes * 8));          // to W
+				WriteX(uc, rt, val);
+			}
+		}
+		if (writeback) WriteBase(uc, rn, wb);
+		uc->uc_mcontext.pc += 4;
+		return true;
+	}
+	return false;
+}
+} // namespace
+
 bool HandleHostFault(int signal, siginfo_t* info, void* ucontext) {
 	auto* uc = static_cast<ucontext_t*>(ucontext);
 	const uint64_t pc = uc->uc_mcontext.pc;
@@ -1001,6 +1251,17 @@ bool HandleHostFault(int signal, siginfo_t* info, void* ucontext) {
 		uc->uc_mcontext.regs[16] = pc;
 		uc->uc_mcontext.pc = reinterpret_cast<uint64_t>(&nova_guest_bridge_entry);
 		uc->uc_mcontext.pstate &= ~(uint64_t {3} << 10); // clear BTYPE: not a branch into the bridge
+		return true;
+	}
+	// Emulator code touching a guest address above the host address space.
+	if (signal == SIGSEGV && EmulateHighAccess(uc, reinterpret_cast<uint64_t>(info->si_addr))) {
+		static std::atomic<int> logged {0};
+		if (logged.fetch_add(1, std::memory_order_relaxed) < 8) {
+			char buf[160];
+			const int n = std::snprintf(buf, sizeof(buf), "NOVA_FEX: host access to guest VA %p emulated (pc=0x%llx)\n",
+			                            info->si_addr, static_cast<unsigned long long>(pc));
+			(void)!write(2, buf, n);
+		}
 		return true;
 	}
 	// Unaligned atomics emitted by the JIT.

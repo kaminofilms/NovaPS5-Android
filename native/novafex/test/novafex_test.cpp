@@ -401,6 +401,26 @@ int main() {
 		              (unsigned long long)r_low);
 		Check("guest VA above 2^39", ok, d);
 	}
+	// Host (emulator) code dereferencing a translated guest address: the fault handler
+	// emulates the access on the backing host memory.
+	{
+		const uint64_t guest = 0x8fc0000000ull + 0x200100;
+		const uint64_t host = NovaFex::TranslateGuestVA(guest);
+		mprotect(reinterpret_cast<void*>(host & ~uint64_t {0xfff}), 0x2000, PROT_READ | PROT_WRITE);
+		auto* p = reinterpret_cast<volatile uint64_t*>(guest);
+		*p = 0x55;                                         // STR
+		const uint64_t a = *p;                             // LDR
+		__atomic_store_n(reinterpret_cast<uint64_t*>(guest + 8), 7, __ATOMIC_RELEASE); // STLR
+		const uint64_t b = __atomic_fetch_add(reinterpret_cast<uint64_t*>(guest + 8), 3, __ATOMIC_SEQ_CST);
+		uint8_t src[48];
+		for (int i = 0; i < 48; i++) src[i] = static_cast<uint8_t>(i);
+		std::memcpy(reinterpret_cast<void*>(guest + 64), src, sizeof(src));
+		uint8_t back[48] {};
+		std::memcpy(back, reinterpret_cast<const void*>(guest + 64), sizeof(back));
+		const bool ok = a == 0x55 && b == 7 && *reinterpret_cast<uint64_t*>(host + 8) == 10 &&
+		                std::memcmp(src, back, sizeof(src)) == 0 && *reinterpret_cast<uint64_t*>(host) == 0x55;
+		Check("host access to guest VA", ok);
+	}
 	// Overheads.
 	{
 		// loop(n): push rbx; mov rbx,rdi; L: call gate(HostInc); dec rbx; jnz L; pop rbx; ret
