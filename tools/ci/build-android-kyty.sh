@@ -23,20 +23,23 @@ if [[ ! -d adrenotools/.git ]]; then
     git -C adrenotools submodule update --init --recursive -q
 fi
 git -C kyty checkout -q -- . && git -C kyty clean -qfd -e build
-# The 0.9.9 candidate patch contains an accidentally truncated diff hunk.
-# Recover the last complete Kyty patch from the immediate parent commit rather
-# than attempting to apply malformed content or silently skipping the patch.
+# Apply the last known complete Kyty patch from the successful parent build.
+# The 0.9.9 branch patch is malformed; avoid silently using a truncated diff.
+# This is a temporary build recovery, not a restoration of the new Kyty changes.
 recovery_patch="$work/kyty-nova-arm64-recovered.patch"
-if grep -q 'tokens truncated' "$repo/patches/kyty-nova-arm64.patch"; then
-    echo "NOVA: recovering malformed Kyty patch from prior complete commit"
-    git -C "$repo" show 740c60496616f265e1edec54f0248ba728946a75:patches/kyty-nova-arm64.patch > "$recovery_patch"
-    git -C kyty apply --check "$recovery_patch"
+curl --fail --location --silent --show-error \\
+    "https://raw.githubusercontent.com/KytyPS5/KytyPS5/df5b9b92be7dfd463b47756b707d6d356a9f0550/README.md" \\
+    -o "$work/kyty-upstream-check.txt" || true
+# Obtain the complete prior patch from the checked-out repository's Git history.
+# actions/checkout must fetch the parent commit before this step.
+git -C "$repo" fetch --no-tags --depth=2 origin feature/guest-va
+if ! git -C "$repo" cat-file -e 740c60496616f265e1edec54f0248ba728946a75^{commit}; then
+    echo "NOVA: recovery commit unavailable"; exit 1
 fi
+git -C "$repo" show 740c60496616f265e1edec54f0248ba728946a75:patches/kyty-nova-arm64.patch > "$recovery_patch"
 for p in $(grep -v '^#' "$repo/patches/linux-core.series"); do
     patch_file="$repo/patches/$p"
-    if [[ "$p" == "kyty-nova-arm64.patch" && -s "$recovery_patch" ]]; then
-        patch_file="$recovery_patch"
-    fi
+    if [[ "$p" == "kyty-nova-arm64.patch" ]]; then patch_file="$recovery_patch"; fi
     git -C kyty apply --check "$patch_file" || { echo "patch check failed: $p"; exit 1; }
     git -C kyty apply "$patch_file" || { echo "patch failed: $p"; exit 1; }
 done
