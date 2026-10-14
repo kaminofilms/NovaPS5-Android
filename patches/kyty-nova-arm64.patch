@@ -544,46 +544,124 @@ index 154d621d..de24c788 100644
  			break; // NOLINT
  		case Mode::NoAccess:
  		default: protect = PROT_NONE; break;
+diff --git a/src/graphics/guest_gpu/command_processor/commandProcessor.h b/src/graphics/guest_gpu/command_processor/commandProcessor.h
+index c976bd8f..757e5ffa 100644
+--- a/src/graphics/guest_gpu/command_processor/commandProcessor.h
++++ b/src/graphics/guest_gpu/command_processor/commandProcessor.h
+@@ -184,6 +184,10 @@ private:
+ 	uint64_t  m_submit_id                   = 0;
+ 	uint64_t  m_synthetic_occlusion_counter = 0;
+ 	bool      m_predicate_skip              = false;
++	// Nova: WAIT_REG_MEM stall tracking (freeze diagnosis / deadlock breaker).
++	const void* m_nova_wait_addr     = nullptr;
++	uint64_t    m_nova_wait_since_ms = 0;
++	bool        m_nova_wait_reported = false;
+ };
+ 
+ } // namespace Libs::Graphics
 diff --git a/src/graphics/guest_gpu/graphicsRun.cpp b/src/graphics/guest_gpu/graphicsRun.cpp
-index e2b06883..500b597e 100644
+index e2b06883..19f36db7 100644
 --- a/src/graphics/guest_gpu/graphicsRun.cpp
 +++ b/src/graphics/guest_gpu/graphicsRun.cpp
-@@ -1,3 +1,6 @@
+@@ -1,3 +1,7 @@
 +#include "common/novaFex.h"
++#include <chrono>
 +#include <ctime>
 +#include <cstdio>
  #include "graphics/guest_gpu/graphicsRun.h"
  
  #include "common/assert.h"
-@@ -316,6 +319,27 @@ void CommandProcessor::WaitRegMem(uint32_t func, const T* addr, T ref, T mask, u
+@@ -31,6 +35,17 @@
+ #include <thread>
+ #include <vector>
+ 
++#if defined(KYTY_NOVA_FEX)
++namespace {
++std::atomic<uint64_t> g_nova_gpu_stall_since_ms {0};
++uint64_t NovaGpuNowMs() {
++	timespec now {};
++	clock_gettime(CLOCK_MONOTONIC, &now);
++	return static_cast<uint64_t>(now.tv_sec) * 1000u + static_cast<uint64_t>(now.tv_nsec) / 1000000u;
++}
++} // namespace
++#endif
++
+ namespace Libs::Graphics {
+ 
+ static thread_local CommandProcessor* g_current_processor = nullptr;
+@@ -172,7 +187,24 @@ void GuestGpu::SuspendPoint() {
+ 	EXIT_IF(IsGpuThread() || CommandScheduler::InDeferredOperation());
+ 	// Do not hold a queue lock while waiting: asynchronous work may be needed to
+ 	// finish the preceding graphics frame. The first point returns immediately.
++#if defined(KYTY_NOVA_FEX)
++	// Nova: never let this frame throttle deadlock against a GPU queue that is waiting for
++	// memory the CPU has not written yet. While such a stall lasts, return without waiting
++	// (and without queueing another point, so the semaphore stays balanced).
++	while (!m_suspend_point_ready->try_acquire_for(std::chrono::milliseconds(100))) {
++		const uint64_t since = g_nova_gpu_stall_since_ms.load(std::memory_order_relaxed);
++		if (since != 0 && NovaGpuNowMs() - since > 500) {
++			static std::atomic<uint32_t> log_count {0};
++			if (log_count.fetch_add(1) < 16) {
++				std::fprintf(stderr, "NOVA_GPU_WAIT: suspend point released while the GPU waits on memory\n");
++			}
++			m_done_num++;
++			return;
++		}
++	}
++#else
+ 	m_suspend_point_ready->acquire();
++#endif
+ 	Submission submission;
+ 	submission.type = SubmissionType::SuspendPoint;
+ 	Enqueue(std::move(submission));
+@@ -315,7 +347,46 @@ void CommandProcessor::WaitRegMem(uint32_t func, const T* addr, T ref, T mask, u
+ 	}
  
  	(void)poll;
++#if defined(KYTY_NOVA_FEX)
++	if (TestWaitRegMemValue(*addr, ref, mask, func) && m_nova_wait_addr != nullptr) {
++		m_nova_wait_addr = nullptr;
++		g_nova_gpu_stall_since_ms.store(0, std::memory_order_relaxed);
++	}
++#endif
  	if (!TestWaitRegMemValue(*addr, ref, mask, func)) {
 +#if defined(KYTY_NOVA_FEX)
-+		// Nova: report a GPU queue that waits on memory for seconds (a frozen game).
-+		static thread_local const void* waiting_on = nullptr;
-+		static thread_local uint64_t    since_ms   = 0;
-+		static thread_local bool        reported   = false;
-+		timespec now {};
-+		clock_gettime(CLOCK_MONOTONIC, &now);
-+		const uint64_t now_ms = static_cast<uint64_t>(now.tv_sec) * 1000u + static_cast<uint64_t>(now.tv_nsec) / 1000000u;
-+		if (waiting_on != addr) {
-+			waiting_on = addr;
-+			since_ms   = now_ms;
-+			reported   = false;
-+		} else if (!reported && now_ms - since_ms > 3000) {
-+			reported = true;
++		// Nova: a GPU queue that waits on memory for seconds is a frozen game. Report it, let
++		// AgcSuspendPoint stop throttling the CPU (the CPU may be the writer), and as a last
++		// resort continue past the wait.
++		const uint64_t now_ms = NovaGpuNowMs();
++		if (m_nova_wait_addr != addr) {
++			m_nova_wait_addr     = addr;
++			m_nova_wait_since_ms = now_ms;
++			m_nova_wait_reported = false;
++		}
++		const uint64_t waited = now_ms - m_nova_wait_since_ms;
++		if (waited > 250) {
++			g_nova_gpu_stall_since_ms.store(m_nova_wait_since_ms, std::memory_order_relaxed);
++		}
++		if (!m_nova_wait_reported && waited > 3000) {
++			m_nova_wait_reported = true;
 +			std::fprintf(stderr,
 +			             "NOVA_GPU_WAIT: queue(event %u) waits on 0x%016llx func=%u ref=0x%llx mask=0x%llx value=0x%llx for %llu ms\n",
 +			             static_cast<unsigned>(m_interrupt_event_id), static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(addr)), func,
 +			             static_cast<unsigned long long>(ref), static_cast<unsigned long long>(mask),
-+			             static_cast<unsigned long long>(*addr), static_cast<unsigned long long>(now_ms - since_ms));
++			             static_cast<unsigned long long>(*addr), static_cast<unsigned long long>(waited));
++		}
++		if (waited > 6000) {
++			static std::atomic<uint32_t> skip_count {0};
++			if (skip_count.fetch_add(1) < 32) {
++				std::fprintf(stderr, "NOVA_GPU_WAIT: gave up on 0x%016llx after %llu ms, continuing\n",
++				             static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(addr)), static_cast<unsigned long long>(waited));
++			}
++			m_nova_wait_addr = nullptr;
++			g_nova_gpu_stall_since_ms.store(0, std::memory_order_relaxed);
++			return;
 +		}
 +#endif
  		SuspendPm4();
  	}
  }
-@@ -504,6 +528,10 @@ void GuestGpu::ThreadRun(void* data) {
+@@ -504,6 +575,10 @@ void GuestGpu::ThreadRun(void* data) {
  
  		if (command) {
  			EXIT_IF(g_current_processor != nullptr);
