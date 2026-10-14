@@ -321,10 +321,10 @@ index 83f8289..dff1234 100644
  
 diff --git a/src/common/guestMemory.h b/src/common/guestMemory.h
 new file mode 100644
-index 0000000..e7d2c06
+index 0000000..0c000f2
 --- /dev/null
 +++ b/src/common/guestMemory.h
-@@ -0,0 +1,82 @@
+@@ -0,0 +1,91 @@
 +#ifndef KYTY_COMMON_GUEST_MEMORY_H_
 +#define KYTY_COMMON_GUEST_MEMORY_H_
 +
@@ -379,6 +379,15 @@ index 0000000..e7d2c06
 +
 +inline void Write(uint64_t guest_dst, const void* src, uint64_t size) noexcept {
 +	Copy(reinterpret_cast<void*>(static_cast<uintptr_t>(guest_dst)), src, size);
++}
++
++// memset for guest memory; the range may span translation units.
++inline void Set(uint64_t guest_dst, int value, uint64_t size) noexcept {
++#if defined(KYTY_NOVA_FEX)
++	NovaGuest::Set(reinterpret_cast<void*>(static_cast<uintptr_t>(guest_dst)), value, size);
++#else
++	std::memset(reinterpret_cast<void*>(static_cast<uintptr_t>(guest_dst)), value, size);
++#endif
 +}
 +
 +// Fills dwords; the range may span translation units.
@@ -833,7 +842,7 @@ index c976bd8..757e5ff 100644
  
  } // namespace Libs::Graphics
 diff --git a/src/graphics/guest_gpu/command_processor/pm4Handlers.cpp b/src/graphics/guest_gpu/command_processor/pm4Handlers.cpp
-index 5586ece..28f8f43 100644
+index 5586ece..d1ec610 100644
 --- a/src/graphics/guest_gpu/command_processor/pm4Handlers.cpp
 +++ b/src/graphics/guest_gpu/command_processor/pm4Handlers.cpp
 @@ -1,4 +1,5 @@
@@ -884,6 +893,26 @@ index 5586ece..28f8f43 100644
  	for (uint32_t i = 0; i < indirect_num_dw; i++, indirect_buffer += 2) {
  		auto raw_cmd_offset = indirect_buffer[0];
  		auto cmd_offset     = NormalizeRegisterOffset(raw_cmd_offset);
+@@ -2256,6 +2262,19 @@ KYTY_CP_OP_PARSER(CpOpReleaseMem) {
+ 	uint64_t value                = buffer[4] | (static_cast<uint64_t>(buffer[5]) << 32u);
+ 	uint32_t interrupt_context_id = buffer[6] & 0x07ffffffu;
+ 
++	// RELEASE_MEM INT_SEL 3 still raises the end-of-pipe interrupt after the write (shadPS4
++	// PM4CmdReleaseMem::SignalFence: IrqUndocumented falls through to signal_irq). Treating it as
++	// "no interrupt" leaves Unreal's AGC interrupt thread waiting forever: its GPU fences never
++	// retire and rendering stops after the first frame (Luna Abyss, 0.9.7).
++	if (interrupt_selector == 0x03) {
++		static std::atomic<uint32_t> int_sel3_log {0};
++		if (int_sel3_log.fetch_add(1, std::memory_order_relaxed) < 4) {
++			std::fprintf(stderr, "NOVA_GPU: RELEASE_MEM int_sel 3 -> interrupt after write (data_sel %u, ctx 0x%x)\n",
++			             data_sel, interrupt_context_id);
++		}
++		interrupt_selector = 0x02;
++	}
++
+ 	constexpr uint32_t ReleaseMemDstMemory = 0;
+ 	constexpr uint32_t ReleaseMemDstTcL2   = 1;
+ 	EXIT_NOT_IMPLEMENTED(release_dst != ReleaseMemDstMemory && release_dst != ReleaseMemDstTcL2);
 diff --git a/src/graphics/guest_gpu/graphicsRun.cpp b/src/graphics/guest_gpu/graphicsRun.cpp
 index e2b0688..6ba2898 100644
 --- a/src/graphics/guest_gpu/graphicsRun.cpp
@@ -2860,7 +2889,7 @@ index 4b82e41..c63a93f 100644
  int KYTY_SYSV_ABI    KernelAvailableDirectMemorySize(int64_t search_start, int64_t search_end,
                                                       size_t alignment, int64_t* phys_addr_out,
 diff --git a/src/kernel/memoryAddressSpace.inc b/src/kernel/memoryAddressSpace.inc
-index 6951f93..0530278 100644
+index 6951f93..ba2a2f7 100644
 --- a/src/kernel/memoryAddressSpace.inc
 +++ b/src/kernel/memoryAddressSpace.inc
 @@ -1,6 +1,26 @@
@@ -2915,60 +2944,171 @@ index 6951f93..0530278 100644
  			case VirtualMemory::Mode::NoAccess:
  			default: return PROT_NONE;
  		}
-@@ -766,14 +792,17 @@ public:
+@@ -765,15 +791,113 @@ public:
+ 		});
  	}
  
++	// Nova guest VA: a guest range above 2^39 can cross 1 GiB slots whose host windows are not
++	// adjacent (Super Meat Boy 3D: sceKernelBatchMap of 0xa07fee0000+0x1c0000 failed with ENOMEM
++	// because the second slot is elsewhere on the host). Every host operation is applied per
++	// translation unit; elsewhere this is a single call.
++	template <typename F>
++	static bool ForEachHostUnit(uint64_t vaddr, uint64_t size, F&& fn) {
++#if defined(KYTY_NOVA_FEX)
++		if (size != 0 && UINT64_MAX - vaddr >= size && NovaFex::GuestVAEnabled() &&
++		    NovaGuest::IsHigh(vaddr, size) && NovaGuest::Piece(vaddr, size) != size) {
++			for (uint64_t done = 0; done < size;) {
++				const uint64_t n = NovaGuest::Piece(vaddr + done, size - done);
++				if (!fn(vaddr + done, n, done)) {
++					return false;
++				}
++				done += n;
++			}
++			return true;
++		}
++#endif
++		return fn(vaddr, size, uint64_t {0});
++	}
++
  	bool TryWriteBacking(uint64_t vaddr, const void* data, uint64_t size) {
-+		NOVA_HOST_VA(vaddr, size);
- 		return m_backing->TryWriteBacking(vaddr, data, size);
+-		return m_backing->TryWriteBacking(vaddr, data, size);
++		return ForEachHostUnit(vaddr, size, [&](uint64_t v, uint64_t n, uint64_t off) {
++			return TryWriteBackingUnit(v, static_cast<const uint8_t*>(data) + off, n);
++		});
  	}
  
  	bool TryReadBacking(uint64_t vaddr, void* data, uint64_t size) {
-+		NOVA_HOST_VA(vaddr, size);
- 		return m_backing->TryReadBacking(vaddr, data, size);
+-		return m_backing->TryReadBacking(vaddr, data, size);
++		return ForEachHostUnit(vaddr, size, [&](uint64_t v, uint64_t n, uint64_t off) {
++			return TryReadBackingUnit(v, static_cast<uint8_t*>(data) + off, n);
++		});
  	}
  
  	bool TryReadSparseBacking(uint64_t vaddr, void* data, uint64_t size) {
++		return ForEachHostUnit(vaddr, size, [&](uint64_t v, uint64_t n, uint64_t off) {
++			return TryReadSparseBackingUnit(v, static_cast<uint8_t*>(data) + off, n);
++		});
++	}
++
++	bool Protect(uint64_t vaddr, uint64_t size, VirtualMemory::Mode mode) {
++		return ForEachHostUnit(vaddr, size,
++		                       [&](uint64_t v, uint64_t n, uint64_t) { return ProtectUnit(v, n, mode); });
++	}
++
++	bool ProtectTransient(uint64_t vaddr, uint64_t size, VirtualMemory::Mode mode) {
++		return ForEachHostUnit(vaddr, size, [&](uint64_t v, uint64_t n, uint64_t) {
++			return ProtectTransientUnit(v, n, mode);
++		});
++	}
++
++	bool MapBacking(uint64_t vaddr, uint64_t size, uint64_t backing_offset,
++	                VirtualMemory::Mode               mode,
++	                GuestBackingStore::FailureReason* failure_reason = nullptr) {
++		uint64_t mapped = 0;
++		const bool ok   = ForEachHostUnit(vaddr, size, [&](uint64_t v, uint64_t n, uint64_t off) {
++			if (!MapBackingUnit(v, n, backing_offset + off, mode, failure_reason)) {
++				return false;
++			}
++			mapped = off + n;
++			return true;
++		});
++		if (!ok && mapped != 0) {
++			// Leave nothing half-mapped: undo the units mapped before the failure.
++			(void)ForEachHostUnit(vaddr, mapped,
++			                      [&](uint64_t v, uint64_t n, uint64_t) { return UnmapBackingUnit(v, n); });
++		}
++		return ok;
++	}
++
++	bool UnmapBacking(uint64_t vaddr, uint64_t size) {
++		return ForEachHostUnit(vaddr, size,
++		                       [&](uint64_t v, uint64_t n, uint64_t) { return UnmapBackingUnit(v, n); });
++	}
++
++	bool ReserveFixed(uint64_t vaddr, uint64_t size) {
++		return ForEachHostUnit(vaddr, size,
++		                       [&](uint64_t v, uint64_t n, uint64_t) { return ReserveFixedUnit(v, n); });
++	}
++
++	bool ReleaseFree(uint64_t vaddr, uint64_t size) {
++		return ForEachHostUnit(vaddr, size,
++		                       [&](uint64_t v, uint64_t n, uint64_t) { return ReleaseFreeUnit(v, n); });
++	}
++
++	bool Commit(uint64_t vaddr, uint64_t size, VirtualMemory::Mode mode) {
++		return ForEachHostUnit(vaddr, size,
++		                       [&](uint64_t v, uint64_t n, uint64_t) { return CommitUnit(v, n, mode); });
++	}
++
++	bool ReleaseCommitted(uint64_t vaddr, uint64_t size) {
++		return ForEachHostUnit(vaddr, size,
++		                       [&](uint64_t v, uint64_t n, uint64_t) { return ReleaseCommittedUnit(v, n); });
++	}
++
++	bool TryWriteBackingUnit(uint64_t vaddr, const void* data, uint64_t size) {
++		NOVA_HOST_VA(vaddr, size);
++		return m_backing->TryWriteBacking(vaddr, data, size);
++	}
++
++	bool TryReadBackingUnit(uint64_t vaddr, void* data, uint64_t size) {
++		NOVA_HOST_VA(vaddr, size);
++		return m_backing->TryReadBacking(vaddr, data, size);
++	}
++
++	bool TryReadSparseBackingUnit(uint64_t vaddr, void* data, uint64_t size) {
 +		NOVA_HOST_VA(vaddr, size);
  		if (!Owns(vaddr, size)) {
  			return false;
  		}
-@@ -794,6 +823,7 @@ public:
+@@ -793,7 +917,8 @@ public:
+ 
  	bool BackingContains(uint64_t vaddr, uint64_t size) { return m_backing->Contains(vaddr, size); }
  
- 	bool Protect(uint64_t vaddr, uint64_t size, VirtualMemory::Mode mode) {
+-	bool Protect(uint64_t vaddr, uint64_t size, VirtualMemory::Mode mode) {
++	bool ProtectUnit(uint64_t vaddr, uint64_t size, VirtualMemory::Mode mode) {
 +		NOVA_HOST_VA(vaddr, size);
  		if (size == 0 || UINT64_MAX - vaddr < size) {
  			return false;
  		}
-@@ -802,6 +832,7 @@ public:
+@@ -801,7 +926,8 @@ public:
+ 		return ProtectMappedUnlocked(vaddr, size, mode);
  	}
  
- 	bool ProtectTransient(uint64_t vaddr, uint64_t size, VirtualMemory::Mode mode) {
+-	bool ProtectTransient(uint64_t vaddr, uint64_t size, VirtualMemory::Mode mode) {
++	bool ProtectTransientUnit(uint64_t vaddr, uint64_t size, VirtualMemory::Mode mode) {
 +		NOVA_HOST_VA(vaddr, size);
  		if (size == 0 || UINT64_MAX - vaddr < size) {
  			return false;
  		}
-@@ -813,6 +844,7 @@ public:
- 	bool MapBacking(uint64_t vaddr, uint64_t size, uint64_t backing_offset,
- 	                VirtualMemory::Mode               mode,
- 	                GuestBackingStore::FailureReason* failure_reason = nullptr) {
+@@ -810,9 +936,10 @@ public:
+ 		return ProtectMappedUnlocked(vaddr, size, mode);
+ 	}
+ 
+-	bool MapBacking(uint64_t vaddr, uint64_t size, uint64_t backing_offset,
+-	                VirtualMemory::Mode               mode,
+-	                GuestBackingStore::FailureReason* failure_reason = nullptr) {
++	bool MapBackingUnit(uint64_t vaddr, uint64_t size, uint64_t backing_offset,
++	                    VirtualMemory::Mode               mode,
++	                    GuestBackingStore::FailureReason* failure_reason) {
 +		NOVA_HOST_VA(vaddr, size);
  		std::lock_guard lock(m_mutex);
  #if KYTY_PLATFORM == KYTY_PLATFORM_LINUX
  		const bool replacing = ContainsMappedUnlocked(vaddr, size, MappingType::Backing);
-@@ -841,6 +873,7 @@ public:
+@@ -840,7 +967,8 @@ public:
+ 		return false;
  	}
  
- 	bool UnmapBacking(uint64_t vaddr, uint64_t size) {
+-	bool UnmapBacking(uint64_t vaddr, uint64_t size) {
++	bool UnmapBackingUnit(uint64_t vaddr, uint64_t size) {
 +		NOVA_HOST_VA(vaddr, size);
  		std::lock_guard lock(m_mutex);
  		if (!ContainsMappedUnlocked(vaddr, size, MappingType::Backing)) {
  			return false;
-@@ -883,7 +916,37 @@ public:
+@@ -883,7 +1011,37 @@ public:
  		return FindFreeAlignedUnlocked(search_start, search_end, size, alignment);
  	}
  
+-	bool ReserveFixed(uint64_t vaddr, uint64_t size) {
 +#if KYTY_PLATFORM == KYTY_PLATFORM_LINUX && !defined(__APPLE__)
 +	// Nova: takes a host range outside the guest regions reserved at startup (for example the
 +	// top of an oversized arena that sits in the host headroom) into the guest address space.
@@ -2998,29 +3138,34 @@ index 6951f93..0530278 100644
 +	}
 +#endif
 +
- 	bool ReserveFixed(uint64_t vaddr, uint64_t size) {
++	bool ReserveFixedUnit(uint64_t vaddr, uint64_t size) {
 +		NOVA_HOST_VA(vaddr, size);
  		if (vaddr == 0 || size == 0 || !IsPageAligned(vaddr) || !IsPageAligned(size)) {
  			return false;
  		}
-@@ -899,11 +962,13 @@ public:
+@@ -898,12 +1056,14 @@ public:
+ 	}
  #endif
  
- 	bool ReleaseFree(uint64_t vaddr, uint64_t size) {
+-	bool ReleaseFree(uint64_t vaddr, uint64_t size) {
++	bool ReleaseFreeUnit(uint64_t vaddr, uint64_t size) {
 +		NOVA_HOST_VA(vaddr, size);
  		std::lock_guard lock(m_mutex);
  		return FindContaining(vaddr, size) != m_free.end();
  	}
  
- 	bool Commit(uint64_t vaddr, uint64_t size, VirtualMemory::Mode mode) {
+-	bool Commit(uint64_t vaddr, uint64_t size, VirtualMemory::Mode mode) {
++	bool CommitUnit(uint64_t vaddr, uint64_t size, VirtualMemory::Mode mode) {
 +		NOVA_HOST_VA(vaddr, size);
  		std::lock_guard lock(m_mutex);
  		if (!ConsumeUnlocked(vaddr, size)) {
  			return false;
-@@ -936,6 +1001,7 @@ public:
+@@ -935,7 +1095,8 @@ public:
+ #endif
  	}
  
- 	bool ReleaseCommitted(uint64_t vaddr, uint64_t size) {
+-	bool ReleaseCommitted(uint64_t vaddr, uint64_t size) {
++	bool ReleaseCommittedUnit(uint64_t vaddr, uint64_t size) {
 +		NOVA_HOST_VA(vaddr, size);
  		if (vaddr == 0 || size == 0 || !IsPageAligned(vaddr) || !IsPageAligned(size)) {
  			return false;
@@ -7591,15 +7736,16 @@ index 0e71438..f447c22 100644
  
  #endif /* EMULATOR_INCLUDE_EMULATOR_LIBS_GUEST_PRINTF_H_ */
 diff --git a/src/libs/libAmpr.cpp b/src/libs/libAmpr.cpp
-index fc4ae4e..3c2f39e 100644
+index fc4ae4e..c5a1cdb 100644
 --- a/src/libs/libAmpr.cpp
 +++ b/src/libs/libAmpr.cpp
-@@ -1,3 +1,4 @@
+@@ -1,3 +1,5 @@
 +#include "common/novaFex.h"
++#include "common/guestMemory.h"
  #include "common/abi.h"
  #include "common/assert.h"
  #include "common/dateTime.h"
-@@ -73,7 +74,11 @@ static bool ReadGuestBytes(uint64_t addr, void* out, uint64_t size) {
+@@ -73,7 +75,11 @@ static bool ReadGuestBytes(uint64_t addr, void* out, uint64_t size) {
  	if (out == nullptr || !IsValidGuestRange(addr, size)) {
  		return false;
  	}
@@ -7611,7 +7757,7 @@ index fc4ae4e..3c2f39e 100644
  	return true;
  }
  
-@@ -81,7 +86,11 @@ static bool WriteGuestBytes(uint64_t addr, const void* in, uint64_t size) {
+@@ -81,7 +87,11 @@ static bool WriteGuestBytes(uint64_t addr, const void* in, uint64_t size) {
  	if (in == nullptr || !IsValidGuestRange(addr, size, true)) {
  		return false;
  	}
@@ -7623,7 +7769,106 @@ index fc4ae4e..3c2f39e 100644
  	return true;
  }
  
-@@ -1433,7 +1442,11 @@ static int ReadHostFileToGuest(const std::filesystem::path& host_path, uint64_t
+@@ -100,12 +110,11 @@ static int ReadGuestCString(uint64_t addr, char* out, size_t out_size) {
+ 		return LibKernel::KERNEL_ERROR_EFAULT;
+ 	}
+ 
+-	const auto* src = reinterpret_cast<const char*>(addr);
+ 	for (size_t pos = 0; pos < out_size; pos++) {
+ 		if (addr > std::numeric_limits<uint64_t>::max() - pos) {
+ 			return LibKernel::KERNEL_ERROR_EFAULT;
+ 		}
+-		out[pos] = src[pos];
++		out[pos] = *GuestMemory::Ptr<const char>(addr + pos, 1);
+ 		if (out[pos] == '\0') {
+ 			return OK;
+ 		}
+@@ -754,13 +763,13 @@ static uint64_t KernelErrorU64(int error) {
+ template <typename T>
+ static T ReadCommandBufferUnchecked(uint64_t addr) {
+ 	T value {};
+-	std::memcpy(&value, reinterpret_cast<const void*>(addr), sizeof(value));
++	GuestMemory::Read(&value, addr, sizeof(value));
+ 	return value;
+ }
+ 
+ template <typename T>
+ static void WriteCommandBufferUnchecked(uint64_t addr, const T& value) {
+-	std::memcpy(reinterpret_cast<void*>(addr), &value, sizeof(value));
++	GuestMemory::Write(addr, &value, sizeof(value));
+ }
+ 
+ static bool ValidateCommandBufferHeader(uint64_t            command_buffer,
+@@ -980,7 +989,7 @@ static bool InitializeBaseCommandBuffer(uint64_t command_buffer) {
+ 		return false;
+ 	}
+ 
+-	std::memset(reinterpret_cast<void*>(command_buffer), 0, COMMAND_BUFFER_SIZE);
++	GuestMemory::Set(command_buffer, 0, COMMAND_BUFFER_SIZE);
+ 
+ 	std::scoped_lock lock(g_command_buffer_mutex);
+ 	EraseCommandBufferStateLocked(command_buffer);
+@@ -1043,9 +1052,8 @@ static bool AppendReadFileRecord(uint64_t command_buffer, uint8_t opcode, uint32
+ 	}
+ 
+ 	const auto record_offset = state.write_offset;
+-	std::memset(reinterpret_cast<void*>(state.buffer + record_offset), 0,
+-	            static_cast<size_t>(record_size));
+-	std::memcpy(reinterpret_cast<void*>(state.buffer + record_offset), &opcode, sizeof(opcode));
++	GuestMemory::Set(state.buffer + record_offset, 0, record_size);
++	GuestMemory::Write(state.buffer + record_offset, &opcode, sizeof(opcode));
+ 	state.commands.push_back({record_offset, CommandBufferState::ReadFileCommand {
+ 	                                             file_id, destination, size, file_offset}});
+ 	if (!CommitCommandBufferRecord(command_buffer, &state, record_size)) {
+@@ -1083,8 +1091,7 @@ static bool AppendKernelEventRecord(uint64_t command_buffer, uint64_t eq, int32_
+ 	}
+ 
+ 	const auto record_offset = state.write_offset;
+-	std::memcpy(reinterpret_cast<void*>(state.buffer + record_offset), record.data(),
+-	            record.size());
++	GuestMemory::Write(state.buffer + record_offset, record.data(), record.size());
+ 	state.commands.push_back(
+ 	    {record_offset, CommandBufferState::KernelEventCommand {eq, id, data}});
+ 	return CommitCommandBufferRecord(command_buffer, &state, KERNEL_EVENT_RECORD_SIZE);
+@@ -1160,8 +1167,7 @@ static bool AppendCommandRecord(uint64_t command_buffer, CommandBufferState::Com
+ 		return false;
+ 	}
+ 
+-	auto* record_addr    = reinterpret_cast<void*>(state.buffer + state.write_offset);
+-	std::memset(record_addr, 0, static_cast<size_t>(record_size));
++	GuestMemory::Set(state.buffer + state.write_offset, 0, record_size);
+ 	state.commands.push_back({state.write_offset, std::move(command)});
+ 	return CommitCommandBufferRecord(command_buffer, &state, record_size);
+ }
+@@ -1202,7 +1208,7 @@ static int ExecuteCommand(const CommandBufferState::Command& entry) {
+ 	} else if (const auto* payload =
+ 	               std::get_if<CommandBufferState::WriteAddressCommand>(&entry.data)) {
+ 		const auto& command = *payload;
+-		std::atomic_ref(*reinterpret_cast<uint64_t*>(command.address))
++		std::atomic_ref(*GuestMemory::Ptr<uint64_t>(command.address, sizeof(uint64_t)))
+ 		    .store(command.value, std::memory_order_release);
+ 	} else if (const auto* command =
+ 	               std::get_if<CommandBufferState::WriteCounterCommand>(&entry.data)) {
+@@ -1238,7 +1244,7 @@ struct Submission {
+ static bool IsWaitSatisfied(const CommandBufferState::WaitCommand& wait) {
+ 	const uint64_t value = wait.is_counter
+ 	                           ? g_counters[wait.source].load(std::memory_order_acquire)
+-	                           : std::atomic_ref(*reinterpret_cast<uint64_t*>(wait.source))
++	                           : std::atomic_ref(*GuestMemory::Ptr<uint64_t>(wait.source, sizeof(uint64_t)))
+ 	                                 .load(std::memory_order_acquire);
+ 	const uint64_t sign = uint64_t {1} << (wait.is_counter ? 31 : 63);
+ 	switch (wait.compare) {
+@@ -1380,8 +1386,7 @@ static bool AdvanceCommandBuffer(uint64_t command_buffer, uint64_t record_size)
+ 		return false;
+ 	}
+ 
+-	std::memset(reinterpret_cast<void*>(state.buffer + state.write_offset), 0,
+-	            static_cast<size_t>(record_size));
++	GuestMemory::Set(state.buffer + state.write_offset, 0, record_size);
+ 	return CommitCommandBufferRecord(command_buffer, &state, record_size);
+ }
+ 
+@@ -1433,7 +1438,11 @@ static int ReadHostFileToGuest(const std::filesystem::path& host_path, uint64_t
  		if (read == 0) {
  			break;
  		}

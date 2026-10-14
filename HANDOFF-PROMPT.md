@@ -22,7 +22,7 @@ You are continuing work on **Nova PS5**, my port of the KytyPS5 PS5 emulator to 
 - Kyty = KytyPS5 commit df5b9b9 + `patches/linux-core.series` (5 small patches, then `patches/kyty-nova-arm64.patch`). To change Kyty: apply the series to df5b9b9, commit after the first five ("base5"), edit, then regenerate `kyty-nova-arm64.patch` = `git diff base5 HEAD`. `tests/test_native_startup.py <patched kyty>` runs in CI before the build and must print two `ALL PASS` lines.
 - `native/novafex/novafex.{h,cpp}` = embedded FEXCore bridge (libnovafex.so); `patches/fex-android/0002-nova-guest-va.patch` = FEX guest-VA translation. Bridge tests must print `NOVAFEX_TEST: ALL PASS`.
 - Java launcher `nova-android/src/com/kaminofilms/novaps5/` (GameActivity sets env: NOVA_GUEST_VA, NOVA_HEAP_HLE…; MainActivity = settings and the session log with "Key lines").
-- Version: workflow `--version-name/--version-code` + defaults in `tests/verify_native_apk.py`. **Current: 0.9.7 / 55.**
+- Version: workflow `--version-name/--version-code` + defaults in `tests/verify_native_apk.py`. **Current: 0.9.8 / 56.**
 - Device: Red Magic 11 Pro (nubia NX809J, SM8850 / Adreno 840, Android 16), 39-bit address space (host VA ceiling 0x80_0000_0000), guest window [0x10_0000_0000, 0x60_0000_0000), guest modules at 0x9_0000_0000.
 
 ## How it works
@@ -36,7 +36,10 @@ You are continuing work on **Nova PS5**, my port of the KytyPS5 PS5 emulator to 
 - **Dead Cells (PPSA15552)** — works (~60 fps).
 - **Super Meat Boy 3D (PPSA31162, Unreal)** — 0.9.5 crashed in VideoOutRegisterBuffers2 (buffer at 0x13FC0000000, above the GPU's old 1 TiB domain); fixed in 0.9.6 (it got past it). The 0.9.6 test ran with the "emulator heap" setting ON and hit Unreal's fatal "Ran out of memory allocating 32 MiB" right after mapping the first 32 MiB display buffer.
 - **Luna Abyss (PPSA36257, Unreal)** — 0.9.5: black screen; the GPU ran 8 compute + 1 vertex shader and `AgcEqueue` (EOP ids 0 and 32) waited > 4 s. 0.9.6 with the emulator heap ON: guest null deref at rip 0x90108af2f (linked-list walk) right after `cxa_atexit`.
-- **0.9.7**: the emulator heap is forced OFF for translated titles (setting removed; it broke both games). So 0.9.7 = 0.9.5 baseline + the 0.9.6 GPU fixes. No 0.9.7 device log yet.
+- **0.9.7**: emulator heap forced OFF for translated titles (setting removed). Both games then reached their FIRST GAME FLIP (game_frames=1):
+  - Meat Boy: Unreal fatal `PS5PlatformMemory.cpp:1518 sceKernelBatchMap failed 0x8002000c` — MapDirect 0xa07fee0000+0x1c0000 crossed a 1 GiB slot boundary (slot host windows are not adjacent).
+  - Luna: froze after the first frame; all Unreal threads in cond waits, GPU idle, `AgcInterruptThread` (waits on AgcEqueue EOP ids 0/32) had only 32 gates = it never got interrupts. hostemu ~27k/s from the AMPR (APR file I/O) HLE in libAmpr.cpp.
+- **0.9.8**: (1) host address-space operations split per slot (`ForEachHostUnit` in memoryAddressSpace.inc, MapBacking rolls back on failure); (2) RELEASE_MEM INT_SEL 3 now raises the EOP interrupt after the write, as shadPS4 does (`PM4CmdReleaseMem::SignalFence`: IrqUndocumented → signal_irq) — logged once as `NOVA_GPU: RELEASE_MEM int_sel 3 -> interrupt`; (3) libAmpr command-buffer records, waits and atomics use `GuestMemory::*`. No 0.9.8 device log yet.
 - EverForward (Unity): black screen (see AnyPS5/sharpemu notes). ccleste homebrew: never booted.
 
 ## Next steps

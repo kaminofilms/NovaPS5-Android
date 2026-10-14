@@ -147,6 +147,18 @@ for name, needle in (("graphicsRun.cpp", "HostCommands(draw_commands)"), ("graph
     assert needle in (root / "src/graphics/guest_gpu" / name).read_text(), needle
 assert "guest_base      = shader_addr" in (root / "src/graphics/shader/shader.cpp").read_text(), "shader Base() must stay the guest address"
 assert "SA_NODEFER" in (root / "src/common/hostException.cpp").read_text(), "nested GPU-tracking faults inside emulated accesses"
+# 0.9.8: host operations on translated guest ranges are split per 1 GiB slot (Meat Boy's
+# sceKernelBatchMap 0xa07fee0000+0x1c0000 crossed a slot and failed with ENOMEM), and RELEASE_MEM
+# INT_SEL 3 raises the end-of-pipe interrupt like shadPS4 (Luna's AGC interrupt thread never woke).
+space = (root / "src/kernel/memoryAddressSpace.inc").read_text()
+map_backing = function(space, "bool MapBacking(")
+assert "ForEachHostUnit" in map_backing and "UnmapBackingUnit" in map_backing, "MapBacking must split per slot and roll back"
+for name in ("Protect(", "ProtectTransient(", "UnmapBacking(", "Commit(", "ReleaseCommitted("):
+    assert "ForEachHostUnit" in function(space, "bool " + name), name
+release_mem = function((root / "src/graphics/guest_gpu/command_processor/pm4Handlers.cpp").read_text(), "KYTY_CP_OP_PARSER(CpOpReleaseMem)")
+assert "interrupt_selector == 0x03" in release_mem and "interrupt_selector = 0x02" in release_mem, "RELEASE_MEM INT_SEL 3 must interrupt"
+ampr = (root / "src/libs/libAmpr.cpp").read_text()
+assert "atomic_ref(*reinterpret_cast<uint64_t*>" not in ampr, "AMPR waits must read guest memory through its host address"
 nova_fex = (root / "src/common/novaFex.h").read_text()
 nova_guest = nova_fex[nova_fex.index("namespace NovaGuest {"):nova_fex.index("} // namespace NovaGuest") + len("} // namespace NovaGuest")]
 program2 = r'''
