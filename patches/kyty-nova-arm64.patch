@@ -391,10 +391,10 @@ index d44c623c..91e9eccb 100644
  
 diff --git a/src/common/novaBionic.h b/src/common/novaBionic.h
 new file mode 100644
-index 00000000..e4649b4b
+index 00000000..1ded0b9a
 --- /dev/null
 +++ b/src/common/novaBionic.h
-@@ -0,0 +1,75 @@
+@@ -0,0 +1,89 @@
 +// Nova PS5 on Android: what bionic does not provide. Force-included into Kyty's own sources only.
 +#ifndef KYTY_COMMON_NOVA_BIONIC_H_
 +#define KYTY_COMMON_NOVA_BIONIC_H_
@@ -422,6 +422,20 @@ index 00000000..e4649b4b
 +#ifndef PTHREAD_MUTEX_FAST_NP
 +#define PTHREAD_MUTEX_FAST_NP PTHREAD_MUTEX_NORMAL
 +#endif
++
++#ifndef PTHREAD_PRIO_PROTECT
++#define PTHREAD_PRIO_PROTECT 2
++#endif
++
++#include <linux/close_range.h>
++#include <sys/syscall.h>
++#include <unistd.h>
++#ifndef CLOSE_RANGE_CLOEXEC
++#define CLOSE_RANGE_CLOEXEC (1U << 2)
++#endif
++inline int close_range(unsigned int first, unsigned int last, int flags) {
++	return static_cast<int>(syscall(__NR_close_range, first, last, flags));
++}
 +
 +namespace NovaBionic {
 +inline std::mutex& CancelMutex() {
