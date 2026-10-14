@@ -157,6 +157,15 @@ public final class MainActivity extends Activity {
     /** Ends a game that is still running (its own process) so the next launch starts clean. */
     void endRunningGame() {
         ActivityManager am = getSystemService(ActivityManager.class);
+        // Earlier games' tasks (one per launch otherwise piles up in Recents).
+        if (am != null) {
+            for (ActivityManager.AppTask task : am.getAppTasks()) {
+                try {
+                    ActivityManager.RecentTaskInfo info = task.getTaskInfo();
+                    if (info.baseActivity != null && info.baseActivity.getClassName().endsWith(".GameActivity")) task.finishAndRemoveTask();
+                } catch (Exception ignored) {}
+            }
+        }
         List<ActivityManager.RunningAppProcessInfo> list = am == null ? null : am.getRunningAppProcesses();
         if (list == null) return;
         for (ActivityManager.RunningAppProcessInfo p : list) {
@@ -180,7 +189,7 @@ public final class MainActivity extends Activity {
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             Intent intent = new Intent(this, GameActivity.class)
                     .putExtra(GameActivity.EXTRA_GAME, path).putExtra(GameActivity.EXTRA_NAME, e.name)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             startActivity(intent);
         }, 400);
     }

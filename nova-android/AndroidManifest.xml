@@ -35,7 +35,7 @@
              launch starts clean. -->
         <activity android:name=".GameActivity" android:exported="false" android:process=":game"
             android:screenOrientation="sensorLandscape" android:launchMode="singleTask"
-            android:taskAffinity="com.kaminofilms.novaps5.game" android:excludeFromRecents="false"
+            android:taskAffinity="com.kaminofilms.novaps5.game" android:autoRemoveFromRecents="true" android:documentLaunchMode="never"
             android:configChanges="layoutDirection|locale|orientation|uiMode|screenLayout|screenSize|smallestScreenSize|keyboard|keyboardHidden|navigation|density|fontScale"
             android:preferMinimalPostProcessing="true" android:resizeableActivity="false"
             android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
