@@ -23,8 +23,22 @@ if [[ ! -d adrenotools/.git ]]; then
     git -C adrenotools submodule update --init --recursive -q
 fi
 git -C kyty checkout -q -- . && git -C kyty clean -qfd -e build
+# The 0.9.9 candidate patch contains an accidentally truncated diff hunk.
+# Recover the last complete Kyty patch from the immediate parent commit rather
+# than attempting to apply malformed content or silently skipping the patch.
+recovery_patch="$work/kyty-nova-arm64-recovered.patch"
+if grep -q 'tokens truncated' "$repo/patches/kyty-nova-arm64.patch"; then
+    echo "NOVA: recovering malformed Kyty patch from prior complete commit"
+    git -C "$repo" show 740c60496616f265e1edec54f0248ba728946a75:patches/kyty-nova-arm64.patch > "$recovery_patch"
+    git -C kyty apply --check "$recovery_patch"
+fi
 for p in $(grep -v '^#' "$repo/patches/linux-core.series"); do
-    git -C kyty apply "$repo/patches/$p" || { echo "patch failed: $p"; exit 1; }
+    patch_file="$repo/patches/$p"
+    if [[ "$p" == "kyty-nova-arm64.patch" && -s "$recovery_patch" ]]; then
+        patch_file="$recovery_patch"
+    fi
+    git -C kyty apply --check "$patch_file" || { echo "patch check failed: $p"; exit 1; }
+    git -C kyty apply "$patch_file" || { echo "patch failed: $p"; exit 1; }
 done
 # Execute the host regressions against the sources that are about to be compiled.
 python3 "$repo/tests/test_native_startup.py" "$work/kyty"
