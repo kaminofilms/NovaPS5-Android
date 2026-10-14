@@ -1,0 +1,6 @@
+FAILED: [code=1] common/CMakeFiles/common.dir/archive.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/archive.cpp:269:27: error: use of undeclared identifier 'PTHREAD_CANCEL_ENABLE'
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/archive.cpp:270:25: error: use of undeclared identifier 'PTHREAD_CANCEL_DISABLE'
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/archive.cpp:300:2: error: use of undeclared identifier 'pthread_setcancelstate'
+FAILED: [code=1] common/CMakeFiles/common.dir/platform/sysLinuxVirtual.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/platform/sysLinuxVirtual.cpp:40:35: error: use of undeclared identifier 'PTHREAD_MUTEX_FAST_NP'

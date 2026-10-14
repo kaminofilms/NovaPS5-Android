@@ -85,3 +85,4 @@ release/38457791547-892e6371 core=success apk=success arm64=success
 runs/android-38486230848-064fa858 android novafex=failure test=skipped
 runs/android-38486708121-4d44212d android novafex=failure test=skipped
 runs/android-38487191238-dd87d84f android novafex=failure test=skipped ffmpeg=success kyty=skipped apk=skipped
+runs/android-38488172083-ca474a87 android novafex=success test=success ffmpeg=success kyty=failure apk=skipped
