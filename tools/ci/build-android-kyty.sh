@@ -27,9 +27,6 @@ git -C kyty checkout -q -- . && git -C kyty clean -qfd -e build
 # The 0.9.9 branch patch is malformed; avoid silently using a truncated diff.
 # This is a temporary build recovery, not a restoration of the new Kyty changes.
 recovery_patch="$work/kyty-nova-arm64-recovered.patch"
-curl --fail --location --silent --show-error \\
-    "https://raw.githubusercontent.com/KytyPS5/KytyPS5/df5b9b92be7dfd463b47756b707d6d356a9f0550/README.md" \\
-    -o "$work/kyty-upstream-check.txt" || true
 # Obtain the complete prior patch from the checked-out repository's Git history.
 # actions/checkout must fetch the parent commit before this step.
 git -C "$repo" fetch --no-tags --depth=2 origin feature/guest-va
