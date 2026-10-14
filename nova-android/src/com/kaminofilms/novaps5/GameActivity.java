@@ -135,7 +135,11 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
         if (files == null || depth > 3) return false;
         for (File f : files) {
             String n = f.getName().toLowerCase(java.util.Locale.ROOT);
-            if (f.isFile() && (n.endsWith(".pak") || n.endsWith(".utoc") || n.endsWith(".ucas"))) return true;
+            // .utoc/.ucas (IoStore) or .pak inside <Project>/Content/Paks: Unreal only. A bare .pak is
+            // not enough (Dead Cells ships one too).
+            if (f.isFile() && (n.endsWith(".utoc") || n.endsWith(".ucas"))) return true;
+            if (f.isFile() && n.endsWith(".pak") && dir.getName().equalsIgnoreCase("Paks")
+                    && dir.getParentFile() != null && dir.getParentFile().getName().equalsIgnoreCase("Content")) return true;
             if (f.isDirectory() && !n.equals("sce_sys") && !n.equals("sce_module") && unrealGame(f, depth + 1)) return true;
         }
         return false;
