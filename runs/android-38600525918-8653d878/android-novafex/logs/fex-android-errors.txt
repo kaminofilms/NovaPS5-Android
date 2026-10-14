@@ -1,0 +1,4 @@
+FAILED: [code=1] FEXCore/Source/CMakeFiles/FEXCore_object.dir/Interface/Core/JIT/MemoryOps.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/FEXCore/Source/Interface/Core/JIT/MemoryOps.cpp:2476:12: error: no member named 'X' in 'ARMEmitter::XRegister'
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/FEXCore/Source/Interface/Core/JIT/MemoryOps.cpp:2476:53: error: no member named 'X' in 'ARMEmitter::XRegister'
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/FEXCore/Source/Interface/Core/JIT/MemoryOps.cpp:2476:63: error: no member named 'X' in 'ARMEmitter::XRegister'
