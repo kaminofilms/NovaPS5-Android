@@ -1,0 +1,4 @@
+FAILED: [code=1] Source/Tools/NovaFex/CMakeFiles/novafex.dir/novafex.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/Source/Tools/NovaFex/novafex.cpp:1001:9: error: non-const lvalue reference to type 'uint64_t' (aka 'unsigned long') cannot bind to a value of unrelated type '__u64' (aka 'unsigned long long')
+FAILED: [code=1] Source/Tools/NovaFex/CMakeFiles/novafex_test_static.dir/novafex.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/Source/Tools/NovaFex/novafex.cpp:1001:9: error: non-const lvalue reference to type 'uint64_t' (aka 'unsigned long') cannot bind to a value of unrelated type '__u64' (aka 'unsigned long long')
