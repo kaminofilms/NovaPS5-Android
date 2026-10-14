@@ -87,10 +87,6 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
             Os.setenv("TMPDIR", getCacheDir().getPath(), true);
             Os.setenv("NOVA_RELAXED_VULKAN", "1", true);
             Os.setenv("NOVA_LIBC_HLE", homebrewLibc() ? "1" : "0", true);
-            String titleId = titleId(new File(game));
-            boolean fixedPagePlacement = "PPSA59322".equals(titleId);
-            Os.setenv("NOVA_FIXED_DIRECT_PAGE_ALIGNMENT", fixedPagePlacement ? "1" : "0", true);
-            if (fixedPagePlacement) BootLog.write(this, "ccleste profile: fixed direct mappings use guest page alignment");
             boolean unreal = unrealGame(new File(game), 0);
             Os.setenv("NOVA_HEAP_HLE", unreal ? "1" : "0", true);
             if (unreal) BootLog.write(this, "Unreal Engine title: the emulator serves its libc heap");

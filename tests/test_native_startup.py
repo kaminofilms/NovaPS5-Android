@@ -28,6 +28,14 @@ def function(source, marker):
     return source[begin:end]
 
 heap = (root / "src/libs/novaHeap.cpp").read_text()
+
+# Regression (ccleste PPSA59322: MapDirect failed 0x80020016 addr=0x400004000 len=0x200000
+# flags=0x10): MAP_FIXED direct maps use the guest page alignment for every title on the
+# FEX build, not only behind a per-title environment switch.
+memory = (root / "src/kernel/memory.cpp").read_text()
+fixed_block = memory[memory.index("NovaValidDirectFixedAddress(in_addr") - 900:memory.index("NovaValidDirectFixedAddress(in_addr")]
+assert "page_placement = true;" in fixed_block, "fixed direct maps must not require the alignment hint"
+assert "NOVA_FIXED_DIRECT_PAGE_ALIGNMENT" not in memory, "fixed placement must not depend on a title profile"
 linker = (root / "src/loader/runtimeLinker.cpp").read_text()
 helpers = "\n".join(function(heap, marker) for marker in (
     "int ModRmLen(", "int RelocateInsn(", "uint64_t BuildOriginalTrampoline(",
