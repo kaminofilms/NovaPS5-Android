@@ -1037,8 +1037,90 @@ index 06731ee7..0ce2c79b 100644
  }
  
  SrtWalker::SrtWalker(const ResourcePlan& program, const SrtRuntime& runtime,
+diff --git a/src/kernel/eventFlag.cpp b/src/kernel/eventFlag.cpp
+index 594e7e14..c6b38f7a 100644
+--- a/src/kernel/eventFlag.cpp
++++ b/src/kernel/eventFlag.cpp
+@@ -1,3 +1,5 @@
++#include <atomic>
++#include <cstdio>
+ #include "kernel/eventFlag.h"
+ 
+ #include "common/assert.h"
+@@ -113,6 +115,8 @@ KernelEventFlagPrivate::Result KernelEventFlagPrivate::Wait(uint64_t bits, WaitM
+ 	uint32_t      elapsed = 0;
+ 	Common::Timer t;
+ 	t.Start();
++	bool reported = false;
++	(void)reported;
+ 
+ 	auto update_timeout = [&]() {
+ 		if (ptr_micros != nullptr) {
+@@ -137,7 +141,20 @@ KernelEventFlagPrivate::Result KernelEventFlagPrivate::Wait(uint64_t bits, WaitM
+ 		m_waiting_threads++;
+ 
+ 		if (infinitely) {
++#if defined(__ANDROID__)
++			// Nova: report flags a thread has waited on for seconds (frozen games).
++			m_cond_var.WaitFor(&m_mutex, 2000000);
++			static std::atomic<uint32_t> reports {0};
++			if (!reported && t.GetTimeS() > 4.0 && reports.fetch_add(1) < 48) {
++				reported = true;
++				std::fprintf(stderr, "NOVA_WAIT: event flag '%s' %p bits=0x%llx wants 0x%llx (%s) waiters=%d\n",
++				             m_name.c_str(), static_cast<void*>(this), static_cast<unsigned long long>(m_bits),
++				             static_cast<unsigned long long>(bits), wait_mode == WaitMode::And ? "all" : "any",
++				             m_waiting_threads);
++			}
++#else
+ 			m_cond_var.Wait(&m_mutex);
++#endif
+ 		} else {
+ 			m_cond_var.WaitFor(&m_mutex, micros - elapsed);
+ 		}
+diff --git a/src/kernel/eventQueue.cpp b/src/kernel/eventQueue.cpp
+index 8641e8a9..8c9aef6b 100644
+--- a/src/kernel/eventQueue.cpp
++++ b/src/kernel/eventQueue.cpp
+@@ -1,3 +1,5 @@
++#include <atomic>
++#include <cstdio>
+ #include "kernel/eventQueue.h"
+ 
+ #include "common/assert.h"
+@@ -183,6 +185,8 @@ int KernelEqueuePrivate::WaitForEvents(KernelEvent* ev, int num, uint32_t micros
+ 	uint32_t      elapsed = 0;
+ 	Common::Timer t;
+ 	t.Start();
++	bool nova_reported = false;
++	(void)nova_reported;
+ 
+ 	for (;;) {
+ 		int ret = GetTriggeredEvents(ev, num);
+@@ -194,7 +198,22 @@ int KernelEqueuePrivate::WaitForEvents(KernelEvent* ev, int num, uint32_t micros
+ 		uint32_t   timer_wait = 0;
+ 		const bool has_timer  = GetNextTimerWaitMicros(MonotonicTimeNs(), &timer_wait);
+ 		if (micros == 0 && !has_timer) {
++#if defined(__ANDROID__)
++			// Nova: report equeues a thread has waited on for seconds, with their events.
++			m_cond_var.WaitFor(&m_mutex, 2000000);
++			static std::atomic<uint32_t> reports {0};
++			if (!nova_reported && t.GetTimeS() > 4.0 && reports.fetch_add(1) < 24) {
++				nova_reported = true;
++				std::fprintf(stderr, "NOVA_WAIT: equeue '%s' %p, %zu event(s):\n", m_name.c_str(), static_cast<void*>(this), m_events.size());
++				for (const auto& e: m_events) {
++					std::fprintf(stderr, "NOVA_WAIT:   ident=%llu filter=%d triggered=%d pending=%zu\n",
++					             static_cast<unsigned long long>(e.event.ident), static_cast<int>(e.event.filter),
++					             e.triggered ? 1 : 0, e.pending_events.size());
++				}
++			}
++#else
+ 			m_cond_var.Wait(&m_mutex);
++#endif
+ 		} else {
+ 			const auto external_wait = micros != 0 ? micros - elapsed : UINT32_MAX;
+ 			m_cond_var.WaitFor(&m_mutex,
 diff --git a/src/kernel/memory.cpp b/src/kernel/memory.cpp
-index febbd49a..29fdc93a 100644
+index febbd49a..511d03df 100644
 --- a/src/kernel/memory.cpp
 +++ b/src/kernel/memory.cpp
 @@ -10,6 +10,7 @@
@@ -1049,7 +1131,31 @@ index febbd49a..29fdc93a 100644
  #include <algorithm>
  #include <array>
  #include <atomic>
-@@ -857,7 +858,11 @@ static uint64_t FindGuestFreeRange(uint64_t search_addr, uint64_t size, uint64_t
+@@ -832,6 +833,23 @@ static std::recursive_mutex g_memory_operation_mutex;
+ // heap below it), so hint-less searches must not fall back to the low system-managed range.
+ static constexpr uint64_t GUEST_DEFAULT_MAP_BASE = 0x200000000ull;
+ 
++// Nova: an oversized reservation that was shrunk to fit ([base, base+asked), real part [base, base+got)).
++static uint64_t g_nova_big_base = 0, g_nova_big_asked = 0, g_nova_big_got = 0;
++static void NovaLogMap(const char* what, uint64_t in_addr, void** out, size_t len, int flags, int result) {
++	const uint64_t got = (result == 0 && out != nullptr) ? reinterpret_cast<uint64_t>(*out) : 0;
++	const uint64_t a   = got != 0 ? got : in_addr;
++	const bool in_big  = g_nova_big_asked != 0 && a >= g_nova_big_base && a < g_nova_big_base + g_nova_big_asked;
++	static std::atomic<uint32_t> fails {0}, bigs {0};
++	if (result != 0 && fails.fetch_add(1) < 64) {
++		std::fprintf(stderr, "NOVA_MEMORY: %s failed 0x%x addr=0x%llx len=0x%llx flags=0x%x\n", what, static_cast<unsigned>(result),
++		             static_cast<unsigned long long>(in_addr), static_cast<unsigned long long>(len), flags);
++	} else if (result == 0 && in_big && bigs.fetch_add(1) < 64) {
++		std::fprintf(stderr, "NOVA_MEMORY: %s in big reservation +0x%llx len=0x%llx%s\n", what,
++		             static_cast<unsigned long long>(a - g_nova_big_base), static_cast<unsigned long long>(len),
++		             a + len > g_nova_big_base + g_nova_big_got ? " (BEYOND the real part)" : "");
++	}
++}
++
+ static uint64_t FindGuestFreeRange(uint64_t search_addr, uint64_t size, uint64_t alignment) {
+ 	EXIT_IF(g_guest_address_space == nullptr || g_virtual_ranges == nullptr);
+ 
+@@ -857,7 +875,11 @@ static uint64_t FindGuestFreeRange(uint64_t search_addr, uint64_t size, uint64_t
  	};
  
  	if (search_addr != 0) {
@@ -1062,7 +1168,47 @@ index febbd49a..29fdc93a 100644
  	}
  	auto addr = find_in(GUEST_DEFAULT_MAP_BASE, HOST_SYSTEM_MANAGED_MAX + 1u);
  	if (addr == 0) {
-@@ -3545,12 +3550,33 @@ int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags,
+@@ -2257,8 +2279,18 @@ static bool UnmapPooledBackingTransactional(const std::vector<PooledMemory::Mapp
+ }
+ 
+ // The ABI entry points and batch operations hold g_memory_operation_mutex.
++static int MapFlexibleMemoryImpl(void** addr_in_out, size_t len, int prot, int flags,
++                                 const char* name);
++static void NovaLogMap(const char* what, uint64_t in_addr, void** out, size_t len, int flags, int result);
+ static int MapFlexibleMemory(void** addr_in_out, size_t len, int prot, int flags,
+                              const char* name) {
++	const uint64_t in_addr = addr_in_out != nullptr ? reinterpret_cast<uint64_t>(*addr_in_out) : 0;
++	const int      result  = MapFlexibleMemoryImpl(addr_in_out, len, prot, flags, name);
++	NovaLogMap("MapFlexible", in_addr, addr_in_out, len, flags, result);
++	return result;
++}
++static int MapFlexibleMemoryImpl(void** addr_in_out, size_t len, int prot, int flags,
++                                 const char* name) {
+ 	EXIT_NOT_IMPLEMENTED(addr_in_out == nullptr);
+ 
+ 	constexpr size_t   PAGE_SIZE                = 0x4000;
+@@ -2979,9 +3011,20 @@ int KYTY_SYSV_ABI KernelCheckedReleaseDirectMemory(int64_t start, size_t len) {
+ }
+ 
+ // The ABI entry points and batch operations hold g_memory_operation_mutex.
++static int MapDirectMemoryImpl(void** addr, size_t len, int prot, int flags,
++                               int64_t direct_memory_start, size_t alignment, const char* name,
++                               int type);
+ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
+                            int64_t direct_memory_start, size_t alignment, const char* name,
+                            int type = -1) {
++	const uint64_t in_addr = addr != nullptr ? reinterpret_cast<uint64_t>(*addr) : 0;
++	const int result = MapDirectMemoryImpl(addr, len, prot, flags, direct_memory_start, alignment, name, type);
++	NovaLogMap("MapDirect", in_addr, addr, len, flags, result);
++	return result;
++}
++static int MapDirectMemoryImpl(void** addr, size_t len, int prot, int flags,
++                               int64_t direct_memory_start, size_t alignment, const char* name,
++                               int type) {
+ 	if (addr == nullptr) {
+ 		return KERNEL_ERROR_EFAULT;
+ 	}
+@@ -3545,12 +3588,36 @@ int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags,
  	} else {
  		alignment = (alignment != 0 ? alignment : PAGE_SIZE);
  		out_addr  = FindGuestFreeRange(in_addr, len, alignment);
@@ -1072,10 +1218,13 @@ index febbd49a..29fdc93a 100644
 +		// up front and only ever commit a small part of it from the bottom. Reserve as much as
 +		// fits and return its base; the unbacked tail is never reached in practice.
 +		if (out_addr == 0 && len > 0x1000000000ull) {
-+			for (uint64_t shrunk = std::min<uint64_t>(len, 0x2000000000ull) & ~(PAGE_SIZE - 1);
-+			     shrunk >= 0x100000000ull && out_addr == 0; shrunk /= 2) {
-+				out_addr = FindGuestFreeRange(0, shrunk, alignment);
++			for (uint64_t shrunk = std::min<uint64_t>(len, 0x6000000000ull) & ~(PAGE_SIZE - 1);
++			     shrunk >= 0x100000000ull && out_addr == 0; shrunk -= 0x400000000ull) {
++				out_addr = FindGuestFreeRange(in_addr != 0 ? in_addr : HOST_USER_MIN, shrunk, alignment);
 +				if (out_addr != 0) {
++					g_nova_big_base  = out_addr;
++					g_nova_big_asked = len;
++					g_nova_big_got   = shrunk;
 +					std::fprintf(stderr, "NOVA_MEMORY: ReserveVirtualRange len=0x%llx does not fit; reserved 0x%llx at 0x%llx\n",
 +					             static_cast<unsigned long long>(len), static_cast<unsigned long long>(shrunk),
 +					             static_cast<unsigned long long>(out_addr));
