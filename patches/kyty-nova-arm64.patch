@@ -545,10 +545,45 @@ index 154d621d..de24c788 100644
  		case Mode::NoAccess:
  		default: protect = PROT_NONE; break;
 diff --git a/src/graphics/guest_gpu/graphicsRun.cpp b/src/graphics/guest_gpu/graphicsRun.cpp
-index e2b06883..d2750f37 100644
+index e2b06883..500b597e 100644
 --- a/src/graphics/guest_gpu/graphicsRun.cpp
 +++ b/src/graphics/guest_gpu/graphicsRun.cpp
-@@ -504,6 +504,10 @@ void GuestGpu::ThreadRun(void* data) {
+@@ -1,3 +1,6 @@
++#include "common/novaFex.h"
++#include <ctime>
++#include <cstdio>
+ #include "graphics/guest_gpu/graphicsRun.h"
+ 
+ #include "common/assert.h"
+@@ -316,6 +319,27 @@ void CommandProcessor::WaitRegMem(uint32_t func, const T* addr, T ref, T mask, u
+ 
+ 	(void)poll;
+ 	if (!TestWaitRegMemValue(*addr, ref, mask, func)) {
++#if defined(KYTY_NOVA_FEX)
++		// Nova: report a GPU queue that waits on memory for seconds (a frozen game).
++		static thread_local const void* waiting_on = nullptr;
++		static thread_local uint64_t    since_ms   = 0;
++		static thread_local bool        reported   = false;
++		timespec now {};
++		clock_gettime(CLOCK_MONOTONIC, &now);
++		const uint64_t now_ms = static_cast<uint64_t>(now.tv_sec) * 1000u + static_cast<uint64_t>(now.tv_nsec) / 1000000u;
++		if (waiting_on != addr) {
++			waiting_on = addr;
++			since_ms   = now_ms;
++			reported   = false;
++		} else if (!reported && now_ms - since_ms > 3000) {
++			reported = true;
++			std::fprintf(stderr,
++			             "NOVA_GPU_WAIT: queue(event %u) waits on 0x%016llx func=%u ref=0x%llx mask=0x%llx value=0x%llx for %llu ms\n",
++			             static_cast<unsigned>(m_interrupt_event_id), static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(addr)), func,
++			             static_cast<unsigned long long>(ref), static_cast<unsigned long long>(mask),
++			             static_cast<unsigned long long>(*addr), static_cast<unsigned long long>(now_ms - since_ms));
++		}
++#endif
+ 		SuspendPm4();
+ 	}
+ }
+@@ -504,6 +528,10 @@ void GuestGpu::ThreadRun(void* data) {
  
  		if (command) {
  			EXIT_IF(g_current_processor != nullptr);
