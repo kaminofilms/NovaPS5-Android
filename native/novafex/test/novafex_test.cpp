@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "novafex.h"
 
+#include <asm/sigcontext.h>
 #include <atomic>
 #include <cerrno>
 #include <chrono>
@@ -441,6 +442,7 @@ int main() {
 		                std::memcmp(src, back, sizeof(src)) == 0 && *reinterpret_cast<uint64_t*>(host) == 0x55;
 		Check("host access to guest VA", ok);
 	}
+#include "structured_simd.inc"
 	// Overheads.
 	{
 		// loop(n): push rbx; mov rbx,rdi; L: call gate(HostInc); dec rbx; jnz L; pop rbx; ret
@@ -475,3 +477,4 @@ int main() {
 	std::printf("NOVAFEX_TEST: %s (%d failures)\n", g_failures ? "FAILED" : "ALL PASS", g_failures);
 	return g_failures ? 1 : 0;
 }
+

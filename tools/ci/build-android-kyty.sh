@@ -28,6 +28,7 @@ for p in $(grep -v '^#' "$repo/patches/linux-core.series"); do
 done
 # Execute the host regressions against the sources that are about to be compiled.
 python3 "$repo/tests/test_native_startup.py" "$work/kyty"
+python3 "$repo/tests/test_release_mem.py" "$work/kyty"
 # SDL's AAudio backend: report stream errors, disconnects and underflows (debug LOGI is off
 # upstream) so the session log shows why audio stops.
 aaudio=kyty/3rdparty/SDL3/src/audio/aaudio/SDL_aaudio.c
@@ -71,4 +72,5 @@ for lib in "$out"/lib/*.so; do
     echo "== ${lib##*/}"; "$TC/llvm-readelf" -d "$lib" | grep -E "NEEDED|SONAME"
 done | tee "$out/logs/android-libs.txt"
 ls -la "$out/lib"
+
 

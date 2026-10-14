@@ -1124,13 +1124,16 @@ void WriteX(ucontext_t* uc, uint32_t n, uint64_t v) {
 	if (n != 31) uc->uc_mcontext.regs[n] = v;
 }
 uint8_t* VReg(ucontext_t* uc, uint32_t n) {
-	auto* head = reinterpret_cast<_aarch64_ctx*>(uc->uc_mcontext.__reserved);
-	while (head->magic != 0) {
-		if (head->magic == FPSIMD_MAGIC) {
+	auto* cursor = reinterpret_cast<uint8_t*>(uc->uc_mcontext.__reserved);
+	auto* end = cursor + sizeof(uc->uc_mcontext.__reserved);
+	while (cursor + sizeof(_aarch64_ctx) <= end) {
+		auto* head = reinterpret_cast<_aarch64_ctx*>(cursor);
+		if (head->magic == 0 || head->size < sizeof(_aarch64_ctx) ||
+		    head->size > static_cast<size_t>(end - cursor) || (head->size & 15)) break;
+		if (head->magic == FPSIMD_MAGIC && head->size >= sizeof(fpsimd_context)) {
 			return reinterpret_cast<uint8_t*>(&reinterpret_cast<fpsimd_context*>(head)->vregs[n]);
 		}
-		if (head->size == 0) break;
-		head = reinterpret_cast<_aarch64_ctx*>(reinterpret_cast<uint8_t*>(head) + head->size);
+		cursor += head->size;
 	}
 	return nullptr;
 }
@@ -1177,6 +1180,51 @@ bool EmulateHighAccess(ucontext_t* uc, uint64_t fault) {
 	const uint32_t insn = *reinterpret_cast<const uint32_t*>(uc->uc_mcontext.pc);
 	const uint32_t rt = insn & 31, rn = (insn >> 5) & 31;
 	const uint32_t size = insn >> 30;
+
+	// Advanced SIMD ST2/LD2 (multiple structures), not the lane or SVE families.
+	// ARM encoding: 0 Q 001100 post L 0 Rm 1000 size Rn Rt.
+	if ((insn & 0xBF20F000u) == 0x0C008000u) {
+		const bool post = (insn >> 23) & 1, load = (insn >> 22) & 1;
+		const unsigned rm = (insn >> 16) & 31, element = 1u << ((insn >> 10) & 3);
+		const unsigned width = (insn & (1u << 30)) ? 16 : 8, total = width * 2;
+		if ((!post && rm != 0) || (width == 8 && element == 8)) return false;
+		const uint64_t base = ReadBase(uc, rn);
+		if (base < FEXCore::Nova::kGuestVALowLimit || base > (uint64_t{1} << 47) - total ||
+		    (rn == 31 && (base & 15))) return false;
+		uint8_t* vectors[2] = {VReg(uc, rt), VReg(uc, (rt + 1) & 31)};
+		if (!vectors[0] || !vectors[1]) return false;
+		const uint64_t increment = rm == 31 ? total : ReadX(uc, rm);
+		// Resolve every byte before mutation: adjacent guest slots need not be adjacent on host.
+		uint8_t* addresses[32];
+		iovec remote[32];
+		uint8_t data[32];
+		for (unsigned i = 0; i < total; ++i) {
+			const uint64_t translated = TranslateGuestVA(base + i);
+			if (translated == base + i) return false;
+			addresses[i] = reinterpret_cast<uint8_t*>(translated);
+			remote[i] = {addresses[i], 1};
+		}
+		// Reject inaccessible backing pages before writing anything. This does not make the
+		// operation atomic against concurrent unmapping/protection changes.
+		iovec local {data, total};
+		if (syscall(SYS_process_vm_readv, getpid(), &local, 1UL, remote, static_cast<unsigned long>(total), 0UL) != total) return false;
+		for (unsigned lane = 0; lane < width / element; ++lane) {
+			for (unsigned reg = 0; reg < 2; ++reg) {
+				for (unsigned byte = 0; byte < element; ++byte) {
+					const unsigned offset = (lane * 2 + reg) * element + byte;
+					if (load) vectors[reg][lane * element + byte] = data[offset];
+					else *addresses[offset] = vectors[reg][lane * element + byte];
+				}
+			}
+		}
+		if (load && width == 8) {
+			std::memset(vectors[0] + 8, 0, 8);
+			std::memset(vectors[1] + 8, 0, 8);
+		}
+		if (post) WriteBase(uc, rn, base + increment);
+		uc->uc_mcontext.pc += 4;
+		return true;
+	}
 
 	// Load/store exclusive, ordered (LDAR/STLR/LDXR/STXR...) and CAS: xx 001000 ...
 	if ((insn & 0x3F000000) == 0x08000000) {
@@ -1405,3 +1453,4 @@ extern "C" __attribute__((visibility("hidden"))) void nova_bridge_call(uint64_t 
 	q[0] = args.ret_vec[0];
 	q[1] = args.ret_vec[1];
 }
+

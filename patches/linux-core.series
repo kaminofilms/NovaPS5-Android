@@ -5,3 +5,5 @@ kyty-nova-relaxed-vulkan.patch
 kyty-nova-libc-hle.patch
 kyty-nova-posix.patch
 kyty-nova-arm64.patch
+kyty-nova-release-batching.patch
+
