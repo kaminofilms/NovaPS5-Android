@@ -80,6 +80,10 @@ struct ThreadData {
 	std::atomic<uint64_t> gates {0};
 	std::atomic<uint64_t> in_host {0};   // host function currently executing, 0 = guest code
 	std::atomic<uint64_t> last_host {0};
+	// Last host calls of this thread: target, rdi, rsi, return value (for crash reports).
+	struct Recent { uint64_t target, a0, a1, ret; };
+	Recent   recent[16] {};
+	uint32_t recent_pos = 0;
 	int tid = 0;
 	~ThreadData();
 	uint64_t guest_stack_top = 0;
@@ -215,7 +219,10 @@ void GateDispatch(void* block_pointer) {
 	const auto saved_rsp = t.gate_rsp;
 	t.gate_stack_args = block->stack_args;
 	t.gate_rsp = reinterpret_cast<uint64_t>(block) - 8;
+	auto& r = t.recent[t.recent_pos++ % 16];
+	r = {block->target, block->gpr[0], block->gpr[1], 0};
 	nova_call_native(block);
+	r.ret = block->ret_gpr[0];
 	t.in_host.store(saved_in_host, std::memory_order_relaxed);
 	t.gate_stack_args = saved_args;
 	t.gate_rsp = saved_rsp;
@@ -803,6 +810,20 @@ void ReportGuestFault(void* ucontext) {
 			name = demangled != nullptr ? demangled : info.dli_sname;
 		}
 		std::fprintf(stderr, "NOVA_FAULT: last host call %.160s (gates=%llu)\n", name, (unsigned long long)t_thread.gates.load());
+		std::free(demangled);
+	}
+	for (uint32_t i = 0; i < 16 && i < t_thread.recent_pos; i++) {
+		const auto& r = t_thread.recent[(t_thread.recent_pos - 1 - i) % 16];
+		Dl_info info {};
+		const char* name = "?";
+		char* demangled = nullptr;
+		if (dladdr(reinterpret_cast<void*>(r.target), &info) != 0 && info.dli_sname != nullptr) {
+			int status = 0;
+			demangled = abi::__cxa_demangle(info.dli_sname, nullptr, nullptr, &status);
+			name = demangled != nullptr ? demangled : info.dli_sname;
+		}
+		std::fprintf(stderr, "NOVA_FAULT:   call -%u: %.110s (0x%llx, 0x%llx) -> 0x%llx\n", i, name,
+		             (unsigned long long)r.a0, (unsigned long long)r.a1, (unsigned long long)r.ret);
 		std::free(demangled);
 	}
 	if (!in_jit) return;

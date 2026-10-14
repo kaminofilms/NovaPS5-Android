@@ -1037,6 +1037,41 @@ index 06731ee7..0ce2c79b 100644
  }
  
  SrtWalker::SrtWalker(const ResourcePlan& program, const SrtRuntime& runtime,
+diff --git a/src/kernel/memory.cpp b/src/kernel/memory.cpp
+index febbd49a..f6ea7254 100644
+--- a/src/kernel/memory.cpp
++++ b/src/kernel/memory.cpp
+@@ -10,6 +10,7 @@
+ #include "libs/errno.h"
+ #include "libs/libs.h"
+ 
++#include <cstdio>
+ #include <algorithm>
+ #include <array>
+ #include <atomic>
+@@ -857,7 +858,11 @@ static uint64_t FindGuestFreeRange(uint64_t search_addr, uint64_t size, uint64_t
+ 	};
+ 
+ 	if (search_addr != 0) {
+-		return find_in(search_addr, HOST_USER_MAX + 1u);
++		// A hint is only a hint: when nothing fits at or above it (on Android the guest window
++		// ends far below the PS5's), search the normal ranges like the PS5 kernel does.
++		if (const auto hinted = find_in(search_addr, HOST_USER_MAX + 1u); hinted != 0) {
++			return hinted;
++		}
+ 	}
+ 	auto addr = find_in(GUEST_DEFAULT_MAP_BASE, HOST_SYSTEM_MANAGED_MAX + 1u);
+ 	if (addr == 0) {
+@@ -3551,6 +3556,9 @@ int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags,
+ 	}
+ 
+ 	if (out_addr == 0) {
++		std::fprintf(stderr, "NOVA_MEMORY: ReserveVirtualRange failed (ENOMEM) addr=0x%llx len=0x%llx flags=0x%x align=0x%llx\n",
++		             static_cast<unsigned long long>(in_addr), static_cast<unsigned long long>(len), flags,
++		             static_cast<unsigned long long>(alignment));
+ 		return KERNEL_ERROR_ENOMEM;
+ 	}
+ 
 diff --git a/src/kernel/memoryAddressSpace.inc b/src/kernel/memoryAddressSpace.inc
 index 6951f933..aadee503 100644
 --- a/src/kernel/memoryAddressSpace.inc

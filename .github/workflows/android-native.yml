@@ -141,10 +141,10 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.7.5-android-arm64.apk" \
-            --version-name 0.7.5-android --version-code 33 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.7.6-android-arm64.apk" \
+            --version-name 0.7.6-android --version-code 34 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.7.5-android-arm64.apk --sdk "$ANDROID_HOME" | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.7.6-android-arm64.apk --sdk "$ANDROID_HOME" | tee dist/apk/verify.txt
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -161,10 +161,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.7.5-android-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.7.5-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.7.5-android-arm64.apk SHA256SUMS.txt verify.txt --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.7.5 native Android (CI ${GITHUB_SHA::7}, device test build)" \
+          tag="v0.7.6-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.7.6-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.7.6-android-arm64.apk SHA256SUMS.txt verify.txt --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.7.6 native Android (CI ${GITHUB_SHA::7}, device test build)" \
             --notes "Native Android build: Kyty + embedded FEXCore in the app process, SDL3/Vulkan/AAudio. No DroidDeck, proot or Linux runtime. Signed with the same key as earlier test builds."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
