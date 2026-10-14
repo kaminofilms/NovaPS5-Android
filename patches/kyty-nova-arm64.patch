@@ -19,7 +19,7 @@ index f3cdf3a9..ca8d2e5a 100644
  	# SDL's built-in iconv fallback does not support CP932.
  	set(SDL_SYSTEM_ICONV ON CACHE BOOL "Use system iconv for CP932 conversion" FORCE)
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 213dd35b..9c222724 100644
+index 213dd35b..2eb21b3a 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -35,6 +35,13 @@ set(KYTY_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty")
@@ -109,7 +109,7 @@ index 213dd35b..9c222724 100644
  target_include_directories(ces_tests PRIVATE ${inc_headers})
  
  add_executable(save_data_dialog_tests EXCLUDE_FROM_ALL
-@@ -756,7 +786,21 @@ if(APPLE AND (CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64" OR
+@@ -756,7 +786,23 @@ if(APPLE AND (CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64" OR
  	endif()
  endif()
  
@@ -119,6 +119,8 @@ index 213dd35b..9c222724 100644
 +	set_target_properties(kyty_emulator PROPERTIES OUTPUT_NAME main)
 +	target_link_options(kyty_emulator PRIVATE -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384 -Wl,--no-undefined)
 +	target_link_libraries(kyty_emulator android log)
++	target_compile_options(kyty_emulator PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include ${KYTY_SOURCE_DIR}/common/novaBionic.h>")
++	target_compile_options(common PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include ${KYTY_SOURCE_DIR}/common/novaBionic.h>")
 +	# Turnip (or any custom Adreno driver) through libadrenotools, as Android Switch emulators do.
 +	if(NOVA_ADRENOTOOLS_SRC)
 +		add_subdirectory("${NOVA_ADRENOTOOLS_SRC}" "${CMAKE_CURRENT_BINARY_DIR}/adrenotools")
@@ -387,6 +389,87 @@ index d44c623c..91e9eccb 100644
  
  #endif
  
+diff --git a/src/common/novaBionic.h b/src/common/novaBionic.h
+new file mode 100644
+index 00000000..e4649b4b
+--- /dev/null
++++ b/src/common/novaBionic.h
+@@ -0,0 +1,75 @@
++// Nova PS5 on Android: what bionic does not provide. Force-included into Kyty's own sources only.
++#ifndef KYTY_COMMON_NOVA_BIONIC_H_
++#define KYTY_COMMON_NOVA_BIONIC_H_
++#if defined(__ANDROID__) && defined(__cplusplus)
++
++#include <pthread.h>
++
++#include <mutex>
++#include <unordered_set>
++
++// bionic has no thread cancellation. Deferred cancellation is emulated: a request is honored when
++// the target thread reaches a cancellation point it calls itself (pthread_testcancel).
++#ifndef PTHREAD_CANCEL_ENABLE
++#define PTHREAD_CANCEL_ENABLE  0
++#define PTHREAD_CANCEL_DISABLE 1
++#endif
++#ifndef PTHREAD_CANCEL_DEFERRED
++#define PTHREAD_CANCEL_DEFERRED     0
++#define PTHREAD_CANCEL_ASYNCHRONOUS 1
++#endif
++#ifndef PTHREAD_CANCELED
++#define PTHREAD_CANCELED (reinterpret_cast<void*>(-1))
++#endif
++
++#ifndef PTHREAD_MUTEX_FAST_NP
++#define PTHREAD_MUTEX_FAST_NP PTHREAD_MUTEX_NORMAL
++#endif
++
++namespace NovaBionic {
++inline std::mutex& CancelMutex() {
++	static std::mutex mutex;
++	return mutex;
++}
++inline std::unordered_set<pthread_t>& CancelPending() {
++	static std::unordered_set<pthread_t> pending;
++	return pending;
++}
++inline thread_local int t_cancel_state = PTHREAD_CANCEL_ENABLE;
++inline thread_local int t_cancel_type  = PTHREAD_CANCEL_DEFERRED;
++// Kyty installs its own thread exit (guest threads must not unwind through translated code).
++inline void (*g_cancel_exit)(void*) = nullptr;
++
++inline bool TakeCancel() {
++	if (t_cancel_state != PTHREAD_CANCEL_ENABLE) {
++		return false;
++	}
++	std::lock_guard lock(CancelMutex());
++	return CancelPending().erase(pthread_self()) != 0;
++}
++} // namespace NovaBionic
++
++inline int pthread_cancel(pthread_t thread) {
++	std::lock_guard lock(NovaBionic::CancelMutex());
++	NovaBionic::CancelPending().insert(thread);
++	return 0;
++}
++inline int pthread_setcancelstate(int state, int* old_state) {
++	if (old_state != nullptr) *old_state = NovaBionic::t_cancel_state;
++	NovaBionic::t_cancel_state = state;
++	return 0;
++}
++inline int pthread_setcanceltype(int type, int* old_type) {
++	if (old_type != nullptr) *old_type = NovaBionic::t_cancel_type;
++	NovaBionic::t_cancel_type = type;
++	return 0;
++}
++inline void pthread_testcancel() {
++	if (NovaBionic::TakeCancel()) {
++		if (NovaBionic::g_cancel_exit != nullptr) NovaBionic::g_cancel_exit(PTHREAD_CANCELED);
++		pthread_exit(PTHREAD_CANCELED);
++	}
++}
++
++#endif
++#endif /* KYTY_COMMON_NOVA_BIONIC_H_ */
 diff --git a/src/common/novaFex.h b/src/common/novaFex.h
 new file mode 100644
 index 00000000..a2badb0a
@@ -669,7 +752,7 @@ index 6951f933..aadee503 100644
  			default: return PROT_NONE;
  		}
 diff --git a/src/kernel/pthread.cpp b/src/kernel/pthread.cpp
-index 673a7dc7..85268c37 100644
+index 673a7dc7..0e9c4057 100644
 --- a/src/kernel/pthread.cpp
 +++ b/src/kernel/pthread.cpp
 @@ -47,6 +47,10 @@
@@ -741,7 +824,22 @@ index 673a7dc7..85268c37 100644
  #else
  	(void)stack_top;
  	return func(arg);
-@@ -3556,6 +3590,11 @@ void KYTY_SYSV_ABI PthreadExit(void* value) {
+@@ -3515,7 +3549,14 @@ int KYTY_SYSV_ABI PthreadSetprio(Pthread thread, int prio) {
+ void KYTY_SYSV_ABI PthreadTestcancel() {
+ 	PRINT_NAME();
+ 
++#if defined(KYTY_ANDROID)
++	// Emulated deferred cancellation (bionic has none): end through Kyty's own thread exit.
++	if (NovaBionic::TakeCancel()) {
++		PthreadExit(PTHREAD_CANCELED);
++	}
++#else
+ 	pthread_testcancel();
++#endif
+ }
+ 
+ void KYTY_SYSV_ABI PthreadExit(void* value) {
+@@ -3556,6 +3597,11 @@ void KYTY_SYSV_ABI PthreadExit(void* value) {
  			__builtin_unreachable();
  		}
  	}
