@@ -19,7 +19,7 @@ index f3cdf3a9..ca8d2e5a 100644
  	# SDL's built-in iconv fallback does not support CP932.
  	set(SDL_SYSTEM_ICONV ON CACHE BOOL "Use system iconv for CP932 conversion" FORCE)
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 213dd35b..bc3ad60a 100644
+index 213dd35b..d5d46030 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -35,6 +35,13 @@ set(KYTY_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty")
@@ -63,7 +63,19 @@ index 213dd35b..bc3ad60a 100644
  	"${KYTY_SOURCE_DIR}/graphics/*.cpp"
  	"${KYTY_SOURCE_DIR}/graphics/*.h"
  	"${KYTY_SOURCE_DIR}/graphics/guest_gpu/*.cpp"
-@@ -336,7 +357,17 @@ if (KYTY_CLANG_CL)
+@@ -266,6 +287,11 @@ set(gpu_tiler_shader_names
+ 	demote_d16
+ 	color_transform
+ )
++# Nova: AnyPS5's NGS2 reports errors with C++ exceptions (caught at its export wrappers).
++file(GLOB nova_anyngs2_src CONFIGURE_DEPENDS "${KYTY_SOURCE_DIR}/libs/anyngs2/*.cpp")
++set_source_files_properties(${nova_anyngs2_src} "${KYTY_SOURCE_DIR}/libs/anyNgs2Exports.cpp"
++	PROPERTIES COMPILE_OPTIONS "-fexceptions;-frtti")
++
+ file(GLOB gpu_tiler_shader_includes CONFIGURE_DEPENDS "${gpu_tiler_shader_dir}/gpu_tiler_*.inc")
+ foreach(shader_name IN LISTS gpu_tiler_shader_names)
+ 	set(shader_source "${gpu_tiler_shader_dir}/gpu_tiler_${shader_name}.comp")
+@@ -336,7 +362,17 @@ if (KYTY_CLANG_CL)
  	set_source_files_properties(${kyty_emulator_src} PROPERTIES COMPILE_FLAGS "-Wno-pragma-pack -Wno-deprecated-declarations -D_TIMESPEC_DEFINED")
  endif()
  
@@ -82,7 +94,7 @@ index 213dd35b..bc3ad60a 100644
  
  # Linux system libraries.
  if(LINUX)
-@@ -514,7 +545,7 @@ target_link_libraries(audio_out2_port_tests common fmt::fmt)
+@@ -514,7 +550,7 @@ target_link_libraries(audio_out2_port_tests common fmt::fmt)
  target_include_directories(audio_out2_port_tests PRIVATE ${inc_headers})
  
  add_executable(audio_out_timing_tests EXCLUDE_FROM_ALL "${KYTY_TESTS_DIR}/AudioOutTimingTests.cpp")
@@ -91,7 +103,7 @@ index 213dd35b..bc3ad60a 100644
  target_include_directories(audio_out_timing_tests PRIVATE ${inc_headers})
  
  add_executable(ngs2_sampler_tests EXCLUDE_FROM_ALL
-@@ -527,13 +558,13 @@ target_include_directories(ngs2_sampler_tests PRIVATE ${inc_headers})
+@@ -527,13 +563,13 @@ target_include_directories(ngs2_sampler_tests PRIVATE ${inc_headers})
  add_executable(pad_haptics_tests EXCLUDE_FROM_ALL
  	"${KYTY_TESTS_DIR}/PadHapticsTests.cpp"
  )
@@ -107,7 +119,7 @@ index 213dd35b..bc3ad60a 100644
  target_include_directories(controller_settings_tests PRIVATE ${inc_headers})
  
  add_executable(save_data_memory_tests EXCLUDE_FROM_ALL
-@@ -547,7 +578,7 @@ target_link_libraries(png_enc_tests common fmt::fmt)
+@@ -547,7 +583,7 @@ target_link_libraries(png_enc_tests common fmt::fmt)
  target_include_directories(png_enc_tests PRIVATE ${inc_headers})
  
  add_executable(ces_tests EXCLUDE_FROM_ALL "${KYTY_TESTS_DIR}/CesTests.cpp")
@@ -116,7 +128,7 @@ index 213dd35b..bc3ad60a 100644
  target_include_directories(ces_tests PRIVATE ${inc_headers})
  
  add_executable(save_data_dialog_tests EXCLUDE_FROM_ALL
-@@ -756,7 +787,24 @@ if(APPLE AND (CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64" OR
+@@ -756,7 +792,24 @@ if(APPLE AND (CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64" OR
  	endif()
  endif()
  
@@ -142,7 +154,7 @@ index 213dd35b..bc3ad60a 100644
  configure_macos_guest_address_space(kyty_emulator)
  
  set(KYTY_TROPHY_UNLOCK_SOUND "${CMAKE_CURRENT_SOURCE_DIR}/assets/sounds/trophy-unlock.wav")
-@@ -778,7 +826,7 @@ endif()
+@@ -778,7 +831,7 @@ endif()
  if (KYTY_CLANG_CL)
  	target_link_libraries(kyty_emulator onecore)
  endif()
