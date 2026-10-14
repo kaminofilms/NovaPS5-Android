@@ -1,0 +1,270 @@
+diff --git a/FEXCore/Source/CMakeLists.txt b/FEXCore/Source/CMakeLists.txt
+index dd8e4aa24..c84dc126e 100644
+--- a/FEXCore/Source/CMakeLists.txt
++++ b/FEXCore/Source/CMakeLists.txt
+@@ -68,6 +68,8 @@ set(SRCS
+   Interface/IR/Passes/RedundantFlagCalculationElimination.cpp
+   Interface/IR/Passes/RegisterAllocationPass.cpp
+   Interface/IR/Passes/x87StackOptimizationPass.cpp
++  Interface/IR/Passes/NovaAddressTranslationPass.cpp
++  Interface/Core/NovaGuestVA.cpp
+   Utils/LongJump.cpp
+   Utils/Telemetry.cpp
+   Utils/Threads.cpp
+diff --git a/FEXCore/Source/Interface/Core/JIT/MemoryOps.cpp b/FEXCore/Source/Interface/Core/JIT/MemoryOps.cpp
+index d7b716cab..2d5f57762 100644
+--- a/FEXCore/Source/Interface/Core/JIT/MemoryOps.cpp
++++ b/FEXCore/Source/Interface/Core/JIT/MemoryOps.cpp
+@@ -5,6 +5,7 @@ tags: backend|arm64
+ $end_info$
+ */
+ 
++#include <FEXCore/Core/NovaGuestVA.h>
+ #include "FEXCore/Core/X86Enums.h"
+ #include "FEXCore/Utils/LogManager.h"
+ #include "Interface/Context/Context.h"
+@@ -2455,6 +2456,28 @@ DEF_OP(CacheLineClean) {
+   }
+ }
+ 
++DEF_OP(NovaXlat) {
++  // Nova PS5 (see FEXCore/Core/NovaGuestVA.h): host = guest for addresses below 2^39,
++  // otherwise guest + GuestVATable[guest >> 30].
++  const auto Op = IROp->C<IR::IROp_NovaXlat>();
++  const auto Src = GetReg(Op->Addr);
++  const auto Dst = GetReg(Node);
++  ARMEmitter::ForwardLabel High;
++  ARMEmitter::ForwardLabel Done;
++  ubfx(ARMEmitter::Size::i64Bit, TMP1, Src, 39, 25);
++  (void)cbnz(ARMEmitter::Size::i64Bit, TMP1, &High);
++  if (Dst != Src) {
++    mov(ARMEmitter::Size::i64Bit, Dst, Src);
++  }
++  (void)b(&Done);
++  (void)Bind(&High);
++  ubfx(ARMEmitter::Size::i64Bit, TMP1, Src, FEXCore::Nova::kGuestVASlotShift, 17);
++  LoadConstant(ARMEmitter::Size::i64Bit, TMP2, reinterpret_cast<uint64_t>(&FEXCore::Nova::GuestVATable[0]));
++  ldr(TMP1.X(), ARMEmitter::ExtendedMemOperand(TMP2.X(), TMP1.X(), ARMEmitter::ExtendedType::LSL_64, 3));
++  add(ARMEmitter::Size::i64Bit, Dst, Src, TMP1);
++  (void)Bind(&Done);
++}
++
+ DEF_OP(CacheLineZero) {
+   auto Op = IROp->C<IR::IROp_CacheLineZero>();
+ 
+diff --git a/FEXCore/Source/Interface/Core/NovaGuestVA.cpp b/FEXCore/Source/Interface/Core/NovaGuestVA.cpp
+new file mode 100644
+index 000000000..9950272a1
+--- /dev/null
++++ b/FEXCore/Source/Interface/Core/NovaGuestVA.cpp
+@@ -0,0 +1,7 @@
++// SPDX-License-Identifier: MIT
++#include <FEXCore/Core/NovaGuestVA.h>
++
++namespace FEXCore::Nova {
++alignas(4096) uint64_t GuestVATable[kGuestVASlots] {};
++bool GuestVAEnabled = false;
++} // namespace FEXCore::Nova
+diff --git a/FEXCore/Source/Interface/IR/IR.json b/FEXCore/Source/Interface/IR/IR.json
+index 880520077..ce0e0b164 100644
+--- a/FEXCore/Source/Interface/IR/IR.json
++++ b/FEXCore/Source/Interface/IR/IR.json
+@@ -725,6 +725,13 @@
+                 ],
+         "HasSideEffects": true
+       },
++      "GPR = NovaXlat GPR:$Addr": {
++        "Desc": ["Nova PS5: translates a guest address to the host address that backs it.",
++                 "Addresses below 2^39 are returned unchanged; higher ones go through",
++                 "NovaGuestVATable (one host delta per 1 GiB guest slot)."
++                ],
++        "DestSize": "OpSize::i64Bit"
++      },
+       "CacheLineZero GPR:$Addr": {
+         "Desc": ["Does a 64 byte zero at the address specified",
+                  "Writing zeroes to memory",
+diff --git a/FEXCore/Source/Interface/IR/PassManager.cpp b/FEXCore/Source/Interface/IR/PassManager.cpp
+index 5d3bcec8b..7bf9cd3cc 100644
+--- a/FEXCore/Source/Interface/IR/PassManager.cpp
++++ b/FEXCore/Source/Interface/IR/PassManager.cpp
+@@ -77,6 +77,8 @@ void PassManager::AddDefaultPasses(Context::ContextImpl* ctx) {
+     InsertPass(CreateDeadFlagCalculationEliminination());
+   }
+ 
++  // Nova PS5: must run in every configuration (it is a correctness pass, a no-op unless enabled).
++  InsertPass(CreateNovaAddressTranslationPass(), "NovaAddressTranslation");
+   InsertPass(IR::CreateRegisterAllocationPass(&ctx->CPUID), "RA");
+ 
+ #if defined(ASSERTIONS_ENABLED) && ASSERTIONS_ENABLED
+diff --git a/FEXCore/Source/Interface/IR/Passes.h b/FEXCore/Source/Interface/IR/Passes.h
+index 213967a09..ff13182d4 100644
+--- a/FEXCore/Source/Interface/IR/Passes.h
++++ b/FEXCore/Source/Interface/IR/Passes.h
+@@ -12,6 +12,7 @@ namespace FEXCore::IR {
+ class Pass;
+ 
+ fextl::unique_ptr<Pass> CreateDeadFlagCalculationEliminination();
++fextl::unique_ptr<Pass> CreateNovaAddressTranslationPass();
+ fextl::unique_ptr<Pass> CreateRegisterAllocationPass(const CPUIDEmu* CPUID);
+ fextl::unique_ptr<Pass> CreateX87StackOptimizationPass(const HostFeatures&, OpSize GPROpSize);
+ 
+diff --git a/FEXCore/Source/Interface/IR/Passes/NovaAddressTranslationPass.cpp b/FEXCore/Source/Interface/IR/Passes/NovaAddressTranslationPass.cpp
+new file mode 100644
+index 000000000..0464534b4
+--- /dev/null
++++ b/FEXCore/Source/Interface/IR/Passes/NovaAddressTranslationPass.cpp
+@@ -0,0 +1,128 @@
++// SPDX-License-Identifier: MIT
++// Nova PS5: routes the address of every guest memory access through NovaXlat (see
++// FEXCore/Core/NovaGuestVA.h). Folded register/immediate offsets are added first, so the
++// translated value is the complete effective address and the access uses no further offset.
++#include "Interface/IR/IR.h"
++#include "Interface/IR/IREmitter.h"
++#include "Interface/IR/PassManager.h"
++#include "FEXCore/Utils/MathUtils.h"
++#include <FEXCore/Core/NovaGuestVA.h>
++#include <FEXCore/Utils/Profiler.h>
++
++namespace FEXCore::IR {
++namespace {
++class NovaAddressTranslation final : public Pass {
++public:
++  void Run(IREmitter* IREmit) override;
++
++private:
++  IREmitter* Emit {};
++
++  // Effective address = Addr + extend(Offset) << log2(Scale), computed before Node.
++  Ref EffectiveAddress(OrderedNodeWrapper AddrW, OrderedNodeWrapper OffsetW, MemOffsetType Type, uint8_t Scale) {
++    Ref Addr = Emit->UnwrapNode(AddrW);
++    if (OffsetW.IsInvalid()) {
++      return Addr;
++    }
++    const uint32_t Shift = Scale > 1 ? FEXCore::ilog2(Scale) : 0;
++    uint64_t Const {};
++    if (Emit->IsValueConstant(OffsetW, &Const) || Emit->IsValueInlineConstant(OffsetW)) {
++      if (Emit->IsValueInlineConstant(OffsetW)) {
++        const auto* Header = Emit->GetOpHeader(OffsetW);
++        Const = Header->C<IROp_InlineConstant>()->Constant;
++      }
++      int64_t Value = static_cast<int64_t>(Const);
++      if (Type == MemOffsetType::UXTW) {
++        Value = static_cast<int64_t>(static_cast<uint32_t>(Const));
++      } else if (Type == MemOffsetType::SXTW) {
++        Value = static_cast<int32_t>(Const);
++      }
++      Value = static_cast<int64_t>(static_cast<uint64_t>(Value) << Shift);
++      return Value == 0 ? Addr : Emit->Add(OpSize::i64Bit, Addr, Emit->Constant(Value));
++    }
++    Ref Offset = Emit->UnwrapNode(OffsetW);
++    if (Type == MemOffsetType::UXTW) {
++      Offset = Emit->_Bfe(OpSize::i64Bit, 32, 0, Offset);
++    } else if (Type == MemOffsetType::SXTW) {
++      Offset = Emit->_Sbfe(OpSize::i64Bit, 32, 0, Offset);
++    }
++    return Emit->_AddShift(OpSize::i64Bit, Addr, Offset, ShiftType::LSL, Shift);
++  }
++
++  void Rewrite(Ref Node, uint8_t AddrIndex, Ref EA) {
++    Ref Xlat = Emit->_NovaXlat(EA);
++    Emit->ReplaceNodeArgument(Node, AddrIndex, Xlat);
++  }
++
++  template<typename T>
++  void WithOffset(Ref Node, const IROp_Header* IROp) {
++    auto* Op = IROp->C<T>();
++    Emit->SetWriteCursorBefore(Node);
++    Ref EA = EffectiveAddress(Op->Addr, Op->Offset, Op->OffsetType, Op->OffsetScale);
++    Rewrite(Node, T::Addr_Index, EA);
++    if (!Op->Offset.IsInvalid()) {
++      Emit->ReplaceNodeArgument(Node, T::Offset_Index, Emit->Invalid());
++    }
++  }
++
++  template<typename T>
++  void Plain(Ref Node, const IROp_Header* IROp) {
++    auto* Op = IROp->C<T>();
++    Emit->SetWriteCursorBefore(Node);
++    Rewrite(Node, T::Addr_Index, Emit->UnwrapNode(Op->Addr));
++  }
++};
++
++void NovaAddressTranslation::Run(IREmitter* IREmit) {
++  if (!FEXCore::Nova::GuestVAEnabled) {
++    return;
++  }
++  FEXCORE_PROFILE_SCOPED("PassManager::NovaAddressTranslation");
++  Emit = IREmit;
++  auto CurrentIR = IREmit->ViewIR();
++  for (auto [BlockNode, BlockHeader] : CurrentIR.GetBlocks()) {
++    IREmit->SetCurrentCodeBlock(BlockNode);
++    for (auto [CodeNode, IROp] : CurrentIR.GetCode(BlockNode)) {
++      switch (IROp->Op) {
++      case OP_LOADMEM: WithOffset<IROp_LoadMem>(CodeNode, IROp); break;
++      case OP_STOREMEM: WithOffset<IROp_StoreMem>(CodeNode, IROp); break;
++      case OP_LOADMEMTSO: WithOffset<IROp_LoadMemTSO>(CodeNode, IROp); break;
++      case OP_STOREMEMTSO: WithOffset<IROp_StoreMemTSO>(CodeNode, IROp); break;
++      case OP_VLOADVECTORMASKED: WithOffset<IROp_VLoadVectorMasked>(CodeNode, IROp); break;
++      case OP_VSTOREVECTORMASKED: WithOffset<IROp_VStoreVectorMasked>(CodeNode, IROp); break;
++      case OP_LOADMEMPAIR: Plain<IROp_LoadMemPair>(CodeNode, IROp); break;
++      case OP_STOREMEMPAIR: Plain<IROp_StoreMemPair>(CodeNode, IROp); break;
++      case OP_LOADMEMX87SVEOPTPREDICATE: Plain<IROp_LoadMemX87SVEOptPredicate>(CodeNode, IROp); break;
++      case OP_STOREMEMX87SVEOPTPREDICATE: Plain<IROp_StoreMemX87SVEOptPredicate>(CodeNode, IROp); break;
++      case OP_VLOADVECTORELEMENT: Plain<IROp_VLoadVectorElement>(CodeNode, IROp); break;
++      case OP_VSTOREVECTORELEMENT: Plain<IROp_VStoreVectorElement>(CodeNode, IROp); break;
++      case OP_VLOADNONTEMPORAL: Plain<IROp_VLoadNonTemporal>(CodeNode, IROp); break;
++      case OP_VSTORENONTEMPORAL: Plain<IROp_VStoreNonTemporal>(CodeNode, IROp); break;
++      case OP_VSTORENONTEMPORALPAIR: Plain<IROp_VStoreNonTemporalPair>(CodeNode, IROp); break;
++      case OP_CAS: Plain<IROp_CAS>(CodeNode, IROp); break;
++      case OP_CASPAIR: Plain<IROp_CASPair>(CodeNode, IROp); break;
++      case OP_ATOMICSWAP: Plain<IROp_AtomicSwap>(CodeNode, IROp); break;
++      case OP_ATOMICFETCHADD: Plain<IROp_AtomicFetchAdd>(CodeNode, IROp); break;
++      case OP_ATOMICFETCHSUB: Plain<IROp_AtomicFetchSub>(CodeNode, IROp); break;
++      case OP_ATOMICFETCHAND: Plain<IROp_AtomicFetchAnd>(CodeNode, IROp); break;
++      case OP_ATOMICFETCHCLR: Plain<IROp_AtomicFetchCLR>(CodeNode, IROp); break;
++      case OP_ATOMICFETCHOR: Plain<IROp_AtomicFetchOr>(CodeNode, IROp); break;
++      case OP_ATOMICFETCHXOR: Plain<IROp_AtomicFetchXor>(CodeNode, IROp); break;
++      case OP_ATOMICFETCHNEG: Plain<IROp_AtomicFetchNeg>(CodeNode, IROp); break;
++      case OP_VBROADCASTFROMMEM: {
++        auto* Op = IROp->C<IROp_VBroadcastFromMem>();
++        IREmit->SetWriteCursorBefore(CodeNode);
++        Rewrite(CodeNode, IROp_VBroadcastFromMem::Address_Index, IREmit->UnwrapNode(Op->Address));
++        break;
++      }
++      default: break;
++      }
++    }
++  }
++}
++} // namespace
++
++fextl::unique_ptr<Pass> CreateNovaAddressTranslationPass() {
++  return fextl::make_unique<NovaAddressTranslation>();
++}
++} // namespace FEXCore::IR
+diff --git a/FEXCore/include/FEXCore/Core/NovaGuestVA.h b/FEXCore/include/FEXCore/Core/NovaGuestVA.h
+new file mode 100644
+index 000000000..481c84c8b
+--- /dev/null
++++ b/FEXCore/include/FEXCore/Core/NovaGuestVA.h
+@@ -0,0 +1,20 @@
++// SPDX-License-Identifier: MIT
++// Nova PS5: guest virtual addresses above the host's address space.
++//
++// Android ARM64 kernels commonly give an app a 39-bit (512 GiB) address space while PS5 titles
++// use addresses up to 1 TiB and more (libc's 512/768 GiB arena puts data at its top). When
++// enabled, every guest memory access goes through NovaXlat: addresses below 2^39 are used as is
++// (identity, zero cost beyond one test), higher ones are rebased per 1 GiB slot through
++// GuestVATable (host = guest + delta). A zero delta leaves the address unmapped (it faults).
++#pragma once
++#include <cstddef>
++#include <cstdint>
++
++namespace FEXCore::Nova {
++constexpr uint64_t kGuestVALowLimit = uint64_t {1} << 39;
++constexpr uint32_t kGuestVASlotShift = 30;
++constexpr size_t kGuestVASlots = size_t {1} << 17; // 2^47 / 1 GiB
++
++extern uint64_t GuestVATable[kGuestVASlots];
++extern bool GuestVAEnabled;
++} // namespace FEXCore::Nova

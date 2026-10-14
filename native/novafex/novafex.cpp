@@ -24,6 +24,7 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
+#include <FEXCore/Core/NovaGuestVA.h>
 #include <map>
 #include <mutex>
 #include <shared_mutex>
@@ -620,6 +621,10 @@ bool Init() {
 	if (g_initialized) {
 		return true;
 	}
+	if (const char* va = getenv("NOVA_GUEST_VA"); va != nullptr && va[0] == '1') {
+		FEXCore::Nova::GuestVAEnabled = true;
+		std::fprintf(stderr, "NOVA_FEX: guest addresses above 2^39 are translated (NOVA_GUEST_VA)\n");
+	}
 	LogMan::Msg::InstallHandler(LogHandler);
 	LogMan::Throw::InstallHandler(ThrowHandler);
 	FEXCore::Config::Initialize();
@@ -878,6 +883,33 @@ void InvalidateGuestCode(uint64_t start, uint64_t size) {
 
 void NoteFrame() {
 	g_frames.fetch_add(1, std::memory_order_relaxed);
+}
+
+void EnableGuestVA() {
+	FEXCore::Nova::GuestVAEnabled = true;
+}
+
+bool GuestVAEnabled() {
+	return FEXCore::Nova::GuestVAEnabled;
+}
+
+void MapGuestVASlot(uint64_t guest_slot_base, uint64_t host_base) {
+	const uint64_t slot = guest_slot_base >> FEXCore::Nova::kGuestVASlotShift;
+	if (slot >= FEXCore::Nova::kGuestVASlots) return;
+	const uint64_t base = slot << FEXCore::Nova::kGuestVASlotShift;
+	__atomic_store_n(&FEXCore::Nova::GuestVATable[slot], host_base - base, __ATOMIC_RELEASE);
+}
+
+void UnmapGuestVASlot(uint64_t guest_slot_base) {
+	const uint64_t slot = guest_slot_base >> FEXCore::Nova::kGuestVASlotShift;
+	if (slot >= FEXCore::Nova::kGuestVASlots) return;
+	__atomic_store_n(&FEXCore::Nova::GuestVATable[slot], uint64_t {0}, __ATOMIC_RELEASE);
+}
+
+uint64_t TranslateGuestVA(uint64_t guest) {
+	if (guest < FEXCore::Nova::kGuestVALowLimit) return guest;
+	const uint64_t slot = (guest >> FEXCore::Nova::kGuestVASlotShift) & (FEXCore::Nova::kGuestVASlots - 1);
+	return guest + __atomic_load_n(&FEXCore::Nova::GuestVATable[slot], __ATOMIC_ACQUIRE);
 }
 
 void NameHostFunction(const void* function, const char* name) {

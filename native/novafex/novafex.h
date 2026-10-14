@@ -112,6 +112,17 @@ NOVAFEX_API void SetFreezeReportHook(void (*hook)());
 // or internal HLE functions). `name` must stay valid for the life of the process.
 NOVAFEX_API void NameHostFunction(const void* function, const char* name);
 
+// Guest addresses above the host address space (see FEXCore/Core/NovaGuestVA.h). Must be enabled
+// before guest code is translated (NOVA_GUEST_VA=1 at Init, or EnableGuestVA() before the first
+// CallGuest). A slot is 1 GiB of guest space; MapGuestVASlot backs it with host memory starting
+// at host_base (any address; the caller reserves 1 GiB there).
+NOVAFEX_API void EnableGuestVA();
+NOVAFEX_API bool GuestVAEnabled();
+NOVAFEX_API void MapGuestVASlot(uint64_t guest_slot_base, uint64_t host_base);
+NOVAFEX_API void UnmapGuestVASlot(uint64_t guest_slot_base);
+// Host address for a guest address (identity below the host limit or for unmapped slots).
+NOVAFEX_API uint64_t TranslateGuestVA(uint64_t guest);
+
 // Invalidates translated guest code (after the guest or the loader modifies code bytes).
 NOVAFEX_API void InvalidateGuestCode(uint64_t start, uint64_t size);
 

@@ -364,6 +364,43 @@ int main() {
 		Check("gate exit hook", before == 12 && armed == 30 && after == 4 && runs_before == 0 && g_hook_runs.load() >= 1);
 		NovaFex::SetGateExitHook(nullptr);
 	}
+	// Guest addresses above the host's address space (NOVA_GUEST_VA). Enabled from here on, so
+	// only code translated after this point is affected.
+	{
+		NovaFex::EnableGuestVA();
+		constexpr uint64_t kGuestSlot = 0x8fc0000000ull & ~((uint64_t {1} << 30) - 1); // slot of libc's arena top
+		void* window = mmap(nullptr, uint64_t {1} << 30, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
+		const auto host = reinterpret_cast<uint64_t>(window);
+		const uint64_t guest = 0x8fc0000000ull + 0x123450;
+		const uint64_t backing = host + (guest - kGuestSlot);
+		mprotect(reinterpret_cast<void*>(backing & ~uint64_t {0xfff}), 0x2000, PROT_READ | PROT_WRITE);
+		NovaFex::MapGuestVASlot(kGuestSlot, host);
+		*reinterpret_cast<uint64_t*>(backing) = 0x1122334455667788ull;
+		// load64(p): mov rax, [rdi]; ret
+		const uint64_t load64 = code.Emit({0x48, 0x8B, 0x07, 0xC3});
+		// store64(p, v): mov [rdi], rsi; ret
+		const uint64_t store64 = code.Emit({0x48, 0x89, 0x37, 0xC3});
+		// loadidx(base, idx): mov rax, [rdi + rsi*8 + 0x10]; ret
+		const uint64_t loadidx = code.Emit({0x48, 0x8B, 0x44, 0xF7, 0x10, 0xC3});
+		// xadd(p, v): lock xadd [rdi], rsi; mov rax, rsi; ret
+		const uint64_t xadd = code.Emit({0xF0, 0x48, 0x0F, 0xC1, 0x37, 0x48, 0x89, 0xF0, 0xC3});
+		const uint64_t r1 = NovaFex::CallGuest(load64, guest);
+		NovaFex::CallGuest(store64, guest + 8, 0xCAFEF00Dull);
+		const uint64_t stored = *reinterpret_cast<uint64_t*>(backing + 8);
+		*reinterpret_cast<uint64_t*>(backing + 0x20) = 77;
+		const uint64_t r3 = NovaFex::CallGuest(loadidx, guest, 2); // guest + 16 + 16
+		const uint64_t old = NovaFex::CallGuest(xadd, guest + 8, 5);
+		const uint64_t after = *reinterpret_cast<uint64_t*>(backing + 8);
+		static uint64_t low_cell = 99;
+		const uint64_t r_low = NovaFex::CallGuest(load64, reinterpret_cast<uint64_t>(&low_cell));
+		const bool ok = r1 == 0x1122334455667788ull && stored == 0xCAFEF00Dull && r3 == 77 && old == 0xCAFEF00Dull &&
+		                after == 0xCAFEF00Dull + 5 && r_low == 99 && NovaFex::TranslateGuestVA(guest) == backing;
+		char d[160];
+		std::snprintf(d, sizeof(d), "(load=%llx store=%llx idx=%llu xadd=%llx/%llx low=%llu)", (unsigned long long)r1,
+		              (unsigned long long)stored, (unsigned long long)r3, (unsigned long long)old, (unsigned long long)after,
+		              (unsigned long long)r_low);
+		Check("guest VA above 2^39", ok, d);
+	}
 	// Overheads.
 	{
 		// loop(n): push rbx; mov rbx,rdi; L: call gate(HostInc); dec rbx; jnz L; pop rbx; ret
