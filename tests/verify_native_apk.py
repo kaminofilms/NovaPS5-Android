@@ -14,8 +14,8 @@ p = argparse.ArgumentParser()
 p.add_argument('apk')
 p.add_argument('--sdk', required=True)
 p.add_argument('--ndk', default=os.environ.get('ANDROID_NDK_LATEST_HOME') or os.environ.get('ANDROID_NDK_HOME'))
-p.add_argument('--version-name', default='0.8.4-android')
-p.add_argument('--version-code', default='42')
+p.add_argument('--version-name', default='0.8.5-android')
+p.add_argument('--version-code', default='43')
 a = p.parse_args()
 root = pathlib.Path(__file__).resolve().parents[1]
 sdk = pathlib.Path(a.sdk)
@@ -92,3 +92,4 @@ with tempfile.TemporaryDirectory() as tmp, zipfile.ZipFile(a.apk) as z:
           ', '.join(sorted(s for s in exports.get('libnovafex.so', set()) if not s.startswith('_ZN7NovaFex'))[:10]))
 print('NOVA_NATIVE_APK:', 'ALL PASS' if not failures else f'{len(failures)} FAILED: ' + ', '.join(failures))
 sys.exit(1 if failures else 0)
+
