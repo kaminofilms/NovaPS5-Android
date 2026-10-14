@@ -28,6 +28,7 @@ public final class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
+        setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         BootLog.install(this);
         BootLog.write(this, "NovaPs5 " + VERSION + " started; Android " + Build.VERSION.SDK_INT + " " + Build.MANUFACTURER + " " + Build.MODEL);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);

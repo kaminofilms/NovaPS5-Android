@@ -34,6 +34,7 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
         if (game == null) game = "";
         prepareEnvironment();
         super.onCreate(state);
+        setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         pad = new NovaPad(this, this);
         pad.opacity = getSharedPreferences("nova", 0).getInt("opacity", 70) / 100f;
         pad.visible = getSharedPreferences("nova", 0).getBoolean("touch_controls", true) && !physicalGamepad();
@@ -124,6 +125,11 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
                     || (sources & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK) return true;
         }
         return false;
+    }
+
+    /** PS5 games are always landscape; SDL would otherwise pick from the window size. */
+    @Override public void setOrientationBis(int w, int h, boolean resizable, String hint) {
+        setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
     }
 
     @Override protected String[] getLibraries() {
