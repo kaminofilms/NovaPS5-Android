@@ -1255,7 +1255,7 @@ index 8641e8a9..8c9aef6b 100644
  			const auto external_wait = micros != 0 ? micros - elapsed : UINT32_MAX;
  			m_cond_var.WaitFor(&m_mutex,
 diff --git a/src/kernel/memory.cpp b/src/kernel/memory.cpp
-index febbd49a..24d31733 100644
+index febbd49a..bc18f134 100644
 --- a/src/kernel/memory.cpp
 +++ b/src/kernel/memory.cpp
 @@ -1,6 +1,8 @@
@@ -1275,12 +1275,18 @@ index febbd49a..24d31733 100644
  #include <algorithm>
  #include <array>
  #include <atomic>
-@@ -832,6 +835,23 @@ static std::recursive_mutex g_memory_operation_mutex;
+@@ -832,6 +835,29 @@ static std::recursive_mutex g_memory_operation_mutex;
  // heap below it), so hint-less searches must not fall back to the low system-managed range.
  static constexpr uint64_t GUEST_DEFAULT_MAP_BASE = 0x200000000ull;
  
 +// Nova: an oversized reservation that was shrunk to fit ([base, base+asked), real part [base, base+got)).
 +static uint64_t g_nova_big_base = 0, g_nova_big_asked = 0, g_nova_big_got = 0;
++// True when [a, a+len) lies inside the oversized arena but outside the part reserved for it.
++[[maybe_unused]] static bool NovaInBigArenaTail(uint64_t a, uint64_t len) {
++	return g_nova_big_asked != 0 && a >= g_nova_big_base + g_nova_big_got &&
++	       a + len <= g_nova_big_base + g_nova_big_asked;
++}
++
 +static void NovaLogMap(const char* what, uint64_t in_addr, void** out, size_t len, int flags, int result) {
 +	const uint64_t got = (result == 0 && out != nullptr) ? reinterpret_cast<uint64_t>(*out) : 0;
 +	const uint64_t a   = got != 0 ? got : in_addr;
@@ -1299,7 +1305,7 @@ index febbd49a..24d31733 100644
  static uint64_t FindGuestFreeRange(uint64_t search_addr, uint64_t size, uint64_t alignment) {
  	EXIT_IF(g_guest_address_space == nullptr || g_virtual_ranges == nullptr);
  
-@@ -857,7 +877,11 @@ static uint64_t FindGuestFreeRange(uint64_t search_addr, uint64_t size, uint64_t
+@@ -857,7 +883,11 @@ static uint64_t FindGuestFreeRange(uint64_t search_addr, uint64_t size, uint64_t
  	};
  
  	if (search_addr != 0) {
@@ -1312,7 +1318,7 @@ index febbd49a..24d31733 100644
  	}
  	auto addr = find_in(GUEST_DEFAULT_MAP_BASE, HOST_SYSTEM_MANAGED_MAX + 1u);
  	if (addr == 0) {
-@@ -2257,8 +2281,18 @@ static bool UnmapPooledBackingTransactional(const std::vector<PooledMemory::Mapp
+@@ -2257,8 +2287,18 @@ static bool UnmapPooledBackingTransactional(const std::vector<PooledMemory::Mapp
  }
  
  // The ABI entry points and batch operations hold g_memory_operation_mutex.
@@ -1331,7 +1337,22 @@ index febbd49a..24d31733 100644
  	EXIT_NOT_IMPLEMENTED(addr_in_out == nullptr);
  
  	constexpr size_t   PAGE_SIZE                = 0x4000;
-@@ -2979,9 +3013,28 @@ int KYTY_SYSV_ABI KernelCheckedReleaseDirectMemory(int64_t start, size_t len) {
+@@ -2331,6 +2371,14 @@ static int MapFlexibleMemory(void** addr_in_out, size_t len, int prot, int flags
+ 			reserved_target = true;
+ 			out_addr        = in_addr;
+ 		}
++#if defined(__ANDROID__)
++		if (!reserved_target && NovaInBigArenaTail(in_addr, len) &&
++		    g_guest_address_space->AdoptHostRange(in_addr, len) &&
++		    ReplaceFixedRangeWithReserved(in_addr, len)) {
++			reserved_target = true;
++			out_addr        = in_addr;
++		}
++#endif
+ 	} else {
+ 		const auto search_addr = (in_addr != 0 ? in_addr : DEFAULT_PS5_BASE);
+ 		out_addr               = FindGuestFreeRange(search_addr, len, map_alignment);
+@@ -2979,9 +3027,28 @@ int KYTY_SYSV_ABI KernelCheckedReleaseDirectMemory(int64_t start, size_t len) {
  }
  
  // The ABI entry points and batch operations hold g_memory_operation_mutex.
@@ -1360,7 +1381,7 @@ index febbd49a..24d31733 100644
  	if (addr == nullptr) {
  		return KERNEL_ERROR_EFAULT;
  	}
-@@ -3038,10 +3091,24 @@ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
+@@ -3038,10 +3105,24 @@ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
  		MapGpuRange(in_addr, len);
  	};
  	if (fixed) {
@@ -1387,7 +1408,72 @@ index febbd49a..24d31733 100644
  		if (no_overwrite && g_virtual_ranges->HasOverlap(in_addr, len)) {
  			return KERNEL_ERROR_ENOMEM;
  		}
-@@ -3545,12 +3612,36 @@ int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags,
+@@ -3102,6 +3183,17 @@ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
+ 			if (!reserved_target && ReplaceFixedRangeWithReserved(in_addr, len)) {
+ 				reserved_target = true;
+ 			}
++#if defined(__ANDROID__)
++			// The top of an oversized arena (Unreal's libc heap maps at base + 511 GiB) lies in
++			// the host headroom; take that exact range from the host if it is unused.
++			if (!reserved_target && NovaInBigArenaTail(in_addr, len) &&
++			    g_guest_address_space->AdoptHostRange(in_addr, len) &&
++			    ReplaceFixedRangeWithReserved(in_addr, len)) {
++				reserved_target = true;
++				std::fprintf(stderr, "NOVA_MEMORY: arena tail 0x%llx len=0x%llx taken from the host range\n",
++				             static_cast<unsigned long long>(in_addr), static_cast<unsigned long long>(len));
++			}
++#endif
+ 			if (!reserved_target) {
+ 				return KERNEL_ERROR_ENOMEM;
+ 			}
+@@ -3504,6 +3596,46 @@ static bool ReplaceFixedRangeWithReserved(uint64_t start, uint64_t size) {
+ 	return true;
+ }
+ 
++#if defined(__ANDROID__)
++static uint64_t NovaProbeHostCeiling() {
++	static const uint64_t ceiling = [] {
++		for (int bit = 48; bit >= 36; bit--) {
++			void* want = reinterpret_cast<void*>(uint64_t {1} << (bit - 1));
++			void* ptr  = mmap(want, 0x10000, PROT_NONE, MAP_PRIVATE | MAP_ANON | MAP_NORESERVE | MAP_FIXED_NOREPLACE, -1, 0);
++			if (ptr != MAP_FAILED) {
++				munmap(ptr, 0x10000);
++			}
++			if (ptr == want) {
++				return uint64_t {1} << bit;
++			}
++		}
++		return uint64_t {1} << 39;
++	}();
++	return ceiling;
++}
++
++// First aligned guest-free range of `size` bytes inside [begin, end) not used by any guest range.
++static uint64_t NovaFindFreeIn(uint64_t begin, uint64_t end, uint64_t size, uint64_t alignment) {
++	auto current = begin;
++	while (current < end && size <= end - current) {
++		const auto candidate = g_guest_address_space->FindFreeAligned(current, end, size, alignment);
++		if (candidate == 0) {
++			return 0;
++		}
++		VirtualRanges::Range overlap {};
++		if (!g_virtual_ranges->QueryOverlap(candidate, size, &overlap)) {
++			return candidate;
++		}
++		const auto overlap_end = overlap.start + overlap.size;
++		if (overlap_end <= current) {
++			return 0;
++		}
++		current = overlap_end;
++	}
++	return 0;
++}
++#endif
++
+ int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags, size_t alignment) {
+ 	PRINT_NAME();
+ 
+@@ -3545,12 +3677,65 @@ int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags,
  	} else {
  		alignment = (alignment != 0 ? alignment : PAGE_SIZE);
  		out_addr  = FindGuestFreeRange(in_addr, len, alignment);
@@ -1396,6 +1482,35 @@ index febbd49a..24d31733 100644
 +		// smaller than the PS5's. Engines (Unreal's libc heap, for example) reserve a huge range
 +		// up front and only ever commit a small part of it from the bottom. Reserve as much as
 +		// fits and return its base; the unbacked tail is never reached in practice.
++		if (out_addr == 0 && len > 0x1000000000ull) {
++			// Engines place structures relative to both ends of the arena (Unreal's libc maps
++			// its large-block region at base + len - 1 GiB). Put the base low enough that this
++			// top region is still a host address (below the 39-bit ceiling), reserve the bottom
++			// 16 GiB plus a little slack for real and take tail pieces on demand.
++			const uint64_t ceiling  = NovaProbeHostCeiling();
++			const uint64_t top_need = len - 0x40000000ull + 0x4000000ull;
++			const uint64_t arena_align = std::max<uint64_t>(alignment, 0x200000ull);
++			constexpr uint64_t kBottom = 0x400000000ull;
++			constexpr uint64_t kSlack  = 0x400000ull;
++			if (len > 0x40000000ull && top_need < ceiling && len <= ceiling + 0x40000000ull) {
++				const uint64_t max_base = ceiling - top_need;
++				const uint64_t base = NovaFindFreeIn(HOST_SYSTEM_MANAGED_MIN, max_base + kBottom + kSlack,
++				                                     kBottom + kSlack, arena_align);
++				if (base != 0 && base <= max_base) {
++					out_addr         = base;
++					g_nova_big_base  = base;
++					g_nova_big_asked = len;
++					g_nova_big_got   = kBottom;
++					std::fprintf(stderr, "NOVA_MEMORY: ReserveVirtualRange len=0x%llx does not fit; arena at 0x%llx "
++					             "(bottom 0x%llx reserved, top at 0x%llx below the 0x%llx ceiling)\n",
++					             static_cast<unsigned long long>(len), static_cast<unsigned long long>(base),
++					             static_cast<unsigned long long>(kBottom),
++					             static_cast<unsigned long long>(base + len - 0x40000000ull),
++					             static_cast<unsigned long long>(ceiling));
++					len = kBottom;
++				}
++			}
++		}
 +		if (out_addr == 0 && len > 0x1000000000ull) {
 +			for (uint64_t shrunk = std::min<uint64_t>(len, 0x6000000000ull) & ~(PAGE_SIZE - 1);
 +			     shrunk >= 0x100000000ull && out_addr == 0; shrunk -= 0x400000000ull) {
@@ -1425,7 +1540,7 @@ index febbd49a..24d31733 100644
  	}
  
 diff --git a/src/kernel/memoryAddressSpace.inc b/src/kernel/memoryAddressSpace.inc
-index 6951f933..aadee503 100644
+index 6951f933..5879274d 100644
 --- a/src/kernel/memoryAddressSpace.inc
 +++ b/src/kernel/memoryAddressSpace.inc
 @@ -635,15 +635,21 @@ private:
@@ -1453,6 +1568,42 @@ index 6951f933..aadee503 100644
  			case VirtualMemory::Mode::NoAccess:
  			default: return PROT_NONE;
  		}
+@@ -883,6 +889,35 @@ public:
+ 		return FindFreeAlignedUnlocked(search_start, search_end, size, alignment);
+ 	}
+ 
++#if KYTY_PLATFORM == KYTY_PLATFORM_LINUX && !defined(__APPLE__)
++	// Nova: takes a host range outside the guest regions reserved at startup (for example the
++	// top of an oversized arena that sits in the host headroom) into the guest address space.
++	// Only succeeds when the host range is completely unused.
++	bool AdoptHostRange(uint64_t vaddr, uint64_t size) {
++		if (vaddr == 0 || size == 0 || !IsPageAligned(vaddr) || !IsPageAligned(size)) {
++			return false;
++		}
++		std::lock_guard lock(m_mutex);
++		if (FindContaining(vaddr, size) != m_free.end()) {
++			return true;
++		}
++		int flags = MAP_PRIVATE | MAP_ANON | MAP_NORESERVE;
++#if defined(MAP_FIXED_NOREPLACE)
++		flags |= MAP_FIXED_NOREPLACE;
++#endif
++		void* ptr = mmap(reinterpret_cast<void*>(vaddr), size, PROT_NONE, flags, -1, 0);
++		if (ptr == MAP_FAILED || reinterpret_cast<uint64_t>(ptr) != vaddr) {
++			if (ptr != MAP_FAILED) {
++				munmap(ptr, size);
++			}
++			return false;
++		}
++		AddFreeUnlocked(vaddr, size);
++		m_owned.emplace_back(vaddr, size);
++		return true;
++	}
++#endif
++
+ 	bool ReserveFixed(uint64_t vaddr, uint64_t size) {
+ 		if (vaddr == 0 || size == 0 || !IsPageAligned(vaddr) || !IsPageAligned(size)) {
+ 			return false;
 diff --git a/src/kernel/novaMemoryCompatibility.h b/src/kernel/novaMemoryCompatibility.h
 new file mode 100644
 index 00000000..ea937e62
