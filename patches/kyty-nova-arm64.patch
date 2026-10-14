@@ -265,6 +265,60 @@ index c7d64187..ebd9a08d 100644
  
  constexpr bool IsConfiguredUserIdValid(int32_t user_id) {
  	constexpr int32_t USER_ID_EVERYONE = 0xfe;
+diff --git a/src/common/file.cpp b/src/common/file.cpp
+index 83f8289f..dff1234b 100644
+--- a/src/common/file.cpp
++++ b/src/common/file.cpp
+@@ -1,4 +1,5 @@
+ #include "common/file.h"
++#include "common/novaFex.h"
+ 
+ #include "common/archive.h"
+ #include "common/assert.h"
+@@ -257,6 +258,21 @@ void File::Read(void* data, uint32_t size, uint32_t* bytes_read) {
+ 	}
+ 
+ 	if (m_p->f != nullptr) {
++#if defined(KYTY_NOVA_FEX)
++		if (NovaGuest::IsHigh(data, size)) {
++			uint32_t total = 0;
++			NovaGuest::ForEach(reinterpret_cast<uint64_t>(data), size, [&](void* host, uint64_t n) {
++				uint32_t got = 0;
++				SysFileRead(host, static_cast<uint32_t>(n), *m_p->f, &got);
++				total += got;
++				return got == n;
++			});
++			if (bytes_read != nullptr) {
++				*bytes_read = total;
++			}
++			return;
++		}
++#endif
+ 		SysFileRead(data, size, *m_p->f, bytes_read);
+ 	}
+ }
+@@ -271,6 +287,21 @@ void File::Write(const void* data, uint32_t size, uint32_t* bytes_written) {
+ 		return;
+ 	}
+ 
++#if defined(KYTY_NOVA_FEX)
++	if (NovaGuest::IsHigh(data, size)) {
++		uint32_t total = 0;
++		NovaGuest::ForEach(reinterpret_cast<uint64_t>(data), size, [&](void* host, uint64_t n) {
++			uint32_t put = 0;
++			SysFileWrite(host, static_cast<uint32_t>(n), *m_p->f, &put);
++			total += put;
++			return put == n;
++		});
++		if (bytes_written != nullptr) {
++			*bytes_written = total;
++		}
++		return;
++	}
++#endif
+ 	SysFileWrite(data, size, *m_p->f, bytes_written);
+ }
+ 
 diff --git a/src/common/hostException.cpp b/src/common/hostException.cpp
 index d44c623c..91e9eccb 100644
 --- a/src/common/hostException.cpp
@@ -530,10 +584,10 @@ index 00000000..1ded0b9a
 +#endif /* KYTY_COMMON_NOVA_BIONIC_H_ */
 diff --git a/src/common/novaFex.h b/src/common/novaFex.h
 new file mode 100644
-index 00000000..a2badb0a
+index 00000000..69812e9a
 --- /dev/null
 +++ b/src/common/novaFex.h
-@@ -0,0 +1,11 @@
+@@ -0,0 +1,82 @@
 +#ifndef KYTY_COMMON_NOVA_FEX_H_
 +#define KYTY_COMMON_NOVA_FEX_H_
 +
@@ -542,6 +596,77 @@ index 00000000..a2badb0a
 +#if defined(__aarch64__)
 +#define KYTY_NOVA_FEX 1
 +#include <novafex.h>
++#include <algorithm>
++#include <cstdint>
++#include <cstring>
++
++// Guest addresses above 2^39 (PS5 libc/Unreal arenas) live in 1 GiB slots backed by separate
++// host windows. Host code (syscalls, memcpy) must translate them piece by piece: a syscall
++// given an untranslated high pointer fails with EFAULT instead of faulting, and per-access
++// fault emulation is far too slow for bulk copies.
++namespace NovaGuest {
++constexpr uint64_t kLow  = uint64_t {1} << 39;
++constexpr uint64_t kSlot = uint64_t {1} << 30;
++inline bool        IsHigh(uint64_t a, uint64_t n) { return a >= kLow || n > kLow - a; }
++inline bool        IsHigh(const void* a, uint64_t n) { return IsHigh(reinterpret_cast<uint64_t>(a), n); }
++// Longest run starting at a that stays inside one translation unit.
++inline uint64_t Piece(uint64_t a, uint64_t n) {
++	const uint64_t limit = a < kLow ? kLow - a : ((a | (kSlot - 1)) + 1) - a;
++	return std::min(n, limit);
++}
++inline void* Host(uint64_t a) { return reinterpret_cast<void*>(static_cast<uintptr_t>(NovaFex::TranslateGuestVA(a))); }
++inline void  Copy(void* dst, const void* src, uint64_t n) {
++	auto d = reinterpret_cast<uint64_t>(dst);
++	auto s = reinterpret_cast<uint64_t>(src);
++	if (!IsHigh(d, n) && !IsHigh(s, n)) {
++		std::memcpy(dst, src, n);
++		return;
++	}
++	while (n != 0) {
++		const uint64_t c = Piece(s, Piece(d, n));
++		std::memcpy(Host(d), Host(s), c);
++		d += c;
++		s += c;
++		n -= c;
++	}
++}
++inline void Set(void* dst, int v, uint64_t n) {
++	auto d = reinterpret_cast<uint64_t>(dst);
++	if (!IsHigh(d, n)) {
++		std::memset(dst, v, n);
++		return;
++	}
++	while (n != 0) {
++		const uint64_t c = Piece(d, n);
++		std::memset(Host(d), v, c);
++		d += c;
++		n -= c;
++	}
++}
++inline int Compare(const void* a, const void* b, uint64_t n) {
++	auto x = reinterpret_cast<uint64_t>(a);
++	auto y = reinterpret_cast<uint64_t>(b);
++	if (!IsHigh(x, n) && !IsHigh(y, n)) return std::memcmp(a, b, n);
++	while (n != 0) {
++		const uint64_t c = Piece(y, Piece(x, n));
++		if (const int r = std::memcmp(Host(x), Host(y), c); r != 0) return r;
++		x += c;
++		y += c;
++		n -= c;
++	}
++	return 0;
++}
++// Calls fn(host_pointer, length) for each piece; stops when fn returns false.
++template <typename F>
++inline void ForEach(uint64_t a, uint64_t n, F&& fn) {
++	while (n != 0) {
++		const uint64_t c = Piece(a, n);
++		if (!fn(Host(a), c)) return;
++		a += c;
++		n -= c;
++	}
++}
++} // namespace NovaGuest
 +#endif
 +
 +#endif /* KYTY_COMMON_NOVA_FEX_H_ */
@@ -868,6 +993,52 @@ index 781bda2d..3865097e 100644
  	// Wait for guest command processing, including all compute queues (not native GPU completion).
  	void              WaitForIdle();
  	[[nodiscard]] int GetFrameNum() const;
+diff --git a/src/graphics/host_gpu/hostMemory.cpp b/src/graphics/host_gpu/hostMemory.cpp
+index 75743346..c26e3878 100644
+--- a/src/graphics/host_gpu/hostMemory.cpp
++++ b/src/graphics/host_gpu/hostMemory.cpp
+@@ -1,5 +1,7 @@
+ #include "graphics/host_gpu/hostMemory.h"
+ 
++#include "common/novaFex.h"
++
+ #include <cinttypes>
+ #include <cstdio>
+ 
+@@ -37,8 +39,33 @@ bool IsAccessible(DWORD protect, HostMemoryAccess access) {
+ 
+ } // namespace
+ 
++static bool HostMemoryQueryRangeHost(uint64_t addr, uint64_t requested_size, HostMemoryAccess access,
++                                     uint64_t& accessible_size);
++
+ bool HostMemoryQueryRange(uint64_t addr, uint64_t requested_size, HostMemoryAccess access,
+                           uint64_t& accessible_size) {
++#if defined(KYTY_NOVA_FEX)
++	// Translated guest addresses (above 2^39): query each slot's host window.
++	if (addr != 0 && requested_size != 0 && addr >= NovaGuest::kLow && (addr >> 56) == 0) {
++		accessible_size = 0;
++		bool stop       = false;
++		NovaGuest::ForEach(addr, requested_size, [&](void* host, uint64_t n) {
++			const auto h = reinterpret_cast<uint64_t>(host);
++			if (h == 0 || h >= NovaGuest::kLow) return false;
++			uint64_t got = 0;
++			HostMemoryQueryRangeHost(h, n, access, got);
++			accessible_size += got;
++			stop = got < n;
++			return !stop;
++		});
++		return accessible_size != 0;
++	}
++#endif
++	return HostMemoryQueryRangeHost(addr, requested_size, access, accessible_size);
++}
++
++static bool HostMemoryQueryRangeHost(uint64_t addr, uint64_t requested_size, HostMemoryAccess access,
++                                     uint64_t& accessible_size) {
+ 	accessible_size = 0;
+ 	if (addr == 0 || requested_size == 0) {
+ 		return false;
 diff --git a/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp b/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp
 index d56b629b..b1a7b913 100644
 --- a/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp
@@ -6547,6 +6718,51 @@ index 0e71438e..f447c227 100644
  } // namespace Libs
  
  #endif /* EMULATOR_INCLUDE_EMULATOR_LIBS_GUEST_PRINTF_H_ */
+diff --git a/src/libs/libAmpr.cpp b/src/libs/libAmpr.cpp
+index fc4ae4e7..3c2f39e8 100644
+--- a/src/libs/libAmpr.cpp
++++ b/src/libs/libAmpr.cpp
+@@ -1,3 +1,4 @@
++#include "common/novaFex.h"
+ #include "common/abi.h"
+ #include "common/assert.h"
+ #include "common/dateTime.h"
+@@ -73,7 +74,11 @@ static bool ReadGuestBytes(uint64_t addr, void* out, uint64_t size) {
+ 	if (out == nullptr || !IsValidGuestRange(addr, size)) {
+ 		return false;
+ 	}
++#if defined(KYTY_NOVA_FEX)
++	NovaGuest::Copy(out, reinterpret_cast<const void*>(addr), size);
++#else
+ 	std::memcpy(out, reinterpret_cast<const void*>(addr), static_cast<size_t>(size));
++#endif
+ 	return true;
+ }
+ 
+@@ -81,7 +86,11 @@ static bool WriteGuestBytes(uint64_t addr, const void* in, uint64_t size) {
+ 	if (in == nullptr || !IsValidGuestRange(addr, size, true)) {
+ 		return false;
+ 	}
++#if defined(KYTY_NOVA_FEX)
++	NovaGuest::Copy(reinterpret_cast<void*>(addr), in, size);
++#else
+ 	std::memcpy(reinterpret_cast<void*>(addr), in, static_cast<size_t>(size));
++#endif
+ 	return true;
+ }
+ 
+@@ -1433,7 +1442,11 @@ static int ReadHostFileToGuest(const std::filesystem::path& host_path, uint64_t
+ 		if (read == 0) {
+ 			break;
+ 		}
++#if defined(KYTY_NOVA_FEX)
++		NovaGuest::Copy(reinterpret_cast<void*>(destination + *bytes_read), buffer.data(), read);
++#else
+ 		std::memcpy(reinterpret_cast<void*>(destination + *bytes_read), buffer.data(), read);
++#endif
+ 		*bytes_read += read;
+ 	}
+ 
 diff --git a/src/libs/libAudio.cpp b/src/libs/libAudio.cpp
 index 704d2b29..a82e113f 100644
 --- a/src/libs/libAudio.cpp
@@ -6574,7 +6790,7 @@ index 704d2b29..a82e113f 100644
  
  } // namespace LibNgs2
 diff --git a/src/libs/libC.cpp b/src/libs/libC.cpp
-index acff2c8c..eca47230 100644
+index acff2c8c..7dd2b064 100644
 --- a/src/libs/libC.cpp
 +++ b/src/libs/libC.cpp
 @@ -7,6 +7,7 @@
@@ -6585,17 +6801,15 @@ index acff2c8c..eca47230 100644
  #include "libs/errno.h"
  #include "libs/guestPrintf.h"
  #include "libs/guestStdio.h"
-@@ -14,6 +15,9 @@
+@@ -14,6 +15,7 @@
  #include "libs/vaContext.h"
  #include "loader/runtimeLinker.h"
  #include "loader/symbolDatabase.h"
-+#if defined(KYTY_NOVA_FEX)
 +#include "common/novaFex.h"
-+#endif
  
  #include <algorithm>
  #include <malloc.h>
-@@ -37,6 +41,7 @@
+@@ -37,6 +39,7 @@
  #include <mutex>
  #include <unordered_map>
  #include <vector>
@@ -6603,7 +6817,7 @@ index acff2c8c..eca47230 100644
  
  namespace Libs {
  
-@@ -204,7 +209,49 @@ static void PrintAbortPointerArrayCandidate(const char* name, uint64_t addr) {
+@@ -204,7 +207,49 @@ static void PrintAbortPointerArrayCandidate(const char* name, uint64_t addr) {
  	asm volatile("movq %%rsp, %0" : "=r"(rsp));
  #endif
  
@@ -6654,7 +6868,53 @@ index acff2c8c..eca47230 100644
  
  	LOGF("Guest abort diagnostics:\n"
  	     "\t return = 0x%016" PRIx64 "\n"
-@@ -1339,16 +1386,48 @@ static KYTY_SYSV_ABI size_t nova_mbrlen(const char* a0, size_t a1, mbstate_t* a2
+@@ -749,19 +794,45 @@ int KYTY_SYSV_ABI fflush(FILE* stream) {
+ void* KYTY_SYSV_ABI memset(void* s, int c, size_t n) {
+ 	PRINT_NAME();
+ 
++#if defined(KYTY_NOVA_FEX)
++	NovaGuest::Set(s, c, n);
++	return s;
++#else
+ 	return ::memset(s, c, n);
++#endif
+ }
+ 
+ void* KYTY_SYSV_ABI memcpy(void* dest, const void* src, size_t n) {
++#if defined(KYTY_NOVA_FEX)
++	NovaGuest::Copy(dest, src, n);
++	return dest;
++#else
+ 	return ::memcpy(dest, src, n);
++#endif
+ }
+ 
+ void* KYTY_SYSV_ABI memmove(void* dest, const void* src, size_t n) {
++#if defined(KYTY_NOVA_FEX)
++	const auto d = reinterpret_cast<uint64_t>(dest);
++	const auto s = reinterpret_cast<uint64_t>(src);
++	if ((NovaGuest::IsHigh(d, n) || NovaGuest::IsHigh(s, n)) && (d + n <= s || s + n <= d)) {
++		NovaGuest::Copy(dest, src, n);
++		return dest;
++	}
++	if ((NovaGuest::IsHigh(d, n) || NovaGuest::IsHigh(s, n)) && NovaGuest::Piece(d, n) == n && NovaGuest::Piece(s, n) == n) {
++		::memmove(NovaGuest::Host(d), NovaGuest::Host(s), n);
++		return dest;
++	}
++#endif
+ 	return ::memmove(dest, src, n);
+ }
+ 
+ int KYTY_SYSV_ABI memcmp(const void* s1, const void* s2, size_t n) {
++#if defined(KYTY_NOVA_FEX)
++	return NovaGuest::Compare(s1, s2, n);
++#else
+ 	return ::memcmp(s1, s2, n);
++#endif
+ }
+ 
+ int KYTY_SYSV_ABI strcmp(const char* s1, const char* s2) {
+@@ -1339,16 +1410,48 @@ static KYTY_SYSV_ABI size_t nova_mbrlen(const char* a0, size_t a1, mbstate_t* a2
  	return ::mbrlen(a0, a1, a2);
  }
  
@@ -6706,7 +6966,7 @@ index acff2c8c..eca47230 100644
  }
  
  static KYTY_SYSV_ABI void* nova_calloc(size_t a0, size_t a1) {
-@@ -1515,30 +1594,67 @@ static KYTY_SYSV_ABI wint_t nova_ungetwc(wint_t a0, void* a1) {
+@@ -1515,30 +1618,67 @@ static KYTY_SYSV_ABI wint_t nova_ungetwc(wint_t a0, void* a1) {
  	if (GuestFd(a1) >= 0) return WEOF; return std::ungetwc(a0, static_cast<FILE*>(a1));
  }
  
@@ -6780,7 +7040,7 @@ index acff2c8c..eca47230 100644
  	va_end(ap);
  	return r;
  }
-@@ -1546,7 +1662,7 @@ static KYTY_SYSV_ABI int nova_fprintf_v(void* a0, const char* a1, ...) {
+@@ -1546,7 +1686,7 @@ static KYTY_SYSV_ABI int nova_fprintf_v(void* a0, const char* a1, ...) {
  static KYTY_SYSV_ABI int nova_sprintf_v(char* a0, const char* a1, ...) {
  	va_list ap;
  	va_start(ap, a1);
@@ -6789,7 +7049,7 @@ index acff2c8c..eca47230 100644
  	va_end(ap);
  	return r;
  }
-@@ -1554,7 +1670,7 @@ static KYTY_SYSV_ABI int nova_sprintf_v(char* a0, const char* a1, ...) {
+@@ -1554,7 +1694,7 @@ static KYTY_SYSV_ABI int nova_sprintf_v(char* a0, const char* a1, ...) {
  static KYTY_SYSV_ABI int nova_asprintf_v(char** a0, const char* a1, ...) {
  	va_list ap;
  	va_start(ap, a1);
@@ -6798,7 +7058,7 @@ index acff2c8c..eca47230 100644
  	va_end(ap);
  	return r;
  }
-@@ -1562,7 +1678,7 @@ static KYTY_SYSV_ABI int nova_asprintf_v(char** a0, const char* a1, ...) {
+@@ -1562,7 +1702,7 @@ static KYTY_SYSV_ABI int nova_asprintf_v(char** a0, const char* a1, ...) {
  static KYTY_SYSV_ABI int nova_sscanf_v(const char* a0, const char* a1, ...) {
  	va_list ap;
  	va_start(ap, a1);
@@ -6807,7 +7067,7 @@ index acff2c8c..eca47230 100644
  	va_end(ap);
  	return r;
  }
-@@ -1724,6 +1840,10 @@ LIB_DEFINE(InitLibcNova_1) {
+@@ -1724,6 +1864,10 @@ LIB_DEFINE(InitLibcNova_1) {
  } // namespace LibcNova
  #endif
  
@@ -6818,7 +7078,7 @@ index acff2c8c..eca47230 100644
  namespace LibC {
  
  LIB_DEFINE(InitLibC_1) {
-@@ -1733,6 +1853,8 @@ LIB_DEFINE(InitLibC_1) {
+@@ -1733,6 +1877,8 @@ LIB_DEFINE(InitLibC_1) {
  	// after checking its hash). Retail titles keep resolving to Sony's own libc.prx.
  	if (const char* hle = std::getenv("NOVA_LIBC_HLE"); hle != nullptr && hle[0] == '1') {
  		LibcNova::InitLibcNova_1(s);

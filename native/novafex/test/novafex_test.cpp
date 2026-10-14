@@ -400,6 +400,26 @@ int main() {
 		              (unsigned long long)stored, (unsigned long long)r3, (unsigned long long)old, (unsigned long long)after,
 		              (unsigned long long)r_low);
 		Check("guest VA above 2^39", ok, d);
+		// rep movsb / rep movsq / rep stosb on translated addresses: data lands in the backing
+		// window and the guest gets its own (untranslated) end pointers back in rdi.
+		const uint64_t repcopy = code.Emit({0x48, 0x89, 0xD1, 0xF3, 0xA4, 0x48, 0x89, 0xF8, 0xC3});
+		const uint64_t repcopyq = code.Emit({0x48, 0x89, 0xD1, 0xF3, 0x48, 0xA5, 0x48, 0x89, 0xF8, 0xC3});
+		const uint64_t repfill = code.Emit({0x48, 0x89, 0xF0, 0x48, 0x89, 0xD1, 0xF3, 0xAA, 0x48, 0x89, 0xF8, 0xC3});
+		for (int i = 0; i < 64; i++) reinterpret_cast<uint8_t*>(backing + 0x400)[i] = static_cast<uint8_t>(i * 3 + 1);
+		const uint64_t end1 = NovaFex::CallGuest(repcopy, guest + 0x800, guest + 0x400, 64);
+		const bool copy_ok = std::memcmp(reinterpret_cast<void*>(backing + 0x800), reinterpret_cast<void*>(backing + 0x400), 64) == 0;
+		const uint64_t end2 = NovaFex::CallGuest(repcopyq, guest + 0x900, guest + 0x400, 8);
+		const bool copyq_ok = std::memcmp(reinterpret_cast<void*>(backing + 0x900), reinterpret_cast<void*>(backing + 0x400), 64) == 0;
+		const uint64_t end3 = NovaFex::CallGuest(repfill, guest + 0xc00, 0xAB, 64);
+		bool fill_ok = true;
+		for (int i = 0; i < 64; i++) fill_ok = fill_ok && reinterpret_cast<uint8_t*>(backing + 0xc00)[i] == 0xAB;
+		static uint8_t low_dst[64];
+		const uint64_t end4 = NovaFex::CallGuest(repcopy, reinterpret_cast<uint64_t>(low_dst), guest + 0x400, 64);
+		const bool low_ok = std::memcmp(low_dst, reinterpret_cast<void*>(backing + 0x400), 64) == 0;
+		std::snprintf(d, sizeof(d), "(copy=%d/%llx copyq=%d/%llx fill=%d/%llx low=%d)", copy_ok, (unsigned long long)end1, copyq_ok,
+		              (unsigned long long)end2, fill_ok, (unsigned long long)end3, low_ok);
+		Check("rep movs/stos on guest VA", copy_ok && copyq_ok && fill_ok && low_ok && end1 == guest + 0x840 && end2 == guest + 0x940 &&
+		                                       end3 == guest + 0xc40 && end4 == reinterpret_cast<uint64_t>(low_dst) + 64, d);
 	}
 	// Host (emulator) code dereferencing a translated guest address: the fault handler
 	// emulates the access on the backing host memory.

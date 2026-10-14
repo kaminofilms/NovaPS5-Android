@@ -65,6 +65,53 @@ index 000000000..9950272a1
 +alignas(4096) uint64_t GuestVATable[kGuestVASlots] {};
 +bool GuestVAEnabled = false;
 +} // namespace FEXCore::Nova
+diff --git a/FEXCore/Source/Interface/Core/OpcodeDispatcher.cpp b/FEXCore/Source/Interface/Core/OpcodeDispatcher.cpp
+index 8dc605ca7..353cb180c 100644
+--- a/FEXCore/Source/Interface/Core/OpcodeDispatcher.cpp
++++ b/FEXCore/Source/Interface/Core/OpcodeDispatcher.cpp
+@@ -7,6 +7,7 @@ $end_info$
+ */
+ 
+ #include "FEXCore/Core/HostFeatures.h"
++#include "FEXCore/Core/NovaGuestVA.h"
+ #include "FEXCore/Utils/Telemetry.h"
+ #include "Interface/Context/Context.h"
+ #include "Interface/Core/OpcodeDispatcher.h"
+@@ -3252,7 +3253,15 @@ void OpDispatchBuilder::STOSOp(OpcodeArgs) {
+ 
+     Ref Counter = LoadGPRRegister(X86State::REG_RCX);
+ 
+-    auto Result = _MemSet(CTX->IsAtomicTSOEnabled(), Size, Segment ?: InvalidNode, Dest, Src, Counter, LoadDir(1));
++    Ref Result;
++    if (FEXCore::Nova::GuestVAEnabled && !Segment) {
++      // Nova: translate the start address; hand the guest back its own (untranslated) end pointer.
++      Ref HostDest = _NovaXlat(Dest);
++      Result = _MemSet(CTX->IsAtomicTSOEnabled(), Size, InvalidNode, HostDest, Src, Counter, LoadDir(1));
++      Result = Add(OpSize::i64Bit, Sub(OpSize::i64Bit, Result, HostDest), Dest);
++    } else {
++      Result = _MemSet(CTX->IsAtomicTSOEnabled(), Size, Segment ?: InvalidNode, Dest, Src, Counter, LoadDir(1));
++    }
+     StoreGPRRegister(X86State::REG_RCX, Constant(0));
+     StoreGPRRegister(X86State::REG_RDI, Result);
+   }
+@@ -3286,7 +3295,16 @@ void OpDispatchBuilder::MOVSOp(OpcodeArgs) {
+ 
+     Ref Result_Src = _AllocateGPR(false);
+     Ref Result_Dst = _AllocateGPR(false);
+-    _MemCpy(CTX->IsAtomicTSOEnabled(), Size, DstAddr, SrcAddr, Counter, LoadDir(1), Result_Dst, Result_Src);
++    if (FEXCore::Nova::GuestVAEnabled) {
++      // Nova: translate both start addresses; hand the guest back untranslated end pointers.
++      Ref HostDst = _NovaXlat(DstAddr);
++      Ref HostSrc = _NovaXlat(SrcAddr);
++      _MemCpy(CTX->IsAtomicTSOEnabled(), Size, HostDst, HostSrc, Counter, LoadDir(1), Result_Dst, Result_Src);
++      Result_Dst = Add(OpSize::i64Bit, Sub(OpSize::i64Bit, Result_Dst, HostDst), DstAddr);
++      Result_Src = Add(OpSize::i64Bit, Sub(OpSize::i64Bit, Result_Src, HostSrc), SrcAddr);
++    } else {
++      _MemCpy(CTX->IsAtomicTSOEnabled(), Size, DstAddr, SrcAddr, Counter, LoadDir(1), Result_Dst, Result_Src);
++    }
+ 
+     if (DstSegment) {
+       Result_Dst = Sub(OpSize::i64Bit, Result_Dst, DstSegment);
 diff --git a/FEXCore/Source/Interface/IR/IR.json b/FEXCore/Source/Interface/IR/IR.json
 index 880520077..ce0e0b164 100644
 --- a/FEXCore/Source/Interface/IR/IR.json
