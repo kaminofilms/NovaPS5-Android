@@ -1633,7 +1633,7 @@ index ebc72e43..05cb8332 100644
  	static uint64_t GetSize() { return 0x1000; }
  
 diff --git a/src/loader/runtimeLinker.cpp b/src/loader/runtimeLinker.cpp
-index f267da60..a7ca7d46 100644
+index f267da60..2624644c 100644
 --- a/src/loader/runtimeLinker.cpp
 +++ b/src/loader/runtimeLinker.cpp
 @@ -22,6 +22,8 @@
@@ -1678,7 +1678,37 @@ index f267da60..a7ca7d46 100644
  #else
  	(void)stack_top;
  	reinterpret_cast<entry_func_t>(addr)(params, atexit_func);
-@@ -928,6 +940,10 @@ static KYTY_MS_ABI uint8_t* TlsMainGetAddr() {
+@@ -647,6 +659,10 @@ static bool IsReadableRange(uint64_t addr, uint64_t size) {
+ 	return true;
+ }
+ 
++#if defined(KYTY_NOVA_FEX)
++static const std::vector<Program*>* g_nova_programs = nullptr;
++#endif
++
+ static bool KytyExceptionHandler(const Common::HostException::ExceptionInfo& exception_info) {
+ 	const auto* info = &exception_info;
+ 
+@@ -705,6 +721,18 @@ static bool KytyExceptionHandler(const Common::HostException::ExceptionInfo& exc
+ 		}
+ 		std::fflush(stdout);
+ 	}
++#if defined(KYTY_NOVA_FEX)
++	NovaFex::ReportGuestFault(info->native_context);
++	if (g_nova_programs != nullptr) {
++		for (const auto* p: *g_nova_programs) {
++			std::fprintf(stderr, "NOVA_FAULT: module 0x%016llx-0x%016llx %s\n",
++			             static_cast<unsigned long long>(p->base_vaddr),
++			             static_cast<unsigned long long>(p->base_vaddr + p->base_size),
++			             Common::PathToString(p->file_name).c_str());
++		}
++	}
++	std::fflush(stderr);
++#endif
+ 	EXIT("Unhandled host exception: type=%u code=%u pc=0x%016" PRIx64
+ 	     " access=%u address=0x%016" PRIx64 "\n",
+ 	     static_cast<unsigned>(info->type), info->native_code, info->exception_address,
+@@ -928,6 +956,10 @@ static KYTY_MS_ABI uint8_t* TlsMainGetAddr() {
  	return g_tls_cached_main_tcb;
  }
  
@@ -1689,7 +1719,7 @@ index f267da60..a7ca7d46 100644
  static void PatchProgram(Program* program, uint64_t address, uint64_t size) {
  	EXIT_IF(program == nullptr);
  	EXIT_IF(program->elf == nullptr);
-@@ -956,8 +972,13 @@ static void PatchProgram(Program* program, uint64_t address, uint64_t size) {
+@@ -956,8 +988,13 @@ static void PatchProgram(Program* program, uint64_t address, uint64_t size) {
  		}
  	}
  
@@ -1703,7 +1733,7 @@ index f267da60..a7ca7d46 100644
  		// Replace:
  		//   66 66 66
  		//   mov <reg>, qword ptr fs:[0x00]
-@@ -1719,6 +1740,12 @@ void RuntimeLinker::LoadProgramToMemory(Program* program) {
+@@ -1719,6 +1756,13 @@ void RuntimeLinker::LoadProgramToMemory(Program* program) {
  		LOGF("tls_handler_size       = 0x%016" PRIx64 "\n", tls_handler_size);
  	}
  
@@ -1712,6 +1742,7 @@ index f267da60..a7ca7d46 100644
 +		EXIT("NovaFex (embedded FEXCore) failed to initialize\n");
 +	}
 +	NovaFex::SetFsBaseProvider(&NovaGuestFsBase);
++	g_nova_programs = &m_programs;
 +#endif
  	if (!Common::HostException::InstallHandler(KytyExceptionHandler)) {
  		EXIT("Failed to install the required vectored exception handler\n");

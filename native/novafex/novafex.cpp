@@ -1,3 +1,4 @@
+#include <sys/uio.h>
 // Nova PS5 - FEXCore embedding for guest-only translation. See novafex.h.
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "novafex.h"
@@ -779,6 +780,57 @@ void InvalidateGuestCode(uint64_t start, uint64_t size) {
 
 void NoteFrame() {
 	g_frames.fetch_add(1, std::memory_order_relaxed);
+}
+
+void ReportGuestFault(void* ucontext) {
+	auto* uc = static_cast<ucontext_t*>(ucontext);
+	if (uc == nullptr) return;
+	const uint64_t pc = uc->uc_mcontext.pc;
+	const bool in_jit = g_initialized && t_thread.fex != nullptr && g_ctx->IsAddressInCodeBuffer(t_thread.fex, pc);
+	std::fprintf(stderr, "NOVA_FAULT: host pc=0x%llx %s\n", (unsigned long long)pc, in_jit ? "(guest JIT code)" : "(host code)");
+	if (t_thread.fex != nullptr) {
+		const auto& st = t_thread.fex->CurrentFrame->State;
+		std::fprintf(stderr, "NOVA_FAULT: guest block rip=0x%llx\n", (unsigned long long)st.rip);
+	}
+	{
+		const uint64_t last = t_thread.last_host.load();
+		Dl_info info {};
+		const char* name = "?";
+		char* demangled = nullptr;
+		if (last != 0 && dladdr(reinterpret_cast<void*>(last), &info) != 0 && info.dli_sname != nullptr) {
+			int status = 0;
+			demangled = abi::__cxa_demangle(info.dli_sname, nullptr, nullptr, &status);
+			name = demangled != nullptr ? demangled : info.dli_sname;
+		}
+		std::fprintf(stderr, "NOVA_FAULT: last host call %.160s (gates=%llu)\n", name, (unsigned long long)t_thread.gates.load());
+		std::free(demangled);
+	}
+	if (!in_jit) return;
+	// FEX x86-64 static register allocation (Arm64Emitter.cpp x64::SRA).
+	static const char* names[16] = {"rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi",
+	                                "r8 ", "r9 ", "r10", "r11", "r12", "r13", "r14", "r15"};
+	static const int host[16] = {4, 7, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 29};
+	for (int i = 0; i < 16; i += 4) {
+		std::fprintf(stderr, "NOVA_FAULT: %s=%016llx %s=%016llx %s=%016llx %s=%016llx\n",
+		             names[i], (unsigned long long)uc->uc_mcontext.regs[host[i]],
+		             names[i + 1], (unsigned long long)uc->uc_mcontext.regs[host[i + 1]],
+		             names[i + 2], (unsigned long long)uc->uc_mcontext.regs[host[i + 2]],
+		             names[i + 3], (unsigned long long)uc->uc_mcontext.regs[host[i + 3]]);
+	}
+	// Return addresses: guest stack values that point into the low guest image area.
+	const uint64_t rsp = uc->uc_mcontext.regs[8];
+	if (rsp >= 0x10000 && (rsp & 7) == 0) {
+		int shown = 0;
+		for (int i = 0; i < 512 && shown < 16; i++) {
+			uint64_t v = 0;
+			struct iovec local {&v, 8}, remote {reinterpret_cast<void*>(rsp + 8 * i), 8};
+			if (process_vm_readv(getpid(), &local, 1, &remote, 1, 0) != 8) break;
+			if (v >= 0x800000000ull && v < 0x1000000000ull) {
+				std::fprintf(stderr, "NOVA_FAULT:   [rsp+0x%x] 0x%llx\n", i * 8, (unsigned long long)v);
+				shown++;
+			}
+		}
+	}
 }
 
 bool HandleHostFault(int signal, siginfo_t* info, void* ucontext) {
