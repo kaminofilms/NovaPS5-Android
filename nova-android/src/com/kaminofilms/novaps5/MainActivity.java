@@ -159,9 +159,9 @@ public final class MainActivity extends Activity {
         List<ActivityManager.RunningAppProcessInfo> list = am == null ? null : am.getRunningAppProcesses();
         if (list == null) return;
         for (ActivityManager.RunningAppProcessInfo p : list) {
-            if (p.processName != null && p.processName.endsWith(":game") && p.pid != Process.myPid()) {
+            if (p.processName != null && p.processName.endsWith(":game") && p.pid != android.os.Process.myPid()) {
                 BootLog.write(this, "Ending the previous game (pid " + p.pid + ")");
-                Process.killProcess(p.pid);
+                android.os.Process.killProcess(p.pid);
             }
         }
     }
