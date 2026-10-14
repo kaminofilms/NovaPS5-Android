@@ -1255,7 +1255,7 @@ index 8641e8a9..8c9aef6b 100644
  			const auto external_wait = micros != 0 ? micros - elapsed : UINT32_MAX;
  			m_cond_var.WaitFor(&m_mutex,
 diff --git a/src/kernel/memory.cpp b/src/kernel/memory.cpp
-index febbd49a..6775c312 100644
+index febbd49a..a5eac18f 100644
 --- a/src/kernel/memory.cpp
 +++ b/src/kernel/memory.cpp
 @@ -1,6 +1,8 @@
@@ -1426,7 +1426,7 @@ index febbd49a..6775c312 100644
  			if (!reserved_target) {
  				return KERNEL_ERROR_ENOMEM;
  			}
-@@ -3504,6 +3596,46 @@ static bool ReplaceFixedRangeWithReserved(uint64_t start, uint64_t size) {
+@@ -3504,6 +3596,83 @@ static bool ReplaceFixedRangeWithReserved(uint64_t start, uint64_t size) {
  	return true;
  }
  
@@ -1468,12 +1468,49 @@ index febbd49a..6775c312 100644
 +	}
 +	return 0;
 +}
++
++// A base at or below max_base with `size` bytes free for the guest. The guest regions reserved
++// at startup are tried first; otherwise unused host address space is taken over (the low
++// gigabyte is shared with the host, e.g. ART's heap, and may never have been reserved).
++static uint64_t NovaFindLowArena(uint64_t max_base, uint64_t size, uint64_t alignment) {
++	const uint64_t reserved = NovaFindFreeIn(HOST_SYSTEM_MANAGED_MIN, max_base + size, size, alignment);
++	if (reserved != 0 && reserved <= max_base) {
++		return reserved;
++	}
++	for (uint64_t base = std::max<uint64_t>(alignment, 0x1000000ull); base <= max_base; base += alignment) {
++		VirtualRanges::Range overlap {};
++		if (g_virtual_ranges->QueryOverlap(base, size, &overlap)) {
++			continue;
++		}
++		if (g_guest_address_space->AdoptHostRange(base, size)) {
++			return base;
++		}
++	}
++	return 0;
++}
++
++static void NovaDumpLowMaps(uint64_t below) {
++	FILE* maps = fopen("/proc/self/maps", "r");
++	if (maps == nullptr) {
++		return;
++	}
++	char line[256];
++	int  shown = 0;
++	while (fgets(line, sizeof(line), maps) != nullptr && shown < 40) {
++		unsigned long long start = 0;
++		if (sscanf(line, "%llx-", &start) == 1 && start < below) {
++			std::fprintf(stderr, "NOVA_MEMORY:   low map %s", line);
++			shown++;
++		}
++	}
++	fclose(maps);
++}
 +#endif
 +
  int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags, size_t alignment) {
  	PRINT_NAME();
  
-@@ -3545,12 +3677,76 @@ int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags,
+@@ -3545,12 +3714,76 @@ int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags,
  	} else {
  		alignment = (alignment != 0 ? alignment : PAGE_SIZE);
  		out_addr  = FindGuestFreeRange(in_addr, len, alignment);
@@ -1498,8 +1535,7 @@ index febbd49a..6775c312 100644
 +				static constexpr uint64_t kBottoms[] = {0x400000000ull, 0x100000000ull, 0x40000000ull,
 +				                                        0x10000000ull,  0x8000000ull,   0x4000000ull};
 +				for (const uint64_t bottom: kBottoms) {
-+					const uint64_t base = NovaFindFreeIn(HOST_SYSTEM_MANAGED_MIN, max_base + bottom + kSlack,
-+					                                     bottom + kSlack, arena_align);
++					const uint64_t base = NovaFindLowArena(max_base, bottom + kSlack, arena_align);
 +					if (base == 0 || base > max_base) {
 +						continue;
 +					}
@@ -1519,6 +1555,7 @@ index febbd49a..6775c312 100644
 +				if (out_addr == 0) {
 +					std::fprintf(stderr, "NOVA_MEMORY: no low arena base below 0x%llx for len=0x%llx; using the shrunk reservation\n",
 +					             static_cast<unsigned long long>(max_base), static_cast<unsigned long long>(len));
++					NovaDumpLowMaps(max_base + 0x40000000ull);
 +				}
 +			}
 +		}
@@ -6323,10 +6360,10 @@ index 7f75f2bb..e0d11e15 100644
  
  LIB_DEFINE(InitLibKernel_1) {
 diff --git a/src/libs/libs.h b/src/libs/libs.h
-index d1220ed3..cdce1023 100644
+index d1220ed3..5215e863 100644
 --- a/src/libs/libs.h
 +++ b/src/libs/libs.h
-@@ -39,7 +39,7 @@
+@@ -39,9 +39,10 @@
  		sr.module_version_major = g_module_version_major;                                          \
  		sr.module_version_minor = g_module_version_minor;                                          \
  		sr.type                 = t;                                                               \
@@ -6334,8 +6371,11 @@ index d1220ed3..cdce1023 100644
 +		auto        func        = Libs::NovaExportAddress(reinterpret_cast<uint64_t>(f), t);       \
  		const char* dbg_name    = "" #f;                                                           \
  		s->Add(sr, func, dbg_name);                                                                \
++		Libs::NovaNameHost(reinterpret_cast<uint64_t>(f), dbg_name);                               \
  	}
-@@ -58,6 +58,23 @@ namespace Loader {
+ // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+ #define LIB_OBJECT(n, f) LIB_ADD(n, f, Loader::SymbolType::Object)
+@@ -58,6 +59,32 @@ namespace Loader {
  class SymbolDatabase;
  } // namespace Loader
  
@@ -6353,6 +6393,15 @@ index d1220ed3..cdce1023 100644
 +#endif
 +	(void)type;
 +	return address;
++}
++// Lets crash reports name HLE functions that have no dynamic symbol.
++inline void NovaNameHost(uint64_t address, const char* name) {
++#if defined(KYTY_NOVA_FEX)
++	NovaFex::NameHostFunction(reinterpret_cast<const void*>(address), name);
++#else
++	(void)address;
++	(void)name;
++#endif
 +}
 +} // namespace Libs
 +

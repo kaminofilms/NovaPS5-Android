@@ -217,6 +217,13 @@ std::atomic<uint64_t> g_total_gates {0};
 std::atomic<uint64_t> g_total_calls {0};
 std::atomic<void (*)()> g_gate_exit_hook {nullptr};
 std::atomic<int> g_gate_exit_armed {0};
+std::shared_mutex g_host_names_mutex;
+std::map<uint64_t, const char*> g_host_names;
+const char* HostName(uint64_t address) {
+	std::shared_lock lock(g_host_names_mutex);
+	auto it = g_host_names.find(address);
+	return it != g_host_names.end() ? it->second : nullptr;
+}
 
 void GateDispatch(void* block_pointer) {
 	auto* block = static_cast<GateBlock*>(block_pointer);
@@ -402,6 +409,8 @@ void ReportGuestThreads() {
 			int status = 0;
 			demangled = abi::__cxa_demangle(info.dli_sname, nullptr, nullptr, &status);
 			name = demangled != nullptr ? demangled : info.dli_sname;
+		} else if (const char* known = HostName(shown); known != nullptr) {
+			name = known;
 		}
 		char path[64], thread_name[32];
 		std::snprintf(path, sizeof(path), "/proc/self/task/%d/comm", t->tid);
@@ -871,6 +880,12 @@ void NoteFrame() {
 	g_frames.fetch_add(1, std::memory_order_relaxed);
 }
 
+void NameHostFunction(const void* function, const char* name) {
+	if (function == nullptr || name == nullptr) return;
+	std::unique_lock lock(g_host_names_mutex);
+	g_host_names.emplace(reinterpret_cast<uint64_t>(function), name);
+}
+
 void SetFreezeReportHook(void (*hook)()) {
 	g_freeze_hook.store(hook);
 }
@@ -894,6 +909,8 @@ void ReportGuestFault(void* ucontext) {
 			int status = 0;
 			demangled = abi::__cxa_demangle(info.dli_sname, nullptr, nullptr, &status);
 			name = demangled != nullptr ? demangled : info.dli_sname;
+		} else if (const char* known = HostName(last); known != nullptr) {
+			name = known;
 		}
 		std::fprintf(stderr, "NOVA_FAULT: last host call %.160s (gates=%llu)\n", name, (unsigned long long)t_thread.gates.load());
 		std::free(demangled);
@@ -907,6 +924,8 @@ void ReportGuestFault(void* ucontext) {
 			int status = 0;
 			demangled = abi::__cxa_demangle(info.dli_sname, nullptr, nullptr, &status);
 			name = demangled != nullptr ? demangled : info.dli_sname;
+		} else if (const char* known = HostName(r.target); known != nullptr) {
+			name = known;
 		}
 		std::fprintf(stderr, "NOVA_FAULT:   call -%u: %.110s (0x%llx, 0x%llx) -> 0x%llx\n", i, name,
 		             (unsigned long long)r.a0, (unsigned long long)r.a1, (unsigned long long)r.ret);

@@ -108,6 +108,9 @@ NOVAFEX_API bool HandleHostFault(int signal, siginfo_t* info, void* ucontext);
 NOVAFEX_API void ReportGuestFault(void* ucontext);
 // Called during a freeze report (no frame for seconds) so the emulator can add its own state.
 NOVAFEX_API void SetFreezeReportHook(void (*hook)());
+// Names a host function for crash/freeze reports when the dynamic symbol table cannot (static
+// or internal HLE functions). `name` must stay valid for the life of the process.
+NOVAFEX_API void NameHostFunction(const void* function, const char* name);
 
 // Invalidates translated guest code (after the guest or the loader modifies code bytes).
 NOVAFEX_API void InvalidateGuestCode(uint64_t start, uint64_t size);
