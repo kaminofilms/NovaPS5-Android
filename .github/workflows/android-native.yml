@@ -143,13 +143,15 @@ jobs:
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
             --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.7.1-android-arm64.apk" \
             --version-name 0.7.1-android --version-code 29 2>&1 | tee dist/apk-build.txt
+      - name: Verify the APK
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.7.1-android-arm64.apk --sdk "$ANDROID_HOME" | tee dist/apk/verify.txt
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: android-apk-build-log
-          path: dist/apk-build.txt
-      - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.7.1-android-arm64.apk --sdk "$ANDROID_HOME" | tee dist/apk/verify.txt
+          path: |
+            dist/apk-build.txt
+            dist/apk/verify.txt
       - uses: actions/upload-artifact@v4
         with:
           name: android-apk
