@@ -1,0 +1,2 @@
+FAILED: [code=1] CMakeFiles/kyty_emulator.dir/src/loader/runtimeLinker.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/loader/runtimeLinker.cpp:1764:21: error: invalid use of member 'm_programs' in static member function
