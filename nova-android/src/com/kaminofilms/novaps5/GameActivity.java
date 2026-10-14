@@ -87,6 +87,9 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
             Os.setenv("TMPDIR", getCacheDir().getPath(), true);
             Os.setenv("NOVA_RELAXED_VULKAN", "1", true);
             Os.setenv("NOVA_LIBC_HLE", homebrewLibc() ? "1" : "0", true);
+            boolean unreal = unrealGame(new File(game), 0);
+            Os.setenv("NOVA_HEAP_HLE", unreal ? "1" : "0", true);
+            if (unreal) BootLog.write(this, "Unreal Engine title: the emulator serves its libc heap");
             Drivers.Driver driver = Drivers.current(this);
             if (driver != null) {
                 Os.setenv("NOVA_TURNIP_DIR", driver.dir.getPath() + "/", true);
@@ -124,6 +127,18 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
         } else {
             Files.copy(from.toPath(), to.toPath(), StandardCopyOption.REPLACE_EXISTING);
         }
+    }
+
+    /** Unreal Engine titles ship their data as .pak/.utoc files under <Project>/Content/Paks. */
+    static boolean unrealGame(File dir, int depth) {
+        File[] files = dir.listFiles();
+        if (files == null || depth > 3) return false;
+        for (File f : files) {
+            String n = f.getName().toLowerCase(java.util.Locale.ROOT);
+            if (f.isFile() && (n.endsWith(".pak") || n.endsWith(".utoc") || n.endsWith(".ucas"))) return true;
+            if (f.isDirectory() && !n.equals("sce_sys") && !n.equals("sce_module") && unrealGame(f, depth + 1)) return true;
+        }
+        return false;
     }
 
     private boolean homebrewLibc() {
