@@ -1,5 +1,5 @@
 diff --git a/3rdparty/CMakeLists.txt b/3rdparty/CMakeLists.txt
-index f3cdf3a9..ca8d2e5a 100644
+index f3cdf3a..ca8d2e5 100644
 --- a/3rdparty/CMakeLists.txt
 +++ b/3rdparty/CMakeLists.txt
 @@ -93,7 +93,14 @@ else()
@@ -19,7 +19,7 @@ index f3cdf3a9..ca8d2e5a 100644
  	# SDL's built-in iconv fallback does not support CP932.
  	set(SDL_SYSTEM_ICONV ON CACHE BOOL "Use system iconv for CP932 conversion" FORCE)
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 213dd35b..d5d46030 100644
+index 213dd35..d5d4603 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -35,6 +35,13 @@ set(KYTY_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty")
@@ -164,7 +164,7 @@ index 213dd35b..d5d46030 100644
  endif()
  # dlopen/dlsym/dladdr for RenderDoc.
 diff --git a/src/common/abi.h b/src/common/abi.h
-index 621ed610..e8be1765 100644
+index 621ed61..e8be176 100644
 --- a/src/common/abi.h
 +++ b/src/common/abi.h
 @@ -3,10 +3,16 @@
@@ -185,7 +185,7 @@ index 621ed610..e8be1765 100644
  
  #endif /* KYTY_COMMON_ABI_H_ */
 diff --git a/src/common/assert.cpp b/src/common/assert.cpp
-index 22cb3f27..7d9e9180 100644
+index 22cb3f2..7d9e918 100644
 --- a/src/common/assert.cpp
 +++ b/src/common/assert.cpp
 @@ -9,6 +9,12 @@
@@ -251,7 +251,7 @@ index 22cb3f27..7d9e9180 100644
  }
  
 diff --git a/src/common/emulatorConfig.h b/src/common/emulatorConfig.h
-index c7d64187..ebd9a08d 100644
+index c7d6418..ebd9a08 100644
 --- a/src/common/emulatorConfig.h
 +++ b/src/common/emulatorConfig.h
 @@ -33,7 +33,9 @@ using ControllerColor = std::array<uint8_t, 3>;
@@ -266,7 +266,7 @@ index c7d64187..ebd9a08d 100644
  constexpr bool IsConfiguredUserIdValid(int32_t user_id) {
  	constexpr int32_t USER_ID_EVERYONE = 0xfe;
 diff --git a/src/common/file.cpp b/src/common/file.cpp
-index 83f8289f..dff1234b 100644
+index 83f8289..dff1234 100644
 --- a/src/common/file.cpp
 +++ b/src/common/file.cpp
 @@ -1,4 +1,5 @@
@@ -319,8 +319,96 @@ index 83f8289f..dff1234b 100644
  	SysFileWrite(data, size, *m_p->f, bytes_written);
  }
  
+diff --git a/src/common/guestMemory.h b/src/common/guestMemory.h
+new file mode 100644
+index 0000000..e7d2c06
+--- /dev/null
++++ b/src/common/guestMemory.h
+@@ -0,0 +1,82 @@
++#ifndef KYTY_COMMON_GUEST_MEMORY_H_
++#define KYTY_COMMON_GUEST_MEMORY_H_
++
++// Host (emulator) access to guest memory by guest address.
++//
++// On the 39-bit Nova Android host, guest addresses at or above 2^39 are translated per 1 GiB slot
++// (common/novaFex.h). Host code that dereferences such an address directly faults, and NovaFex
++// emulates the faulting load/store one instruction at a time: correct, but thousands of times
++// slower than a plain access. The GPU front end (command buffers, shader code, buffer uploads,
++// index and indirect reads) must therefore translate before touching guest memory. Everywhere
++// else these helpers are the identity.
++
++#include "common/novaFex.h"
++
++#include <cstdint>
++#include <cstring>
++
++namespace GuestMemory {
++
++// Host pointer for the guest range [address, address + size) when the range is contiguous on the
++// host (one translation unit). Otherwise the guest address itself: accesses then still work
++// through fault emulation, only slowly.
++template <typename T = void>
++inline T* Ptr(uint64_t address, uint64_t size = 1) noexcept {
++#if defined(KYTY_NOVA_FEX)
++	if (address != 0 && size != 0 && NovaGuest::IsHigh(address, size) &&
++	    NovaGuest::Piece(address, size) == size) {
++		return reinterpret_cast<T*>(static_cast<uintptr_t>(NovaFex::TranslateGuestVA(address)));
++	}
++#endif
++	(void)size;
++	return reinterpret_cast<T*>(static_cast<uintptr_t>(address));
++}
++
++template <typename T>
++inline T* Ptr(T* address, uint64_t size) noexcept {
++	return Ptr<T>(reinterpret_cast<uint64_t>(address), size);
++}
++
++// Copies between any combination of guest and host buffers; ranges may span translation units.
++inline void Copy(void* dst, const void* src, uint64_t size) noexcept {
++#if defined(KYTY_NOVA_FEX)
++	NovaGuest::Copy(dst, src, size);
++#else
++	std::memcpy(dst, src, size);
++#endif
++}
++
++inline void Read(void* dst, uint64_t guest_src, uint64_t size) noexcept {
++	Copy(dst, reinterpret_cast<const void*>(static_cast<uintptr_t>(guest_src)), size);
++}
++
++inline void Write(uint64_t guest_dst, const void* src, uint64_t size) noexcept {
++	Copy(reinterpret_cast<void*>(static_cast<uintptr_t>(guest_dst)), src, size);
++}
++
++// Fills dwords; the range may span translation units.
++inline void Fill32(uint64_t guest_dst, uint32_t value, uint64_t size) noexcept {
++	while (size >= sizeof(uint32_t)) {
++#if defined(KYTY_NOVA_FEX)
++		const uint64_t piece = NovaGuest::Piece(guest_dst, size) & ~uint64_t {3};
++#else
++		const uint64_t piece = size & ~uint64_t {3};
++#endif
++		if (piece == 0) {
++			Write(guest_dst, &value, sizeof(value));
++			guest_dst += sizeof(value);
++			size -= sizeof(value);
++			continue;
++		}
++		auto* p = Ptr<uint32_t>(guest_dst, piece);
++		for (uint64_t i = 0; i < piece / sizeof(uint32_t); i++) {
++			p[i] = value;
++		}
++		guest_dst += piece;
++		size -= piece;
++	}
++}
++
++} // namespace GuestMemory
++
++#endif /* KYTY_COMMON_GUEST_MEMORY_H_ */
 diff --git a/src/common/hostException.cpp b/src/common/hostException.cpp
-index d44c623c..91e9eccb 100644
+index d44c623..3829807 100644
 --- a/src/common/hostException.cpp
 +++ b/src/common/hostException.cpp
 @@ -10,7 +10,11 @@
@@ -335,7 +423,7 @@ index d44c623c..91e9eccb 100644
  #if defined(__APPLE__)
  #include <sys/ucontext.h>
  #else
-@@ -225,6 +229,143 @@ static void ChainToDefault(int signal_number) noexcept {
+@@ -225,6 +229,155 @@ static void ChainToDefault(int signal_number) noexcept {
  	::sigaction(signal_number, &restore, nullptr);
  }
  
@@ -418,6 +506,18 @@ index d44c623c..91e9eccb 100644
 +
 +static void SignalHandler(int signal_number, siginfo_t* signal_info, void* native_context) {
 +	auto* context = static_cast<ucontext_t*>(native_context);
++	// Installed with SA_NODEFER: a fault inside the handler re-enters it. One level is expected
++	// (an emulated guest-VA store hitting a GPU-tracked page); deeper means the handler itself
++	// is faulting.
++	static thread_local int depth = 0;
++	struct DepthScope {
++		DepthScope() { depth++; }
++		~DepthScope() { depth--; }
++	} depth_scope;
++	if (depth > 4) {
++		ChainToDefault(signal_number);
++		return;
++	}
 +	if (NovaFex::HandleHostFault(signal_number, signal_info, native_context)) {
 +		return;
 +	}
@@ -479,7 +579,7 @@ index d44c623c..91e9eccb 100644
  static void SignalHandler(int signal_number, siginfo_t* signal_info, void* native_context) {
  	auto* context = static_cast<ucontext_t*>(native_context);
  	auto* gregs   = context->uc_mcontext.gregs;
-@@ -276,6 +417,7 @@ static void SignalHandler(int signal_number, siginfo_t* signal_info, void* nativ
+@@ -276,6 +429,7 @@ static void SignalHandler(int signal_number, siginfo_t* signal_info, void* nativ
  
  	ChainToDefault(signal_number);
  }
@@ -487,9 +587,23 @@ index d44c623c..91e9eccb 100644
  
  #endif
  
+@@ -323,6 +477,13 @@ bool InstallHandler(Handler handler) {
+ 	action.sa_sigaction = SignalHandler;
+ 	sigemptyset(&action.sa_mask);
+ 	action.sa_flags = SA_SIGINFO | SA_RESTART | SA_ONSTACK;
++#if defined(__aarch64__)
++	// Nova: NovaFex emulates emulator loads/stores to translated guest addresses inside this
++	// handler. When the target page is write-protected by the GPU's page tracking, that store
++	// faults again; it must reach this handler (which unprotects the page) instead of killing
++	// the process because SIGSEGV is blocked. SignalHandler bounds the nesting depth.
++	action.sa_flags |= SA_NODEFER;
++#endif
+ 
+ 	for (const int signal_number: {SIGSEGV, SIGBUS, SIGILL}) {
+ 		if (::sigaction(signal_number, &action, nullptr) != 0) {
 diff --git a/src/common/novaBionic.h b/src/common/novaBionic.h
 new file mode 100644
-index 00000000..1ded0b9a
+index 0000000..1ded0b9
 --- /dev/null
 +++ b/src/common/novaBionic.h
 @@ -0,0 +1,89 @@
@@ -584,7 +698,7 @@ index 00000000..1ded0b9a
 +#endif /* KYTY_COMMON_NOVA_BIONIC_H_ */
 diff --git a/src/common/novaFex.h b/src/common/novaFex.h
 new file mode 100644
-index 00000000..69812e9a
+index 0000000..69812e9
 --- /dev/null
 +++ b/src/common/novaFex.h
 @@ -0,0 +1,82 @@
@@ -671,7 +785,7 @@ index 00000000..69812e9a
 +
 +#endif /* KYTY_COMMON_NOVA_FEX_H_ */
 diff --git a/src/common/platform/sysLinuxVirtual.cpp b/src/common/platform/sysLinuxVirtual.cpp
-index 154d621d..de24c788 100644
+index 154d621..de24c78 100644
 --- a/src/common/platform/sysLinuxVirtual.cpp
 +++ b/src/common/platform/sysLinuxVirtual.cpp
 @@ -47,17 +47,25 @@ void Init() {
@@ -704,7 +818,7 @@ index 154d621d..de24c788 100644
  		case Mode::NoAccess:
  		default: protect = PROT_NONE; break;
 diff --git a/src/graphics/guest_gpu/command_processor/commandProcessor.h b/src/graphics/guest_gpu/command_processor/commandProcessor.h
-index c976bd8f..757e5ffa 100644
+index c976bd8..757e5ff 100644
 --- a/src/graphics/guest_gpu/command_processor/commandProcessor.h
 +++ b/src/graphics/guest_gpu/command_processor/commandProcessor.h
 @@ -184,6 +184,10 @@ private:
@@ -718,19 +832,72 @@ index c976bd8f..757e5ffa 100644
  };
  
  } // namespace Libs::Graphics
+diff --git a/src/graphics/guest_gpu/command_processor/pm4Handlers.cpp b/src/graphics/guest_gpu/command_processor/pm4Handlers.cpp
+index 5586ece..28f8f43 100644
+--- a/src/graphics/guest_gpu/command_processor/pm4Handlers.cpp
++++ b/src/graphics/guest_gpu/command_processor/pm4Handlers.cpp
+@@ -1,4 +1,5 @@
+ #include "common/assert.h"
++#include "common/guestMemory.h"
+ #include "common/logging/log.h"
+ #include "common/profiler.h"
+ #include "common/stringUtils.h"
+@@ -1351,6 +1352,7 @@ KYTY_CP_OP_PARSER(CpOpGetLodStats) {
+ 	                                                 (static_cast<uint64_t>(buffer[2]) << 32u));
+ 
+ 	if (dst != nullptr && buffer_size != 0) {
++		dst = GuestMemory::Ptr(dst, buffer_size);
+ 		memset(dst, 0, buffer_size);
+ 		// Hack?
+ 		if (buffer_size >= sizeof(uint32_t)) {
+@@ -1475,7 +1477,8 @@ KYTY_CP_OP_PARSER(CpOpBranch) {
+ 	EXIT_NOT_IMPLEMENTED(function > 6);
+ 	EXIT_NOT_IMPLEMENTED(then_buffer == nullptr || then_num_dw == 0);
+ 
+-	const bool take_then = TestWaitRegMemValue(*compare_addr, reference, mask, function);
++	const bool take_then =
++	    TestWaitRegMemValue(*GuestMemory::Ptr(compare_addr, sizeof(uint64_t)), reference, mask, function);
+ 	LOGF("\t branch: take=%u then=0x%016" PRIx64 "/%" PRIu32 " else=0x%016" PRIx64 "/%" PRIu32 "\n",
+ 	     take_then ? 1u : 0u, reinterpret_cast<uint64_t>(then_buffer), then_num_dw,
+ 	     reinterpret_cast<uint64_t>(else_buffer), else_num_dw);
+@@ -1969,6 +1972,7 @@ KYTY_CP_OP_PARSER(CpOpIndirectCxRegs) {
+ 	if (indirect_buffer == nullptr) {
+ 		EXIT("indirect CX registers have null address, num_regs = %" PRIu32 "\n", indirect_num_dw);
+ 	}
++	indirect_buffer = GuestMemory::Ptr(indirect_buffer, uint64_t {indirect_num_dw} * 8u);
+ 	for (uint32_t i = 0; i < indirect_num_dw; i++, indirect_buffer += 2) {
+ 		// Keep the encoded offset for packet control values, and use the normalized offset
+ 		// only for register dispatch.
+@@ -2040,6 +2044,7 @@ KYTY_CP_OP_PARSER(CpOpIndirectShRegs) {
+ 		EXIT("indirect SH registers have null address, num_regs = %" PRIu32 "\n", indirect_num_dw);
+ 	}
+ 	const auto indirect_address = reinterpret_cast<uint64_t>(indirect_buffer);
++	indirect_buffer             = GuestMemory::Ptr(indirect_buffer, uint64_t {indirect_num_dw} * 8u);
+ 
+ 	for (uint32_t i = 0; i < indirect_num_dw; i++, indirect_buffer += 2) {
+ 		auto raw_cmd_offset = indirect_buffer[0];
+@@ -2102,6 +2107,7 @@ KYTY_CP_OP_PARSER(CpOpIndirectUcRegs) {
+ 	if (indirect_buffer == nullptr) {
+ 		EXIT("indirect UC registers have null address, num_regs = %" PRIu32 "\n", indirect_num_dw);
+ 	}
++	indirect_buffer = GuestMemory::Ptr(indirect_buffer, uint64_t {indirect_num_dw} * 8u);
+ 	for (uint32_t i = 0; i < indirect_num_dw; i++, indirect_buffer += 2) {
+ 		auto raw_cmd_offset = indirect_buffer[0];
+ 		auto cmd_offset     = NormalizeRegisterOffset(raw_cmd_offset);
 diff --git a/src/graphics/guest_gpu/graphicsRun.cpp b/src/graphics/guest_gpu/graphicsRun.cpp
-index e2b06883..63c4d462 100644
+index e2b0688..6ba2898 100644
 --- a/src/graphics/guest_gpu/graphicsRun.cpp
 +++ b/src/graphics/guest_gpu/graphicsRun.cpp
-@@ -1,3 +1,7 @@
+@@ -1,3 +1,8 @@
 +#include "common/novaFex.h"
++#include "common/guestMemory.h"
 +#include <chrono>
 +#include <ctime>
 +#include <cstdio>
  #include "graphics/guest_gpu/graphicsRun.h"
  
  #include "common/assert.h"
-@@ -31,6 +35,50 @@
+@@ -31,6 +36,50 @@
  #include <thread>
  #include <vector>
  
@@ -781,7 +948,7 @@ index e2b06883..63c4d462 100644
  namespace Libs::Graphics {
  
  static thread_local CommandProcessor* g_current_processor = nullptr;
-@@ -58,8 +106,34 @@ static bool GraphicsRunDebugDumpEnabled() {
+@@ -58,8 +107,34 @@ static bool GraphicsRunDebugDumpEnabled() {
  	       Config::GetPrintfDirection() != Config::LogDirection::Silent;
  }
  
@@ -816,7 +983,43 @@ index e2b06883..63c4d462 100644
  	GraphicsInitJmpTables();
  	m_gfx_cp = std::make_unique<CommandProcessor>(renderer, 0);
  	m_gfx_cp->Reset();
-@@ -172,13 +246,42 @@ void GuestGpu::SuspendPoint() {
+@@ -134,6 +209,15 @@ void GuestGpu::SendCommandSync(Common::UniqueFunction<void>&& command) {
+ 	done.acquire();
+ }
+ 
++// Command buffers are guest memory; on the Nova host a buffer above 2^39 is read through its
++// translated host address (one plain load per dword instead of one emulated fault).
++static std::span<const uint32_t> HostCommands(std::span<const uint32_t> commands) {
++	if (commands.empty()) {
++		return commands;
++	}
++	return {GuestMemory::Ptr(commands.data(), commands.size_bytes()), commands.size()};
++}
++
+ void GuestGpu::Submit(std::span<const uint32_t> draw_commands,
+                       std::span<const uint32_t> constant_commands) {
+ 	if (draw_commands.empty()) {
+@@ -142,8 +226,8 @@ void GuestGpu::Submit(std::span<const uint32_t> draw_commands,
+ 	Submission submission;
+ 	submission.type              = SubmissionType::Graphics;
+ 	submission.queue_id          = 0;
+-	submission.commands          = draw_commands;
+-	submission.constant_commands = constant_commands;
++	submission.commands          = HostCommands(draw_commands);
++	submission.constant_commands = HostCommands(constant_commands);
+ 	Enqueue(std::move(submission));
+ }
+ 
+@@ -156,7 +240,7 @@ void GuestGpu::SubmitCompute(uint32_t queue, std::span<const uint32_t> commands)
+ 	Submission submission;
+ 	submission.type     = SubmissionType::Compute;
+ 	submission.queue_id = 1 + compute_queue;
+-	submission.commands = commands;
++	submission.commands = HostCommands(commands);
+ 	Enqueue(std::move(submission));
+ }
+ 
+@@ -172,13 +256,42 @@ void GuestGpu::SuspendPoint() {
  	EXIT_IF(IsGpuThread() || CommandScheduler::InDeferredOperation());
  	// Do not hold a queue lock while waiting: asynchronous work may be needed to
  	// finish the preceding graphics frame. The first point returns immediately.
@@ -859,17 +1062,29 @@ index e2b06883..63c4d462 100644
  int GuestGpu::GetFrameNum() const {
  	return m_done_num;
  }
-@@ -315,7 +418,68 @@ void CommandProcessor::WaitRegMem(uint32_t func, const T* addr, T ref, T mask, u
+@@ -288,7 +401,7 @@ void CommandProcessor::WriteConstRam(uint32_t offset, const uint32_t* src, uint3
+ }
+ 
+ void CommandProcessor::DumpConstRam(uint32_t* dst, uint32_t offset, uint32_t dw_num) {
+-	memcpy(dst, m_const_ram + offset / 4, static_cast<size_t>(dw_num) * 4);
++	GuestMemory::Copy(dst, m_const_ram + offset / 4, static_cast<uint64_t>(dw_num) * 4);
+ }
+ 
+ bool TestWaitRegMemValue(uint64_t value, uint64_t ref, uint64_t mask, uint32_t func) {
+@@ -315,7 +428,70 @@ void CommandProcessor::WaitRegMem(uint32_t func, const T* addr, T ref, T mask, u
  	}
  
  	(void)poll;
+-	if (!TestWaitRegMemValue(*addr, ref, mask, func)) {
++	// The label is guest memory: read it through its host address (addr stays the identity).
++	const T* value = GuestMemory::Ptr(addr, sizeof(T));
 +#if defined(KYTY_NOVA_FEX)
-+	if (TestWaitRegMemValue(*addr, ref, mask, func) && m_nova_wait_addr != nullptr) {
++	if (TestWaitRegMemValue(*value, ref, mask, func) && m_nova_wait_addr != nullptr) {
 +		m_nova_wait_addr = nullptr;
 +		g_nova_gpu_stall_since_ms.store(0, std::memory_order_relaxed);
 +	}
 +#endif
- 	if (!TestWaitRegMemValue(*addr, ref, mask, func)) {
++	if (!TestWaitRegMemValue(*value, ref, mask, func)) {
 +#if defined(KYTY_NOVA_FEX)
 +		// Nova: a GPU queue that waits on memory for seconds is a frozen game. Report it, let
 +		// AgcSuspendPoint stop throttling the CPU (the CPU may be the writer), and as a last
@@ -892,7 +1107,7 @@ index e2b06883..63c4d462 100644
 +			             "NOVA_GPU_WAIT: queue(event %u) waits on 0x%016llx func=%u ref=0x%llx mask=0x%llx value=0x%llx for %llu ms\n",
 +			             static_cast<unsigned>(m_interrupt_event_id), a64, func,
 +			             static_cast<unsigned long long>(ref), static_cast<unsigned long long>(mask),
-+			             static_cast<unsigned long long>(*addr), static_cast<unsigned long long>(waited));
++			             static_cast<unsigned long long>(*value), static_cast<unsigned long long>(waited));
 +			uint32_t shown = 0;
 +			for (uint32_t i = 0; i < NOVA_WRITES && i < g_nova_write_pos; i++) {
 +				const auto& w = g_nova_writes[(g_nova_write_pos - 1 - i) % NOVA_WRITES];
@@ -928,7 +1143,7 @@ index e2b06883..63c4d462 100644
  		SuspendPm4();
  	}
  }
-@@ -342,6 +506,9 @@ void CommandProcessor::WriteData(uint32_t* dst, const uint32_t* src, uint32_t dw
+@@ -342,12 +518,16 @@ void CommandProcessor::WriteData(uint32_t* dst, const uint32_t* src, uint32_t dw
  		return;
  	}
  
@@ -936,9 +1151,27 @@ index e2b06883..63c4d462 100644
 +	NovaNoteGpuWrite(dst, src[dw_num - 1], static_cast<uint32_t>(m_interrupt_event_id), 'D');
 +#endif
  	if (write_one_address) {
++		auto* host_dst = GuestMemory::Ptr(dst, sizeof(uint32_t));
  		for (uint32_t i = 0; i < dw_num; i++) {
- 			dst[0] = src[i];
-@@ -504,6 +671,10 @@ void GuestGpu::ThreadRun(void* data) {
+-			dst[0] = src[i];
++			host_dst[0] = src[i];
+ 		}
+ 	} else {
+-		memcpy(dst, src, static_cast<size_t>(dw_num) * sizeof(uint32_t));
++		GuestMemory::Copy(dst, src, static_cast<uint64_t>(dw_num) * sizeof(uint32_t));
+ 	}
+ }
+ 
+@@ -358,7 +538,7 @@ void CommandProcessor::WriteReferenceClock(uint64_t dst_address, uint32_t num_by
+ 		     num_bytes);
+ 	}
+ 	const auto value = Sync::ReadReferenceClock();
+-	std::memcpy(reinterpret_cast<void*>(dst_address), &value, num_bytes);
++	GuestMemory::Write(dst_address, &value, num_bytes);
+ 	static std::atomic<uint32_t> clock_log_count {0};
+ 	if (clock_log_count.fetch_add(1) < 64) {
+ 		LOGF("\t copy_data reference clock: dst=0x%016" PRIx64 " value=0x%016" PRIx64
+@@ -504,6 +684,10 @@ void GuestGpu::ThreadRun(void* data) {
  
  		if (command) {
  			EXIT_IF(g_current_processor != nullptr);
@@ -949,7 +1182,16 @@ index e2b06883..63c4d462 100644
  			command();
  
  			Common::LockGuard lock(gpu->m_queue_mutex);
-@@ -706,6 +877,11 @@ void CommandProcessor::ProcessPm4(Pm4Execution& execution) {
+@@ -652,7 +836,7 @@ Pm4ProcessResult CommandProcessor::Process(Pm4Execution&             execution,
+ void CommandProcessor::ProcessIndirectBuffer(std::span<const uint32_t> commands, bool chain) {
+ 	EXIT_IF(g_current_execution == nullptr);
+ 	EXIT_IF(!g_current_execution->m_next_buffer.empty());
+-	g_current_execution->m_next_buffer = commands;
++	g_current_execution->m_next_buffer = HostCommands(commands);
+ 	g_current_execution->m_chain       = chain;
+ }
+ 
+@@ -706,6 +890,11 @@ void CommandProcessor::ProcessPm4(Pm4Execution& execution) {
  			}
  			if (opcode == Pm4::IT_NOP && KYTY_PM4_R(packet_header) == Pm4::R_RELEASE_MEM &&
  			    packet_dw >= 7) {
@@ -961,28 +1203,89 @@ index e2b06883..63c4d462 100644
  				static std::atomic<uint32_t> log_count {0};
  				if (log_count.fetch_add(1) < 128) {
  					const auto dst = packet[3] | (static_cast<uint64_t>(packet[4]) << 32u);
-@@ -1078,6 +1254,9 @@ void CommandProcessor::WriteAtEndOfPipe(uint32_t cache_policy, uint32_t event_wr
+@@ -925,7 +1114,7 @@ void CommandProcessor::DrawIndirectMulti(uint32_t data_offset, uint32_t max_coun
+ 		                       static_cast<uint64_t>(i) * stride_in_bytes;
+ 
+ 		if (!indexed) {
+-			auto* args = reinterpret_cast<const DrawIndirectArgs*>(args_addr);
++			auto* args = GuestMemory::Ptr<const DrawIndirectArgs>(args_addr, sizeof(DrawIndirectArgs));
+ 			PatchIndirectDrawOffsets(*this, registers, args->start_vertex_location,
+ 			                         args->start_instance_location, 0);
+ 			m_num_instances = args->instance_count;
+@@ -937,7 +1126,7 @@ void CommandProcessor::DrawIndirectMulti(uint32_t data_offset, uint32_t max_coun
+ 			continue;
+ 		}
+ 
+-		auto* args = reinterpret_cast<const DrawIndexedIndirectArgs*>(args_addr);
++		auto* args = GuestMemory::Ptr<const DrawIndexedIndirectArgs>(args_addr, sizeof(DrawIndexedIndirectArgs));
+ 		PatchIndirectDrawOffsets(*this, registers, args->base_vertex_location,
+ 		                         args->start_instance_location, args->start_index_location);
+ 
+@@ -1001,7 +1190,7 @@ void CommandProcessor::DispatchDirect(uint32_t thread_group_x, uint32_t thread_g
+ void CommandProcessor::DispatchIndirect(uint64_t args_addr, uint32_t mode) {
+ 	EXIT_NOT_IMPLEMENTED(args_addr == 0 || (args_addr & 3u) != 0);
+ 	if ((mode & Pm4::COMPUTE_DISPATCH_INITIATOR_USE_THREAD_DIMENSIONS) != 0) {
+-		const auto* args = reinterpret_cast<const vk::DispatchIndirectCommand*>(args_addr);
++		const auto* args = GuestMemory::Ptr<const vk::DispatchIndirectCommand>(args_addr, sizeof(vk::DispatchIndirectCommand));
+ 		DispatchDirect(args->x, args->y, args->z, mode);
+ 		return;
+ 	}
+@@ -1077,7 +1266,10 @@ void CommandProcessor::WriteAtEndOfPipe(uint32_t cache_policy, uint32_t event_wr
+ 		auto  data = static_cast<uint32_t>(value);
  		EXIT_IF(dst == nullptr);
  		(void)command.Handle();
- 		std::memcpy(dst, &data, sizeof(data));
+-		std::memcpy(dst, &data, sizeof(data));
++		GuestMemory::Copy(dst, &data, sizeof(data));
 +#if defined(KYTY_NOVA_FEX)
 +		NovaNoteGpuWrite(dst, data, static_cast<uint32_t>(m_interrupt_event_id), 'E');
 +#endif
  
  		if (with_interrupt) {
  			TriggerEopEventAtEndOfPipe(interrupt_context_id);
-@@ -1121,6 +1300,9 @@ void CommandProcessor::WriteAtEndOfPipe(uint32_t cache_policy, uint32_t event_wr
+@@ -1090,8 +1282,9 @@ void CommandProcessor::WriteAtEndOfPipe(uint32_t cache_policy, uint32_t event_wr
+ 				if (eop_event_type == 0x2f && cache_action == 0x00 && event_index == 0x06) {
+ 					auto* dst = static_cast<uint32_t*>(dst_gpu_addr);
+ 					SynchronizeGpu();
+-					Sync::ReadGds(*m_renderer.GetBufferCache().GetGdsBuffer(), dst, value & 0xffffu,
+-					              value >> 16u);
++					Sync::ReadGds(*m_renderer.GetBufferCache().GetGdsBuffer(),
++					              GuestMemory::Ptr(dst, uint64_t {value >> 16u} * sizeof(uint32_t)),
++					              value & 0xffffu, value >> 16u);
+ 					if (with_interrupt) {
+ 						m_renderer.TriggerInterrupt(m_interrupt_event_id, interrupt_context_id);
+ 					}
+@@ -1120,7 +1313,10 @@ void CommandProcessor::WriteAtEndOfPipe(uint32_t cache_policy, uint32_t event_wr
+ 					auto* dst = static_cast<uint64_t*>(dst_gpu_addr);
  					EXIT_IF(dst == nullptr);
  					(void)command.Handle();
- 					std::memcpy(dst, &value, sizeof(value));
+-					std::memcpy(dst, &value, sizeof(value));
++					GuestMemory::Copy(dst, &value, sizeof(value));
 +#if defined(KYTY_NOVA_FEX)
 +					NovaNoteGpuWrite(dst, static_cast<uint64_t>(value), static_cast<uint32_t>(m_interrupt_event_id), 'E');
 +#endif
  
  					if (with_interrupt) {
  						TriggerEopEventAtEndOfPipe(interrupt_context_id);
+@@ -1349,7 +1545,7 @@ void CommandProcessor::Flip(void* dst_gpu_addr, uint32_t value) {
+ 	}
+ 
+ 	EXIT_IF(dst_gpu_addr == nullptr);
+-	std::memcpy(dst_gpu_addr, &value, sizeof(value));
++	GuestMemory::Copy(dst_gpu_addr, &value, sizeof(value));
+ 	auto request = Sync::PrepareVideoOutFlip(command, m_flip.handle, m_flip.index, m_flip.flip_mode,
+ 	                                         m_flip.flip_arg);
+ 	(void)command.Handle();
+@@ -1375,7 +1571,7 @@ void CommandProcessor::FlipWithInterrupt(uint32_t eop_event_type, uint32_t cache
+ 		EXIT("unknown event type\n");
+ 	}
+ 	EXIT_IF(dst_gpu_addr == nullptr);
+-	std::memcpy(dst_gpu_addr, &value, sizeof(value));
++	GuestMemory::Copy(dst_gpu_addr, &value, sizeof(value));
+ 	auto request = Sync::PrepareVideoOutFlip(command, m_flip.handle, m_flip.index, m_flip.flip_mode,
+ 	                                         m_flip.flip_arg);
+ 	(void)command.Handle();
 diff --git a/src/graphics/guest_gpu/graphicsRun.h b/src/graphics/guest_gpu/graphicsRun.h
-index 781bda2d..3865097e 100644
+index 781bda2..3865097 100644
 --- a/src/graphics/guest_gpu/graphicsRun.h
 +++ b/src/graphics/guest_gpu/graphicsRun.h
 @@ -39,6 +39,7 @@ public:
@@ -994,7 +1297,7 @@ index 781bda2d..3865097e 100644
  	void              WaitForIdle();
  	[[nodiscard]] int GetFrameNum() const;
 diff --git a/src/graphics/host_gpu/hostMemory.cpp b/src/graphics/host_gpu/hostMemory.cpp
-index 75743346..c26e3878 100644
+index 7574334..c26e387 100644
 --- a/src/graphics/host_gpu/hostMemory.cpp
 +++ b/src/graphics/host_gpu/hostMemory.cpp
 @@ -1,5 +1,7 @@
@@ -1039,8 +1342,134 @@ index 75743346..c26e3878 100644
  	accessible_size = 0;
  	if (addr == 0 || requested_size == 0) {
  		return false;
+diff --git a/src/graphics/host_gpu/regionDefinitions.h b/src/graphics/host_gpu/regionDefinitions.h
+index b6bd162..7d15fc6 100644
+--- a/src/graphics/host_gpu/regionDefinitions.h
++++ b/src/graphics/host_gpu/regionDefinitions.h
+@@ -12,8 +12,18 @@ namespace Libs::Graphics {
+ constexpr uint64_t TRACKER_PAGE_SIZE    = 4ull * 1024ull;
+ constexpr uint64_t TRACKER_REGION_SIZE  = 4ull * 1024ull * 1024ull;
+ constexpr uint64_t TRACKER_ADDRESS_SIZE = 1ull << 44u;
+-constexpr uint64_t LOWER_ADDRESS_SIZE   = 1ull << 40u;
+-constexpr size_t   TRACKER_REGION_PAGES = TRACKER_REGION_SIZE / TRACKER_PAGE_SIZE;
++#if defined(__aarch64__)
++// Nova (39-bit Android host): there is no PS5 extended memory, and engines' huge arenas (libc /
++// Unreal, up to 768 GiB) are placed at 2^39 through FEX guest VA translation, so they end above
++// 1 TiB. The GPU's linear address domain therefore covers [0, 1.5 TiB) and has no extended part;
++// the domain size (and the BDA page table) is the same as upstream's 1 TiB + 512 GiB.
++constexpr uint64_t LOWER_ADDRESS_SIZE = 3ull << 39u;
++constexpr uint64_t GPU_EXTENDED_SIZE  = 0;
++#else
++constexpr uint64_t LOWER_ADDRESS_SIZE = 1ull << 40u;
++constexpr uint64_t GPU_EXTENDED_SIZE  = LibKernel::Memory::kExtendedMemorySize;
++#endif
++constexpr size_t TRACKER_REGION_PAGES = TRACKER_REGION_SIZE / TRACKER_PAGE_SIZE;
+ 
+ struct GuestRange {
+ 	uint64_t address = 0;
+@@ -23,9 +33,13 @@ struct GuestRange {
+ 	[[nodiscard]] constexpr bool Valid() const noexcept {
+ 		if (address == 0 || size == 0) return false;
+ 		if (address < LOWER_ADDRESS_SIZE) return size <= LOWER_ADDRESS_SIZE - address;
+-		constexpr auto base = LibKernel::Memory::kExtendedMemoryBase;
+-		constexpr auto length = LibKernel::Memory::kExtendedMemorySize;
+-		return address >= base && address - base < length && size <= length - (address - base);
++		if constexpr (GPU_EXTENDED_SIZE == 0) {
++			return false;
++		} else {
++			constexpr auto base   = LibKernel::Memory::kExtendedMemoryBase;
++			constexpr auto length = GPU_EXTENDED_SIZE;
++			return address >= base && address - base < length && size <= length - (address - base);
++		}
+ 	}
+ 	[[nodiscard]] constexpr bool     ValidOrEmpty() const noexcept { return Empty() || Valid(); }
+ 	[[nodiscard]] constexpr uint64_t End() const noexcept { return address + size; }
+diff --git a/src/graphics/host_gpu/renderer/cache/bufferCache.cpp b/src/graphics/host_gpu/renderer/cache/bufferCache.cpp
+index 165e32e..3d5b51e 100644
+--- a/src/graphics/host_gpu/renderer/cache/bufferCache.cpp
++++ b/src/graphics/host_gpu/renderer/cache/bufferCache.cpp
+@@ -1,4 +1,5 @@
+ #include "graphics/host_gpu/renderer/cache/bufferCache.h"
++#include "common/guestMemory.h"
+ 
+ #include "common/alignment.h"
+ #include "common/assert.h"
+@@ -347,7 +348,7 @@ BufferCache::OverlapResult BufferCache::ResolveOverlaps(uint64_t vaddr, uint64_t
+ 			if (expands_left) {
+ 				end += std::min(StreamLeapSize, (vaddr < LOWER_ADDRESS_SIZE ? LOWER_ADDRESS_SIZE
+ 				                                       : LibKernel::Memory::kExtendedMemoryBase +
+-				                                             LibKernel::Memory::kExtendedMemorySize) - end);
++				                                             GPU_EXTENDED_SIZE) - end);
+ 			}
+ 			if (expands_right) {
+ 				const auto minimum = vaddr < LOWER_ADDRESS_SIZE
+@@ -451,7 +452,7 @@ vk::Buffer BufferCache::UploadCopies(Buffer& buffer, std::span<vk::BufferCopy> c
+ 	if (mapped != nullptr) {
+ 		for (auto& copy: copies) {
+ 			const auto address = buffer.CpuAddress() + copy.dstOffset;
+-			std::memcpy(mapped + copy.srcOffset, reinterpret_cast<const void*>(address), copy.size);
++			GuestMemory::Read(mapped + copy.srcOffset, address, copy.size);
+ 			copy.srcOffset += base_offset;
+ 		}
+ 		m_staging_buffer.Commit();
+@@ -462,8 +463,7 @@ vk::Buffer BufferCache::UploadCopies(Buffer& buffer, std::span<vk::BufferCopy> c
+ 	                                         vk::BufferUsageFlagBits::eTransferSrc, total_size);
+ 	for (const auto& copy: copies) {
+ 		const auto address = buffer.CpuAddress() + copy.dstOffset;
+-		std::memcpy(temporary->Mapped().data() + copy.srcOffset,
+-		            reinterpret_cast<const void*>(address), copy.size);
++		GuestMemory::Read(temporary->Mapped().data() + copy.srcOffset, address, copy.size);
+ 	}
+ 	temporary->Flush(0, total_size);
+ 	const auto handle = temporary->Handle();
+@@ -486,7 +486,7 @@ std::pair<Buffer*, uint64_t> BufferCache::ObtainBuffer(uint64_t vaddr, uint64_t
+ 		    m_graphics.physical_device_properties.limits.minUniformBufferOffsetAlignment, 1);
+ 		auto [mapped, offset] = m_stream_buffer.Map(size, alignment, false);
+ 		if (mapped != nullptr) {
+-			std::memcpy(mapped, reinterpret_cast<const void*>(vaddr), size);
++			GuestMemory::Read(mapped, vaddr, size);
+ 			m_stream_buffer.Commit();
+ 			return {&m_stream_buffer, offset};
+ 		}
+@@ -545,9 +545,9 @@ void BufferCache::FillBuffer(uint64_t vaddr, uint64_t size, uint32_t value, bool
+ 	}
+ 	(void)m_texture_cache.ClearMeta(vaddr);
+ 	if (!IsRegionGpuModified(vaddr, size)) {
+-		// Access the guest mapping so write faults invalidate cached buffers and images.
+-		auto* destination = reinterpret_cast<uint32_t*>(vaddr);
+-		std::fill(destination, destination + size / sizeof(uint32_t), value);
++		// Access the guest mapping so write faults invalidate cached buffers and images (on the
++		// Nova host through the translated address; its faults are mapped back to the guest).
++		GuestMemory::Fill32(vaddr, value, size);
+ 		return;
+ 	}
+ 
+@@ -571,8 +571,8 @@ void BufferCache::CopyBuffer(uint64_t dst_vaddr, uint64_t src_vaddr, uint64_t si
+ 	}
+ 	if (src_memory && dst_memory && !IsRegionGpuModified(dst_vaddr, size) &&
+ 	    !IsRegionGpuModified(src_vaddr, size) && !m_texture_cache.FindImageFromRange(src_vaddr, size)) {
+-		std::memcpy(reinterpret_cast<void*>(dst_vaddr), reinterpret_cast<const void*>(src_vaddr),
+-		            size);
++		GuestMemory::Copy(reinterpret_cast<void*>(dst_vaddr), reinterpret_cast<const void*>(src_vaddr),
++		                  size);
+ 		return;
+ 	}
+ 
+diff --git a/src/graphics/host_gpu/renderer/cache/bufferCache.h b/src/graphics/host_gpu/renderer/cache/bufferCache.h
+index 1212bd5..e289995 100644
+--- a/src/graphics/host_gpu/renderer/cache/bufferCache.h
++++ b/src/graphics/host_gpu/renderer/cache/bufferCache.h
+@@ -29,7 +29,7 @@ class BufferCache {
+ public:
+ 	static constexpr uint32_t CACHING_PAGEBITS  = 14;
+ 	static constexpr uint64_t CACHING_PAGESIZE  = uint64_t {1} << CACHING_PAGEBITS;
+-	static constexpr uint64_t CACHING_NUMPAGES  = (LOWER_ADDRESS_SIZE + LibKernel::Memory::kExtendedMemorySize) >> CACHING_PAGEBITS;
++	static constexpr uint64_t CACHING_NUMPAGES  = (LOWER_ADDRESS_SIZE + GPU_EXTENDED_SIZE) >> CACHING_PAGEBITS;
+ 	static constexpr uint64_t BDA_PAGETABLE_SIZE =
+ 	    CACHING_NUMPAGES * sizeof(vk::DeviceAddress);
+ 
 diff --git a/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp b/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp
-index d56b629b..b1a7b913 100644
+index d56b629..b1a7b91 100644
 --- a/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp
 +++ b/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp
 @@ -512,10 +512,8 @@ void PipelineCache::InitializeDriverCache() {
@@ -1056,16 +1485,61 @@ index d56b629b..b1a7b913 100644
  
  	m_driver_cache_path     = std::filesystem::path("_PipelineCache") / (title_id + ".bin");
  	const auto path         = Common::PathToString(m_driver_cache_path);
+diff --git a/src/graphics/host_gpu/renderer/renderCompute.cpp b/src/graphics/host_gpu/renderer/renderCompute.cpp
+index 7222d7f..18c6d6b 100644
+--- a/src/graphics/host_gpu/renderer/renderCompute.cpp
++++ b/src/graphics/host_gpu/renderer/renderCompute.cpp
+@@ -2,6 +2,7 @@
+ #include "common/common.h"
+ #include "common/emulatorConfig.h"
+ #include "common/file.h"
++#include "common/guestMemory.h"
+ #include "common/logging/log.h"
+ #include "common/profiler.h"
+ #include "common/stringUtils.h"
+@@ -204,8 +205,7 @@ static void BindSharedMemory(RenderContext& context, ShaderComputeInputInfo& inp
+ 	auto& cache = context.GetBufferCache();
+ 	if (indirect_args != 0) {
+ 		cache.ReadMemory(indirect_args, sizeof(vk::DispatchIndirectCommand));
+-		std::memcpy(input.workgroup_counts, reinterpret_cast<const void*>(indirect_args),
+-		            sizeof(input.workgroup_counts));
++		GuestMemory::Read(input.workgroup_counts, indirect_args, sizeof(input.workgroup_counts));
+ 	}
+ 	// LDS has no contents to preserve between dispatches. The existing shader hazard
+ 	// barriers also order other users of this GPU-only utility buffer.
+diff --git a/src/graphics/host_gpu/renderer/renderDraw.cpp b/src/graphics/host_gpu/renderer/renderDraw.cpp
+index fb00710..58ea1e5 100644
+--- a/src/graphics/host_gpu/renderer/renderDraw.cpp
++++ b/src/graphics/host_gpu/renderer/renderDraw.cpp
+@@ -4,6 +4,7 @@
+ #include "common/common.h"
+ #include "common/emulatorConfig.h"
+ #include "common/file.h"
++#include "common/guestMemory.h"
+ #include "common/logging/log.h"
+ #include "common/profiler.h"
+ #include "common/stringUtils.h"
+@@ -850,7 +851,7 @@ static bool ResolvePrimitiveRestart(const CommandBuffer& buffer,
+ 	// Keep restart off in that case; fail if we actually find the value.
+ 	// Scan before preparing draw resources: readback can restart the command buffer.
+ 	EXIT_NOT_IMPLEMENTED(source.address == 0);
+-	const auto* indices = reinterpret_cast<const uint8_t*>(source.address);
++	const auto* indices = GuestMemory::Ptr<const uint8_t>(source.address, source.size);
+ 	for (uint64_t offset = 0; offset < source.size; offset += element_size) {
+ 		uint32_t index = 0;
+ 		std::memcpy(&index, indices + offset, element_size);
 diff --git a/src/graphics/presentation/videoOut.cpp b/src/graphics/presentation/videoOut.cpp
-index 11e989e4..b62630ce 100644
+index 11e989e..1e5d196 100644
 --- a/src/graphics/presentation/videoOut.cpp
 +++ b/src/graphics/presentation/videoOut.cpp
-@@ -1,3 +1,4 @@
+@@ -1,4 +1,6 @@
 +#include <cstdio>
  #include "graphics/presentation/videoOut.h"
++#include "common/novaFex.h"
  
  #include "common/abi.h"
-@@ -203,7 +204,24 @@ class FlipQueue {
+ #include "common/assert.h"
+@@ -203,7 +205,24 @@ class FlipQueue {
  public:
  	explicit FlipQueue(Graphics::Presenter& presenter): m_presenter(presenter) {
  		EXIT_NOT_IMPLEMENTED(!Common::Thread::IsMainThread());
@@ -1090,7 +1564,7 @@ index 11e989e4..b62630ce 100644
  	~FlipQueue();
  	KYTY_CLASS_NO_COPY(FlipQueue);
  
-@@ -289,6 +307,10 @@ private:
+@@ -289,6 +308,10 @@ private:
  
  static std::unique_ptr<VideoOutDriver> g_video_out_driver;
  
@@ -1101,8 +1575,18 @@ index 11e989e4..b62630ce 100644
  static VideoOutDriver::Impl& DriverState() {
  	EXIT_IF(g_video_out_driver == nullptr);
  	return g_video_out_driver->State();
+@@ -1242,6 +1265,9 @@ bool FlipQueue::Flip(uint32_t micros) {
+ 	}
+ 	if (due) {
+ 		m_presenter.Present(std::span(layers.data(), count));
++#if defined(KYTY_NOVA_FEX)
++		NovaFex::NoteGameFrame();
++#endif
+ 	}
+ 
+ 	m_mutex.Lock();
 diff --git a/src/graphics/presentation/window/swapchain.cpp b/src/graphics/presentation/window/swapchain.cpp
-index 07c74012..9ce70128 100644
+index 07c7401..9ce7012 100644
 --- a/src/graphics/presentation/window/swapchain.cpp
 +++ b/src/graphics/presentation/window/swapchain.cpp
 @@ -2,6 +2,10 @@
@@ -1175,7 +1659,7 @@ index 07c74012..9ce70128 100644
  }
  
 diff --git a/src/graphics/presentation/window/vulkanWindow.cpp b/src/graphics/presentation/window/vulkanWindow.cpp
-index 95005f5a..a7907637 100644
+index 95005f5..a790763 100644
 --- a/src/graphics/presentation/window/vulkanWindow.cpp
 +++ b/src/graphics/presentation/window/vulkanWindow.cpp
 @@ -1,3 +1,5 @@
@@ -1273,7 +1757,7 @@ index 95005f5a..a7907637 100644
  }
  
 diff --git a/src/graphics/shader/recompiler/ir/passes/ShaderInfoCollection.cpp b/src/graphics/shader/recompiler/ir/passes/ShaderInfoCollection.cpp
-index 29aecffe..a27e7296 100644
+index 29aecff..a27e729 100644
 --- a/src/graphics/shader/recompiler/ir/passes/ShaderInfoCollection.cpp
 +++ b/src/graphics/shader/recompiler/ir/passes/ShaderInfoCollection.cpp
 @@ -7,6 +7,12 @@
@@ -1321,10 +1805,25 @@ index 29aecffe..a27e7296 100644
  			break;
  		case StageInputKind::WorkgroupId:
 diff --git a/src/graphics/shader/recompiler/ir/passes/SrtWalker.cpp b/src/graphics/shader/recompiler/ir/passes/SrtWalker.cpp
-index 06731ee7..0ce2c79b 100644
+index 06731ee..b47bd93 100644
 --- a/src/graphics/shader/recompiler/ir/passes/SrtWalker.cpp
 +++ b/src/graphics/shader/recompiler/ir/passes/SrtWalker.cpp
-@@ -432,6 +432,10 @@ void CompileSrtWalker(ResourcePlan& program) {
+@@ -1,4 +1,5 @@
+ #include "graphics/shader/recompiler/ir/passes/SrtWalker.h"
++#include "common/guestMemory.h"
+ 
+ #include "common/abi.h"
+ #include "common/assert.h"
+@@ -39,7 +40,7 @@ bool SrtReadCapture::ReadOrdinary(void* userdata, uint64_t address, std::span<ui
+ 	if (capture.m_source.read_memory != nullptr) {
+ 		if (!capture.m_source.read_memory(capture.m_source.userdata, address, values)) return false;
+ 	} else {
+-		std::memcpy(values.data(), reinterpret_cast<const void*>(address), values.size_bytes());
++		GuestMemory::Read(values.data(), address, values.size_bytes());
+ 	}
+ 	capture.m_ranges.emplace_back(address, values.size_bytes());
+ 	return true;
+@@ -432,6 +433,10 @@ void CompileSrtWalker(ResourcePlan& program) {
  	}
  	if (visited.size() != pointer_uses.size()) return;
  
@@ -1335,7 +1834,7 @@ index 06731ee7..0ce2c79b 100644
  	program.srt_code = std::make_unique<Xbyak::CodeGenerator>(4096, Xbyak::AutoGrow);
  	auto& code = *program.srt_code;
  	Xbyak::Label failed, finished;
-@@ -487,6 +491,7 @@ void CompileSrtWalker(ResourcePlan& program) {
+@@ -487,6 +492,7 @@ void CompileSrtWalker(ResourcePlan& program) {
  	code.ret();
  	code.readyRE();
  	EXIT_IF(Xbyak::GetError() != 0);
@@ -1343,8 +1842,92 @@ index 06731ee7..0ce2c79b 100644
  }
  
  SrtWalker::SrtWalker(const ResourcePlan& program, const SrtRuntime& runtime,
+@@ -691,7 +697,7 @@ bool SrtWalker::EvaluateRawRead(const Inst& inst, uint64_t& result) {
+ 		}
+ 	} else {
+ 		if (vector) return false;
+-		std::memcpy(&word, reinterpret_cast<const void*>(address), sizeof(word));
++		GuestMemory::Read(&word, address, sizeof(word));
+ 	}
+ 	result = word;
+ 	return true;
+diff --git a/src/graphics/shader/shader.cpp b/src/graphics/shader/shader.cpp
+index deff9fc..769e844 100644
+--- a/src/graphics/shader/shader.cpp
++++ b/src/graphics/shader/shader.cpp
+@@ -1,4 +1,5 @@
+ #include "graphics/shader/shader.h"
++#include "common/guestMemory.h"
+ 
+ #include "common/assert.h"
+ #include "common/common.h"
+@@ -62,7 +63,8 @@ void ShaderMapUserData(uint64_t addr, const ShaderMappedData& data) {
+ 		EXIT("ShaderMapUserData shader=0x%016" PRIx64 " has invalid AGC shader_size=0x%08" PRIx32 "\n",
+ 		     addr, data.code_size_bytes);
+ 	}
+-	const auto hash = XXH3_64bits(reinterpret_cast<const void*>(addr), data.code_size_bytes);
++	const auto hash = XXH3_64bits(GuestMemory::Ptr<const void>(addr, data.code_size_bytes),
++	                              data.code_size_bytes);
+ 	std::scoped_lock lock(g_shader_map_mutex);
+ 	(*g_shader_map)[addr] = {data, hash};
+ }
+@@ -83,11 +85,15 @@ static ShaderParams GetShaderParams(uint64_t shader_addr, uint64_t hash,
+ 	                                std::span<const uint32_t> user_data,
+ 	                                const ShaderMappedData& data, uint32_t user_data_base = 0) {
+ 	const auto code_words = data.code_size_bytes / sizeof(uint32_t);
+-	const auto code = std::span {reinterpret_cast<const uint32_t*>(shader_addr), code_words};
++	// The recompiler reads the code through its host address; Base() keeps the guest address
++	// (s_getpc and shader-relative tables use it).
++	const auto code = std::span {GuestMemory::Ptr<const uint32_t>(shader_addr, data.code_size_bytes),
++	                             code_words};
+ 	ShaderParams params {
+ 	    .code            = code,
+ 	    .user_data_count = static_cast<uint32_t>(user_data.size()) + user_data_base,
+ 	    .hash            = hash,
++	    .guest_base      = shader_addr,
+ 	};
+ 	EXIT_IF(user_data.size() > HW::UserSgprInfo::SGPRS_MAX ||
+ 	        params.user_data_count > params.user_data.size());
+@@ -490,12 +496,15 @@ static bool ShaderGetStaticVertexInputInfo(uint64_t shader_addr, const HW::UserS
+ 		info.fetch_attrib_reg = metadata.vertex_attrib_reg;
+ 		info.fetch_buffer_reg = metadata.vertex_buffer_reg;
+ 
+-		const auto* attrib = reinterpret_cast<const uint32_t*>(
++		// Fetch tables are guest memory; only their contents are used here.
++		const auto* attrib = GuestMemory::Ptr<const uint32_t>(
+ 		    static_cast<uint64_t>(user_sgpr.value[metadata.vertex_attrib_reg]) |
+-		    (static_cast<uint64_t>(user_sgpr.value[metadata.vertex_attrib_reg + 1]) << 32u));
+-		const auto* buffer = reinterpret_cast<const uint32_t*>(
++		        (static_cast<uint64_t>(user_sgpr.value[metadata.vertex_attrib_reg + 1]) << 32u),
++		    256);
++		const auto* buffer = GuestMemory::Ptr<const uint32_t>(
+ 		    static_cast<uint64_t>(user_sgpr.value[metadata.vertex_buffer_reg]) |
+-		    (static_cast<uint64_t>(user_sgpr.value[metadata.vertex_buffer_reg + 1]) << 32u));
++		        (static_cast<uint64_t>(user_sgpr.value[metadata.vertex_buffer_reg + 1]) << 32u),
++		    256);
+ 
+ 		if (attrib == nullptr || buffer == nullptr) {
+ 			LOGF("ShaderGetVertexInputInfo(): null vertex table pointer shader=0x%016" PRIx64 "\n",
+diff --git a/src/graphics/shader/shaderCompiler.h b/src/graphics/shader/shaderCompiler.h
+index d4b05f5..5cc77b6 100644
+--- a/src/graphics/shader/shaderCompiler.h
++++ b/src/graphics/shader/shaderCompiler.h
+@@ -20,9 +20,12 @@ struct ShaderParams {
+ 	uint32_t                  user_data_count = 0;
+ 	uint64_t                  hash = 0;
+ 	std::span<const uint32_t> back_code;
++	// Guest address of the shader when `code` was read through a translated host address
++	// (Nova guest VA); 0 when code.data() is the guest address itself.
++	uint64_t guest_base = 0;
+ 
+ 	[[nodiscard]] uint64_t Base() const {
+-		return reinterpret_cast<uint64_t>(code.data());
++		return guest_base != 0 ? guest_base : reinterpret_cast<uint64_t>(code.data());
+ 	}
+ };
+ 
 diff --git a/src/kernel/eventFlag.cpp b/src/kernel/eventFlag.cpp
-index 594e7e14..c6b38f7a 100644
+index 594e7e1..c6b38f7 100644
 --- a/src/kernel/eventFlag.cpp
 +++ b/src/kernel/eventFlag.cpp
 @@ -1,3 +1,5 @@
@@ -1384,7 +1967,7 @@ index 594e7e14..c6b38f7a 100644
  			m_cond_var.WaitFor(&m_mutex, micros - elapsed);
  		}
 diff --git a/src/kernel/eventQueue.cpp b/src/kernel/eventQueue.cpp
-index 8641e8a9..8c9aef6b 100644
+index 8641e8a..8c9aef6 100644
 --- a/src/kernel/eventQueue.cpp
 +++ b/src/kernel/eventQueue.cpp
 @@ -1,3 +1,5 @@
@@ -1426,7 +2009,7 @@ index 8641e8a9..8c9aef6b 100644
  			const auto external_wait = micros != 0 ? micros - elapsed : UINT32_MAX;
  			m_cond_var.WaitFor(&m_mutex,
 diff --git a/src/kernel/memory.cpp b/src/kernel/memory.cpp
-index febbd49a..13eb3784 100644
+index febbd49..97fe0d9 100644
 --- a/src/kernel/memory.cpp
 +++ b/src/kernel/memory.cpp
 @@ -1,6 +1,8 @@
@@ -1488,7 +2071,7 @@ index febbd49a..13eb3784 100644
  LIB_NAME("libkernel", "libkernel");
  
  constexpr int PROT_CPU_READ  = 0x01;
-@@ -832,6 +870,63 @@ static std::recursive_mutex g_memory_operation_mutex;
+@@ -832,6 +870,86 @@ static std::recursive_mutex g_memory_operation_mutex;
  // heap below it), so hint-less searches must not fall back to the low system-managed range.
  static constexpr uint64_t GUEST_DEFAULT_MAP_BASE = 0x200000000ull;
  
@@ -1497,6 +2080,24 @@ index febbd49a..13eb3784 100644
 +// True when [a, a+len) lies inside the oversized arena but outside the part reserved for it.
 +#if defined(KYTY_NOVA_FEX)
 +static uint64_t FindGuestFreeRange(uint64_t search_addr, uint64_t size, uint64_t alignment);
++// Reverse map of the slot windows (append-only; slots are never unmapped). A fault raised by an
++// access through a translated address reports the host window address; the GPU's page tracking
++// knows the guest address.
++static constexpr uint32_t   kNovaSlotRecords = 2048;
++static std::atomic<uint64_t> g_nova_slot_host[kNovaSlotRecords];
++static std::atomic<uint64_t> g_nova_slot_guest[kNovaSlotRecords];
++static std::atomic<uint32_t> g_nova_slot_count {0};
++static uint64_t NovaHostToGuestVA(uint64_t host) {
++	constexpr uint64_t kSlot = uint64_t {1} << 30;
++	const uint32_t     count = std::min(g_nova_slot_count.load(std::memory_order_acquire), kNovaSlotRecords);
++	for (uint32_t i = 0; i < count; i++) {
++		const uint64_t base = g_nova_slot_host[i].load(std::memory_order_relaxed);
++		if (host >= base && host - base < kSlot) {
++			return g_nova_slot_guest[i].load(std::memory_order_relaxed) + (host - base);
++		}
++	}
++	return 0;
++}
 +// Backs every 1 GiB guest slot of [vaddr, vaddr+size) that lies above 2^39 with a host window
 +// taken from the guest user window (marked reserved so the guest never gets it).
 +static void NovaEnsureVASlots(uint64_t vaddr, uint64_t size) {
@@ -1514,6 +2115,11 @@ index febbd49a..13eb3784 100644
 +			continue;
 +		}
 +		NovaFex::MapGuestVASlot(slot, host);
++		if (const uint32_t index = g_nova_slot_count.load(std::memory_order_relaxed); index < kNovaSlotRecords) {
++			g_nova_slot_host[index].store(host, std::memory_order_relaxed);
++			g_nova_slot_guest[index].store(slot, std::memory_order_relaxed);
++			g_nova_slot_count.store(index + 1, std::memory_order_release);
++		}
 +		static std::atomic<uint32_t> shown {0};
 +		if (shown.fetch_add(1) < 24) std::fprintf(stderr, "NOVA_MEMORY: guest slot 0x%llx -> host 0x%llx\n", static_cast<unsigned long long>(slot),
 +		             static_cast<unsigned long long>(host));
@@ -1552,7 +2158,7 @@ index febbd49a..13eb3784 100644
  static uint64_t FindGuestFreeRange(uint64_t search_addr, uint64_t size, uint64_t alignment) {
  	EXIT_IF(g_guest_address_space == nullptr || g_virtual_ranges == nullptr);
  
-@@ -857,7 +952,11 @@ static uint64_t FindGuestFreeRange(uint64_t search_addr, uint64_t size, uint64_t
+@@ -857,7 +975,11 @@ static uint64_t FindGuestFreeRange(uint64_t search_addr, uint64_t size, uint64_t
  	};
  
  	if (search_addr != 0) {
@@ -1565,7 +2171,101 @@ index febbd49a..13eb3784 100644
  	}
  	auto addr = find_in(GUEST_DEFAULT_MAP_BASE, HOST_SYSTEM_MANAGED_MAX + 1u);
  	if (addr == 0) {
-@@ -1012,6 +1111,9 @@ void Initialize() {
+@@ -866,14 +988,49 @@ static uint64_t FindGuestFreeRange(uint64_t search_addr, uint64_t size, uint64_t
+ 	return addr;
+ }
+ 
++#if defined(KYTY_NOVA_FEX)
++// Nova guest VA: host addresses are contiguous only within one translation unit (below 2^39, or
++// one 1 GiB slot above it), so backing accesses are split at those boundaries.
++template <typename F>
++static bool NovaForEachHostPiece(uint64_t vaddr, uint64_t size, F&& fn) {
++	if (size == 0 || !NovaGuest::IsHigh(vaddr, size) || NovaGuest::Piece(vaddr, size) == size) {
++		return fn(vaddr, uint64_t {0}, size);
++	}
++	for (uint64_t done = 0; done < size;) {
++		const uint64_t n = NovaGuest::Piece(vaddr + done, size - done);
++		if (!fn(vaddr + done, done, n)) {
++			return false;
++		}
++		done += n;
++	}
++	return true;
++}
++#endif
++
+ bool TryWriteBacking(uint64_t vaddr, const void* data, uint64_t size) {
+-	return g_guest_address_space != nullptr &&
+-	       g_guest_address_space->TryWriteBacking(vaddr, data, size);
++	if (g_guest_address_space == nullptr) {
++		return false;
++	}
++#if defined(KYTY_NOVA_FEX)
++	return NovaForEachHostPiece(vaddr, size, [&](uint64_t a, uint64_t offset, uint64_t n) {
++		return g_guest_address_space->TryWriteBacking(a, static_cast<const uint8_t*>(data) + offset, n);
++	});
++#else
++	return g_guest_address_space->TryWriteBacking(vaddr, data, size);
++#endif
+ }
+ 
+ bool TryReadBacking(uint64_t vaddr, void* data, uint64_t size) {
+-	return g_guest_address_space != nullptr &&
+-	       g_guest_address_space->TryReadBacking(vaddr, data, size);
++	if (g_guest_address_space == nullptr) {
++		return false;
++	}
++#if defined(KYTY_NOVA_FEX)
++	return NovaForEachHostPiece(vaddr, size, [&](uint64_t a, uint64_t offset, uint64_t n) {
++		return g_guest_address_space->TryReadBacking(a, static_cast<uint8_t*>(data) + offset, n);
++	});
++#else
++	return g_guest_address_space->TryReadBacking(vaddr, data, size);
++#endif
+ }
+ 
+ bool TryReadBufferBacking(uint64_t vaddr, void* data, uint64_t size) {
+@@ -927,7 +1084,24 @@ void InstallGpuResources(Graphics::RenderContext* resources) noexcept {
+ }
+ 
+ bool HandleGpuFault(Graphics::PageFaultAccess access, uint64_t fault_vaddr) noexcept {
+-	return g_gpu_resources != nullptr && g_gpu_resources->HandleFault(access, fault_vaddr);
++	if (g_gpu_resources == nullptr) {
++		return false;
++	}
++#if defined(KYTY_NOVA_FEX)
++	// Guest code (FEX translates the address) and emulator code using a translated pointer fault
++	// on the slot's host window; GPU page tracking is keyed by the guest address.
++	if (const uint64_t guest = NovaHostToGuestVA(fault_vaddr); guest != 0) {
++		static std::atomic<uint32_t> shown {0};
++		if (shown.fetch_add(1, std::memory_order_relaxed) < 4) {
++			char text[128];
++			const int n = std::snprintf(text, sizeof(text), "NOVA_MEMORY: GPU-tracked fault at host 0x%llx -> guest 0x%llx\n",
++			                            static_cast<unsigned long long>(fault_vaddr), static_cast<unsigned long long>(guest));
++			(void)!write(2, text, static_cast<size_t>(n));
++		}
++		fault_vaddr = guest;
++	}
++#endif
++	return g_gpu_resources->HandleFault(access, fault_vaddr);
+ }
+ 
+ struct PrtAperture {
+@@ -962,7 +1136,13 @@ static bool IsInPrtAperture(uint64_t address, uint64_t size = 1) {
+ }
+ 
+ bool TryReadSparseBacking(uint64_t vaddr, void* data, uint64_t size) {
++#if defined(KYTY_NOVA_FEX)
++	return NovaForEachHostPiece(vaddr, size, [&](uint64_t a, uint64_t offset, uint64_t n) {
++		return g_guest_address_space->TryReadSparseBacking(a, static_cast<uint8_t*>(data) + offset, n);
++	});
++#else
+ 	return g_guest_address_space->TryReadSparseBacking(vaddr, data, size);
++#endif
+ }
+ 
+ static bool SelfTestSub64SharedPlaceholderAlias() {
+@@ -1012,6 +1192,9 @@ void Initialize() {
  	g_flexible_memory_size_frozen = true;
  	VirtualMemory::Init();
  	g_guest_address_space = std::make_unique<GuestAddressSpace>(PhysicalMemory::TotalSize());
@@ -1575,7 +2275,7 @@ index febbd49a..13eb3784 100644
  	g_physical_memory     = std::make_unique<PhysicalMemory>();
  	g_flexible_memory     = std::make_unique<FlexibleMemory>();
  	g_pooled_memory       = std::make_unique<PooledMemory>();
-@@ -2257,8 +2359,18 @@ static bool UnmapPooledBackingTransactional(const std::vector<PooledMemory::Mapp
+@@ -2257,8 +2440,18 @@ static bool UnmapPooledBackingTransactional(const std::vector<PooledMemory::Mapp
  }
  
  // The ABI entry points and batch operations hold g_memory_operation_mutex.
@@ -1594,7 +2294,7 @@ index febbd49a..13eb3784 100644
  	EXIT_NOT_IMPLEMENTED(addr_in_out == nullptr);
  
  	constexpr size_t   PAGE_SIZE                = 0x4000;
-@@ -2331,6 +2443,14 @@ static int MapFlexibleMemory(void** addr_in_out, size_t len, int prot, int flags
+@@ -2331,6 +2524,14 @@ static int MapFlexibleMemory(void** addr_in_out, size_t len, int prot, int flags
  			reserved_target = true;
  			out_addr        = in_addr;
  		}
@@ -1609,7 +2309,7 @@ index febbd49a..13eb3784 100644
  	} else {
  		const auto search_addr = (in_addr != 0 ? in_addr : DEFAULT_PS5_BASE);
  		out_addr               = FindGuestFreeRange(search_addr, len, map_alignment);
-@@ -2383,14 +2503,30 @@ static int MapFlexibleMemory(void** addr_in_out, size_t len, int prot, int flags
+@@ -2383,14 +2584,30 @@ static int MapFlexibleMemory(void** addr_in_out, size_t len, int prot, int flags
  	return OK;
  }
  
@@ -1640,7 +2340,7 @@ index febbd49a..13eb3784 100644
  	PRINT_NAME();
  	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
  	return MapFlexibleMemory(addr_in_out, len, prot, flags, "");
-@@ -2474,7 +2610,14 @@ int KYTY_SYSV_ABI KernelGetPrtAperture(int index, void** addr, size_t* len) {
+@@ -2474,7 +2691,14 @@ int KYTY_SYSV_ABI KernelGetPrtAperture(int index, void** addr, size_t* len) {
  	return OK;
  }
  
@@ -1655,7 +2355,7 @@ index febbd49a..13eb3784 100644
  	PRINT_NAME();
  
  	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
-@@ -2618,7 +2761,20 @@ static int UnmapMemory(uint64_t vaddr, size_t len) {
+@@ -2618,7 +2842,20 @@ static int UnmapMemory(uint64_t vaddr, size_t len) {
  	return UnmapMemoryRange(vaddr, len);
  }
  
@@ -1676,7 +2376,7 @@ index febbd49a..13eb3784 100644
  	PRINT_NAME();
  	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
  	return UnmapMemory(vaddr, len);
-@@ -2979,9 +3135,28 @@ int KYTY_SYSV_ABI KernelCheckedReleaseDirectMemory(int64_t start, size_t len) {
+@@ -2979,9 +3216,28 @@ int KYTY_SYSV_ABI KernelCheckedReleaseDirectMemory(int64_t start, size_t len) {
  }
  
  // The ABI entry points and batch operations hold g_memory_operation_mutex.
@@ -1705,7 +2405,7 @@ index febbd49a..13eb3784 100644
  	if (addr == nullptr) {
  		return KERNEL_ERROR_EFAULT;
  	}
-@@ -3038,10 +3213,24 @@ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
+@@ -3038,10 +3294,24 @@ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
  		MapGpuRange(in_addr, len);
  	};
  	if (fixed) {
@@ -1732,7 +2432,7 @@ index febbd49a..13eb3784 100644
  		if (no_overwrite && g_virtual_ranges->HasOverlap(in_addr, len)) {
  			return KERNEL_ERROR_ENOMEM;
  		}
-@@ -3102,6 +3291,34 @@ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
+@@ -3102,6 +3372,34 @@ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
  			if (!reserved_target && ReplaceFixedRangeWithReserved(in_addr, len)) {
  				reserved_target = true;
  			}
@@ -1767,7 +2467,7 @@ index febbd49a..13eb3784 100644
  			if (!reserved_target) {
  				return KERNEL_ERROR_ENOMEM;
  			}
-@@ -3208,15 +3425,33 @@ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
+@@ -3208,15 +3506,33 @@ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
  	return OK;
  }
  
@@ -1801,7 +2501,7 @@ index febbd49a..13eb3784 100644
  	PRINT_NAME();
  	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
  	return MapDirectMemory(addr, len, prot, flags, direct_memory_start, alignment, "", type);
-@@ -3252,9 +3487,20 @@ int MapAutomaticMemory(uint64_t vaddr, size_t size, int type, int prot) {
+@@ -3252,9 +3568,20 @@ int MapAutomaticMemory(uint64_t vaddr, size_t size, int type, int prot) {
  	return OK;
  }
  
@@ -1822,7 +2522,7 @@ index febbd49a..13eb3784 100644
  	PRINT_NAME();
  
  	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
-@@ -3278,7 +3524,14 @@ int KYTY_SYSV_ABI KernelIsAddressSanitizerEnabled() {
+@@ -3278,7 +3605,14 @@ int KYTY_SYSV_ABI KernelIsAddressSanitizerEnabled() {
  	return 0;
  }
  
@@ -1837,7 +2537,7 @@ index febbd49a..13eb3784 100644
  	PRINT_NAME();
  
  	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
-@@ -3504,7 +3757,91 @@ static bool ReplaceFixedRangeWithReserved(uint64_t start, uint64_t size) {
+@@ -3504,7 +3838,91 @@ static bool ReplaceFixedRangeWithReserved(uint64_t start, uint64_t size) {
  	return true;
  }
  
@@ -1929,7 +2629,7 @@ index febbd49a..13eb3784 100644
  	PRINT_NAME();
  
  	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
-@@ -3545,12 +3882,98 @@ int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags,
+@@ -3545,12 +3963,102 @@ int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags,
  	} else {
  		alignment = (alignment != 0 ? alignment : PAGE_SIZE);
  		out_addr  = FindGuestFreeRange(in_addr, len, alignment);
@@ -1952,8 +2652,12 @@ index febbd49a..13eb3784 100644
 +				g_nova_big_base  = base;
 +				g_nova_big_asked = len;
 +				g_nova_big_got   = len;
-+				std::fprintf(stderr, "NOVA_MEMORY: ReserveVirtualRange len=0x%llx placed at guest 0x%llx (translated guest VA)\n",
-+				             static_cast<unsigned long long>(len), static_cast<unsigned long long>(base));
++				// The GPU's linear address domain ends at 1.5 TiB (regionDefinitions.h); GPU
++				// resources the game puts above it cannot be used by the renderer.
++				constexpr uint64_t kGpuDomainEnd = uint64_t {3} << 39;
++				std::fprintf(stderr, "NOVA_MEMORY: ReserveVirtualRange len=0x%llx placed at guest 0x%llx (translated guest VA)%s\n",
++				             static_cast<unsigned long long>(len), static_cast<unsigned long long>(base),
++				             base + len > kGpuDomainEnd ? " - WARNING: ends above the GPU address domain (1.5 TiB)" : "");
 +			}
 +		}
 +#endif
@@ -2028,7 +2732,7 @@ index febbd49a..13eb3784 100644
  		return KERNEL_ERROR_ENOMEM;
  	}
  
-@@ -3649,8 +4072,17 @@ bool TestGuestFreeRangeBounds() {
+@@ -3649,8 +4157,17 @@ bool TestGuestFreeRangeBounds() {
  }
  #endif
  
@@ -2046,7 +2750,7 @@ index febbd49a..13eb3784 100644
  	PRINT_NAME();
  
  	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
-@@ -3703,7 +4135,14 @@ int KYTY_SYSV_ABI KernelVirtualQuery(const void* addr, int flags, VirtualQueryIn
+@@ -3703,7 +4220,14 @@ int KYTY_SYSV_ABI KernelVirtualQuery(const void* addr, int flags, VirtualQueryIn
  	return OK;
  }
  
@@ -2061,7 +2765,7 @@ index febbd49a..13eb3784 100644
  	PRINT_NAME();
  
  	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
-@@ -3955,13 +4394,33 @@ static int ProtectMemory(const void* addr, size_t len, int prot) {
+@@ -3955,13 +4479,33 @@ static int ProtectMemory(const void* addr, size_t len, int prot) {
  	return OK;
  }
  
@@ -2095,7 +2799,7 @@ index febbd49a..13eb3784 100644
  	PRINT_NAME();
  	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
  	LOGF("\t type = %d\n", type);
-@@ -4103,8 +4562,17 @@ int KYTY_SYSV_ABI KernelMemoryPoolExpand(int64_t search_start, int64_t search_en
+@@ -4103,8 +4647,17 @@ int KYTY_SYSV_ABI KernelMemoryPoolExpand(int64_t search_start, int64_t search_en
  	return OK;
  }
  
@@ -2113,7 +2817,7 @@ index febbd49a..13eb3784 100644
  	PRINT_NAME();
  
  	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
-@@ -4150,7 +4618,14 @@ int KYTY_SYSV_ABI KernelMemoryPoolReserve(void* addr_in, size_t len, size_t alig
+@@ -4150,7 +4703,14 @@ int KYTY_SYSV_ABI KernelMemoryPoolReserve(void* addr_in, size_t len, size_t alig
  	return ret;
  }
  
@@ -2128,7 +2832,7 @@ index febbd49a..13eb3784 100644
  	PRINT_NAME();
  
  	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
-@@ -4281,7 +4756,14 @@ static int DecommitMemoryPoolRange(uint64_t vaddr, size_t len) {
+@@ -4281,7 +4841,14 @@ static int DecommitMemoryPoolRange(uint64_t vaddr, size_t len) {
  	return OK;
  }
  
@@ -2144,7 +2848,7 @@ index febbd49a..13eb3784 100644
  
  	std::lock_guard<std::recursive_mutex> memory_operation_lock(g_memory_operation_mutex);
 diff --git a/src/kernel/memory.h b/src/kernel/memory.h
-index 4b82e41b..c63a93fa 100644
+index 4b82e41..c63a93f 100644
 --- a/src/kernel/memory.h
 +++ b/src/kernel/memory.h
 @@ -128,6 +128,7 @@ int KYTY_SYSV_ABI KernelMapFlexibleMemory(void** addr_in_out, size_t len, int pr
@@ -2156,7 +2860,7 @@ index 4b82e41b..c63a93fa 100644
  int KYTY_SYSV_ABI    KernelAvailableDirectMemorySize(int64_t search_start, int64_t search_end,
                                                       size_t alignment, int64_t* phys_addr_out,
 diff --git a/src/kernel/memoryAddressSpace.inc b/src/kernel/memoryAddressSpace.inc
-index 6951f933..0530278b 100644
+index 6951f93..0530278 100644
 --- a/src/kernel/memoryAddressSpace.inc
 +++ b/src/kernel/memoryAddressSpace.inc
 @@ -1,6 +1,26 @@
@@ -2323,7 +3027,7 @@ index 6951f933..0530278b 100644
  		}
 diff --git a/src/kernel/novaMemoryCompatibility.h b/src/kernel/novaMemoryCompatibility.h
 new file mode 100644
-index 00000000..ea937e62
+index 0000000..ea937e6
 --- /dev/null
 +++ b/src/kernel/novaMemoryCompatibility.h
 @@ -0,0 +1,18 @@
@@ -2346,7 +3050,7 @@ index 00000000..ea937e62
 +
 +} // namespace Libs::LibKernel::Memory
 diff --git a/src/kernel/pthread.cpp b/src/kernel/pthread.cpp
-index 673a7dc7..19cf00d6 100644
+index 673a7dc..19cf00d 100644
 --- a/src/kernel/pthread.cpp
 +++ b/src/kernel/pthread.cpp
 @@ -47,6 +47,10 @@
@@ -2614,7 +3318,7 @@ index 673a7dc7..19cf00d6 100644
  
  	pthread_exit(value);
 diff --git a/src/kernel/semaphore.cpp b/src/kernel/semaphore.cpp
-index 37217532..0c2674d0 100644
+index 3721753..0c2674d 100644
 --- a/src/kernel/semaphore.cpp
 +++ b/src/kernel/semaphore.cpp
 @@ -1,6 +1,7 @@
@@ -2671,7 +3375,7 @@ index 37217532..0c2674d0 100644
  
 diff --git a/src/libs/anyNgs2Exports.cpp b/src/libs/anyNgs2Exports.cpp
 new file mode 100644
-index 00000000..5ae15e51
+index 0000000..5ae15e5
 --- /dev/null
 +++ b/src/libs/anyNgs2Exports.cpp
 @@ -0,0 +1,416 @@
@@ -3093,7 +3797,7 @@ index 00000000..5ae15e51
 +} // namespace Libs::AnyNgs2
 diff --git a/src/libs/anyngs2/Atrac9.cpp b/src/libs/anyngs2/Atrac9.cpp
 new file mode 100644
-index 00000000..6c79b862
+index 0000000..6c79b86
 --- /dev/null
 +++ b/src/libs/anyngs2/Atrac9.cpp
 @@ -0,0 +1,429 @@
@@ -3528,7 +4232,7 @@ index 00000000..6c79b862
 +#pragma GCC visibility pop
 diff --git a/src/libs/anyngs2/Custom.cpp b/src/libs/anyngs2/Custom.cpp
 new file mode 100644
-index 00000000..6bd5afe5
+index 0000000..6bd5afe
 --- /dev/null
 +++ b/src/libs/anyngs2/Custom.cpp
 @@ -0,0 +1,164 @@
@@ -3698,7 +4402,7 @@ index 00000000..6bd5afe5
 +}
 diff --git a/src/libs/anyngs2/General.hpp b/src/libs/anyngs2/General.hpp
 new file mode 100644
-index 00000000..ba67080c
+index 0000000..ba67080
 --- /dev/null
 +++ b/src/libs/anyngs2/General.hpp
 @@ -0,0 +1,18 @@
@@ -3722,7 +4426,7 @@ index 00000000..ba67080c
 +#endif
 diff --git a/src/libs/anyngs2/Geom.cpp b/src/libs/anyngs2/Geom.cpp
 new file mode 100644
-index 00000000..41d90077
+index 0000000..41d9007
 --- /dev/null
 +++ b/src/libs/anyngs2/Geom.cpp
 @@ -0,0 +1,55 @@
@@ -3783,7 +4487,7 @@ index 00000000..41d90077
 +}
 diff --git a/src/libs/anyngs2/Ngs2Internal.hpp b/src/libs/anyngs2/Ngs2Internal.hpp
 new file mode 100644
-index 00000000..441ec6e9
+index 0000000..441ec6e
 --- /dev/null
 +++ b/src/libs/anyngs2/Ngs2Internal.hpp
 @@ -0,0 +1,227 @@
@@ -4016,7 +4720,7 @@ index 00000000..441ec6e9
 +#endif
 diff --git a/src/libs/anyngs2/Ngs2Types.hpp b/src/libs/anyngs2/Ngs2Types.hpp
 new file mode 100644
-index 00000000..98ed8410
+index 0000000..98ed841
 --- /dev/null
 +++ b/src/libs/anyngs2/Ngs2Types.hpp
 @@ -0,0 +1,730 @@
@@ -4752,7 +5456,7 @@ index 00000000..98ed8410
 +#endif
 diff --git a/src/libs/anyngs2/Pan.cpp b/src/libs/anyngs2/Pan.cpp
 new file mode 100644
-index 00000000..11e899d3
+index 0000000..11e899d
 --- /dev/null
 +++ b/src/libs/anyngs2/Pan.cpp
 @@ -0,0 +1,135 @@
@@ -4893,7 +5597,7 @@ index 00000000..11e899d3
 +}
 diff --git a/src/libs/anyngs2/Rack.cpp b/src/libs/anyngs2/Rack.cpp
 new file mode 100644
-index 00000000..b47f5994
+index 0000000..b47f599
 --- /dev/null
 +++ b/src/libs/anyngs2/Rack.cpp
 @@ -0,0 +1,256 @@
@@ -5155,7 +5859,7 @@ index 00000000..b47f5994
 +#pragma GCC visibility pop
 diff --git a/src/libs/anyngs2/Render.cpp b/src/libs/anyngs2/Render.cpp
 new file mode 100644
-index 00000000..f3710c83
+index 0000000..f3710c8
 --- /dev/null
 +++ b/src/libs/anyngs2/Render.cpp
 @@ -0,0 +1,323 @@
@@ -5484,7 +6188,7 @@ index 00000000..f3710c83
 +}
 diff --git a/src/libs/anyngs2/Reverb.cpp b/src/libs/anyngs2/Reverb.cpp
 new file mode 100644
-index 00000000..147b1e1e
+index 0000000..147b1e1
 --- /dev/null
 +++ b/src/libs/anyngs2/Reverb.cpp
 @@ -0,0 +1,384 @@
@@ -5874,7 +6578,7 @@ index 00000000..147b1e1e
 +}
 diff --git a/src/libs/anyngs2/System.cpp b/src/libs/anyngs2/System.cpp
 new file mode 100644
-index 00000000..be6fdab4
+index 0000000..be6fdab
 --- /dev/null
 +++ b/src/libs/anyngs2/System.cpp
 @@ -0,0 +1,256 @@
@@ -6136,7 +6840,7 @@ index 00000000..be6fdab4
 +#pragma GCC visibility pop
 diff --git a/src/libs/anyngs2/Unimplemented.cpp b/src/libs/anyngs2/Unimplemented.cpp
 new file mode 100644
-index 00000000..27ea9af3
+index 0000000..27ea9af
 --- /dev/null
 +++ b/src/libs/anyngs2/Unimplemented.cpp
 @@ -0,0 +1,37 @@
@@ -6179,7 +6883,7 @@ index 00000000..27ea9af3
 +#pragma GCC visibility pop
 diff --git a/src/libs/anyngs2/Voice.cpp b/src/libs/anyngs2/Voice.cpp
 new file mode 100644
-index 00000000..f2377daf
+index 0000000..f2377da
 --- /dev/null
 +++ b/src/libs/anyngs2/Voice.cpp
 @@ -0,0 +1,519 @@
@@ -6703,7 +7407,7 @@ index 00000000..f2377daf
 +
 +#pragma GCC visibility pop
 diff --git a/src/libs/audio.cpp b/src/libs/audio.cpp
-index 1aa13b2c..c976157b 100644
+index 1aa13b2..c976157 100644
 --- a/src/libs/audio.cpp
 +++ b/src/libs/audio.cpp
 @@ -1,5 +1,10 @@
@@ -6818,7 +7522,7 @@ index 1aa13b2c..c976157b 100644
  				port->queue_primed = false;
  				break;
 diff --git a/src/libs/guestPrintf.cpp b/src/libs/guestPrintf.cpp
-index afc61624..5ea3e7e2 100644
+index afc6162..5ea3e7e 100644
 --- a/src/libs/guestPrintf.cpp
 +++ b/src/libs/guestPrintf.cpp
 @@ -7,6 +7,8 @@
@@ -6864,7 +7568,7 @@ index afc61624..5ea3e7e2 100644
  	return kyty_vprintf;
  }
 diff --git a/src/libs/guestPrintf.h b/src/libs/guestPrintf.h
-index 0e71438e..f447c227 100644
+index 0e71438..f447c22 100644
 --- a/src/libs/guestPrintf.h
 +++ b/src/libs/guestPrintf.h
 @@ -4,6 +4,8 @@
@@ -6887,7 +7591,7 @@ index 0e71438e..f447c227 100644
  
  #endif /* EMULATOR_INCLUDE_EMULATOR_LIBS_GUEST_PRINTF_H_ */
 diff --git a/src/libs/libAmpr.cpp b/src/libs/libAmpr.cpp
-index fc4ae4e7..3c2f39e8 100644
+index fc4ae4e..3c2f39e 100644
 --- a/src/libs/libAmpr.cpp
 +++ b/src/libs/libAmpr.cpp
 @@ -1,3 +1,4 @@
@@ -6932,7 +7636,7 @@ index fc4ae4e7..3c2f39e8 100644
  	}
  
 diff --git a/src/libs/libAudio.cpp b/src/libs/libAudio.cpp
-index 704d2b29..a82e113f 100644
+index 704d2b2..a82e113 100644
 --- a/src/libs/libAudio.cpp
 +++ b/src/libs/libAudio.cpp
 @@ -1134,6 +1134,10 @@ LIB_DEFINE(InitAudio_1_Audio3d) {
@@ -6958,7 +7662,7 @@ index 704d2b29..a82e113f 100644
  
  } // namespace LibNgs2
 diff --git a/src/libs/libC.cpp b/src/libs/libC.cpp
-index acff2c8c..99b833e5 100644
+index acff2c8..99b833e 100644
 --- a/src/libs/libC.cpp
 +++ b/src/libs/libC.cpp
 @@ -7,6 +7,7 @@
@@ -7279,7 +7983,7 @@ index acff2c8c..99b833e5 100644
  #endif
  
 diff --git a/src/libs/libKernel.cpp b/src/libs/libKernel.cpp
-index 7f75f2bb..e0d11e15 100644
+index 7f75f2b..e0d11e1 100644
 --- a/src/libs/libKernel.cpp
 +++ b/src/libs/libKernel.cpp
 @@ -1,3 +1,4 @@
@@ -7438,7 +8142,7 @@ index 7f75f2bb..e0d11e15 100644
  
  LIB_DEFINE(InitLibKernel_1) {
 diff --git a/src/libs/libs.h b/src/libs/libs.h
-index d1220ed3..5215e863 100644
+index d1220ed..5215e86 100644
 --- a/src/libs/libs.h
 +++ b/src/libs/libs.h
 @@ -39,9 +39,10 @@
@@ -7487,7 +8191,7 @@ index d1220ed3..5215e863 100644
  
  // Keep the formatting path from inflating fiber functions' stack frames under LTO.
 diff --git a/src/libs/ngs2.cpp b/src/libs/ngs2.cpp
-index e92cfb9c..8955bdd0 100644
+index e92cfb9..8955bdd 100644
 --- a/src/libs/ngs2.cpp
 +++ b/src/libs/ngs2.cpp
 @@ -1796,6 +1796,9 @@ static void Ngs2RenderVoice(Ngs2VoiceInternal& voice, const std::vector<Ngs2Voic
@@ -7538,7 +8242,7 @@ index e92cfb9c..8955bdd0 100644
  				        0x1f) {
 diff --git a/src/libs/nova/TLSF-LICENSE.md b/src/libs/nova/TLSF-LICENSE.md
 new file mode 100644
-index 00000000..982919fc
+index 0000000..982919f
 --- /dev/null
 +++ b/src/libs/nova/TLSF-LICENSE.md
 @@ -0,0 +1,92 @@
@@ -7636,7 +8340,7 @@ index 00000000..982919fc
 +  * First release
 diff --git a/src/libs/nova/tlsf.h b/src/libs/nova/tlsf.h
 new file mode 100644
-index 00000000..e6b39f73
+index 0000000..e6b39f7
 --- /dev/null
 +++ b/src/libs/nova/tlsf.h
 @@ -0,0 +1,90 @@
@@ -7732,7 +8436,7 @@ index 00000000..e6b39f73
 +#endif
 diff --git a/src/libs/novaHeap.cpp b/src/libs/novaHeap.cpp
 new file mode 100644
-index 00000000..c8629e7b
+index 0000000..c8629e7
 --- /dev/null
 +++ b/src/libs/novaHeap.cpp
 @@ -0,0 +1,683 @@
@@ -8421,7 +9125,7 @@ index 00000000..c8629e7b
 +} // namespace Libs::NovaHeap
 diff --git a/src/libs/novaTlsf.cpp b/src/libs/novaTlsf.cpp
 new file mode 100644
-index 00000000..9a47d49f
+index 0000000..9a47d49
 --- /dev/null
 +++ b/src/libs/novaTlsf.cpp
 @@ -0,0 +1,1265 @@
@@ -9691,7 +10395,7 @@ index 00000000..9a47d49f
 +	return p;
 +}
 diff --git a/src/libs/vaContext.h b/src/libs/vaContext.h
-index 399d0cc0..b874ea50 100644
+index 399d0cc..b874ea5 100644
 --- a/src/libs/vaContext.h
 +++ b/src/libs/vaContext.h
 @@ -2,7 +2,17 @@
@@ -9723,7 +10427,7 @@ index 399d0cc0..b874ea50 100644
  namespace Libs {
  
 diff --git a/src/loader/guestInstructionPatcher.cpp b/src/loader/guestInstructionPatcher.cpp
-index 0ab7de67..59402560 100644
+index 0ab7de6..5940256 100644
 --- a/src/loader/guestInstructionPatcher.cpp
 +++ b/src/loader/guestInstructionPatcher.cpp
 @@ -1,3 +1,4 @@
@@ -9759,7 +10463,7 @@ index 0ab7de67..59402560 100644
 +} // namespace Loader
 +#endif
 diff --git a/src/loader/jit.h b/src/loader/jit.h
-index ebc72e43..05cb8332 100644
+index ebc72e4..05cb833 100644
 --- a/src/loader/jit.h
 +++ b/src/loader/jit.h
 @@ -2,6 +2,7 @@
@@ -9799,7 +10503,7 @@ index ebc72e43..05cb8332 100644
  	static uint64_t GetSize() { return 0x1000; }
  
 diff --git a/src/loader/runtimeLinker.cpp b/src/loader/runtimeLinker.cpp
-index f267da60..584d7387 100644
+index f267da6..584d738 100644
 --- a/src/loader/runtimeLinker.cpp
 +++ b/src/loader/runtimeLinker.cpp
 @@ -22,11 +22,14 @@
@@ -10037,7 +10741,7 @@ index f267da60..584d7387 100644
  
  } // namespace Loader
 diff --git a/src/loader/runtimeLinker.h b/src/loader/runtimeLinker.h
-index 3787b94c..d887724e 100644
+index 3787b94..d887724 100644
 --- a/src/loader/runtimeLinker.h
 +++ b/src/loader/runtimeLinker.h
 @@ -25,6 +25,9 @@ struct Elf64_Sym;
@@ -10051,7 +10755,7 @@ index 3787b94c..d887724e 100644
  using application_heap_free_func_t           = KYTY_SYSV_ABI void (*)(void*);
  using application_heap_malloc_func_t         = KYTY_SYSV_ABI void* (*)(uint64_t);
 diff --git a/src/loader/symbolDatabase.cpp b/src/loader/symbolDatabase.cpp
-index 992e43f9..463032ac 100644
+index 992e43f..463032a 100644
 --- a/src/loader/symbolDatabase.cpp
 +++ b/src/loader/symbolDatabase.cpp
 @@ -80,6 +80,26 @@ const SymbolRecord* SymbolDatabase::FindByNid(const std::string& nid, SymbolType
@@ -10082,7 +10786,7 @@ index 992e43f9..463032ac 100644
  	auto prefix = name + "[";
  	auto suffix = fmt::format("[{}]", magic_enum::enum_name(type));
 diff --git a/src/loader/symbolDatabase.h b/src/loader/symbolDatabase.h
-index bf3f64ab..1648bc6f 100644
+index bf3f64a..1648bc6 100644
 --- a/src/loader/symbolDatabase.h
 +++ b/src/loader/symbolDatabase.h
 @@ -46,6 +46,9 @@ public:
@@ -10096,7 +10800,7 @@ index bf3f64ab..1648bc6f 100644
  	void DbgDump(const std::string& folder, const std::string& file_name);
  
 diff --git a/src/loader/x64InstructionEmulator.cpp b/src/loader/x64InstructionEmulator.cpp
-index 7500c364..7a82c07e 100644
+index 7500c36..7a82c07 100644
 --- a/src/loader/x64InstructionEmulator.cpp
 +++ b/src/loader/x64InstructionEmulator.cpp
 @@ -1,3 +1,4 @@
@@ -10119,7 +10823,7 @@ index 7500c364..7a82c07e 100644
 +} // namespace Loader::X64InstructionEmulator
 +#endif
 diff --git a/src/main.cpp b/src/main.cpp
-index a9610102..892e7405 100644
+index a961010..892e740 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -535,6 +535,16 @@ int wmain(int argc, wchar_t* argv[]) {
@@ -10141,7 +10845,7 @@ index a9610102..892e7405 100644
  int main(int argc, char* argv[]) {
 diff --git a/src/novaAndroid.cpp b/src/novaAndroid.cpp
 new file mode 100644
-index 00000000..25ee33b0
+index 0000000..25ee33b
 --- /dev/null
 +++ b/src/novaAndroid.cpp
 @@ -0,0 +1,177 @@

@@ -337,6 +337,68 @@ ThreadData::~ThreadData() {
 }
 
 std::atomic<uint64_t> g_frames {0};
+// Frames the game itself flipped (the presenter also shows frames at vblank without the game).
+std::atomic<uint64_t> g_game_frames {0};
+
+// Emulator (host) loads/stores to translated guest addresses that had to be emulated in the
+// fault handler: each costs a signal round trip, so a high count names a slow path. The faulting
+// host pcs are recorded lock-free here and named by the watchdog thread.
+constexpr int kEmuSites = 48;
+std::atomic<uint64_t> g_host_emulated {0};
+std::atomic<uint64_t> g_emu_site_pc[kEmuSites] {};
+std::atomic<uint64_t> g_emu_site_count[kEmuSites] {};
+void NoteHostEmulation(uint64_t pc) {
+	g_host_emulated.fetch_add(1, std::memory_order_relaxed);
+	for (int i = 0; i < kEmuSites; i++) {
+		uint64_t current = g_emu_site_pc[i].load(std::memory_order_relaxed);
+		if (current == 0) {
+			if (g_emu_site_pc[i].compare_exchange_strong(current, pc, std::memory_order_relaxed)) {
+				current = pc;
+			}
+		}
+		if (current == pc) {
+			g_emu_site_count[i].fetch_add(1, std::memory_order_relaxed);
+			return;
+		}
+	}
+}
+// Names a host code address as "symbol+0x..", or "library+0x.." without a symbol.
+void DescribeHostPc(uint64_t pc, char* out, size_t size) {
+	Dl_info info {};
+	if (dladdr(reinterpret_cast<void*>(pc), &info) == 0) {
+		std::snprintf(out, size, "?");
+		return;
+	}
+	if (info.dli_sname != nullptr) {
+		int status = 0;
+		char* demangled = abi::__cxa_demangle(info.dli_sname, nullptr, nullptr, &status);
+		std::snprintf(out, size, "%.150s+0x%llx", demangled != nullptr ? demangled : info.dli_sname,
+		              static_cast<unsigned long long>(pc - reinterpret_cast<uint64_t>(info.dli_saddr)));
+		std::free(demangled);
+		return;
+	}
+	const char* lib = info.dli_fname != nullptr ? info.dli_fname : "?";
+	if (const char* slash = strrchr(lib, '/'); slash != nullptr) lib = slash + 1;
+	std::snprintf(out, size, "%s+0x%llx", lib, static_cast<unsigned long long>(pc - reinterpret_cast<uint64_t>(info.dli_fbase)));
+}
+// The busiest emulation sites (watchdog thread only).
+void ReportHostEmulationSites(int limit) {
+	struct Site {
+		uint64_t pc, count;
+	};
+	std::vector<Site> sites;
+	for (int i = 0; i < kEmuSites; i++) {
+		const uint64_t pc = g_emu_site_pc[i].load(std::memory_order_relaxed);
+		if (pc != 0) sites.push_back({pc, g_emu_site_count[i].load(std::memory_order_relaxed)});
+	}
+	std::sort(sites.begin(), sites.end(), [](const Site& a, const Site& b) { return a.count > b.count; });
+	for (int i = 0; i < limit && i < static_cast<int>(sites.size()); i++) {
+		char name[200];
+		DescribeHostPc(sites[i].pc, name, sizeof(name));
+		std::fprintf(stderr, "NOVA_FEX:   hostemu %llu at pc=0x%llx %s\n", static_cast<unsigned long long>(sites[i].count),
+		             static_cast<unsigned long long>(sites[i].pc), name);
+	}
+}
 
 // Stall diagnostics: every host thread prints its own native backtrace on SIGRTMIN+6.
 void DumpSelf(int, siginfo_t*, void*) {
@@ -444,12 +506,13 @@ int EnvInt(const char* name, int fallback) {
 }
 
 void Watchdog() {
-	const int report_every = EnvInt("NOVA_FEX_HEARTBEAT", 30);
+	const int report_every = EnvInt("NOVA_FEX_HEARTBEAT", 15);
 	const int freeze_after = EnvInt("NOVA_FREEZE_SECONDS", 4);
 	// The Nova launcher that started this process. Kyty may run outside the session's process
 	// tree (outside proot); when the launcher is gone the session has ended.
 	const pid_t launcher = static_cast<pid_t>(EnvInt("NOVA_LAUNCHER_PID", 0));
 	uint64_t last_frames = 0, report_frames = 0, report_gates = 0, last_gates = 0;
+	uint64_t report_game_frames = 0, report_emulated = 0;
 	int frozen_for = 0, quiet_for = 0, freeze_episodes = 0;
 	bool stall_dumped = false;
 	for (int tick = 1;; tick++) {
@@ -458,7 +521,12 @@ void Watchdog() {
 			std::fprintf(stderr, "NOVA_FEX: launcher gone, exiting\n");
 			_exit(0);
 		}
-		const auto frames = g_frames.load(std::memory_order_relaxed);
+		const auto presented = g_frames.load(std::memory_order_relaxed);
+		const auto game_frames = g_game_frames.load(std::memory_order_relaxed);
+		const auto emulated = g_host_emulated.load(std::memory_order_relaxed);
+		// The presenter keeps showing frames at vblank while the game shows nothing, so a freeze is
+		// judged by the game's own flips once it has made any (presented frames otherwise).
+		const auto frames = game_frames != 0 ? game_frames : presented;
 		const auto gates = g_total_gates.load(std::memory_order_relaxed);
 		const auto calls = g_total_calls.load(std::memory_order_relaxed);
 		if (frames != last_frames) {
@@ -467,17 +535,32 @@ void Watchdog() {
 		} else if (frames != 0) {
 			frozen_for++;
 		}
+		// Black screen from the start: the game never flipped. Report where every thread is.
+		if (game_frames == 0 && presented != 0 && (tick == 20 || tick == 45)) {
+			std::fprintf(stderr, "NOVA_FREEZE: no game frame after %d s (presented=%llu gates=%llu guest_calls=%llu hostemu=%llu rss=%ldMB avail=%ldMB)\n",
+			             tick, (unsigned long long)presented, (unsigned long long)gates, (unsigned long long)calls,
+			             (unsigned long long)emulated, ReadKb("/proc/self/status", "VmRSS:") / 1024,
+			             ReadKb("/proc/meminfo", "MemAvailable:") / 1024);
+			ReportGuestThreads();
+			ReportTasks();
+			ReportHostEmulationSites(12);
+			if (tick == 45) DumpAllThreads();
+			if (auto hook = g_freeze_hook.load(); hook != nullptr) hook();
+			std::fprintf(stderr, "NOVA_FREEZE: end of report\n");
+		}
 		// The game had been presenting frames and stopped: report where every thread is. Loading
 		// screens can pause presentation for a while, so the first reports only read /proc; the
 		// stacks (which interrupt each thread) come only if it stays frozen.
 		if (freeze_after > 0 && frames != 0 && freeze_episodes <= 3 &&
 		    (frozen_for == freeze_after || frozen_for == freeze_after * 3 || frozen_for == freeze_after * 5)) {
 			if (frozen_for == freeze_after) freeze_episodes++;
-			std::fprintf(stderr, "NOVA_FREEZE: no frame for %d s (frames=%llu gates=%llu guest_calls=%llu rss=%ldMB avail=%ldMB)\n",
+			std::fprintf(stderr, "NOVA_FREEZE: no frame for %d s (frames=%llu gates=%llu guest_calls=%llu hostemu=%llu rss=%ldMB avail=%ldMB)\n",
 			             frozen_for, (unsigned long long)frames, (unsigned long long)gates, (unsigned long long)calls,
-			             ReadKb("/proc/self/status", "VmRSS:") / 1024, ReadKb("/proc/meminfo", "MemAvailable:") / 1024);
+			             (unsigned long long)emulated, ReadKb("/proc/self/status", "VmRSS:") / 1024,
+			             ReadKb("/proc/meminfo", "MemAvailable:") / 1024);
 			ReportGuestThreads();
 			ReportTasks();
+			ReportHostEmulationSites(12);
 			if (frozen_for == freeze_after * 5) DumpAllThreads();
 			if (auto hook = g_freeze_hook.load(); hook != nullptr) hook();
 			std::fprintf(stderr, "NOVA_FREEZE: end of report\n");
@@ -494,12 +577,17 @@ void Watchdog() {
 		}
 		if (report_every > 0 && (tick == 5 || tick % report_every == 0)) {
 			const int span = tick == 5 ? 5 : report_every;
-			std::fprintf(stderr, "NOVA_FEX: heartbeat fps=%.1f frames=%llu gates=%llu (+%llu) guest_calls=%llu threads=%zu rss=%ldMB avail=%ldMB\n",
-			             static_cast<double>(frames - report_frames) / span, (unsigned long long)frames,
-			             (unsigned long long)gates, (unsigned long long)(gates - report_gates), (unsigned long long)calls,
+			std::fprintf(stderr, "NOVA_FEX: heartbeat fps=%.1f game_fps=%.1f frames=%llu game_frames=%llu gates=%llu (+%llu) guest_calls=%llu hostemu=%llu (+%llu) threads=%zu rss=%ldMB avail=%ldMB\n",
+			             static_cast<double>(presented - report_frames) / span,
+			             static_cast<double>(game_frames - report_game_frames) / span, (unsigned long long)presented,
+			             (unsigned long long)game_frames, (unsigned long long)gates, (unsigned long long)(gates - report_gates),
+			             (unsigned long long)calls, (unsigned long long)emulated, (unsigned long long)(emulated - report_emulated),
 			             g_threads.size(), ReadKb("/proc/self/status", "VmRSS:") / 1024,
 			             ReadKb("/proc/meminfo", "MemAvailable:") / 1024);
-			report_frames = frames;
+			if (emulated - report_emulated > 1000) ReportHostEmulationSites(6);
+			report_frames = presented;
+			report_game_frames = game_frames;
+			report_emulated = emulated;
 			report_gates = gates;
 		}
 	}
@@ -886,6 +974,10 @@ void NoteFrame() {
 	g_frames.fetch_add(1, std::memory_order_relaxed);
 }
 
+void NoteGameFrame() {
+	g_game_frames.fetch_add(1, std::memory_order_relaxed);
+}
+
 void EnableGuestVA() {
 	FEXCore::Nova::GuestVAEnabled = true;
 }
@@ -1270,6 +1362,7 @@ bool HandleHostFault(int signal, siginfo_t* info, void* ucontext) {
 	}
 	// Emulator code touching a guest address above the host address space.
 	if (signal == SIGSEGV && EmulateHighAccess(uc, reinterpret_cast<uint64_t>(info->si_addr))) {
+		NoteHostEmulation(pc);
 		static std::atomic<int> logged {0};
 		if (logged.fetch_add(1, std::memory_order_relaxed) < 8) {
 			char buf[160];

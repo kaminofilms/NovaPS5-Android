@@ -129,5 +129,8 @@ NOVAFEX_API void InvalidateGuestCode(uint64_t start, uint64_t size);
 // Called by the emulator once per presented frame. The watchdog uses it to detect a frozen game
 // (no frame for several seconds) and writes a report of every thread to stderr.
 NOVAFEX_API void NoteFrame();
+// Called when the game itself flipped a frame (NoteFrame also counts vblank-only presents). The
+// watchdog reports a black screen (no game frame for 20 s) and freezes by these.
+NOVAFEX_API void NoteGameFrame();
 
 } // namespace NovaFex
