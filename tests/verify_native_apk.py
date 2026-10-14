@@ -19,7 +19,8 @@ p.add_argument('--version-code', default='28')
 a = p.parse_args()
 root = pathlib.Path(__file__).resolve().parents[1]
 sdk = pathlib.Path(a.sdk)
-bt = sorted((sdk / 'build-tools').glob('3*'))[-1]
+bt = sorted((x for x in (sdk / 'build-tools').glob('3*') if re.fullmatch(r'[0-9.]+', x.name)),
+            key=lambda x: [int(n) for n in x.name.split('.')])[-1]
 readelf = pathlib.Path(a.ndk) / 'toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf'
 failures = []
 

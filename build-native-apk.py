@@ -30,7 +30,9 @@ for d in ['classes', 'dex', 'src', 'res']:
 
 
 def newest(directory, pattern):
-    found = sorted(directory.glob(pattern), key=lambda x: [int(n) if n.isdigit() else n for n in re.split(r'(\d+)', x.name)])
+    # Stable releases only (no previews/betas): android-36, 36.0.0, ...
+    found = [x for x in directory.glob(pattern) if re.fullmatch(r'(android-)?[0-9.]+', x.name)]
+    found.sort(key=lambda x: [int(n) for n in re.findall(r'\d+', x.name)])
     if not found:
         raise SystemExit(f'missing {pattern} in {directory}')
     return found[-1]
@@ -38,6 +40,8 @@ def newest(directory, pattern):
 
 bt = newest(sdk / 'build-tools', '3*')
 platform = newest(sdk / 'platforms', 'android-3*') / 'android.jar'
+lambda_stubs = bt / 'core-lambda-stubs.jar'
+print('build-tools', bt.name, 'platform', platform.parent.name)
 
 
 def run(*args):
@@ -70,7 +74,8 @@ if a.assets:
     link += ['-A', a.assets, '-0', 'zip']
 run(*link)
 sources = sorted(str(x) for x in (build / 'src').rglob('*.java'))
-run('javac', '-nowarn', '-encoding', 'UTF-8', '-source', '8', '-target', '8', '-bootclasspath', platform,
+run('javac', '-nowarn', '-encoding', 'UTF-8', '-source', '8', '-target', '8',
+    '-bootclasspath', f'{platform}{os.pathsep}{lambda_stubs}',
     '-d', build / 'classes', *sources)
 with zipfile.ZipFile(build / 'classes.jar', 'w') as jar:
     for f in sorted((build / 'classes').rglob('*.class')):
