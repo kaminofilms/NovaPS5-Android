@@ -47,7 +47,11 @@ for section in parts:
     if not section.strip():
         continue
     if not section.startswith(b'diff --git '):
-        raise SystemExit('NOVA_PATCH: invalid patch preamble')
+        # Format-patch headers and leading comments are not source diffs.
+        if section is parts[0]:
+            print('NOVA_PATCH: skipping', len(section), 'bytes of patch preamble')
+            continue
+        raise SystemExit('NOVA_PATCH: unexpected text between diff sections')
     if re.search(rb'^new file mode ', section, re.MULTILINE):
         new_files.append(section)
     else:
