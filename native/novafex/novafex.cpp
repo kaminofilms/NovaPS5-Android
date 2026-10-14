@@ -932,6 +932,17 @@ void ReportGuestFault(void* ucontext) {
 	if (t_thread.fex != nullptr) {
 		const auto& st = t_thread.fex->CurrentFrame->State;
 		std::fprintf(stderr, "NOVA_FAULT: guest block rip=0x%llx\n", (unsigned long long)st.rip);
+		// Guest code of the faulting block (x86-64), read safely, for offline disassembly.
+		uint8_t code[160] {};
+		iovec local {code, sizeof(code)};
+		iovec remote {reinterpret_cast<void*>(TranslateGuestVA(st.rip)), sizeof(code)};
+		if (process_vm_readv(getpid(), &local, 1, &remote, 1, 0) == static_cast<ssize_t>(sizeof(code))) {
+			for (size_t off = 0; off < sizeof(code); off += 32) {
+				char line[3 * 32 + 1] {};
+				for (size_t i = 0; i < 32; i++) std::snprintf(line + 3 * i, 4, "%02x ", code[off + i]);
+				std::fprintf(stderr, "NOVA_FAULT: guest code +0x%02zx: %s\n", off, line);
+			}
+		}
 	}
 	{
 		const uint64_t last = t_thread.last_host.load();
