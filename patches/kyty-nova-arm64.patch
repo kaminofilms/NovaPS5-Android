@@ -6309,10 +6309,10 @@ index 00000000..e9b5a91c
 +#endif
 diff --git a/src/libs/novaHeap.cpp b/src/libs/novaHeap.cpp
 new file mode 100644
-index 00000000..8f0d00a7
+index 00000000..91f39ca5
 --- /dev/null
 +++ b/src/libs/novaHeap.cpp
-@@ -0,0 +1,580 @@
+@@ -0,0 +1,603 @@
 +// Nova: an emulator-side libc heap (malloc family and C++ operator new/delete).
 +//
 +// Why: Sony's libc reserves the whole heap arena up front. Unreal Engine titles ask it for a
@@ -6696,6 +6696,24 @@ index 00000000..8f0d00a7
 +		abs_jmp(pc + 6 + static_cast<int64_t>(rel));
 +		return 6;
 +	}
++	// call/jmp [rip+disp32] (libc's allocator wrappers call through a pointer slot): load the
++	// slot address into r11 (scratch, never an argument) and call/jump through it.
++	if (p[0] == 0xFF && (p[1] == 0x15 || p[1] == 0x25)) {
++		int32_t rel = 0;
++		std::memcpy(&rel, p + 2, 4);
++		const uint64_t slot = pc + 6 + static_cast<int64_t>(rel);
++		out->push_back(0x49);
++		out->push_back(0xBB);
++		for (int i = 0; i < 8; i++) out->push_back(static_cast<uint8_t>(slot >> (8 * i)));
++		out->push_back(0x41);
++		out->push_back(0xFF);
++		out->push_back(p[1] == 0x15 ? 0x13 : 0x23);
++		return 6;
++	}
++	if (p[0] == 0xC3) {
++		out->push_back(0xC3);
++		return 1;
++	}
 +	if (p[0] == 0xE9 || p[0] == 0xE8) {
 +		int32_t rel = 0;
 +		std::memcpy(&rel, p + 1, 4);
@@ -6749,15 +6767,20 @@ index 00000000..8f0d00a7
 +uint64_t BuildOriginalTrampoline(uint64_t fn, int min_bytes) {
 +	std::vector<uint8_t> out;
 +	int copied = 0;
-+	while (copied < min_bytes) {
-+		const int n = RelocateInsn(reinterpret_cast<const uint8_t*>(fn + copied), fn + copied, &out);
++	bool ended = false; // the copied code ended with ret / jmp: nothing after it runs
++	while (copied < min_bytes && !ended) {
++		const auto* insn = reinterpret_cast<const uint8_t*>(fn + copied);
++		const int n = RelocateInsn(insn, fn + copied, &out);
 +		if (n == 0) return 0;
++		ended = insn[0] == 0xC3 || insn[0] == 0xE9 || insn[0] == 0xEB || (insn[0] == 0xFF && insn[1] == 0x25);
 +		copied += n;
 +	}
-+	const uint64_t back = fn + copied;
-+	const uint8_t j[6] = {0xFF, 0x25, 0, 0, 0, 0};
-+	out.insert(out.end(), j, j + 6);
-+	for (int i = 0; i < 8; i++) out.push_back(static_cast<uint8_t>(back >> (8 * i)));
++	if (!ended) {
++		const uint64_t back = fn + copied;
++		const uint8_t j[6] = {0xFF, 0x25, 0, 0, 0, 0};
++		out.insert(out.end(), j, j + 6);
++		for (int i = 0; i < 8; i++) out.push_back(static_cast<uint8_t>(back >> (8 * i)));
++	}
 +	static uint8_t* page = nullptr;
 +	static size_t   used = 0;
 +	if (page == nullptr || used + out.size() > 0x1000) {
