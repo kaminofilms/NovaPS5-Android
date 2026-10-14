@@ -94,16 +94,21 @@ jobs:
         with:
           name: android-ffmpeg
           path: dist/ffmpeg
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
         with:
           path: ~/.cache/ccache
-          key: android-kyty-ccache-${{ env.KYTY_COMMIT }}-${{ hashFiles('patches/*.patch') }}
+          key: android-kyty-ccache-${{ env.KYTY_COMMIT }}-${{ github.run_id }}
           restore-keys: android-kyty-ccache-${{ env.KYTY_COMMIT }}-
       - name: Build Kyty for Android (libmain.so + SDL3)
         run: |
           set -o pipefail
           export ANDROID_NDK=$ANDROID_NDK_LATEST_HOME
           bash tools/ci/build-android-kyty.sh "$PWD" "$PWD/work" "$PWD/dist/kyty" "$PWD/dist/novafex" "$PWD/dist/ffmpeg" 2>&1 | tail -200
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: ~/.cache/ccache
+          key: android-kyty-ccache-${{ env.KYTY_COMMIT }}-${{ github.run_id }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
