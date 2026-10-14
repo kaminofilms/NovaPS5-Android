@@ -577,7 +577,7 @@ index d56b629b..b1a7b913 100644
  	m_driver_cache_path     = std::filesystem::path("_PipelineCache") / (title_id + ".bin");
  	const auto path         = Common::PathToString(m_driver_cache_path);
 diff --git a/src/graphics/presentation/window/swapchain.cpp b/src/graphics/presentation/window/swapchain.cpp
-index 07c74012..21606b8f 100644
+index 07c74012..e648dd07 100644
 --- a/src/graphics/presentation/window/swapchain.cpp
 +++ b/src/graphics/presentation/window/swapchain.cpp
 @@ -2,6 +2,7 @@
@@ -588,7 +588,52 @@ index 07c74012..21606b8f 100644
  #include "common/profiler.h"
  #include "common/threads.h"
  #include "gpu_blit_shaders/gpu_blit_fs_triangle_spv.h"
-@@ -908,6 +909,9 @@ Swapchain::Status Swapchain::Present() {
+@@ -420,6 +421,14 @@ void Swapchain::Create() {
+ 		    std::clamp(m_window_extent.height, surface.capabilities.minImageExtent.height,
+ 		               surface.capabilities.maxImageExtent.height);
+ 	}
++#if defined(KYTY_ANDROID)
++	// Android reports the extent in the panel's natural (portrait) orientation while the game is
++	// landscape; the swapchain uses the identity transform (the compositor rotates), so it must
++	// have the window's orientation.
++	if ((m_window_extent.width > m_window_extent.height) != (m_extent.width > m_extent.height)) {
++		std::swap(m_extent.width, m_extent.height);
++	}
++#endif
+ 	uint32_t image_count = surface.capabilities.minImageCount + 1;
+ 	if (surface.capabilities.maxImageCount != 0) {
+ 		image_count = std::min(image_count, surface.capabilities.maxImageCount);
+@@ -609,8 +618,14 @@ Swapchain::Status Swapchain::AcquireNextImage(CommandScheduler& scheduler) {
+ 	switch (result) {
+ 		case vk::Result::eSuccess: break;
+ 		case vk::Result::eSuboptimalKHR:
++#if defined(KYTY_ANDROID)
++			// Identity transform on a rotated panel is always "suboptimal" on Android; the
++			// compositor rotates the image. Recreating would loop forever without a frame.
++			break;
++#else
+ 			LOGF("vkAcquireNextImageKHR returned vk::Result::eSuboptimalKHR\n");
+ 			return Status::Recreate;
++#endif
+ 		case vk::Result::eErrorOutOfDateKHR:
+ 			LOGF("vkAcquireNextImageKHR returned vk::Result::eErrorOutOfDateKHR\n");
+ 			return Status::Recreate;
+@@ -897,8 +912,14 @@ Swapchain::Status Swapchain::Present() {
+ 	switch (result) {
+ 		case vk::Result::eSuccess: break;
+ 		case vk::Result::eSuboptimalKHR:
++#if defined(KYTY_ANDROID)
++			// Identity transform on a rotated panel is always "suboptimal" on Android; the
++			// compositor rotates the image. Recreating would loop forever without a frame.
++			break;
++#else
+ 			LOGF("vkQueuePresentKHR returned vk::Result::eSuboptimalKHR\n");
+ 			return Status::Recreate;
++#endif
+ 		case vk::Result::eErrorOutOfDateKHR:
+ 			LOGF("vkQueuePresentKHR returned vk::Result::eErrorOutOfDateKHR\n");
+ 			return Status::Recreate;
+@@ -908,6 +929,9 @@ Swapchain::Status Swapchain::Present() {
  		default: EXIT("vkQueuePresentKHR failed: %s\n", vk::to_string(result).c_str());
  	}
  	m_frame_index = (m_frame_index + 1u) % static_cast<uint32_t>(m_images.size());
