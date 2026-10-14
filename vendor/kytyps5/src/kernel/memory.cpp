@@ -3038,8 +3038,10 @@ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
 		MapGpuRange(in_addr, len);
 	};
 	if (fixed) {
-		if (in_addr == 0 || (in_addr & (PAGE_SIZE - 1u)) != 0 ||
-		    (alignment != 0 && in_addr % alignment != 0)) {
+		// MAP_FIXED selects an exact guest address. The alignment hint only constrains
+		// allocator-chosen addresses; requiring it here rejects valid 16 KiB-aligned
+		// PS5 mappings (e.g. ccleste's 0x400004000 with a 2 MiB hint).
+		if (in_addr == 0 || (in_addr & (PAGE_SIZE - 1u)) != 0) {
 			return KERNEL_ERROR_EINVAL;
 		}
 		if (no_overwrite && g_virtual_ranges->HasOverlap(in_addr, len)) {
