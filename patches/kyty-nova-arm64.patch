@@ -1,5 +1,5 @@
 diff --git a/3rdparty/CMakeLists.txt b/3rdparty/CMakeLists.txt
-index f3cdf3a9..ca8d2e5a 100644
+index f3cdf3a..ca8d2e5 100644
 --- a/3rdparty/CMakeLists.txt
 +++ b/3rdparty/CMakeLists.txt
 @@ -93,7 +93,14 @@ else()
@@ -19,7 +19,7 @@ index f3cdf3a9..ca8d2e5a 100644
  	# SDL's built-in iconv fallback does not support CP932.
  	set(SDL_SYSTEM_ICONV ON CACHE BOOL "Use system iconv for CP932 conversion" FORCE)
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 213dd35b..d5d46030 100644
+index 213dd35..d5d4603 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -35,6 +35,13 @@ set(KYTY_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty")
@@ -164,7 +164,7 @@ index 213dd35b..d5d46030 100644
  endif()
  # dlopen/dlsym/dladdr for RenderDoc.
 diff --git a/src/common/abi.h b/src/common/abi.h
-index 621ed610..e8be1765 100644
+index 621ed61..e8be176 100644
 --- a/src/common/abi.h
 +++ b/src/common/abi.h
 @@ -3,10 +3,16 @@
@@ -185,7 +185,7 @@ index 621ed610..e8be1765 100644
  
  #endif /* KYTY_COMMON_ABI_H_ */
 diff --git a/src/common/assert.cpp b/src/common/assert.cpp
-index 22cb3f27..7d9e9180 100644
+index 22cb3f2..7d9e918 100644
 --- a/src/common/assert.cpp
 +++ b/src/common/assert.cpp
 @@ -9,6 +9,12 @@
@@ -251,7 +251,7 @@ index 22cb3f27..7d9e9180 100644
  }
  
 diff --git a/src/common/emulatorConfig.h b/src/common/emulatorConfig.h
-index c7d64187..ebd9a08d 100644
+index c7d6418..ebd9a08 100644
 --- a/src/common/emulatorConfig.h
 +++ b/src/common/emulatorConfig.h
 @@ -33,7 +33,9 @@ using ControllerColor = std::array<uint8_t, 3>;
@@ -266,7 +266,7 @@ index c7d64187..ebd9a08d 100644
  constexpr bool IsConfiguredUserIdValid(int32_t user_id) {
  	constexpr int32_t USER_ID_EVERYONE = 0xfe;
 diff --git a/src/common/hostException.cpp b/src/common/hostException.cpp
-index d44c623c..91e9eccb 100644
+index d44c623..91e9ecc 100644
 --- a/src/common/hostException.cpp
 +++ b/src/common/hostException.cpp
 @@ -10,7 +10,11 @@
@@ -435,7 +435,7 @@ index d44c623c..91e9eccb 100644
  
 diff --git a/src/common/novaBionic.h b/src/common/novaBionic.h
 new file mode 100644
-index 00000000..1ded0b9a
+index 0000000..1ded0b9
 --- /dev/null
 +++ b/src/common/novaBionic.h
 @@ -0,0 +1,89 @@
@@ -530,7 +530,7 @@ index 00000000..1ded0b9a
 +#endif /* KYTY_COMMON_NOVA_BIONIC_H_ */
 diff --git a/src/common/novaFex.h b/src/common/novaFex.h
 new file mode 100644
-index 00000000..a2badb0a
+index 0000000..a2badb0
 --- /dev/null
 +++ b/src/common/novaFex.h
 @@ -0,0 +1,11 @@
@@ -546,7 +546,7 @@ index 00000000..a2badb0a
 +
 +#endif /* KYTY_COMMON_NOVA_FEX_H_ */
 diff --git a/src/common/platform/sysLinuxVirtual.cpp b/src/common/platform/sysLinuxVirtual.cpp
-index 154d621d..de24c788 100644
+index 154d621..de24c78 100644
 --- a/src/common/platform/sysLinuxVirtual.cpp
 +++ b/src/common/platform/sysLinuxVirtual.cpp
 @@ -47,17 +47,25 @@ void Init() {
@@ -579,7 +579,7 @@ index 154d621d..de24c788 100644
  		case Mode::NoAccess:
  		default: protect = PROT_NONE; break;
 diff --git a/src/graphics/guest_gpu/command_processor/commandProcessor.h b/src/graphics/guest_gpu/command_processor/commandProcessor.h
-index c976bd8f..757e5ffa 100644
+index c976bd8..757e5ff 100644
 --- a/src/graphics/guest_gpu/command_processor/commandProcessor.h
 +++ b/src/graphics/guest_gpu/command_processor/commandProcessor.h
 @@ -184,6 +184,10 @@ private:
@@ -594,7 +594,7 @@ index c976bd8f..757e5ffa 100644
  
  } // namespace Libs::Graphics
 diff --git a/src/graphics/guest_gpu/graphicsRun.cpp b/src/graphics/guest_gpu/graphicsRun.cpp
-index e2b06883..63c4d462 100644
+index e2b0688..63c4d46 100644
 --- a/src/graphics/guest_gpu/graphicsRun.cpp
 +++ b/src/graphics/guest_gpu/graphicsRun.cpp
 @@ -1,3 +1,7 @@
@@ -857,7 +857,7 @@ index e2b06883..63c4d462 100644
  					if (with_interrupt) {
  						TriggerEopEventAtEndOfPipe(interrupt_context_id);
 diff --git a/src/graphics/guest_gpu/graphicsRun.h b/src/graphics/guest_gpu/graphicsRun.h
-index 781bda2d..3865097e 100644
+index 781bda2..3865097 100644
 --- a/src/graphics/guest_gpu/graphicsRun.h
 +++ b/src/graphics/guest_gpu/graphicsRun.h
 @@ -39,6 +39,7 @@ public:
@@ -869,7 +869,7 @@ index 781bda2d..3865097e 100644
  	void              WaitForIdle();
  	[[nodiscard]] int GetFrameNum() const;
 diff --git a/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp b/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp
-index d56b629b..b1a7b913 100644
+index d56b629..b1a7b91 100644
 --- a/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp
 +++ b/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp
 @@ -512,10 +512,8 @@ void PipelineCache::InitializeDriverCache() {
@@ -886,7 +886,7 @@ index d56b629b..b1a7b913 100644
  	m_driver_cache_path     = std::filesystem::path("_PipelineCache") / (title_id + ".bin");
  	const auto path         = Common::PathToString(m_driver_cache_path);
 diff --git a/src/graphics/presentation/videoOut.cpp b/src/graphics/presentation/videoOut.cpp
-index 11e989e4..b62630ce 100644
+index 11e989e..b62630c 100644
 --- a/src/graphics/presentation/videoOut.cpp
 +++ b/src/graphics/presentation/videoOut.cpp
 @@ -1,3 +1,4 @@
@@ -931,7 +931,7 @@ index 11e989e4..b62630ce 100644
  	EXIT_IF(g_video_out_driver == nullptr);
  	return g_video_out_driver->State();
 diff --git a/src/graphics/presentation/window/swapchain.cpp b/src/graphics/presentation/window/swapchain.cpp
-index 07c74012..9ce70128 100644
+index 07c7401..9ce7012 100644
 --- a/src/graphics/presentation/window/swapchain.cpp
 +++ b/src/graphics/presentation/window/swapchain.cpp
 @@ -2,6 +2,10 @@
@@ -1004,7 +1004,7 @@ index 07c74012..9ce70128 100644
  }
  
 diff --git a/src/graphics/presentation/window/vulkanWindow.cpp b/src/graphics/presentation/window/vulkanWindow.cpp
-index 95005f5a..a7907637 100644
+index 95005f5..a790763 100644
 --- a/src/graphics/presentation/window/vulkanWindow.cpp
 +++ b/src/graphics/presentation/window/vulkanWindow.cpp
 @@ -1,3 +1,5 @@
@@ -1102,7 +1102,7 @@ index 95005f5a..a7907637 100644
  }
  
 diff --git a/src/graphics/shader/recompiler/ir/passes/ShaderInfoCollection.cpp b/src/graphics/shader/recompiler/ir/passes/ShaderInfoCollection.cpp
-index 29aecffe..a27e7296 100644
+index 29aecff..a27e729 100644
 --- a/src/graphics/shader/recompiler/ir/passes/ShaderInfoCollection.cpp
 +++ b/src/graphics/shader/recompiler/ir/passes/ShaderInfoCollection.cpp
 @@ -7,6 +7,12 @@
@@ -1150,7 +1150,7 @@ index 29aecffe..a27e7296 100644
  			break;
  		case StageInputKind::WorkgroupId:
 diff --git a/src/graphics/shader/recompiler/ir/passes/SrtWalker.cpp b/src/graphics/shader/recompiler/ir/passes/SrtWalker.cpp
-index 06731ee7..0ce2c79b 100644
+index 06731ee..0ce2c79 100644
 --- a/src/graphics/shader/recompiler/ir/passes/SrtWalker.cpp
 +++ b/src/graphics/shader/recompiler/ir/passes/SrtWalker.cpp
 @@ -432,6 +432,10 @@ void CompileSrtWalker(ResourcePlan& program) {
@@ -1173,7 +1173,7 @@ index 06731ee7..0ce2c79b 100644
  
  SrtWalker::SrtWalker(const ResourcePlan& program, const SrtRuntime& runtime,
 diff --git a/src/kernel/eventFlag.cpp b/src/kernel/eventFlag.cpp
-index 594e7e14..c6b38f7a 100644
+index 594e7e1..c6b38f7 100644
 --- a/src/kernel/eventFlag.cpp
 +++ b/src/kernel/eventFlag.cpp
 @@ -1,3 +1,5 @@
@@ -1213,7 +1213,7 @@ index 594e7e14..c6b38f7a 100644
  			m_cond_var.WaitFor(&m_mutex, micros - elapsed);
  		}
 diff --git a/src/kernel/eventQueue.cpp b/src/kernel/eventQueue.cpp
-index 8641e8a9..8c9aef6b 100644
+index 8641e8a..8c9aef6 100644
 --- a/src/kernel/eventQueue.cpp
 +++ b/src/kernel/eventQueue.cpp
 @@ -1,3 +1,5 @@
@@ -1255,10 +1255,19 @@ index 8641e8a9..8c9aef6b 100644
  			const auto external_wait = micros != 0 ? micros - elapsed : UINT32_MAX;
  			m_cond_var.WaitFor(&m_mutex,
 diff --git a/src/kernel/memory.cpp b/src/kernel/memory.cpp
-index febbd49a..511d03df 100644
+index febbd49..b479f26 100644
 --- a/src/kernel/memory.cpp
 +++ b/src/kernel/memory.cpp
-@@ -10,6 +10,7 @@
+@@ -1,6 +1,8 @@
+ #include "kernel/memory.h"
++#include "kernel/novaMemoryCompatibility.h"
+ 
+ #include "common/assert.h"
++#include "common/novaFex.h"
+ #include "common/logging/log.h"
+ #include "common/stringUtils.h"
+ #include "common/threads.h"
+@@ -10,6 +12,7 @@
  #include "libs/errno.h"
  #include "libs/libs.h"
  
@@ -1266,7 +1275,7 @@ index febbd49a..511d03df 100644
  #include <algorithm>
  #include <array>
  #include <atomic>
-@@ -832,6 +833,23 @@ static std::recursive_mutex g_memory_operation_mutex;
+@@ -832,6 +835,23 @@ static std::recursive_mutex g_memory_operation_mutex;
  // heap below it), so hint-less searches must not fall back to the low system-managed range.
  static constexpr uint64_t GUEST_DEFAULT_MAP_BASE = 0x200000000ull;
  
@@ -1290,7 +1299,7 @@ index febbd49a..511d03df 100644
  static uint64_t FindGuestFreeRange(uint64_t search_addr, uint64_t size, uint64_t alignment) {
  	EXIT_IF(g_guest_address_space == nullptr || g_virtual_ranges == nullptr);
  
-@@ -857,7 +875,11 @@ static uint64_t FindGuestFreeRange(uint64_t search_addr, uint64_t size, uint64_t
+@@ -857,7 +877,11 @@ static uint64_t FindGuestFreeRange(uint64_t search_addr, uint64_t size, uint64_t
  	};
  
  	if (search_addr != 0) {
@@ -1303,7 +1312,7 @@ index febbd49a..511d03df 100644
  	}
  	auto addr = find_in(GUEST_DEFAULT_MAP_BASE, HOST_SYSTEM_MANAGED_MAX + 1u);
  	if (addr == 0) {
-@@ -2257,8 +2279,18 @@ static bool UnmapPooledBackingTransactional(const std::vector<PooledMemory::Mapp
+@@ -2257,8 +2281,18 @@ static bool UnmapPooledBackingTransactional(const std::vector<PooledMemory::Mapp
  }
  
  // The ABI entry points and batch operations hold g_memory_operation_mutex.
@@ -1322,7 +1331,7 @@ index febbd49a..511d03df 100644
  	EXIT_NOT_IMPLEMENTED(addr_in_out == nullptr);
  
  	constexpr size_t   PAGE_SIZE                = 0x4000;
-@@ -2979,9 +3011,20 @@ int KYTY_SYSV_ABI KernelCheckedReleaseDirectMemory(int64_t start, size_t len) {
+@@ -2979,9 +3013,28 @@ int KYTY_SYSV_ABI KernelCheckedReleaseDirectMemory(int64_t start, size_t len) {
  }
  
  // The ABI entry points and batch operations hold g_memory_operation_mutex.
@@ -1335,6 +1344,14 @@ index febbd49a..511d03df 100644
 +	const uint64_t in_addr = addr != nullptr ? reinterpret_cast<uint64_t>(*addr) : 0;
 +	const int result = MapDirectMemoryImpl(addr, len, prot, flags, direct_memory_start, alignment, name, type);
 +	NovaLogMap("MapDirect", in_addr, addr, len, flags, result);
++	if (result != 0) {
++		static std::atomic<uint32_t> details {0};
++		if (details.fetch_add(1, std::memory_order_relaxed) < 64) {
++			std::fprintf(stderr, "NOVA_MEMORY: MapDirect arguments phys=0x%llx align=0x%llx prot=0x%x type=%d name=%.80s\n",
++			             static_cast<unsigned long long>(direct_memory_start),
++			             static_cast<unsigned long long>(alignment), prot, type, name != nullptr ? name : "(none)");
++		}
++	}
 +	return result;
 +}
 +static int MapDirectMemoryImpl(void** addr, size_t len, int prot, int flags,
@@ -1343,7 +1360,33 @@ index febbd49a..511d03df 100644
  	if (addr == nullptr) {
  		return KERNEL_ERROR_EFAULT;
  	}
-@@ -3545,12 +3588,36 @@ int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags,
+@@ -3038,10 +3091,23 @@ static int MapDirectMemory(void** addr, size_t len, int prot, int flags,
+ 		MapGpuRange(in_addr, len);
+ 	};
+ 	if (fixed) {
+-		if (in_addr == 0 || (in_addr & (PAGE_SIZE - 1u)) != 0 ||
+-		    (alignment != 0 && in_addr % alignment != 0)) {
++		bool page_placement = false;
++#if defined(KYTY_NOVA_FEX)
++		if (const char* profile = std::getenv("NOVA_FIXED_DIRECT_PAGE_ALIGNMENT");
++		    profile != nullptr && std::strcmp(profile, "1") == 0) {
++			page_placement = true;
++		}
++#endif
++		if (!NovaValidDirectFixedAddress(in_addr, len, alignment, page_placement)) {
+ 			return KERNEL_ERROR_EINVAL;
+ 		}
++		if (page_placement && alignment != 0 && in_addr % alignment != 0) {
++			static std::atomic<uint32_t> placed {0};
++			if (placed.fetch_add(1, std::memory_order_relaxed) < 8) {
++				std::fprintf(stderr, "NOVA_MEMORY: title profile fixed direct page placement addr=0x%llx align=0x%llx\n",
++				             static_cast<unsigned long long>(in_addr), static_cast<unsigned long long>(alignment));
++			}
++		}
+ 		if (no_overwrite && g_virtual_ranges->HasOverlap(in_addr, len)) {
+ 			return KERNEL_ERROR_ENOMEM;
+ 		}
+@@ -3545,12 +3611,36 @@ int KYTY_SYSV_ABI KernelReserveVirtualRange(void** addr, size_t len, int flags,
  	} else {
  		alignment = (alignment != 0 ? alignment : PAGE_SIZE);
  		out_addr  = FindGuestFreeRange(in_addr, len, alignment);
@@ -1381,7 +1424,7 @@ index febbd49a..511d03df 100644
  	}
  
 diff --git a/src/kernel/memoryAddressSpace.inc b/src/kernel/memoryAddressSpace.inc
-index 6951f933..aadee503 100644
+index 6951f93..aadee50 100644
 --- a/src/kernel/memoryAddressSpace.inc
 +++ b/src/kernel/memoryAddressSpace.inc
 @@ -635,15 +635,21 @@ private:
@@ -1409,8 +1452,32 @@ index 6951f933..aadee503 100644
  			case VirtualMemory::Mode::NoAccess:
  			default: return PROT_NONE;
  		}
+diff --git a/src/kernel/novaMemoryCompatibility.h b/src/kernel/novaMemoryCompatibility.h
+new file mode 100644
+index 0000000..ea937e6
+--- /dev/null
++++ b/src/kernel/novaMemoryCompatibility.h
+@@ -0,0 +1,18 @@
++#pragma once
++
++#include <cstdint>
++
++namespace Libs::LibKernel::Memory {
++
++// Placement alignment normally applies to MAP_FIXED too. A title-specific opt-in
++// can instead use the guest page alignment; it never permits null, wrapping, or
++// sub-page addresses. Physical backing and ownership checks remain in memory.cpp.
++inline bool NovaValidDirectFixedAddress(uint64_t address, uint64_t size,
++                                       uint64_t alignment, bool page_placement) {
++	constexpr uint64_t page = 0x4000;
++	return address != 0 && (address & (page - 1)) == 0 &&
++	       size != 0 && size <= UINT64_MAX - address &&
++	       (page_placement || alignment == 0 || address % alignment == 0);
++}
++
++} // namespace Libs::LibKernel::Memory
 diff --git a/src/kernel/pthread.cpp b/src/kernel/pthread.cpp
-index 673a7dc7..0e9c4057 100644
+index 673a7dc..0e9c405 100644
 --- a/src/kernel/pthread.cpp
 +++ b/src/kernel/pthread.cpp
 @@ -47,6 +47,10 @@
@@ -1509,9 +1576,65 @@ index 673a7dc7..0e9c4057 100644
  #endif
  
  	pthread_exit(value);
+diff --git a/src/kernel/semaphore.cpp b/src/kernel/semaphore.cpp
+index 3721753..0c2674d 100644
+--- a/src/kernel/semaphore.cpp
++++ b/src/kernel/semaphore.cpp
+@@ -1,6 +1,7 @@
+ #include "kernel/semaphore.h"
+ 
+ #include "common/assert.h"
++#include "common/novaFex.h"
+ #include "common/logging/log.h"
+ #include "common/stringUtils.h"
+ #include "common/threads.h"
+@@ -10,6 +11,7 @@
+ 
+ #include <algorithm>
+ #include <atomic>
++#include <cstdio>
+ #include <limits>
+ #include <unordered_map>
+ #include <vector>
+@@ -291,6 +293,21 @@ int KYTY_SYSV_ABI KernelWaitSema(KernelSema sem, int need, KernelUseconds* time)
+ 		return KERNEL_ERROR_ESRCH;
+ 	}
+ 
++#if defined(KYTY_NOVA_FEX)
++	const uint32_t requested_micros = time != nullptr ? *time : 0;
++	static thread_local uint64_t calls = 0;
++	const uint64_t call = ++calls;
++	const bool sample = call <= 4 || (call & (call - 1)) == 0;
++	// A concurrent delete can release the semaphore after Wait returns. Keep the
++	// sampled name locally rather than dereferencing the handle in the exit report.
++	const std::string sampled_name = sample ? sem->GetName() : std::string {};
++	if (sample) {
++		std::fprintf(stderr, "NOVA_WAIT: semaphore name=%.80s handle=%p need=%d timeout=%s micros=%u call=%llu entering\n",
++		             sampled_name.c_str(), static_cast<void*>(sem), need,
++		             time != nullptr ? "finite" : "infinite", requested_micros,
++		             static_cast<unsigned long long>(call));
++	}
++#endif
+ 	auto result = sem->Wait(need, time);
+ 
+ 	int ret = OK;
+@@ -303,6 +320,13 @@ int KYTY_SYSV_ABI KernelWaitSema(KernelSema sem, int need, KernelUseconds* time)
+ 		case KernelSemaPrivate::Result::Deleted: ret = KERNEL_ERROR_EACCES; break;
+ 	}
+ 
++#if defined(KYTY_NOVA_FEX)
++	if (sample) {
++		std::fprintf(stderr, "NOVA_WAIT: semaphore name=%.80s handle=%p call=%llu result=0x%x\n",
++		             sampled_name.c_str(), static_cast<void*>(sem),
++		             static_cast<unsigned long long>(call), static_cast<unsigned>(ret));
++	}
++#endif
+ 	return ret;
+ }
+ 
 diff --git a/src/libs/anyNgs2Exports.cpp b/src/libs/anyNgs2Exports.cpp
 new file mode 100644
-index 00000000..5ae15e51
+index 0000000..5ae15e5
 --- /dev/null
 +++ b/src/libs/anyNgs2Exports.cpp
 @@ -0,0 +1,416 @@
@@ -1933,7 +2056,7 @@ index 00000000..5ae15e51
 +} // namespace Libs::AnyNgs2
 diff --git a/src/libs/anyngs2/Atrac9.cpp b/src/libs/anyngs2/Atrac9.cpp
 new file mode 100644
-index 00000000..6c79b862
+index 0000000..6c79b86
 --- /dev/null
 +++ b/src/libs/anyngs2/Atrac9.cpp
 @@ -0,0 +1,429 @@
@@ -2368,7 +2491,7 @@ index 00000000..6c79b862
 +#pragma GCC visibility pop
 diff --git a/src/libs/anyngs2/Custom.cpp b/src/libs/anyngs2/Custom.cpp
 new file mode 100644
-index 00000000..6bd5afe5
+index 0000000..6bd5afe
 --- /dev/null
 +++ b/src/libs/anyngs2/Custom.cpp
 @@ -0,0 +1,164 @@
@@ -2538,7 +2661,7 @@ index 00000000..6bd5afe5
 +}
 diff --git a/src/libs/anyngs2/General.hpp b/src/libs/anyngs2/General.hpp
 new file mode 100644
-index 00000000..ba67080c
+index 0000000..ba67080
 --- /dev/null
 +++ b/src/libs/anyngs2/General.hpp
 @@ -0,0 +1,18 @@
@@ -2562,7 +2685,7 @@ index 00000000..ba67080c
 +#endif
 diff --git a/src/libs/anyngs2/Geom.cpp b/src/libs/anyngs2/Geom.cpp
 new file mode 100644
-index 00000000..41d90077
+index 0000000..41d9007
 --- /dev/null
 +++ b/src/libs/anyngs2/Geom.cpp
 @@ -0,0 +1,55 @@
@@ -2623,7 +2746,7 @@ index 00000000..41d90077
 +}
 diff --git a/src/libs/anyngs2/Ngs2Internal.hpp b/src/libs/anyngs2/Ngs2Internal.hpp
 new file mode 100644
-index 00000000..441ec6e9
+index 0000000..441ec6e
 --- /dev/null
 +++ b/src/libs/anyngs2/Ngs2Internal.hpp
 @@ -0,0 +1,227 @@
@@ -2856,7 +2979,7 @@ index 00000000..441ec6e9
 +#endif
 diff --git a/src/libs/anyngs2/Ngs2Types.hpp b/src/libs/anyngs2/Ngs2Types.hpp
 new file mode 100644
-index 00000000..98ed8410
+index 0000000..98ed841
 --- /dev/null
 +++ b/src/libs/anyngs2/Ngs2Types.hpp
 @@ -0,0 +1,730 @@
@@ -3592,7 +3715,7 @@ index 00000000..98ed8410
 +#endif
 diff --git a/src/libs/anyngs2/Pan.cpp b/src/libs/anyngs2/Pan.cpp
 new file mode 100644
-index 00000000..11e899d3
+index 0000000..11e899d
 --- /dev/null
 +++ b/src/libs/anyngs2/Pan.cpp
 @@ -0,0 +1,135 @@
@@ -3733,7 +3856,7 @@ index 00000000..11e899d3
 +}
 diff --git a/src/libs/anyngs2/Rack.cpp b/src/libs/anyngs2/Rack.cpp
 new file mode 100644
-index 00000000..b47f5994
+index 0000000..b47f599
 --- /dev/null
 +++ b/src/libs/anyngs2/Rack.cpp
 @@ -0,0 +1,256 @@
@@ -3995,7 +4118,7 @@ index 00000000..b47f5994
 +#pragma GCC visibility pop
 diff --git a/src/libs/anyngs2/Render.cpp b/src/libs/anyngs2/Render.cpp
 new file mode 100644
-index 00000000..f3710c83
+index 0000000..f3710c8
 --- /dev/null
 +++ b/src/libs/anyngs2/Render.cpp
 @@ -0,0 +1,323 @@
@@ -4324,7 +4447,7 @@ index 00000000..f3710c83
 +}
 diff --git a/src/libs/anyngs2/Reverb.cpp b/src/libs/anyngs2/Reverb.cpp
 new file mode 100644
-index 00000000..147b1e1e
+index 0000000..147b1e1
 --- /dev/null
 +++ b/src/libs/anyngs2/Reverb.cpp
 @@ -0,0 +1,384 @@
@@ -4714,7 +4837,7 @@ index 00000000..147b1e1e
 +}
 diff --git a/src/libs/anyngs2/System.cpp b/src/libs/anyngs2/System.cpp
 new file mode 100644
-index 00000000..be6fdab4
+index 0000000..be6fdab
 --- /dev/null
 +++ b/src/libs/anyngs2/System.cpp
 @@ -0,0 +1,256 @@
@@ -4976,7 +5099,7 @@ index 00000000..be6fdab4
 +#pragma GCC visibility pop
 diff --git a/src/libs/anyngs2/Unimplemented.cpp b/src/libs/anyngs2/Unimplemented.cpp
 new file mode 100644
-index 00000000..27ea9af3
+index 0000000..27ea9af
 --- /dev/null
 +++ b/src/libs/anyngs2/Unimplemented.cpp
 @@ -0,0 +1,37 @@
@@ -5019,7 +5142,7 @@ index 00000000..27ea9af3
 +#pragma GCC visibility pop
 diff --git a/src/libs/anyngs2/Voice.cpp b/src/libs/anyngs2/Voice.cpp
 new file mode 100644
-index 00000000..f2377daf
+index 0000000..f2377da
 --- /dev/null
 +++ b/src/libs/anyngs2/Voice.cpp
 @@ -0,0 +1,519 @@
@@ -5543,7 +5666,7 @@ index 00000000..f2377daf
 +
 +#pragma GCC visibility pop
 diff --git a/src/libs/audio.cpp b/src/libs/audio.cpp
-index 1aa13b2c..c976157b 100644
+index 1aa13b2..c976157 100644
 --- a/src/libs/audio.cpp
 +++ b/src/libs/audio.cpp
 @@ -1,5 +1,10 @@
@@ -5658,7 +5781,7 @@ index 1aa13b2c..c976157b 100644
  				port->queue_primed = false;
  				break;
 diff --git a/src/libs/guestPrintf.cpp b/src/libs/guestPrintf.cpp
-index afc61624..5ea3e7e2 100644
+index afc6162..5ea3e7e 100644
 --- a/src/libs/guestPrintf.cpp
 +++ b/src/libs/guestPrintf.cpp
 @@ -7,6 +7,8 @@
@@ -5704,7 +5827,7 @@ index afc61624..5ea3e7e2 100644
  	return kyty_vprintf;
  }
 diff --git a/src/libs/guestPrintf.h b/src/libs/guestPrintf.h
-index 0e71438e..f447c227 100644
+index 0e71438..f447c22 100644
 --- a/src/libs/guestPrintf.h
 +++ b/src/libs/guestPrintf.h
 @@ -4,6 +4,8 @@
@@ -5727,7 +5850,7 @@ index 0e71438e..f447c227 100644
  
  #endif /* EMULATOR_INCLUDE_EMULATOR_LIBS_GUEST_PRINTF_H_ */
 diff --git a/src/libs/libAudio.cpp b/src/libs/libAudio.cpp
-index 704d2b29..a82e113f 100644
+index 704d2b2..a82e113 100644
 --- a/src/libs/libAudio.cpp
 +++ b/src/libs/libAudio.cpp
 @@ -1134,6 +1134,10 @@ LIB_DEFINE(InitAudio_1_Audio3d) {
@@ -5753,7 +5876,7 @@ index 704d2b29..a82e113f 100644
  
  } // namespace LibNgs2
 diff --git a/src/libs/libC.cpp b/src/libs/libC.cpp
-index acff2c8c..e695bd82 100644
+index acff2c8..e695bd8 100644
 --- a/src/libs/libC.cpp
 +++ b/src/libs/libC.cpp
 @@ -1515,30 +1515,67 @@ static KYTY_SYSV_ABI wint_t nova_ungetwc(wint_t a0, void* a1) {
@@ -5878,7 +6001,7 @@ index acff2c8c..e695bd82 100644
  #endif
  
 diff --git a/src/libs/libKernel.cpp b/src/libs/libKernel.cpp
-index 7f75f2bb..29b9541f 100644
+index 7f75f2b..e0d11e1 100644
 --- a/src/libs/libKernel.cpp
 +++ b/src/libs/libKernel.cpp
 @@ -1,3 +1,4 @@
@@ -5886,7 +6009,17 @@ index 7f75f2bb..29b9541f 100644
  #include "graphics/host_gpu/hostMemory.h"
  #include "common/abi.h"
  #include "common/assert.h"
-@@ -465,7 +466,11 @@ static KYTY_SYSV_ABI void stack_chk_fail() {
+@@ -267,7 +268,8 @@ int KYTY_SYSV_ABI KernelDlsym(KernelModule handle, const char* symbol, void** ad
+ 	}
+ 
+ 	if (handle == 0 && std::strcmp(symbol, "scriptingGetMem") == 0) {
+-		*addr = reinterpret_cast<void*>(&KernelApplicationHeapGetMem);
++		*addr = reinterpret_cast<void*>(Libs::NovaExportAddress(
++		    reinterpret_cast<uint64_t>(&KernelApplicationHeapGetMem), Loader::SymbolType::Func));
+ 		if (index < 32 || (index % 600) == 0) {
+ 			LOGF("\t resolved = 0x%016" PRIx64 " (application heap scriptingGetMem)\n",
+ 			     reinterpret_cast<uint64_t>(*addr));
+@@ -465,7 +467,11 @@ static KYTY_SYSV_ABI void stack_chk_fail() {
  	PRINT_NAME();
  
  	uint64_t rsp = 0;
@@ -5898,7 +6031,7 @@ index 7f75f2bb..29b9541f 100644
  	dump_stack_chk_fail_context(reinterpret_cast<uint64_t>(__builtin_return_address(0)), rsp);
  
  	EXIT("stack fail!!!");
-@@ -705,6 +710,7 @@ static SignalUcontext CreateSignalUcontext(
+@@ -705,6 +711,7 @@ static SignalUcontext CreateSignalUcontext(
  	return ctx;
  }
  
@@ -5906,7 +6039,7 @@ index 7f75f2bb..29b9541f 100644
  static SignalUcontext CreateCurrentGuestCallSignalUcontext(uint64_t rip) {
  	auto ctx = CreateSignalUcontext();
  
-@@ -746,11 +752,47 @@ static SignalUcontext CreateCurrentGuestCallSignalUcontext(uint64_t rip) {
+@@ -746,11 +753,47 @@ static SignalUcontext CreateCurrentGuestCallSignalUcontext(uint64_t rip) {
  
  	return ctx;
  }
@@ -5954,7 +6087,7 @@ index 7f75f2bb..29b9541f 100644
  static bool IsAddressInRange(uint64_t addr, uint64_t base, uint64_t size) {
  	return size != 0 && addr >= base && addr < base + size;
  }
-@@ -1077,11 +1119,20 @@ void KernelDispatchPendingSignalForCurrentThread() {
+@@ -1077,11 +1120,20 @@ void KernelDispatchPendingSignalForCurrentThread() {
  			continue;
  		}
  
@@ -5975,7 +6108,7 @@ index 7f75f2bb..29b9541f 100644
  			handler(signum, &ctx);
  		}
  		return;
-@@ -1195,6 +1246,41 @@ static int KYTY_SYSV_ABI KernelRaiseException(Pthread thread, int signum) {
+@@ -1195,6 +1247,41 @@ static int KYTY_SYSV_ABI KernelRaiseException(Pthread thread, int signum) {
  		PthreadWakeForSignal(thread);
  		WaitForSignalDispatch(thread, signum);
  		return OK;
@@ -6017,7 +6150,7 @@ index 7f75f2bb..29b9541f 100644
  #else
  		auto ctx = CreateSignalUcontext();
  		handler(signum, &ctx);
-@@ -3480,7 +3566,7 @@ static void AddLibkernelUnityFunc(Loader::SymbolDatabase* s, const char* nid, ui
+@@ -3480,7 +3567,7 @@ static void AddLibkernelUnityFunc(Loader::SymbolDatabase* s, const char* nid, ui
  	sr.module_version_major = 1;
  	sr.module_version_minor = 1;
  	sr.type                 = Loader::SymbolType::Func;
@@ -6027,7 +6160,7 @@ index 7f75f2bb..29b9541f 100644
  
  LIB_DEFINE(InitLibKernel_1) {
 diff --git a/src/libs/libs.h b/src/libs/libs.h
-index d1220ed3..cdce1023 100644
+index d1220ed..cdce102 100644
 --- a/src/libs/libs.h
 +++ b/src/libs/libs.h
 @@ -39,7 +39,7 @@
@@ -6064,7 +6197,7 @@ index d1220ed3..cdce1023 100644
  
  // Keep the formatting path from inflating fiber functions' stack frames under LTO.
 diff --git a/src/libs/ngs2.cpp b/src/libs/ngs2.cpp
-index e92cfb9c..8955bdd0 100644
+index e92cfb9..8955bdd 100644
 --- a/src/libs/ngs2.cpp
 +++ b/src/libs/ngs2.cpp
 @@ -1796,6 +1796,9 @@ static void Ngs2RenderVoice(Ngs2VoiceInternal& voice, const std::vector<Ngs2Voic
@@ -6115,7 +6248,7 @@ index e92cfb9c..8955bdd0 100644
  				        0x1f) {
 diff --git a/src/libs/nova/TLSF-LICENSE.md b/src/libs/nova/TLSF-LICENSE.md
 new file mode 100644
-index 00000000..982919fc
+index 0000000..982919f
 --- /dev/null
 +++ b/src/libs/nova/TLSF-LICENSE.md
 @@ -0,0 +1,92 @@
@@ -6213,7 +6346,7 @@ index 00000000..982919fc
 +  * First release
 diff --git a/src/libs/nova/tlsf.h b/src/libs/nova/tlsf.h
 new file mode 100644
-index 00000000..e9b5a91c
+index 0000000..e6b39f7
 --- /dev/null
 +++ b/src/libs/nova/tlsf.h
 @@ -0,0 +1,90 @@
@@ -6309,10 +6442,10 @@ index 00000000..e9b5a91c
 +#endif
 diff --git a/src/libs/novaHeap.cpp b/src/libs/novaHeap.cpp
 new file mode 100644
-index 00000000..91f39ca5
+index 0000000..c8629e7
 --- /dev/null
 +++ b/src/libs/novaHeap.cpp
-@@ -0,0 +1,603 @@
+@@ -0,0 +1,683 @@
 +// Nova: an emulator-side libc heap (malloc family and C++ operator new/delete).
 +//
 +// Why: Sony's libc reserves the whole heap arena up front. Unreal Engine titles ask it for a
@@ -6375,6 +6508,7 @@ index 00000000..91f39ca5
 +std::vector<std::pair<uint64_t, uint64_t>> g_large_free; // reusable address ranges
 +uint64_t                            g_libc_free = 0, g_libc_realloc = 0, g_libc_usable = 0;
 +bool                                g_failed    = false;
++bool                                g_patched   = false;
 +
 +uint64_t AlignUp(uint64_t v, uint64_t a) {
 +	return (v + a - 1) & ~(a - 1);
@@ -6416,7 +6550,6 @@ index 00000000..91f39ca5
 +	std::fprintf(stderr, "NOVA_HEAP: emulator heap at 0x%llx (libc.prx free=0x%llx realloc=0x%llx)\n",
 +	             static_cast<unsigned long long>(g_base), static_cast<unsigned long long>(g_libc_free),
 +	             static_cast<unsigned long long>(g_libc_realloc));
-+	PatchLibc();
 +	return true;
 +}
 +
@@ -6696,18 +6829,21 @@ index 00000000..91f39ca5
 +		abs_jmp(pc + 6 + static_cast<int64_t>(rel));
 +		return 6;
 +	}
-+	// call/jmp [rip+disp32] (libc's allocator wrappers call through a pointer slot): load the
-+	// slot address into r11 (scratch, never an argument) and call/jump through it.
++	// Snapshot the original dispatch target. The live slot may subsequently be redirected to
++	// NovaHeap; a foreign-pointer trampoline must keep calling libc's original allocator.
 +	if (p[0] == 0xFF && (p[1] == 0x15 || p[1] == 0x25)) {
 +		int32_t rel = 0;
 +		std::memcpy(&rel, p + 2, 4);
 +		const uint64_t slot = pc + 6 + static_cast<int64_t>(rel);
++		uint64_t target = 0;
++		std::memcpy(&target, reinterpret_cast<const void*>(slot), sizeof(target));
++		if (target < 0x10000) return 0;
 +		out->push_back(0x49);
 +		out->push_back(0xBB);
-+		for (int i = 0; i < 8; i++) out->push_back(static_cast<uint8_t>(slot >> (8 * i)));
++		for (int i = 0; i < 8; i++) out->push_back(static_cast<uint8_t>(target >> (8 * i)));
 +		out->push_back(0x41);
 +		out->push_back(0xFF);
-+		out->push_back(p[1] == 0x15 ? 0x13 : 0x23);
++		out->push_back(p[1] == 0x15 ? 0xD3 : 0xE3);
 +		return 6;
 +	}
 +	if (p[0] == 0xC3) {
@@ -6811,6 +6947,50 @@ index 00000000..91f39ca5
 +	return true;
 +}
 +
++// The public free/realloc wrappers are `push rbp; mov rbp,rsp; call [rip+disp]; pop
++// rbp; ret`. Other libc functions can use the same dispatch slot without entering
++// the public wrapper, so redirect the slot as well as the export. Only this known
++// wrapper form is accepted; unfamiliar libc versions retain export-only redirection.
++uint64_t AllocatorDispatchSlot(uint64_t addr) {
++	const auto* p = reinterpret_cast<const uint8_t*>(addr);
++	if (p[0] == 0x55 && p[1] == 0x48 && p[2] == 0x89 && p[3] == 0xE5 &&
++	    p[4] == 0xFF && p[5] == 0x15 && p[10] == 0x5D && p[11] == 0xC3) {
++		int32_t rel = 0;
++		std::memcpy(&rel, p + 6, sizeof(rel));
++		return addr + 10 + static_cast<int64_t>(rel);
++	}
++	return 0;
++}
++
++bool RewriteDispatchSlot(uint64_t slot, uint64_t gate) {
++	if (slot == 0 || (slot & 7u) != 0) return false;
++	// A recognized instruction form does not prove that its slot is writable (RELRO
++	// may protect it). Check the live mapping before either reading or writing it.
++	bool writable = false;
++	if (FILE* maps = std::fopen("/proc/self/maps", "r")) {
++		char line[512];
++		while (std::fgets(line, sizeof(line), maps) != nullptr) {
++			unsigned long long begin = 0, end = 0;
++			char perms[5] {};
++			if (std::sscanf(line, "%llx-%llx %4s", &begin, &end, perms) == 3 &&
++			    slot >= begin && slot < end && end - slot >= sizeof(uint64_t) &&
++			    perms[0] == 'r' && perms[1] == 'w') {
++				writable = true;
++				break;
++			}
++		}
++		std::fclose(maps);
++	}
++	if (!writable) return false;
++	uint64_t original = 0;
++	std::memcpy(&original, reinterpret_cast<const void*>(slot), sizeof(original));
++	if (original < 0x10000) return false;
++	// Relocations already made libc's data segments writable. Do not relax protection
++	// on an unknown segment or touch an unrelated function's dispatch table.
++	std::memcpy(reinterpret_cast<void*>(slot), &gate, sizeof(gate));
++	return true;
++}
++
 +void PatchLibc() {
 +	struct Entry {
 +		const char* nid;
@@ -6829,12 +7009,30 @@ index 00000000..91f39ca5
 +	    {"Y7aJ1uydPMo", reinterpret_cast<uint64_t>(nova_realloc), 2},
 +	    {"OGybVuPAhAY", reinterpret_cast<uint64_t>(nova_reallocalign), 2},
 +	    {"NDcSfcYZRC8", reinterpret_cast<uint64_t>(nova_malloc_usable_size), 3},
++	    {"ryUxD-60bKM", reinterpret_cast<uint64_t>(nova_new_nothrow), 0},
++	    {"Jh5qUcwiSEk", reinterpret_cast<uint64_t>(nova_new_nothrow), 0},
++	    {"3yxLpdKD0RA", reinterpret_cast<uint64_t>(nova_new_aligned), 0},
++	    {"kn-rKRB0pfY", reinterpret_cast<uint64_t>(nova_new_aligned), 0},
++	    {"iQXBbJbfT5k", reinterpret_cast<uint64_t>(nova_new_aligned_nothrow), 0},
++	    {"s2eGsgUF9vk", reinterpret_cast<uint64_t>(nova_new_aligned_nothrow), 0},
++	    {"z+P+xCnWLBk", reinterpret_cast<uint64_t>(nova_delete), 0},
++	    {"MLWl90SFWNE", reinterpret_cast<uint64_t>(nova_delete), 0},
++	    {"McsGnqV6yRE", reinterpret_cast<uint64_t>(nova_delete_2), 0},
++	    {"m-fSo3EbxNA", reinterpret_cast<uint64_t>(nova_delete_2), 0},
++	    {"lYDzBVE5mZs", reinterpret_cast<uint64_t>(nova_delete_2), 0},
++	    {"FOt55ZNaVJk", reinterpret_cast<uint64_t>(nova_delete_2), 0},
++	    {"bZx+FFSlkUM", reinterpret_cast<uint64_t>(nova_delete_2), 0},
++	    {"v09ZcAhZzSc", reinterpret_cast<uint64_t>(nova_delete_2), 0},
++	    {"nwujzxOPXzQ", reinterpret_cast<uint64_t>(nova_delete_3), 0},
++	    {"Y1RR+IQy6Pg", reinterpret_cast<uint64_t>(nova_delete_3), 0},
 +	};
 +	int done = 0;
++	int slots = 0;
 +	for (const auto& e: entries) {
 +		const uint64_t addr = Loader::NovaFindModuleExport(e.nid);
 +		if (addr == 0) continue;
 +		const auto* b = reinterpret_cast<const uint8_t*>(addr);
++		const uint64_t slot = AllocatorDispatchSlot(addr);
 +		if (e.kind != 0) {
 +			uint64_t original = ThunkTarget(addr);
 +			if (original == 0) {
@@ -6857,11 +7055,13 @@ index 00000000..91f39ca5
 +		const uint64_t gate = Libs::NovaExportAddress(e.fn, Loader::SymbolType::Func);
 +		if (Rewrite(addr, gate)) {
 +			done++;
++			if (RewriteDispatchSlot(slot, gate)) slots++;
 +		} else {
 +			std::fprintf(stderr, "NOVA_HEAP: could not redirect libc %s at 0x%llx\n", e.nid, static_cast<unsigned long long>(addr));
 +		}
 +	}
 +	std::fprintf(stderr, "NOVA_HEAP: %d libc.prx allocator entry points now use the emulator heap\n", done);
++	std::fprintf(stderr, "NOVA_HEAP: %d internal allocator dispatch slots redirected\n", slots);
 +}
 +
 +} // namespace
@@ -6869,6 +7069,19 @@ index 00000000..91f39ca5
 +LIB_VERSION("libc", 1, "libc", 1, 1);
 +
 +static bool g_registered = false;
++
++void PrepareLibc() {
++	if (!g_registered) return;
++	std::lock_guard lock(g_mutex);
++	if (!Init()) {
++		std::fprintf(stderr, "NOVA_HEAP: pre-entry allocator preparation failed\n");
++		return;
++	}
++	if (!g_patched) {
++		PatchLibc();
++		g_patched = true;
++	}
++}
 +
 +// Imports of these NIDs bind to the emulator heap whatever library/version the importer names
 +// (games import the allocator from libc and from LibcInternal under several versions).
@@ -6918,7 +7131,7 @@ index 00000000..91f39ca5
 +} // namespace Libs::NovaHeap
 diff --git a/src/libs/novaTlsf.cpp b/src/libs/novaTlsf.cpp
 new file mode 100644
-index 00000000..29dbcaf3
+index 0000000..9a47d49
 --- /dev/null
 +++ b/src/libs/novaTlsf.cpp
 @@ -0,0 +1,1265 @@
@@ -8188,7 +8401,7 @@ index 00000000..29dbcaf3
 +	return p;
 +}
 diff --git a/src/libs/vaContext.h b/src/libs/vaContext.h
-index 399d0cc0..b874ea50 100644
+index 399d0cc..b874ea5 100644
 --- a/src/libs/vaContext.h
 +++ b/src/libs/vaContext.h
 @@ -2,7 +2,17 @@
@@ -8220,7 +8433,7 @@ index 399d0cc0..b874ea50 100644
  namespace Libs {
  
 diff --git a/src/loader/guestInstructionPatcher.cpp b/src/loader/guestInstructionPatcher.cpp
-index 0ab7de67..59402560 100644
+index 0ab7de6..5940256 100644
 --- a/src/loader/guestInstructionPatcher.cpp
 +++ b/src/loader/guestInstructionPatcher.cpp
 @@ -1,3 +1,4 @@
@@ -8256,7 +8469,7 @@ index 0ab7de67..59402560 100644
 +} // namespace Loader
 +#endif
 diff --git a/src/loader/jit.h b/src/loader/jit.h
-index ebc72e43..05cb8332 100644
+index ebc72e4..05cb833 100644
 --- a/src/loader/jit.h
 +++ b/src/loader/jit.h
 @@ -2,6 +2,7 @@
@@ -8296,7 +8509,7 @@ index ebc72e43..05cb8332 100644
  	static uint64_t GetSize() { return 0x1000; }
  
 diff --git a/src/loader/runtimeLinker.cpp b/src/loader/runtimeLinker.cpp
-index f267da60..9f2ff9e3 100644
+index f267da6..89e9a4c 100644
 --- a/src/loader/runtimeLinker.cpp
 +++ b/src/loader/runtimeLinker.cpp
 @@ -22,11 +22,14 @@
@@ -8314,18 +8527,19 @@ index f267da60..9f2ff9e3 100644
  #include <cstdlib>
  #include <cstring>
  #include <fmt/format.h>
-@@ -53,6 +56,10 @@ namespace Libs::LibKernel {
+@@ -53,6 +56,11 @@ namespace Libs::LibKernel {
  void SetProgName(const std::string& name);
  } // namespace Libs::LibKernel
  
 +namespace Libs::NovaHeap {
 +bool Overrides(const std::string& nid);
++void PrepareLibc();
 +} // namespace Libs::NovaHeap
 +
  namespace Loader {
  
  Program::Program() = default;
-@@ -159,7 +166,8 @@ static uint64_t AllocateUnresolvedImportThunk(uint64_t record_id) {
+@@ -159,7 +167,8 @@ static uint64_t AllocateUnresolvedImportThunk(uint64_t record_id) {
  	    0x0f, 0x57, 0xc0,                     // xorps xmm0, xmm0
  	    0xc3,                                 // ret
  	};
@@ -8335,7 +8549,7 @@ index f267da60..9f2ff9e3 100644
  	std::memcpy(bytes + 6, &record_id, sizeof(record_id));
  	std::memcpy(bytes + 16, &target, sizeof(target));
  	std::memcpy(code, bytes, sizeof(bytes));
-@@ -222,6 +230,8 @@ static Program*              g_tls_main_program        = nullptr;
+@@ -222,6 +231,8 @@ static Program*              g_tls_main_program        = nullptr;
  static thread_local Program* g_tls_cached_main_program = nullptr;
  static thread_local uint8_t* g_tls_cached_main_tcb     = nullptr;
  
@@ -8344,7 +8558,7 @@ index f267da60..9f2ff9e3 100644
  static KYTY_SYSV_ABI void RunEntry(uint64_t addr, EntryParams* params, atexit_func_t atexit_func,
                                     void* stack_top) {
  #if defined(__x86_64__) || defined(_M_X64)
-@@ -357,6 +367,13 @@ static KYTY_SYSV_ABI void RunEntry(uint64_t addr, EntryParams* params, atexit_fu
+@@ -357,6 +368,13 @@ static KYTY_SYSV_ABI void RunEntry(uint64_t addr, EntryParams* params, atexit_fu
  	               "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7", "xmm8", "xmm9", "xmm10",
  	               "xmm11", "xmm12", "xmm13", "xmm14", "xmm15");
  #endif
@@ -8358,7 +8572,7 @@ index f267da60..9f2ff9e3 100644
  #else
  	(void)stack_top;
  	reinterpret_cast<entry_func_t>(addr)(params, atexit_func);
-@@ -647,6 +664,35 @@ static bool IsReadableRange(uint64_t addr, uint64_t size) {
+@@ -647,6 +665,35 @@ static bool IsReadableRange(uint64_t addr, uint64_t size) {
  	return true;
  }
  
@@ -8394,7 +8608,7 @@ index f267da60..9f2ff9e3 100644
  static bool KytyExceptionHandler(const Common::HostException::ExceptionInfo& exception_info) {
  	const auto* info = &exception_info;
  
-@@ -705,6 +751,37 @@ static bool KytyExceptionHandler(const Common::HostException::ExceptionInfo& exc
+@@ -705,6 +752,37 @@ static bool KytyExceptionHandler(const Common::HostException::ExceptionInfo& exc
  		}
  		std::fflush(stdout);
  	}
@@ -8432,7 +8646,7 @@ index f267da60..9f2ff9e3 100644
  	EXIT("Unhandled host exception: type=%u code=%u pc=0x%016" PRIx64
  	     " access=%u address=0x%016" PRIx64 "\n",
  	     static_cast<unsigned>(info->type), info->native_code, info->exception_address,
-@@ -928,6 +1005,10 @@ static KYTY_MS_ABI uint8_t* TlsMainGetAddr() {
+@@ -928,6 +1006,10 @@ static KYTY_MS_ABI uint8_t* TlsMainGetAddr() {
  	return g_tls_cached_main_tcb;
  }
  
@@ -8443,7 +8657,7 @@ index f267da60..9f2ff9e3 100644
  static void PatchProgram(Program* program, uint64_t address, uint64_t size) {
  	EXIT_IF(program == nullptr);
  	EXIT_IF(program->elf == nullptr);
-@@ -956,8 +1037,13 @@ static void PatchProgram(Program* program, uint64_t address, uint64_t size) {
+@@ -956,8 +1038,13 @@ static void PatchProgram(Program* program, uint64_t address, uint64_t size) {
  		}
  	}
  
@@ -8457,7 +8671,7 @@ index f267da60..9f2ff9e3 100644
  		// Replace:
  		//   66 66 66
  		//   mov <reg>, qword ptr fs:[0x00]
-@@ -1170,6 +1256,9 @@ Program* RuntimeLinker::LoadProgram(const std::filesystem::path& elf_name) {
+@@ -1170,6 +1257,9 @@ Program* RuntimeLinker::LoadProgram(const std::filesystem::path& elf_name) {
  	KYTY_PROFILER_FUNCTION();
  
  	Common::LockGuard lock(m_mutex);
@@ -8467,7 +8681,17 @@ index f267da60..9f2ff9e3 100644
  
  	static int32_t id_seq = 0;
  
-@@ -1334,6 +1423,12 @@ void RuntimeLinker::Resolve(const std::string& name, SymbolType type, Program* p
+@@ -1270,6 +1360,9 @@ void RuntimeLinker::Execute(const std::filesystem::path& game_patch) {
+ 	if (libc != nullptr && libc->dynamic_info->init_vaddr != 0) {
+ 		StartModule(libc, 0, nullptr, nullptr);
+ 	}
++	// libc's initializer installs the allocator dispatch slots. Redirect them before the
++	// executable can allocate through an internal libc call instead of an imported export.
++	Libs::NovaHeap::PrepareLibc();
+ 
+ 	LOGF_COLOR(Log::Color::BrightYellow, "---\n--- Execute: %s\n---\n", "Main");
+ 
+@@ -1334,6 +1427,12 @@ void RuntimeLinker::Resolve(const std::string& name, SymbolType type, Program* p
  		*bind_self = false;
  	}
  
@@ -8480,7 +8704,7 @@ index f267da60..9f2ff9e3 100644
  	if (ids.size() == 3) {
  		const LibraryId* l = FindLibrary(*program, ids.at(1));
  		const ModuleId*  m = FindModule(*program, ids.at(2));
-@@ -1719,6 +1814,12 @@ void RuntimeLinker::LoadProgramToMemory(Program* program) {
+@@ -1719,6 +1818,12 @@ void RuntimeLinker::LoadProgramToMemory(Program* program) {
  		LOGF("tls_handler_size       = 0x%016" PRIx64 "\n", tls_handler_size);
  	}
  
@@ -8493,8 +8717,36 @@ index f267da60..9f2ff9e3 100644
  	if (!Common::HostException::InstallHandler(KytyExceptionHandler)) {
  		EXIT("Failed to install the required vectored exception handler\n");
  	}
+@@ -2183,7 +2288,13 @@ void* RuntimeLinker::ApplicationHeapMemalign(uint64_t alignment, uint64_t size)
+ 
+ 	if (m_application_heap_posix_memalign != nullptr) {
+ 		void* ptr = nullptr;
++#if defined(KYTY_NOVA_FEX)
++		const auto result = NovaFex::CallGuest(reinterpret_cast<uint64_t>(m_application_heap_posix_memalign),
++		                                      reinterpret_cast<uint64_t>(&ptr), alignment, size);
++		return static_cast<int32_t>(result) == 0 ? ptr : nullptr;
++#else
+ 		return m_application_heap_posix_memalign(&ptr, alignment, size) == 0 ? ptr : nullptr;
++#endif
+ 	}
+ 
+ 	return nullptr;
+@@ -2192,7 +2303,12 @@ void* RuntimeLinker::ApplicationHeapMemalign(uint64_t alignment, uint64_t size)
+ void* RuntimeLinker::ApplicationHeapMalloc(uint64_t size) {
+ 	Common::LockGuard lock(m_mutex);
+ 
+-	return m_application_heap_malloc != nullptr ? m_application_heap_malloc(size) : nullptr;
++	if (m_application_heap_malloc == nullptr) return nullptr;
++#if defined(KYTY_NOVA_FEX)
++	return reinterpret_cast<void*>(NovaFex::CallGuest(reinterpret_cast<uint64_t>(m_application_heap_malloc), size));
++#else
++	return m_application_heap_malloc(size);
++#endif
+ }
+ 
+ } // namespace Loader
 diff --git a/src/loader/runtimeLinker.h b/src/loader/runtimeLinker.h
-index 3787b94c..d887724e 100644
+index 3787b94..d887724 100644
 --- a/src/loader/runtimeLinker.h
 +++ b/src/loader/runtimeLinker.h
 @@ -25,6 +25,9 @@ struct Elf64_Sym;
@@ -8508,7 +8760,7 @@ index 3787b94c..d887724e 100644
  using application_heap_free_func_t           = KYTY_SYSV_ABI void (*)(void*);
  using application_heap_malloc_func_t         = KYTY_SYSV_ABI void* (*)(uint64_t);
 diff --git a/src/loader/symbolDatabase.cpp b/src/loader/symbolDatabase.cpp
-index 992e43f9..463032ac 100644
+index 992e43f..463032a 100644
 --- a/src/loader/symbolDatabase.cpp
 +++ b/src/loader/symbolDatabase.cpp
 @@ -80,6 +80,26 @@ const SymbolRecord* SymbolDatabase::FindByNid(const std::string& nid, SymbolType
@@ -8539,7 +8791,7 @@ index 992e43f9..463032ac 100644
  	auto prefix = name + "[";
  	auto suffix = fmt::format("[{}]", magic_enum::enum_name(type));
 diff --git a/src/loader/symbolDatabase.h b/src/loader/symbolDatabase.h
-index bf3f64ab..1648bc6f 100644
+index bf3f64a..1648bc6 100644
 --- a/src/loader/symbolDatabase.h
 +++ b/src/loader/symbolDatabase.h
 @@ -46,6 +46,9 @@ public:
@@ -8553,7 +8805,7 @@ index bf3f64ab..1648bc6f 100644
  	void DbgDump(const std::string& folder, const std::string& file_name);
  
 diff --git a/src/loader/x64InstructionEmulator.cpp b/src/loader/x64InstructionEmulator.cpp
-index 7500c364..7a82c07e 100644
+index 7500c36..7a82c07 100644
 --- a/src/loader/x64InstructionEmulator.cpp
 +++ b/src/loader/x64InstructionEmulator.cpp
 @@ -1,3 +1,4 @@
@@ -8576,7 +8828,7 @@ index 7500c364..7a82c07e 100644
 +} // namespace Loader::X64InstructionEmulator
 +#endif
 diff --git a/src/main.cpp b/src/main.cpp
-index a9610102..892e7405 100644
+index a961010..892e740 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -535,6 +535,16 @@ int wmain(int argc, wchar_t* argv[]) {
@@ -8598,7 +8850,7 @@ index a9610102..892e7405 100644
  int main(int argc, char* argv[]) {
 diff --git a/src/novaAndroid.cpp b/src/novaAndroid.cpp
 new file mode 100644
-index 00000000..25ee33b0
+index 0000000..25ee33b
 --- /dev/null
 +++ b/src/novaAndroid.cpp
 @@ -0,0 +1,177 @@
