@@ -997,9 +997,6 @@ namespace {
 // Emulator code that dereferences such a guest pointer faults: the address does not exist on
 // the host. The faulting load/store is emulated on the translated host address and skipped.
 
-uint64_t& XReg(ucontext_t* uc, uint32_t n) {
-	return uc->uc_mcontext.regs[n]; // n < 31
-}
 uint64_t ReadX(ucontext_t* uc, uint32_t n) {
 	return n == 31 ? 0 : uc->uc_mcontext.regs[n];
 }
