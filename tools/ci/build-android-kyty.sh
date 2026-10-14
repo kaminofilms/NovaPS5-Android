@@ -32,11 +32,41 @@ while IFS= read -r p || [[ -n "$p" ]]; do
     patch_file="$repo/patches/$p"
     echo "NOVA_PATCH: validate $p"
     if [[ "$p" == "kyty-nova-arm64.patch" ]]; then
-        git -C kyty apply --recount --check "$patch_file" || {
-            echo "NOVA_PATCH: 0.9.9 Kyty patch validation failed: $p"
-            exit 1
+        # Git --recount repairs stale hunk lengths in modified-file diffs but can
+        # incorrectly classify new-file hunks as depending on existing content.
+        # Keep all 0.9.9 code: split at diff boundaries and apply new files
+        # without recounting their already-correct /dev/null hunks.
+        revised="$work/kyty-modified-files.patch"
+        created="$work/kyty-new-files.patch"
+        python3 - "$patch_file" "$revised" "$created" <<'PY'
+import pathlib, re, sys
+src = pathlib.Path(sys.argv[1]).read_bytes()
+parts = re.split(rb'(?=^diff --git )', src, flags=re.MULTILINE)
+modified, new_files = [], []
+for section in parts:
+    if not section.strip():
+        continue
+    if not section.startswith(b'diff --git '):
+        raise SystemExit('NOVA_PATCH: invalid patch preamble')
+    if re.search(rb'^new file mode ', section, re.MULTILINE):
+        new_files.append(section)
+    else:
+        modified.append(section)
+if not modified or not new_files:
+    raise SystemExit('NOVA_PATCH: expected modified and new-file sections')
+pathlib.Path(sys.argv[2]).write_bytes(b''.join(modified))
+pathlib.Path(sys.argv[3]).write_bytes(b''.join(new_files))
+print('NOVA_PATCH: grouped', len(modified), 'modified-file diffs and',
+      len(new_files), 'new-file diffs')
+PY
+        git -C kyty apply --recount --check "$revised" || {
+            echo "NOVA_PATCH: modified-file patch validation failed"; exit 1;
         }
-        git -C kyty apply --recount "$patch_file"
+        git -C kyty apply --check "$created" || {
+            echo "NOVA_PATCH: new-file patch validation failed"; exit 1;
+        }
+        git -C kyty apply --recount "$revised"
+        git -C kyty apply "$created"
     else
         git -C kyty apply --check "$patch_file" || { echo "patch check failed: $p"; exit 1; }
         git -C kyty apply "$patch_file" || { echo "patch failed: $p"; exit 1; }
