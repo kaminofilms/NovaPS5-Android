@@ -19,7 +19,7 @@ index f3cdf3a9..ca8d2e5a 100644
  	# SDL's built-in iconv fallback does not support CP932.
  	set(SDL_SYSTEM_ICONV ON CACHE BOOL "Use system iconv for CP932 conversion" FORCE)
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 213dd35b..f872fc83 100644
+index 213dd35b..9eafb887 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -35,6 +35,13 @@ set(KYTY_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty")
@@ -109,7 +109,7 @@ index 213dd35b..f872fc83 100644
  target_include_directories(ces_tests PRIVATE ${inc_headers})
  
  add_executable(save_data_dialog_tests EXCLUDE_FROM_ALL
-@@ -756,7 +786,23 @@ if(APPLE AND (CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64" OR
+@@ -756,7 +786,24 @@ if(APPLE AND (CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64" OR
  	endif()
  endif()
  
@@ -117,7 +117,8 @@ index 213dd35b..f872fc83 100644
 +if(KYTY_ANDROID)
 +	add_library(kyty_emulator SHARED "${KYTY_SOURCE_DIR}/main.cpp" "${KYTY_SOURCE_DIR}/novaAndroid.cpp" ${kyty_emulator_src})
 +	set_target_properties(kyty_emulator PROPERTIES OUTPUT_NAME main)
-+	target_link_options(kyty_emulator PRIVATE -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384 -Wl,--no-undefined)
++	# -Bsymbolic: FFmpeg's AArch64 assembly addresses its tables directly (not preemptible).
++	target_link_options(kyty_emulator PRIVATE -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384 -Wl,--no-undefined -Wl,-Bsymbolic)
 +	target_link_libraries(kyty_emulator android log)
 +	target_compile_options(kyty_emulator PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include ${KYTY_SOURCE_DIR}/common/novaBionic.h>")
 +	target_compile_options(common PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include ${KYTY_SOURCE_DIR}/common/novaBionic.h>")
@@ -134,7 +135,7 @@ index 213dd35b..f872fc83 100644
  configure_macos_guest_address_space(kyty_emulator)
  
  set(KYTY_TROPHY_UNLOCK_SOUND "${CMAKE_CURRENT_SOURCE_DIR}/assets/sounds/trophy-unlock.wav")
-@@ -778,7 +824,7 @@ endif()
+@@ -778,7 +825,7 @@ endif()
  if (KYTY_CLANG_CL)
  	target_link_libraries(kyty_emulator onecore)
  endif()
