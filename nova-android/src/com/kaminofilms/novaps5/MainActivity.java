@@ -47,7 +47,20 @@ public final class MainActivity extends Activity {
                 | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
     }
 
-    @Override protected void onResume() { super.onResume(); immersive(); if (home != null) home.invalidate(); }
+    @Override protected void onResume() { super.onResume(); immersive(); if (home != null) home.invalidate(); refreshLibrary(); }
+
+    private long lastRefresh;
+    /** Rescans the game folders so newly copied games show up without re-importing. */
+    void refreshLibrary() {
+        long now = android.os.SystemClock.elapsedRealtime();
+        if (store == null || now - lastRefresh < 3000) return;
+        lastRefresh = now;
+        io.execute(() -> {
+            try {
+                if (store.refresh()) { BootLog.write(this, "Library refreshed: " + store.snapshot().size() + " game(s)"); ui(() -> home.invalidate()); }
+            } catch (Exception x) { BootLog.write(this, "Library refresh failed: " + x); }
+        });
+    }
     @Override protected void onDestroy() { io.shutdownNow(); super.onDestroy(); }
 
     void askFileAccess() {
@@ -114,6 +127,7 @@ public final class MainActivity extends Activity {
             busy("Importing game folder", () -> {
                 List<GameStore.Entry> found = store.scan(uri);
                 store.addAll(found);
+                store.addRoot(GameStore.pathOf(uri.toString()));
                 store.loadImages();
                 return found.size() + " game folder(s) found.";
             }, value -> { home.invalidate(); info("Library updated", value); });
@@ -222,7 +236,30 @@ public final class MainActivity extends Activity {
                 + "\nGPU driver: " + Drivers.label(this)
                 + "\n\nLatest game log:\n" + tail(new File(logs, "kyty-session.log"), 400000)
                 + "\n\nPrevious game log (end):\n" + tail(new File(logs, "kyty-session.previous.log"), 60000)
-                + "\n\nApp log:\n" + BootLog.read(this);
+                + "\n\nApp log:\n" + BootLog.read(this)
+                + "\n\nAndroid audio/SDL log:\n" + logcat();
+    }
+
+    /** Recent SDL / AAudio lines from Android's log (this app's own entries). */
+    static String logcat() {
+        try {
+            java.lang.Process p = new ProcessBuilder("logcat", "-d", "-t", "400", "-v", "time", "-s",
+                    "SDL:V", "SDL/APP:V", "SDL/AUDIO:V", "AAudio:V", "AudioStream:V", "AudioStreamLegacy:V", "AudioTrack:W", "libOpenSLES:W")
+                    .redirectErrorStream(true).start();
+            byte[] out = readAll(p.getInputStream(), 200000);
+            p.waitFor();
+            return out.length == 0 ? "(empty)" : new String(out, StandardCharsets.UTF_8);
+        } catch (Exception x) {
+            return "(unavailable: " + x + ")";
+        }
+    }
+
+    static byte[] readAll(java.io.InputStream in, int limit) throws IOException {
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        int n;
+        while ((n = in.read(buffer)) > 0) { if (out.size() < limit) out.write(buffer, 0, Math.min(n, limit - out.size())); }
+        return out.toByteArray();
     }
 
     void diagnostics() {

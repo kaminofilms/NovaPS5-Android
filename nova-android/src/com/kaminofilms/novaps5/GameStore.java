@@ -19,8 +19,9 @@ final class GameStore {
     final ArrayList<Entry> entries=new ArrayList<>();
     GameStore(Context c){context=c;load();}
     synchronized ArrayList<Entry> snapshot(){return new ArrayList<>(entries);}
-    synchronized void addAll(List<Entry> found)throws JSONException {for(Entry e:found){boolean exists=false;for(Entry old:entries)if(old.uri.equals(e.uri)){exists=true;break;}if(!exists)entries.add(e);}save();}
-    synchronized void remove(Entry e)throws JSONException {entries.remove(e);save();}
+    synchronized void addAll(List<Entry> found)throws JSONException {HashSet<String> h=hidden();for(Entry e:found){File g=pathOf(e.uri);if(g!=null)h.remove(g.getPath());}context.getSharedPreferences("nova",0).edit().putString("hidden",new JSONArray(h).toString()).apply();for(Entry e:found){boolean exists=false;for(Entry old:entries)if(old.uri.equals(e.uri)){exists=true;break;}if(!exists)entries.add(e);}save();}
+    synchronized void remove(Entry e)throws JSONException {entries.remove(e);save();File g=pathOf(e.uri);if(g!=null){JSONArray h=new JSONArray(context.getSharedPreferences("nova",0).getString("hidden","[]"));h.put(g.getPath());context.getSharedPreferences("nova",0).edit().putString("hidden",h.toString()).apply();}}
+    synchronized HashSet<String> hidden(){HashSet<String> h=new HashSet<>();try{JSONArray a=new JSONArray(context.getSharedPreferences("nova",0).getString("hidden","[]"));for(int i=0;i<a.length();i++)h.add(a.getString(i));}catch(JSONException ignored){}return h;}
     void load(){try{JSONArray a=new JSONArray(context.getSharedPreferences("nova",0).getString("games","[]"));for(int i=0;i<a.length();i++){JSONObject o=a.getJSONObject(i);Entry e=new Entry();e.name=o.optString("name","Game");e.id=o.optString("id","Unknown title");e.uri=o.optString("uri");e.eboot=o.optString("eboot");e.icon=o.optString("icon");e.background=o.optString("background");e.version=o.optString("version");entries.add(e);}}catch(JSONException ignored){}}
     void save()throws JSONException {JSONArray a=new JSONArray();for(Entry e:entries)a.put(e.json());context.getSharedPreferences("nova",0).edit().putString("games",a.toString()).apply();}
     List<Node> children(Uri tree,String parent)throws Exception {
@@ -39,11 +40,7 @@ final class GameStore {
             if(boot!=null){
                 Entry e=new Entry();e.eboot=boot.uri.toString();e.uri=DocumentsContract.buildDocumentUriUsingTree(tree,task[0]).toString();e.name=task[0].substring(task[0].lastIndexOf('/')+1);e.id="Unknown title";e.version="";e.icon="";e.background="";
                 if(sys!=null){for(Node n:children(tree,sys.id)){
-                    if("param.json".equalsIgnoreCase(n.name))try{
-                        JSONObject p=new JSONObject(new String(readLimited(n.uri,1048576),"UTF-8"));JSONObject localized=p.optJSONObject("localizedParameters");
-                        if(localized!=null){JSONObject title=localized.optJSONObject(localized.optString("defaultLanguage","en-US"));if(title==null)title=localized.optJSONObject("en-US");if(title==null){Iterator<String> keys=localized.keys();while(keys.hasNext()){JSONObject candidate=localized.optJSONObject(keys.next());if(candidate!=null&&candidate.has("titleName")){title=candidate;break;}}}if(title!=null)e.name=title.optString("titleName",e.name);}
-                        if(p.has("titleName"))e.name=p.optString("titleName",e.name);if(e.name.isEmpty())e.name="Untitled game";e.id=p.optString("titleId",p.optString("contentId",e.id));e.version=p.optString("contentVersion",p.optString("applicationVersion",""));
-                    }catch(Exception ignored){}
+                    if("param.json".equalsIgnoreCase(n.name))try{meta(e,readLimited(n.uri,1048576));}catch(Exception ignored){}
                     if("icon0.png".equalsIgnoreCase(n.name)||"icon0.jpg".equalsIgnoreCase(n.name))e.icon=n.uri.toString();
                     if("pic1.png".equalsIgnoreCase(n.name)||"pic1.jpg".equalsIgnoreCase(n.name))e.background=n.uri.toString();
                 }}found.add(e);
@@ -60,4 +57,51 @@ final class GameStore {
         try(InputStream in=context.getContentResolver().openInputStream(Uri.parse(uri))){return BitmapFactory.decodeStream(in,null,o);}
     }catch(Exception e){return null;}}
     void loadImages(){for(Entry e:snapshot()){if(e.cover==null)e.cover=image(e.icon,512);if(e.hero==null)e.hero=image(e.background,1280);}}
+
+    static void meta(Entry e,byte[] json)throws Exception{
+        JSONObject p=new JSONObject(new String(json,"UTF-8"));JSONObject localized=p.optJSONObject("localizedParameters");
+        if(localized!=null){JSONObject title=localized.optJSONObject(localized.optString("defaultLanguage","en-US"));if(title==null)title=localized.optJSONObject("en-US");if(title==null){Iterator<String> keys=localized.keys();while(keys.hasNext()){JSONObject candidate=localized.optJSONObject(keys.next());if(candidate!=null&&candidate.has("titleName")){title=candidate;break;}}}if(title!=null)e.name=title.optString("titleName",e.name);}
+        if(p.has("titleName"))e.name=p.optString("titleName",e.name);if(e.name.isEmpty())e.name="Untitled game";e.id=p.optString("titleId",p.optString("contentId",e.id));e.version=p.optString("contentVersion",p.optString("applicationVersion",""));
+    }
+
+    // ---- Auto refresh: the folders games live in are rescanned whenever the library is shown. ----
+    static final String STORAGE_AUTHORITY="com.android.externalstorage.documents";
+    static File base(){try{return android.os.Environment.getExternalStorageDirectory().getCanonicalFile();}catch(IOException x){return android.os.Environment.getExternalStorageDirectory();}}
+    /** The internal-storage folder of a game entry (or of a picked tree), or null. */
+    static File pathOf(String uri){try{Uri u=Uri.parse(uri);String doc=DocumentsContract.isTreeUri(u)&&!uri.contains("/document/")?DocumentsContract.getTreeDocumentId(u):DocumentsContract.getDocumentId(u);
+        if(doc==null||!doc.startsWith("primary:"))return null;return new File(base(),doc.substring(8)).getCanonicalFile();}catch(Exception x){return null;}}
+    synchronized void addRoot(File root){if(root==null)return;try{JSONArray a=new JSONArray(context.getSharedPreferences("nova",0).getString("roots","[]"));for(int i=0;i<a.length();i++)if(root.getPath().equals(a.optString(i)))return;a.put(root.getPath());context.getSharedPreferences("nova",0).edit().putString("roots",a.toString()).apply();}catch(JSONException ignored){}}
+    synchronized LinkedHashSet<File> roots(){LinkedHashSet<File> r=new LinkedHashSet<>();
+        try{JSONArray a=new JSONArray(context.getSharedPreferences("nova",0).getString("roots","[]"));for(int i=0;i<a.length();i++)r.add(new File(a.getString(i)));}catch(JSONException ignored){}
+        for(Entry e:entries){File g=pathOf(e.uri);if(g!=null&&g.getParentFile()!=null&&!g.getParentFile().equals(base()))r.add(g.getParentFile());}
+        return r;}
+    static Uri documentUri(File dir){String rel=dir.getPath().substring(base().getPath().length()+1);return DocumentsContract.buildDocumentUri(STORAGE_AUTHORITY,"primary:"+rel);}
+    void fileScan(File dir,int depth,List<Entry> out,int[] visited){
+        if(++visited[0]>2048||depth>4)return;File[] files=dir.listFiles();if(files==null)return;
+        File boot=new File(dir,"eboot.bin");
+        if(boot.isFile()){Entry e=new Entry();e.uri=documentUri(dir).toString();e.eboot=Uri.fromFile(boot).toString();e.name=dir.getName();e.id="Unknown title";e.version="";e.icon="";e.background="";
+            File sys=new File(dir,"sce_sys");
+            File param=new File(sys,"param.json");if(param.isFile()&&param.length()<1048576)try{meta(e,java.nio.file.Files.readAllBytes(param.toPath()));}catch(Exception ignored){}
+            for(String n:new String[]{"icon0.png","icon0.jpg"}){File f=new File(sys,n);if(f.isFile()){e.icon=Uri.fromFile(f).toString();break;}}
+            for(String n:new String[]{"pic1.png","pic1.jpg"}){File f=new File(sys,n);if(f.isFile()){e.background=Uri.fromFile(f).toString();break;}}
+            out.add(e);return;}
+        for(File f:files)if(f.isDirectory()&&!f.getName().startsWith(".")&&!"sce_sys".equalsIgnoreCase(f.getName()))fileScan(f,depth+1,out,visited);
+    }
+    /** Adds games that appeared in the library folders and drops ones whose folder is gone. True if anything changed. */
+    boolean refresh(){
+        if(!android.os.Environment.isExternalStorageManager())return false;
+        ArrayList<Entry> found=new ArrayList<>();int[] visited={0};
+        for(File root:roots())if(root.isDirectory())fileScan(root,0,found,visited);
+        boolean changed=false;
+        synchronized(this){
+            HashSet<String> have=hidden();
+            for(Iterator<Entry> it=entries.iterator();it.hasNext();){Entry e=it.next();File g=pathOf(e.uri);
+                if(g!=null&&g.getParentFile()!=null&&g.getParentFile().isDirectory()&&!new File(g,"eboot.bin").exists()){it.remove();changed=true;continue;}
+                if(g!=null)have.add(g.getPath());}
+            for(Entry e:found){File g=pathOf(e.uri);if(g!=null&&have.add(g.getPath())){entries.add(e);changed=true;}}
+            if(changed)try{save();}catch(JSONException ignored){}
+        }
+        if(changed)loadImages();
+        return changed;
+    }
 }

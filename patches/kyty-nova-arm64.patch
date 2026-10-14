@@ -560,7 +560,7 @@ index c976bd8f..757e5ffa 100644
  
  } // namespace Libs::Graphics
 diff --git a/src/graphics/guest_gpu/graphicsRun.cpp b/src/graphics/guest_gpu/graphicsRun.cpp
-index e2b06883..19f36db7 100644
+index e2b06883..66d656c3 100644
 --- a/src/graphics/guest_gpu/graphicsRun.cpp
 +++ b/src/graphics/guest_gpu/graphicsRun.cpp
 @@ -1,3 +1,7 @@
@@ -571,13 +571,46 @@ index e2b06883..19f36db7 100644
  #include "graphics/guest_gpu/graphicsRun.h"
  
  #include "common/assert.h"
-@@ -31,6 +35,17 @@
+@@ -31,6 +35,50 @@
  #include <thread>
  #include <vector>
  
 +#if defined(KYTY_NOVA_FEX)
 +namespace {
 +std::atomic<uint64_t> g_nova_gpu_stall_since_ms {0};
++// Ring of recent GPU-side memory writes (GPU thread only) to find who should write a label.
++struct NovaGpuWrite {
++	uint64_t addr;
++	uint64_t value;
++	uint32_t queue;
++	char     kind;
++};
++constexpr uint32_t    NOVA_WRITES = 4096;
++NovaGpuWrite          g_nova_writes[NOVA_WRITES] {};
++uint32_t              g_nova_write_pos = 0;
++std::atomic<uint64_t> g_nova_watch_addr {0};
++const void*           g_nova_bad_waits[16] {};
++uint32_t              g_nova_bad_wait_count = 0;
++void NovaNoteGpuWrite(const void* addr, uint64_t value, uint32_t queue, char kind) {
++	const auto a = reinterpret_cast<uint64_t>(addr);
++	g_nova_writes[g_nova_write_pos++ % NOVA_WRITES] = {a, value, queue, kind};
++	const auto watch = g_nova_watch_addr.load(std::memory_order_relaxed);
++	if (watch != 0 && a + 8 > watch && a < watch + 8) {
++		static std::atomic<uint32_t> n {0};
++		if (n.fetch_add(1) < 32) {
++			std::fprintf(stderr, "NOVA_GPU_WATCH: queue(event %u) %c-write 0x%016llx = 0x%llx\n", queue, kind,
++			             static_cast<unsigned long long>(a), static_cast<unsigned long long>(value));
++		}
++	}
++}
++bool NovaIsBadWait(const void* addr) {
++	for (uint32_t i = 0; i < g_nova_bad_wait_count && i < 16; i++) {
++		if (g_nova_bad_waits[i] == addr) {
++			return true;
++		}
++	}
++	return false;
++}
 +uint64_t NovaGpuNowMs() {
 +	timespec now {};
 +	clock_gettime(CLOCK_MONOTONIC, &now);
@@ -589,7 +622,7 @@ index e2b06883..19f36db7 100644
  namespace Libs::Graphics {
  
  static thread_local CommandProcessor* g_current_processor = nullptr;
-@@ -172,7 +187,24 @@ void GuestGpu::SuspendPoint() {
+@@ -172,13 +220,42 @@ void GuestGpu::SuspendPoint() {
  	EXIT_IF(IsGpuThread() || CommandScheduler::InDeferredOperation());
  	// Do not hold a queue lock while waiting: asynchronous work may be needed to
  	// finish the preceding graphics frame. The first point returns immediately.
@@ -614,7 +647,25 @@ index e2b06883..19f36db7 100644
  	Submission submission;
  	submission.type = SubmissionType::SuspendPoint;
  	Enqueue(std::move(submission));
-@@ -315,7 +347,46 @@ void CommandProcessor::WaitRegMem(uint32_t func, const T* addr, T ref, T mask, u
+ 	m_done_num++;
+ }
+ 
++void GuestGpu::NovaDumpQueues() {
++	Common::LockGuard lock(m_queue_mutex);
++	for (uint32_t id = 0; id < QueueCount; id++) {
++		if (!m_queues[id].empty()) {
++			std::fprintf(stderr, "NOVA_GPU_WAIT:   queue %u: %zu pending (front type %d blocked %d)\n", id,
++			             m_queues[id].size(), static_cast<int>(m_queues[id].front().type),
++			             m_queues[id].front().blocked ? 1 : 0);
++		}
++	}
++	std::fprintf(stderr, "NOVA_GPU_WAIT:   commands pending %zu\n", m_commands.size());
++}
++
+ int GuestGpu::GetFrameNum() const {
+ 	return m_done_num;
+ }
+@@ -315,7 +392,68 @@ void CommandProcessor::WaitRegMem(uint32_t func, const T* addr, T ref, T mask, u
  	}
  
  	(void)poll;
@@ -639,19 +690,41 @@ index e2b06883..19f36db7 100644
 +		if (waited > 250) {
 +			g_nova_gpu_stall_since_ms.store(m_nova_wait_since_ms, std::memory_order_relaxed);
 +		}
-+		if (!m_nova_wait_reported && waited > 3000) {
++		const bool known_bad = NovaIsBadWait(addr);
++		if (!m_nova_wait_reported && !known_bad && waited > 1500) {
 +			m_nova_wait_reported = true;
++			const auto a64 = static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(addr));
 +			std::fprintf(stderr,
 +			             "NOVA_GPU_WAIT: queue(event %u) waits on 0x%016llx func=%u ref=0x%llx mask=0x%llx value=0x%llx for %llu ms\n",
-+			             static_cast<unsigned>(m_interrupt_event_id), static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(addr)), func,
++			             static_cast<unsigned>(m_interrupt_event_id), a64, func,
 +			             static_cast<unsigned long long>(ref), static_cast<unsigned long long>(mask),
 +			             static_cast<unsigned long long>(*addr), static_cast<unsigned long long>(waited));
++			uint32_t shown = 0;
++			for (uint32_t i = 0; i < NOVA_WRITES && i < g_nova_write_pos; i++) {
++				const auto& w = g_nova_writes[(g_nova_write_pos - 1 - i) % NOVA_WRITES];
++				if (w.addr + 16 > a64 && w.addr < a64 + 16 && shown++ < 8) {
++					std::fprintf(stderr, "NOVA_GPU_WAIT:   recent %c-write by queue(event %u): 0x%016llx = 0x%llx (%u writes ago)\n",
++					             w.kind, w.queue, static_cast<unsigned long long>(w.addr),
++					             static_cast<unsigned long long>(w.value), i);
++				}
++			}
++			if (shown == 0) {
++				std::fprintf(stderr, "NOVA_GPU_WAIT:   no GPU write near it in the last %u writes\n",
++				             std::min<uint32_t>(g_nova_write_pos, NOVA_WRITES));
++			}
++			if (g_gpu_state != nullptr) {
++				g_gpu_state->NovaDumpQueues();
++			}
++			g_nova_watch_addr.store(a64, std::memory_order_relaxed);
 +		}
-+		if (waited > 6000) {
++		if (waited > (known_bad ? 100u : 2000u)) {
 +			static std::atomic<uint32_t> skip_count {0};
-+			if (skip_count.fetch_add(1) < 32) {
++			if (skip_count.fetch_add(1) < 16) {
 +				std::fprintf(stderr, "NOVA_GPU_WAIT: gave up on 0x%016llx after %llu ms, continuing\n",
 +				             static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(addr)), static_cast<unsigned long long>(waited));
++			}
++			if (!known_bad && g_nova_bad_wait_count < 16) {
++				g_nova_bad_waits[g_nova_bad_wait_count++] = addr;
 +			}
 +			m_nova_wait_addr = nullptr;
 +			g_nova_gpu_stall_since_ms.store(0, std::memory_order_relaxed);
@@ -661,7 +734,17 @@ index e2b06883..19f36db7 100644
  		SuspendPm4();
  	}
  }
-@@ -504,6 +575,10 @@ void GuestGpu::ThreadRun(void* data) {
+@@ -342,6 +480,9 @@ void CommandProcessor::WriteData(uint32_t* dst, const uint32_t* src, uint32_t dw
+ 		return;
+ 	}
+ 
++#if defined(KYTY_NOVA_FEX)
++	NovaNoteGpuWrite(dst, src[dw_num - 1], static_cast<uint32_t>(m_interrupt_event_id), 'D');
++#endif
+ 	if (write_one_address) {
+ 		for (uint32_t i = 0; i < dw_num; i++) {
+ 			dst[0] = src[i];
+@@ -504,6 +645,10 @@ void GuestGpu::ThreadRun(void* data) {
  
  		if (command) {
  			EXIT_IF(g_current_processor != nullptr);
@@ -672,6 +755,50 @@ index e2b06883..19f36db7 100644
  			command();
  
  			Common::LockGuard lock(gpu->m_queue_mutex);
+@@ -706,6 +851,11 @@ void CommandProcessor::ProcessPm4(Pm4Execution& execution) {
+ 			}
+ 			if (opcode == Pm4::IT_NOP && KYTY_PM4_R(packet_header) == Pm4::R_RELEASE_MEM &&
+ 			    packet_dw >= 7) {
++#if defined(KYTY_NOVA_FEX)
++				NovaNoteGpuWrite(reinterpret_cast<const void*>(packet[3] | (static_cast<uint64_t>(packet[4]) << 32u)),
++				                 packet[5] | (static_cast<uint64_t>(packet[6]) << 32u),
++				                 static_cast<uint32_t>(m_interrupt_event_id), 'S');
++#endif
+ 				static std::atomic<uint32_t> log_count {0};
+ 				if (log_count.fetch_add(1) < 128) {
+ 					const auto dst = packet[3] | (static_cast<uint64_t>(packet[4]) << 32u);
+@@ -1078,6 +1228,9 @@ void CommandProcessor::WriteAtEndOfPipe(uint32_t cache_policy, uint32_t event_wr
+ 		EXIT_IF(dst == nullptr);
+ 		(void)command.Handle();
+ 		std::memcpy(dst, &data, sizeof(data));
++#if defined(KYTY_NOVA_FEX)
++		NovaNoteGpuWrite(dst, data, static_cast<uint32_t>(m_interrupt_event_id), 'E');
++#endif
+ 
+ 		if (with_interrupt) {
+ 			TriggerEopEventAtEndOfPipe(interrupt_context_id);
+@@ -1121,6 +1274,9 @@ void CommandProcessor::WriteAtEndOfPipe(uint32_t cache_policy, uint32_t event_wr
+ 					EXIT_IF(dst == nullptr);
+ 					(void)command.Handle();
+ 					std::memcpy(dst, &value, sizeof(value));
++#if defined(KYTY_NOVA_FEX)
++					NovaNoteGpuWrite(dst, static_cast<uint64_t>(value), static_cast<uint32_t>(m_interrupt_event_id), 'E');
++#endif
+ 
+ 					if (with_interrupt) {
+ 						TriggerEopEventAtEndOfPipe(interrupt_context_id);
+diff --git a/src/graphics/guest_gpu/graphicsRun.h b/src/graphics/guest_gpu/graphicsRun.h
+index 781bda2d..3865097e 100644
+--- a/src/graphics/guest_gpu/graphicsRun.h
++++ b/src/graphics/guest_gpu/graphicsRun.h
+@@ -39,6 +39,7 @@ public:
+ 	void SubmitFlipPreparation(uint64_t request_id);
+ 	// Insert an ordered graphics drain; only a previous suspend point can block the caller.
+ 	void SuspendPoint();
++	void NovaDumpQueues();
+ 	// Wait for guest command processing, including all compute queues (not native GPU completion).
+ 	void              WaitForIdle();
+ 	[[nodiscard]] int GetFrameNum() const;
 diff --git a/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp b/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp
 index d56b629b..b1a7b913 100644
 --- a/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp
@@ -1040,10 +1167,13 @@ index 673a7dc7..0e9c4057 100644
  
  	pthread_exit(value);
 diff --git a/src/libs/audio.cpp b/src/libs/audio.cpp
-index 1aa13b2c..2c3fbe8d 100644
+index 1aa13b2c..a87471ac 100644
 --- a/src/libs/audio.cpp
 +++ b/src/libs/audio.cpp
-@@ -1,5 +1,7 @@
+@@ -1,5 +1,10 @@
++#include <cstdlib>
++#include <atomic>
++#include <cmath>
  #include "libs/audio.h"
  
 +#include <cstdio>
@@ -1051,7 +1181,7 @@ index 1aa13b2c..2c3fbe8d 100644
  #include "common/assert.h"
  #include "common/emulatorConfig.h"
  #include "common/logging/log.h"
-@@ -265,8 +267,17 @@ bool Audio::OpenSdlDevice(PortOut* port) {
+@@ -265,8 +270,17 @@ bool Audio::OpenSdlDevice(PortOut* port) {
  
  	if (!SDL_InitSubSystem(SDL_INIT_AUDIO)) {
  		LOGF("AudioOut: SDL audio init failed: %s\n", SDL_GetError());
@@ -1069,7 +1199,7 @@ index 1aa13b2c..2c3fbe8d 100644
  
  	SDL_AudioSpec desired {};
  	desired.freq     = static_cast<int>(port->freq);
-@@ -277,6 +288,7 @@ bool Audio::OpenSdlDevice(PortOut* port) {
+@@ -277,6 +291,7 @@ bool Audio::OpenSdlDevice(PortOut* port) {
  	                                         nullptr);
  	if (port->stream == nullptr) {
  		LOGF("AudioOut: SDL_OpenAudioDeviceStream failed: %s\n", SDL_GetError());
@@ -1077,6 +1207,66 @@ index 1aa13b2c..2c3fbe8d 100644
  		SDL_QuitSubSystem(SDL_INIT_AUDIO);
  		return false;
  	}
+@@ -377,6 +392,51 @@ bool Audio::QueueSdlAudio(PortOut* port, const void* data, bool blocking, float
+ 		return false;
+ 	}
+ 
++#if defined(__ANDROID__)
++	// Nova: periodic audio health line (is the game sending sound, is the device consuming it).
++	static std::atomic<uint64_t> nova_puts {0};
++	static std::atomic<uint64_t> nova_timeouts {0};
++	static std::atomic<uint32_t> nova_peak {0};
++	static std::atomic<int64_t>  nova_last_report {0};
++	nova_puts.fetch_add(1, std::memory_order_relaxed);
++	{
++		uint32_t   peak  = 0;
++		const auto count = static_cast<size_t>(port->samples_num) * static_cast<size_t>(port->channels_num);
++		if (FormatIsFloat(port->format)) {
++			const auto* f = static_cast<const float*>(data);
++			for (size_t i = 0; i < count; i += 7) {
++				const auto v = static_cast<uint32_t>(std::fabs(f[i]) * 32767.0f);
++				peak         = std::max(peak, v);
++			}
++		} else {
++			const auto* v16 = static_cast<const int16_t*>(data);
++			for (size_t i = 0; i < count; i += 7) {
++				peak = std::max(peak, static_cast<uint32_t>(std::abs(static_cast<int>(v16[i]))));
++			}
++		}
++		uint32_t prev = nova_peak.load(std::memory_order_relaxed);
++		while (peak > prev && !nova_peak.compare_exchange_weak(prev, peak)) {
++		}
++	}
++	{
++		const int64_t now  = static_cast<int64_t>(LibKernel::KernelGetProcessTime());
++		int64_t       last = nova_last_report.load(std::memory_order_relaxed);
++		if (now - last > 10000000 && nova_last_report.compare_exchange_strong(last, now)) {
++			const auto device = SDL_GetAudioStreamDevice(port->stream);
++			std::fprintf(stderr,
++			             "NOVA_AUDIO: puts=%llu timeouts=%llu queued=%d peak=%u device=%u paused=%d freq=%u ch=%d\n",
++			             static_cast<unsigned long long>(nova_puts.exchange(0)),
++			             static_cast<unsigned long long>(nova_timeouts.exchange(0)),
++			             SDL_GetAudioStreamQueued(port->stream), nova_peak.exchange(0),
++			             static_cast<unsigned>(device), device != 0 && SDL_AudioDevicePaused(device) ? 1 : 0,
++			             port->freq, static_cast<int>(port->channels_num));
++		}
++	}
++#define NOVA_AUDIO_TIMEOUT() nova_timeouts.fetch_add(1, std::memory_order_relaxed)
++#else
++#define NOVA_AUDIO_TIMEOUT() ((void)0)
++#endif
++
+ 	std::vector<uint8_t> prepared_buffer;
+ 	const void*          prepared_data = PrepareOutputBuffer(*port, data, &prepared_buffer, gain, gains);
+ 	const auto           output_channels = OutputChannels(*port);
+@@ -395,6 +455,7 @@ bool Audio::QueueSdlAudio(PortOut* port, const void* data, bool blocking, float
+ 		auto       queued          = SDL_GetAudioStreamQueued(port->stream);
+ 		while (queued > static_cast<int>(min_queued_size)) {
+ 			if (LibKernel::KernelGetProcessTime() - wait_start > 200000) {
++				NOVA_AUDIO_TIMEOUT();
+ 				SDL_ClearAudioStream(port->stream);
+ 				port->queue_primed = false;
+ 				break;
 diff --git a/src/libs/guestPrintf.cpp b/src/libs/guestPrintf.cpp
 index afc61624..5ea3e7e2 100644
 --- a/src/libs/guestPrintf.cpp
