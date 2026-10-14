@@ -1577,7 +1577,7 @@ index 673a7dc..0e9c405 100644
  
  	pthread_exit(value);
 diff --git a/src/kernel/semaphore.cpp b/src/kernel/semaphore.cpp
-index 3721753..b81d169 100644
+index 3721753..0c2674d 100644
 --- a/src/kernel/semaphore.cpp
 +++ b/src/kernel/semaphore.cpp
 @@ -1,6 +1,7 @@
@@ -1596,7 +1596,7 @@ index 3721753..b81d169 100644
  #include <limits>
  #include <unordered_map>
  #include <vector>
-@@ -291,6 +293,18 @@ int KYTY_SYSV_ABI KernelWaitSema(KernelSema sem, int need, KernelUseconds* time)
+@@ -291,6 +293,21 @@ int KYTY_SYSV_ABI KernelWaitSema(KernelSema sem, int need, KernelUseconds* time)
  		return KERNEL_ERROR_ESRCH;
  	}
  
@@ -1605,9 +1605,12 @@ index 3721753..b81d169 100644
 +	static thread_local uint64_t calls = 0;
 +	const uint64_t call = ++calls;
 +	const bool sample = call <= 4 || (call & (call - 1)) == 0;
++	// A concurrent delete can release the semaphore after Wait returns. Keep the
++	// sampled name locally rather than dereferencing the handle in the exit report.
++	const std::string sampled_name = sample ? sem->GetName() : std::string {};
 +	if (sample) {
 +		std::fprintf(stderr, "NOVA_WAIT: semaphore name=%.80s handle=%p need=%d timeout=%s micros=%u call=%llu entering\n",
-+		             sem->GetName().c_str(), static_cast<void*>(sem), need,
++		             sampled_name.c_str(), static_cast<void*>(sem), need,
 +		             time != nullptr ? "finite" : "infinite", requested_micros,
 +		             static_cast<unsigned long long>(call));
 +	}
@@ -1615,14 +1618,14 @@ index 3721753..b81d169 100644
  	auto result = sem->Wait(need, time);
  
  	int ret = OK;
-@@ -303,6 +317,13 @@ int KYTY_SYSV_ABI KernelWaitSema(KernelSema sem, int need, KernelUseconds* time)
+@@ -303,6 +320,13 @@ int KYTY_SYSV_ABI KernelWaitSema(KernelSema sem, int need, KernelUseconds* time)
  		case KernelSemaPrivate::Result::Deleted: ret = KERNEL_ERROR_EACCES; break;
  	}
  
 +#if defined(KYTY_NOVA_FEX)
 +	if (sample) {
 +		std::fprintf(stderr, "NOVA_WAIT: semaphore name=%.80s handle=%p call=%llu result=0x%x\n",
-+		             sem->GetName().c_str(), static_cast<void*>(sem),
++		             sampled_name.c_str(), static_cast<void*>(sem),
 +		             static_cast<unsigned long long>(call), static_cast<unsigned>(ret));
 +	}
 +#endif
