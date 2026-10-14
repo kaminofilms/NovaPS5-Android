@@ -1,0 +1,20 @@
+NOVA_FEX: seccomp denied syscall 275 -> ENOSYS
+NOVAFEX_TEST: seccomp SIGSYS -> ENOSYS     PASS 
+NOVA_FEX: host AVX=1 SVE256=0 AFP=0 RCPC=1
+NOVAFEX_TEST: init                         PASS 
+NOVAFEX_TEST: host->guest CallGuest        PASS 
+NOVAFEX_TEST: host->guest fn pointer       PASS 
+NOVAFEX_TEST: guest loop                   PASS 
+NOVAFEX_TEST: guest->host gate             PASS 
+NOVAFEX_TEST: nested guest->host->guest    PASS 
+NOVAFEX_TEST: 8 int + 2 double args        PASS 
+NOVAFEX_TEST: 10 int args (AAPCS stack)    PASS 
+NOVAFEX_TEST: gate stack args pointer      PASS 
+NOVAFEX_TEST: double args/return           PASS 
+NOVAFEX_TEST: fs base                      PASS 
+NOVAFEX_TEST: split-line lock xadd         PASS 
+NOVAFEX_TEST: 4 host threads               PASS 
+NOVAFEX_TEST: gate call overhead           PASS (33.4 ns per guest->host call)
+NOVAFEX_TEST: CallGuest overhead           PASS (69.0 ns per CallGuest)
+NOVAFEX_TEST: fault bridge overhead        PASS (1359.1 ns per fault-bridged call)
+NOVAFEX_TEST: ALL PASS (0 failures)
