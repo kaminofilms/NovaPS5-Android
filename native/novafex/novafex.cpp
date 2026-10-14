@@ -45,6 +45,7 @@ extern "C" __attribute__((visibility("hidden"))) void nova_guest_bridge_entry();
 
 namespace NovaFex {
 namespace {
+std::atomic<void (*)()> g_freeze_hook {nullptr};
 
 using FEXCore::X86State::REG_R8;
 using FEXCore::X86State::REG_R9;
@@ -427,6 +428,7 @@ void Watchdog() {
 			ReportGuestThreads();
 			ReportTasks();
 			if (frozen_for == freeze_after * 5) DumpAllThreads();
+			if (auto hook = g_freeze_hook.load(); hook != nullptr) hook();
 			std::fprintf(stderr, "NOVA_FREEZE: end of report\n");
 		}
 		// Before the first frame: (almost) no guest->host traffic for 15 s.
@@ -787,6 +789,10 @@ void InvalidateGuestCode(uint64_t start, uint64_t size) {
 
 void NoteFrame() {
 	g_frames.fetch_add(1, std::memory_order_relaxed);
+}
+
+void SetFreezeReportHook(void (*hook)()) {
+	g_freeze_hook.store(hook);
 }
 
 void ReportGuestFault(void* ucontext) {

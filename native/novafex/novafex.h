@@ -91,6 +91,8 @@ NOVAFEX_API bool HandleHostFault(int signal, siginfo_t* info, void* ucontext);
 // Prints the guest view of a fault inside JIT code: guest registers, block rip, the host
 // function this thread called last and guest-code-looking values on the guest stack.
 NOVAFEX_API void ReportGuestFault(void* ucontext);
+// Called during a freeze report (no frame for seconds) so the emulator can add its own state.
+NOVAFEX_API void SetFreezeReportHook(void (*hook)());
 
 // Invalidates translated guest code (after the guest or the loader modifies code bytes).
 NOVAFEX_API void InvalidateGuestCode(uint64_t start, uint64_t size);
