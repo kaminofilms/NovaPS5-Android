@@ -29,7 +29,7 @@ git -C kyty checkout -q -- . && git -C kyty clean -qfd -e build
 recovery_patch="$work/kyty-nova-arm64-recovered.patch"
 # Obtain the complete prior patch from the checked-out repository's Git history.
 # actions/checkout must fetch the parent commit before this step.
-git -C "$repo" fetch --no-tags --depth=2 origin feature/guest-va
+git -C "$repo" fetch --no-tags --depth=1 origin 740c60496616f265e1edec54f0248ba728946a75
 if ! git -C "$repo" cat-file -e 740c60496616f265e1edec54f0248ba728946a75^{commit}; then
     echo "NOVA: recovery commit unavailable"; exit 1
 fi
