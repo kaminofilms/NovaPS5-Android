@@ -1,5 +1,5 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# Prepared 0.9.35 / 83; owner approval required before APK build.
+# Owner-approved 0.9.35 / 83 build: explicit BatchMap guest write-back.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
