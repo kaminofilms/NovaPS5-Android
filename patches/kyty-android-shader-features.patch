@@ -1,0 +1,119 @@
+--- a/src/graphics/host_gpu/graphicContext.h
++++ b/src/graphics/host_gpu/graphicContext.h
+@@ -30,6 +30,7 @@
+ 	bool                               compute_subgroup_size_control_enabled = false;
+ 	bool                               sample_rate_shading_enabled           = false;
+ 	bool                               shader_image_int64_atomics_enabled    = false;
++	bool                               native_lds_int64_atomics_enabled       = false;
+ 	// bool fp64_denorm_preserve = false; // Temporarily disabled.
+ 	bool                               attachment_feedback_loop_enabled      = false;
+ 	bool                               provoking_vertex_last_enabled         = false;
+--- a/src/graphics/presentation/window/vulkanWindow.cpp
++++ b/src/graphics/presentation/window/vulkanWindow.cpp
+@@ -547,6 +547,15 @@
+ 	vk::PhysicalDeviceWorkgroupMemoryExplicitLayoutFeaturesKHR workgroup_layout {};
+ 	workgroup_layout.workgroupMemoryExplicitLayout =
+ 	    supported_workgroup_layout.workgroupMemoryExplicitLayout;
++	graphics.native_lds_int64_atomics_enabled =
++	    features12.shaderSharedInt64Atomics == VK_TRUE &&
++	    workgroup_layout_extension && workgroup_layout.workgroupMemoryExplicitLayout == VK_TRUE;
++	std::fprintf(stderr, "NOVA_SHADER_FEATURES: native_lds_int64=%u shared_atomics=%u explicit_layout=%u buffer_atomics=%u\n",
++	             graphics.native_lds_int64_atomics_enabled ? 1u : 0u,
++	             features12.shaderSharedInt64Atomics == VK_TRUE ? 1u : 0u,
++	             workgroup_layout.workgroupMemoryExplicitLayout == VK_TRUE ? 1u : 0u,
++	             features12.shaderBufferInt64Atomics == VK_TRUE ? 1u : 0u);
++
+ 	workgroup_layout.pNext = &depth_clip_control;
+ 	features12.pNext = workgroup_layout_extension ? static_cast<void*>(&workgroup_layout)
+ 	                                             : static_cast<void*>(&depth_clip_control);
+--- a/src/graphics/shader/shader.h
++++ b/src/graphics/shader/shader.h
+@@ -153,6 +153,13 @@
+ 	bool               group_id[3]                = {false, false, false};
+ 	bool               dispatch_thread_dimensions = false;
+ 	bool               lds_storage                = false;
++	bool               native_lds_int64_atomics    = true;
++	// Keep ordinary LDS in fast workgroup memory. Only shaders needing unsupported
++	// native 64-bit LDS atomics use the existing per-workgroup storage-buffer ABI.
++	[[nodiscard]] bool UsesStorageLds(bool shared_int64_atomics) const noexcept {
++		return lds_storage || (shared_int64_atomics && !native_lds_int64_atomics);
++	}
++
+ 	int                thread_ids_num             = 0;
+ 	int                workgroup_register         = 0;
+ 	bool               tg_size_en                 = false;
+--- a/src/graphics/shader/shader.cpp
++++ b/src/graphics/shader/shader.cpp
+@@ -711,6 +711,8 @@
+ 		key.push_back(static_cast<uint32_t>(info.group_id[i]));
+ 	}
+ 	key.push_back(static_cast<uint32_t>(info.tg_size_en));
++	key.push_back(static_cast<uint32_t>(info.lds_storage));
++	key.push_back(static_cast<uint32_t>(info.native_lds_int64_atomics));
+ }
+ 
+ ShaderParams PrepareProgram(const HW::VertexShaderInfo& regs, const HW::Context& context,
+--- a/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp
++++ b/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp
+@@ -748,6 +748,7 @@
+ 	const auto        params      = PrepareProgram(regs, sh, input_info);
+ 	input_info.lds_storage = input_info.lds_size_dwords * 4u >
+ 	    m_graphics.GetPhysicalDeviceProperties().limits.maxComputeSharedMemorySize;
++	input_info.native_lds_int64_atomics = m_graphics.native_lds_int64_atomics_enabled;
+ 	uint32_t          push_data_cursor = 0;
+ 	return m_program_cache->Get(params, input_info, push_data_cursor);
+ }
+--- a/src/graphics/shader/recompiler/backend/spirv/spirvEmitterInternal.h
++++ b/src/graphics/shader/recompiler/backend/spirv/spirvEmitterInternal.h
+@@ -80,7 +80,8 @@
+ 			lds_storage_class = spv::StorageClassWorkgroup;
+ 		}
+ 		if (program.info.uses_lds && program.stage == ShaderType::Compute &&
+-		    input_info.compute != nullptr && input_info.compute->lds_storage) {
++		    input_info.compute != nullptr &&
++		    input_info.compute->UsesStorageLds(program.info.shared_int64_atomics)) {
+ 			lds_storage_class = spv::StorageClassStorageBuffer;
+ 		}
+ 	}
+--- a/src/graphics/shader/recompiler/backend/spirv/SpirvEmitter.cpp
++++ b/src/graphics/shader/recompiler/backend/spirv/SpirvEmitter.cpp
+@@ -222,8 +222,7 @@
+ 	        ? 2u
+ 	        : 1u;
+ 	DefineModule(state);
+-	ValidateNativeProgram(program, program.stage == ShaderType::Compute &&
+-	                                   input_info.compute != nullptr && input_info.compute->lds_storage);
++	ValidateNativeProgram(program, state.lds_storage_class == spv::StorageClassStorageBuffer);
+ 	EmitProgram(state);
+ 	state.builder.AddEntryPoint(ExecutionModelForStage(state.program.stage), state.main_func,
+ 	                            "main", state.interface_variables);
+--- a/src/graphics/host_gpu/renderer/pipeline/shaders.cpp
++++ b/src/graphics/host_gpu/renderer/pipeline/shaders.cpp
+@@ -20,6 +20,7 @@
+ 
+ #include <algorithm>
+ #include <bit>
++#include <cstdio>
+ #include <limits>
+ #include <span>
+ #include <vector>
+@@ -616,6 +617,19 @@
+ 	                                                &pipeline.pipeline);
+ 	LOGF("PipelineTrace: vkCreateComputePipelines done result=%s pipeline=%p\n",
+ 	     vk::to_string(result).c_str(), static_cast<void*>(pipeline.pipeline));
++	if (result != vk::Result::eSuccess) {
++		const auto& shader = *input_info.stage.program;
++		std::fprintf(stderr,
++		    "NOVA_COMPUTE_PIPELINE_FAILED: result=%s (%d) hash=0x%016" PRIx64
++		    " local=%ux%ux%u guest_wave=%u host_subgroup=%u lds_bytes=%u storage_lds=%u shared_i64=%u buffer_i64=%u fp64=%u derivatives=%u\n",
++		    vk::to_string(result).c_str(), static_cast<int>(result), shader.shader_hash,
++		    input_info.threads_num[0], input_info.threads_num[1], input_info.threads_num[2],
++		    shader.wave_size, input_info.host_subgroup_size, input_info.lds_size_dwords * 4u,
++		    input_info.UsesStorageLds(shader.info.shared_int64_atomics) ? 1u : 0u,
++		    shader.info.shared_int64_atomics ? 1u : 0u, shader.info.buffer_int64_atomics ? 1u : 0u,
++		    shader.info.float64 ? 1u : 0u, shader.info.compute_derivatives ? 1u : 0u);
++	}
++
+ 	EXIT_NOT_IMPLEMENTED(result != vk::Result::eSuccess);
+ 
+ 	EXIT_NOT_IMPLEMENTED(pipeline.pipeline == nullptr);

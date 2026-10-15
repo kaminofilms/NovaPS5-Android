@@ -111,6 +111,9 @@ PY
 # AnyPS5-derived GPU completion/shader adaptation must reach the compiled source.
 git -C kyty apply --check "$repo/patches/kyty-anyps5-gpu-completion.patch"
 git -C kyty apply "$repo/patches/kyty-anyps5-gpu-completion.patch"
+git -C kyty apply --check "$repo/patches/kyty-android-shader-features.patch"
+git -C kyty apply "$repo/patches/kyty-android-shader-features.patch"
+python3 "$repo/tests/test_shader_features.py" "$work/kyty"
 python3 "$repo/tests/test_gpu_completion.py" "$work/kyty"
 # Execute the host regressions against the sources that are about to be compiled.
 python3 "$repo/tests/test_native_startup.py" "$work/kyty"
