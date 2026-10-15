@@ -12,9 +12,10 @@ after the AGC packet/cursor fault reductions. Latest on-device report:
   alongside shader/CPU stalls.
 
 ## Actual behavior fixed
-The existing Kyty PipelineCache rejected every patched ("-dirty") build,
-including the native Android image, despite a UUID/vendor/device/driver
-signature already being enforced. Nova uses a distinct `NovaPC26` prefix:
+Upstream Kyty rejects patched ("-dirty") builds, but Nova's pinned
+Android base patch already removes that gate. The remaining missing piece
+was persistence on forced process exit. Nova 0.9.26 also uses a distinct
+`NovaPC26` signature prefix:
 a cache from an older renderer or incompatible GPU/driver is refused. Cache
 is scoped to the PS5 title ID, from the game's param metadata (Android
 provides a validated fallback if system content is not yet populated).
