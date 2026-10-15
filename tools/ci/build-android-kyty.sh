@@ -92,6 +92,26 @@ s = s.replace(anchor, msg + anchor, 1)
 p.write_text(s)
 print('NOVA_EOP: unsupported RELEASE_MEM packet diagnostics enabled')
 PY
+# Super Meat Boy 3D: RELEASE_MEM event 0x2d must write its 64-bit value
+# and signal the requested EOP interrupt. Keep all other event combinations unchanged.
+python3 - "$work/kyty/src/graphics/guest_gpu/graphicsRun.cpp" <<'PY'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1]); s = p.read_text()
+old = '''case 0x2b:
+			case 0x2d:
+			case 0x30:
+				if (event_index == 0x00 && !with_interrupt) {'''
+new = '''case 0x2b:
+			case 0x2d:
+			case 0x30:
+				if (event_index == 0x00 && (!with_interrupt || eop_event_type == 0x2d)) {'''
+if s.count(old) != 1:
+    raise SystemExit('NOVA_EOP_FIX: expected cache_action 0x00 dispatch anchor not found exactly once')
+s = s.replace(old, new, 1)
+p.write_text(s)
+assert s.count('(!with_interrupt || eop_event_type == 0x2d)') == 1
+print('NOVA_EOP_FIX: 64-bit 0x2d write and interrupt enabled')
+PY
 # Execute the host regressions against the sources that are about to be compiled.
 python3 "$repo/tests/test_native_startup.py" "$work/kyty"
 python3 "$repo/tests/test_release_mem.py" "$work/kyty"
