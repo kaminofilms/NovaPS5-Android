@@ -2,6 +2,9 @@
 from pathlib import Path
 import subprocess,tempfile,sys
 root=Path(sys.argv[1])/'src/graphics/host_gpu/renderer'
+helper=(root/'image/blitHelper.cpp').read_text()
+assert 'command_buffer.BindPipeline(vk::PipelineBindPoint::eGraphics,' in helper
+assert 'command.bindPipeline(vk::PipelineBindPoint::eGraphics,' not in helper
 def extract(s,signature):
     start=s.index(signature);pos=s.index('{',start);depth=1;end=pos+1
     while depth:
@@ -48,6 +51,10 @@ int main(){
  b.BindPipeline(vk::PipelineBindPoint::eCompute,2);assert(b.binds==3);
  b.BindPipeline(vk::PipelineBindPoint::eGraphics,2);assert(b.binds==3);
  b.m_bound_pipelines={};b.BindPipeline(vk::PipelineBindPoint::eGraphics,2);assert(b.binds==4);
+ // Internal graphics blits must update the same cache, so the next game draw
+ // restores its own pipeline even if it matches the draw before the blit.
+ b.BindPipeline(vk::PipelineBindPoint::eGraphics,99);assert(b.binds==5);
+ b.BindPipeline(vk::PipelineBindPoint::eGraphics,2);assert(b.binds==6);
  std::puts("RENDER_OVERHEAD_TEST: all 64 submit-boundary combinations and pipeline bind isolation PASS");
 }
 '''

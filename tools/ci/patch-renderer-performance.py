@@ -161,6 +161,9 @@ edit(sc,'void CommandScheduler::Flush(SubmitInfo& submit) {\n\tSubmit(submit);',
 edit('src/graphics/host_gpu/renderer/renderDraw.cpp',
      'vk_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.pipeline);',
      'buffer.BindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.pipeline);')
+edit('src/graphics/host_gpu/renderer/image/blitHelper.cpp',
+     'command.bindPipeline(vk::PipelineBindPoint::eGraphics,',
+     'command_buffer.BindPipeline(vk::PipelineBindPoint::eGraphics,')
 header=Path(__file__).with_name('novaShaderDisk.h')
 (root/'src/graphics/host_gpu/renderer/pipeline/novaShaderDisk.h').write_text(header.read_text())
 print('NOVA_PERF: translated shader disk artifacts and reusable fast-link graphics libraries')
