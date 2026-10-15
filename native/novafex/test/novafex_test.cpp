@@ -424,6 +424,74 @@ int main() {
 		Check("rep movs/stos on guest VA", copy_ok && copyq_ok && fill_ok && low_ok && end1 == guest + 0x840 && end2 == guest + 0x940 &&
 		                                       end3 == guest + 0xc40 && end4 == reinterpret_cast<uint64_t>(low_dst) + 64, d);
 	}
+	// AVX2 gathers on translated guest addresses (0.9.31). Luna faulted forever on an SVE
+	// `ld1w {z.s}, p/z, [x, z.s, sxtw #2]` whose base was an untranslated guest address. The
+	// base sits 16 bytes below the end of one 1 GiB slot and the indices reach into the next
+	// slot, which is backed by a separate host window: translating only the base would read the
+	// wrong memory, so this also proves the translation is per element.
+	{
+		constexpr uint64_t kSlot = uint64_t {1} << 30;
+		constexpr uint64_t kSlotA = 0x9040000000ull; // slot of Luna's faulting address 0x9040f60174
+		constexpr uint64_t kSlotB = kSlotA + kSlot;
+		auto reserve = [] {
+			return reinterpret_cast<uint64_t>(mmap(nullptr, kSlot, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0));
+		};
+		const uint64_t host_a = reserve();
+		const uint64_t gap = reserve(); // keeps the two backing windows non-adjacent
+		const uint64_t host_b = reserve();
+		(void)gap;
+		const uint64_t page_a = host_a + kSlot - 0x1000; // last page of slot A
+		const uint64_t page_b = host_b;                   // first page of slot B
+		mprotect(reinterpret_cast<void*>(page_a), 0x1000, PROT_READ | PROT_WRITE);
+		mprotect(reinterpret_cast<void*>(page_b), 0x1000, PROT_READ | PROT_WRITE);
+		NovaFex::MapGuestVASlot(kSlotA, host_a);
+		NovaFex::MapGuestVASlot(kSlotB, host_b);
+		// Distinct value per guest dword, derived from its guest address.
+		auto value_at = [](uint64_t guest_addr) { return static_cast<uint32_t>(0x5A000000u ^ (guest_addr & 0xffffffu) ^ (guest_addr >> 30)); };
+		for (uint64_t off = 0; off < 0x1000; off += 4) {
+			*reinterpret_cast<uint32_t*>(page_a + off) = value_at(kSlotB - 0x1000 + off);
+			*reinterpret_cast<uint32_t*>(page_b + off) = value_at(kSlotB + off);
+		}
+		const uint64_t base = kSlotB - 0x10;
+		alignas(32) static int32_t idx32[8] = {0, 1, 4, 5, -2, 8, 2, 1000};
+		alignas(32) static int64_t idx64[4] = {3, 4, -3, 600};
+		alignas(32) static uint32_t mask[8] = {0x80000000u, 0, 0xffffffffu, 0, 0x80000000u, 0x80000000u, 0, 0xffffffffu};
+		alignas(32) static uint32_t out[8];
+		// all-ones mask: vmovdqu ymm1,[rsi]; vpcmpeqd ymm2,ymm2,ymm2; vpxor ymm0,ymm0,ymm0;
+		// vpgatherdd ymm0,[rdi+ymm1*4],ymm2; vmovdqu [rdx],ymm0; vzeroupper; ret
+		const uint64_t gather_dd = code.Emit({0xC5, 0xFE, 0x6F, 0x0E, 0xC5, 0xED, 0x76, 0xD2, 0xC5, 0xFD, 0xEF, 0xC0, 0xC4, 0xE2, 0x6D,
+		                                      0x90, 0x04, 0x8F, 0xC5, 0xFE, 0x7F, 0x02, 0xC5, 0xF8, 0x77, 0xC3});
+		// masked: vmovdqu ymm1,[rsi]; vmovdqu ymm2,[rcx]; vmovdqu ymm0,[rdx];
+		// vpgatherdd ymm0,[rdi+ymm1*4],ymm2; vmovdqu [rdx],ymm0; vzeroupper; ret
+		const uint64_t gather_dd_masked = code.Emit({0xC5, 0xFE, 0x6F, 0x0E, 0xC5, 0xFE, 0x6F, 0x11, 0xC5, 0xFE, 0x6F, 0x02, 0xC4, 0xE2,
+		                                             0x6D, 0x90, 0x04, 0x8F, 0xC5, 0xFE, 0x7F, 0x02, 0xC5, 0xF8, 0x77, 0xC3});
+		// 64-bit indices, 32-bit data (QPS form): vmovdqu ymm1,[rsi]; vpcmpeqd xmm2,xmm2,xmm2;
+		// vpxor xmm0,xmm0,xmm0; vpgatherqd xmm0,[rdi+ymm1*4],xmm2; vmovdqu [rdx],xmm0; vzeroupper; ret
+		const uint64_t gather_qd = code.Emit({0xC5, 0xFE, 0x6F, 0x0E, 0xC5, 0xE9, 0x76, 0xD2, 0xC5, 0xF9, 0xEF, 0xC0, 0xC4, 0xE2, 0x6D,
+		                                      0x91, 0x04, 0x8F, 0xC5, 0xFA, 0x7F, 0x02, 0xC5, 0xF8, 0x77, 0xC3});
+		NovaFex::CallGuest(gather_dd, base, reinterpret_cast<uint64_t>(idx32), reinterpret_cast<uint64_t>(out));
+		bool dd_ok = true;
+		for (int i = 0; i < 8; i++) {
+			dd_ok = dd_ok && out[i] == value_at(base + static_cast<int64_t>(idx32[i]) * 4);
+		}
+		uint32_t expect[8];
+		for (int i = 0; i < 8; i++) {
+			out[i]    = 0xD0D0D000u + static_cast<uint32_t>(i);
+			expect[i] = (mask[i] & 0x80000000u) != 0 ? value_at(base + static_cast<int64_t>(idx32[i]) * 4) : out[i];
+		}
+		NovaFex::CallGuest(gather_dd_masked, base, reinterpret_cast<uint64_t>(idx32), reinterpret_cast<uint64_t>(out),
+		                   reinterpret_cast<uint64_t>(mask));
+		const bool masked_ok = std::memcmp(out, expect, sizeof(expect)) == 0;
+		std::memset(out, 0xEE, sizeof(out));
+		NovaFex::CallGuest(gather_qd, base, reinterpret_cast<uint64_t>(idx64), reinterpret_cast<uint64_t>(out));
+		bool qd_ok = true;
+		for (int i = 0; i < 4; i++) {
+			qd_ok = qd_ok && out[i] == value_at(base + static_cast<uint64_t>(idx64[i]) * 4);
+		}
+		char d[160];
+		std::snprintf(d, sizeof(d), "(dd=%d masked=%d qd=%d out0=%08x)", dd_ok, masked_ok, qd_ok, out[0]);
+		Check("AVX2 gather on guest VA", dd_ok && masked_ok && qd_ok, d);
+	}
 	// Host (emulator) code dereferencing a translated guest address: the fault handler
 	// emulates the access on the backing host memory.
 	{

@@ -1,0 +1,62 @@
+diff --git a/FEXCore/Source/Interface/Core/JIT/MemoryOps.cpp b/FEXCore/Source/Interface/Core/JIT/MemoryOps.cpp
+index 9014ad6..fc345e4 100644
+--- a/FEXCore/Source/Interface/Core/JIT/MemoryOps.cpp
++++ b/FEXCore/Source/Interface/Core/JIT/MemoryOps.cpp
+@@ -1115,6 +1115,15 @@ void Arm64JITCore::Emulate128BitGather(IR::OpSize Size, IR::OpSize ElementSize,
+     mov(ResultReg.Q(), IncomingDst.Q());
+   }
+ 
++  // Nova PS5: element addresses are guest addresses; translate each one exactly like NovaXlat
++  // (identity below 2^39, otherwise + GuestVATable[address >> 30]). Elements may lie in
++  // different 1 GiB slots, so the translation is per element, never per base.
++  const bool TranslateElements = FEXCore::Nova::GuestVAEnabled;
++  const auto XlatTableReg = TMP3;
++  if (TranslateElements) {
++    LoadConstant(ARMEmitter::Size::i64Bit, XlatTableReg, reinterpret_cast<uint64_t>(&FEXCore::Nova::GuestVATable[0]));
++  }
++
+   for (size_t i = DataElementOffsetStart, IndexElement = IndexElementOffsetStart; i < NumDataElements; ++i, ++IndexElement) {
+     ARMEmitter::ForwardLabel Skip {};
+     if (!MaskAllOnes) {
+@@ -1151,6 +1160,17 @@ void Arm64JITCore::Emulate128BitGather(IR::OpSize Size, IR::OpSize ElementSize,
+       }
+     }
+ 
++    if (TranslateElements) {
++      ARMEmitter::ForwardLabel LowAddress {};
++      // WorkingReg (the mask/index scratch) is dead once the element address is formed.
++      ubfx(ARMEmitter::Size::i64Bit, WorkingReg, TempMemReg, 39, 25);
++      (void)cbz(ARMEmitter::Size::i64Bit, WorkingReg, &LowAddress);
++      ubfx(ARMEmitter::Size::i64Bit, WorkingReg, TempMemReg, FEXCore::Nova::kGuestVASlotShift, 17);
++      ldr(WorkingReg, ARMEmitter::ExtendedMemOperand(XlatTableReg, WorkingReg, ARMEmitter::ExtendedType::LSL_64, 3));
++      add(ARMEmitter::Size::i64Bit, TempMemReg, TempMemReg, WorkingReg);
++      (void)Bind(&LowAddress);
++    }
++
+     // Now that the address is calculated. Do the load.
+     switch (ElementSize) {
+     case IR::OpSize::i8Bit: ld1<ARMEmitter::SubRegSize::i8Bit>(ResultReg.Q(), i, TempMemReg); break;
+@@ -1204,7 +1224,11 @@ DEF_OP(VLoadVectorGatherMasked) {
+     !Op->VectorIndexHigh.IsInvalid() ? std::make_optional(GetVReg(Op->VectorIndexHigh)) : std::nullopt;
+ 
+   ///< If the host supports SVE and the offset scale matches SVE limitations then it can do an SVE style load.
+-  const bool SupportsSVELoad = (HostSupportsSVE128 || HostSupportsSVE256) &&
++  // Nova PS5: an SVE gather forms every element address in hardware from the untranslated
++  // guest base, which faults for guest addresses at or above 2^39. Translated titles use the
++  // per-element path below, which translates each element address. Untranslated titles
++  // (GuestVAEnabled == false, e.g. Dead Cells) keep the SVE gather unchanged.
++  const bool SupportsSVELoad = !FEXCore::Nova::GuestVAEnabled && (HostSupportsSVE128 || HostSupportsSVE256) &&
+                                (OffsetScale == 1 || OffsetScale == IR::OpSizeToSize(VectorIndexSize)) &&
+                                VectorIndexSize == IROp->ElementSize && Op->AddrSize == IR::OpSize::i64Bit;
+ 
+@@ -1294,7 +1318,9 @@ DEF_OP(VLoadVectorGatherMaskedQPS) {
+     !Op->VectorIndexHigh.IsInvalid() ? std::make_optional(GetVReg(Op->VectorIndexHigh)) : std::nullopt;
+ 
+   ///< If the host supports SVE and the offset scale matches SVE limitations then it can do an SVE style load.
+-  const bool SupportsSVELoad = HostSupportsSVE128 && (OffsetScale == 1 || OffsetScale == 4) && Op->AddrSize == IR::OpSize::i64Bit;
++  // Nova PS5: see VLoadVectorGatherMasked; translated titles take the per-element path.
++  const bool SupportsSVELoad = !FEXCore::Nova::GuestVAEnabled && HostSupportsSVE128 && (OffsetScale == 1 || OffsetScale == 4) &&
++                               Op->AddrSize == IR::OpSize::i64Bit;
+ 
+   if (SupportsSVELoad) {
+     ARMEmitter::SVEModType ModType = ARMEmitter::SVEModType::MOD_NONE;
