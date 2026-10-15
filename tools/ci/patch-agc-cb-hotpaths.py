@@ -62,7 +62,7 @@ replace_once(
 begin = s.index("\tKYTY_SYSV_ABI bool ReserveDW(uint32_t num_dw) {")
 end = s.index("\n\tKYTY_SYSV_ABI uint32_t* AllocateDW", begin)
 method = s[begin:end]
-assert method.count("reserved_dw") == 5, f"Unexpected ReserveDW fields: {method.count('reserved_dw')}"
+assert method.count("reserved_dw") == 7, f"Unexpected ReserveDW fields: {method.count('reserved_dw')}"
 assert method.count("bool result = callback(this, num_dw + reserved_dw, user_data);") == 1
 method = method.replace("bool result = callback(this, num_dw + reserved_dw, user_data);",
                         "// Callback must receive the ORIGINAL guest pointer, never the host alias.\n"
