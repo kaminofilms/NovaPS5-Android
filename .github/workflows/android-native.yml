@@ -163,12 +163,12 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.29-android-arm64.apk" \
-            --version-name 0.9.29-android --version-code 77 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.30-android-arm64.apk" \
+            --version-name 0.9.30-android --version-code 78 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.29-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.29-android --version-code 77 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.30-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.30-android --version-code 78 | tee dist/apk/verify.txt
       - name: Verify packaged mesh driver
-        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.29-android-arm64.apk
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.30-android-arm64.apk
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -185,11 +185,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.9.29-android-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.9.29-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.9.29-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.29 native shader persistence and pipeline library reuse (CI ${GITHUB_SHA::7}, device test build)" \
-            --notes "Full native Android Kyty + NovaFEX. Includes 0.9.28 AGC fixes plus persisted translated SPIR-V and metadata, feature-gated reusable graphics pipeline libraries, consecutive-draw pipeline lookup, redundant-bind elimination and empty-submit suppression. Native Android. Real GPU work and synchronization retained. Gameplay FPS needs device validation. Preserves existing cache epoch, GPU waits, draw/dispatch results and earlier fixes. FPS requires phone validation; cold shader compilation and synthetic always-visible occlusion remain."
+          tag="v0.9.30-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.30-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.30-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.30 native wait and shader memory access fixes (CI ${GITHUB_SHA::7}, device test build)" \
+            --notes "Native Android Kyty + NovaFEX. Fixes measured guest-access traps in wait-packet validation, packet predication, GPU query/boolean predication and shader creation/relative relocation. Retains original guest pointers, volatile query readiness, waits and real draw/dispatch results. Regression tests exercise production functions with inaccessible guest addresses and separate native backing. Includes earlier translated shader persistence, pipeline libraries and mesh support. Gameplay speed improvement still requires phone validation; new pipeline compilation can still stall."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()
@@ -211,6 +211,7 @@ jobs:
           git add -A
           git -c user.name=nova-lab -c user.email=nova-lab@users.noreply.github.com commit -qm "android logs $dest"
           for i in 1 2 3; do git push -q origin HEAD:lab-logs && break; git pull -q --rebase origin lab-logs; done
+
 
 
 
