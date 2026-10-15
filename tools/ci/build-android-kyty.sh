@@ -76,6 +76,22 @@ p.write_text(s)
 print('NOVA_PERF: hot-path GPU write diagnostics disabled (GPU wait semantics unchanged)')
 PY
 fi
+# GPU EOP compatibility: record the exact unsupported packet before the upstream
+# fatal path. This is diagnostic only; unknown event semantics must not be guessed.
+python3 - "$work/kyty/src/graphics/guest_gpu/graphicsRun.cpp" <<'PY'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1]); s = p.read_text()
+anchor = '\\tEXIT("unknown event type\\n");'
+# This exact statement occurs in both WriteAtEndOfPipe and FlipWithInterrupt.
+if s.count(anchor) != 2:
+    raise SystemExit('NOVA_EOP: unknown-event anchors changed; refusing edit')
+msg = ('\\tstd::fprintf(stderr, "NOVA_EOP_UNSUPPORTED: cache_policy=0x%x dest=0x%x type=0x%x cache_action=0x%x index=0x%x source=0x%x interrupt=0x%x context=0x%x value=0x%llx\\\\n",\\n'
+       '\\t             cache_policy, event_write_dest, eop_event_type, cache_action, event_index, event_write_source, interrupt_selector, interrupt_context_id,\\n'
+       '\\t             static_cast<unsigned long long>(value));\\n')
+s = s.replace(anchor, msg + anchor, 1)
+p.write_text(s)
+print('NOVA_EOP: exact unsupported RELEASE_MEM packet diagnostics enabled')
+PY
 # Execute the host regressions against the sources that are about to be compiled.
 python3 "$repo/tests/test_native_startup.py" "$work/kyty"
 python3 "$repo/tests/test_release_mem.py" "$work/kyty"
