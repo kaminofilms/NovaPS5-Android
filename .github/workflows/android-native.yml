@@ -3,7 +3,7 @@ name: Nova PS5 Android-native (no DroidDeck)
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
   push:
-    branches: [android-native, feature/guest-va, feature/anyps5-android-gpu, fix/0923-arm64-ld1-boot, fix/0924-native-guest-hotpaths, fix/0925-agc-commandbuffer-hostviews]
+    branches: [android-native, feature/guest-va, feature/anyps5-android-gpu, fix/0923-arm64-ld1-boot, fix/0924-native-guest-hotpaths, fix/0925-agc-commandbuffer-hostviews, fix/0926-shader-cache-persistence]
   workflow_dispatch:
 permissions:
   contents: write
@@ -147,7 +147,7 @@ jobs:
           mkdir -p dist/assets/licenses dist/apk
           cp LICENSE dist/assets/licenses/Nova-GPL-2.0.txt
           cp LICENSES/* dist/assets/licenses/
-          cp docs/ANYPS5-GPU-INTEGRATION.md docs/ANDROID-SHADER-FEATURES-0.9.15.md docs/ANYPS5-COMPUTE-WORKGROUPS-0.9.16.md docs/ANDROID-MESH-DRIVER-0.9.17.md docs/ANDROID-MESH-WAVE32-0.9.18.md docs/ANDROID-MESH-SUBGROUP-0.9.19.md docs/ANDROID-GUEST-MEMORY-0.9.20.md docs/ANDROID-AGC-PACKETS-0.9.21.md docs/ANDROID-NATIVE-PACKETS-0.9.22.md docs/ANDROID-LD1-BOOT-0.9.23.md docs/ANDROID-HOTPATHS-0.9.24.md docs/ANDROID-AGC-HOTPATHS-0.9.25.md dist/assets/licenses/
+          cp docs/ANYPS5-GPU-INTEGRATION.md docs/ANDROID-SHADER-FEATURES-0.9.15.md docs/ANYPS5-COMPUTE-WORKGROUPS-0.9.16.md docs/ANDROID-MESH-DRIVER-0.9.17.md docs/ANDROID-MESH-WAVE32-0.9.18.md docs/ANDROID-MESH-SUBGROUP-0.9.19.md docs/ANDROID-GUEST-MEMORY-0.9.20.md docs/ANDROID-AGC-PACKETS-0.9.21.md docs/ANDROID-NATIVE-PACKETS-0.9.22.md docs/ANDROID-LD1-BOOT-0.9.23.md docs/ANDROID-HOTPATHS-0.9.24.md docs/ANDROID-AGC-HOTPATHS-0.9.25.md docs/ANDROID-PIPELINE-CACHE-0.9.26.md dist/assets/licenses/
           cp dist/kyty/source/*.tar.gz dist/novafex/source/*.tar.gz dist/apk/
           git archive --format=tar.gz HEAD > dist/apk/NovaPS5-build-source.tar.gz
       - name: Bundled Turnip (Adreno 8xx, adrenotools build)
@@ -163,12 +163,12 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.25-android-arm64.apk" \
-            --version-name 0.9.25-android --version-code 73 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.26-android-arm64.apk" \
+            --version-name 0.9.26-android --version-code 74 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.25-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.25-android --version-code 73 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.26-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.26-android --version-code 74 | tee dist/apk/verify.txt
       - name: Verify packaged mesh driver
-        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.25-android-arm64.apk
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.26-android-arm64.apk
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -185,11 +185,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.9.25-android-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.9.25-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.9.25-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.24 native AGC command-buffer guest-memory performance (CI ${GITHUB_SHA::7}, device test build)" \
-            --notes "Notes: Full native Android Kyty + NovaFEX. AGC register patch and command-buffer host views reduce per-DWORD ARM64 guest faults; callbacks and PM4 addresses remain guest ABI. Preserves 0.9.24 shader, Opus, AGC packet and 0.9.23 LD1 fixes. No emulator core or Turnip replacement. FPS requires phone validation."
+          tag="v0.9.26-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.26-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.26-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.24 persistent Vulkan pipeline cache and vertex metadata performance (CI ${GITHUB_SHA::7}, device test build)" \
+            --notes "Full native Android Kyty + NovaFEX release. Enables per-game UUID/driver/renderer-version Vulkan pipeline cache in patched Android builds, saving live snapshots before forced process exit; native guest views remove repeated shader vertex metadata traps. Preserves GPU synchronization, 0.9.25 AGC and earlier fixes. FPS unverified until phone test; first-run shader compilation remains."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()
