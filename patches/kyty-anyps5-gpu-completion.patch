@@ -1,6 +1,73 @@
 --- a/src/graphics/guest_gpu/graphicsRun.cpp
 +++ b/src/graphics/guest_gpu/graphicsRun.cpp
-@@ -1261,20 +1261,29 @@
+@@ -50,8 +50,6 @@
+ NovaGpuWrite          g_nova_writes[NOVA_WRITES] {};
+ uint32_t              g_nova_write_pos = 0;
+ std::atomic<uint64_t> g_nova_watch_addr {0};
+-const void*           g_nova_bad_waits[16] {};
+-uint32_t              g_nova_bad_wait_count = 0;
+ void NovaNoteGpuWrite(const void* addr, uint64_t value, uint32_t queue, char kind) {
+ 	const auto a = reinterpret_cast<uint64_t>(addr);
+ 	/* NOVA_PERF: omit hot-path GPU diagnostic ring writes in release builds */
+@@ -63,14 +61,6 @@
+ 			             static_cast<unsigned long long>(a), static_cast<unsigned long long>(value));
+ 		}
+ 	}
+-}
+-bool NovaIsBadWait(const void* addr) {
+-	for (uint32_t i = 0; i < g_nova_bad_wait_count && i < 16; i++) {
+-		if (g_nova_bad_waits[i] == addr) {
+-			return true;
+-		}
+-	}
+-	return false;
+ }
+ uint64_t NovaGpuNowMs() {
+ 	timespec now {};
+@@ -438,9 +428,8 @@
+ #endif
+ 	if (!TestWaitRegMemValue(*value, ref, mask, func)) {
+ #if defined(KYTY_NOVA_FEX)
+-		// Nova: a GPU queue that waits on memory for seconds is a frozen game. Report it, let
+-		// AgcSuspendPoint stop throttling the CPU (the CPU may be the writer), and as a last
+-		// resort continue past the wait.
++		// Keep an unsatisfied guest wait suspended. A timeout is diagnostic evidence,
++		// never proof that the GPU/CPU producer has completed the requested write.
+ 		const uint64_t now_ms = NovaGpuNowMs();
+ 		if (m_nova_wait_addr != addr) {
+ 			m_nova_wait_addr     = addr;
+@@ -451,8 +440,7 @@
+ 		if (waited > 250) {
+ 			g_nova_gpu_stall_since_ms.store(m_nova_wait_since_ms, std::memory_order_relaxed);
+ 		}
+-		const bool known_bad = NovaIsBadWait(addr);
+-		if (!m_nova_wait_reported && !known_bad && waited > 1500) {
++		if (!m_nova_wait_reported && waited > 1500) {
+ 			m_nova_wait_reported = true;
+ 			const auto a64 = static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(addr));
+ 			std::fprintf(stderr,
+@@ -478,19 +466,7 @@
+ 			}
+ 			g_nova_watch_addr.store(a64, std::memory_order_relaxed);
+ 		}
+-		if (waited > (known_bad ? 100u : 2000u)) {
+-			static std::atomic<uint32_t> skip_count {0};
+-			if (skip_count.fetch_add(1) < 16) {
+-				std::fprintf(stderr, "NOVA_GPU_WAIT: gave up on 0x%016llx after %llu ms, continuing\n",
+-				             static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(addr)), static_cast<unsigned long long>(waited));
+-			}
+-			if (!known_bad && g_nova_bad_wait_count < 16) {
+-				g_nova_bad_waits[g_nova_bad_wait_count++] = addr;
+-			}
+-			m_nova_wait_addr = nullptr;
+-			g_nova_gpu_stall_since_ms.store(0, std::memory_order_relaxed);
+-			return;
+-		}
++
+ #endif
+ 		SuspendPm4();
+ 	}
+@@ -1261,20 +1237,23 @@
  		default: EXIT("unknown interrupt_selector\n");
  	}
  
@@ -8,39 +75,33 @@
 -		auto* dst  = static_cast<uint32_t*>(dst_gpu_addr);
 -		auto  data = static_cast<uint32_t>(value);
 -		EXIT_IF(dst == nullptr);
-+	// AnyPS5 PacketMemory orders a label store and its IRQ after recorded GPU work.
-+	// Use Kyty's timeline-backed completion queue instead of publishing the label
-+	// immediately while Vulkan is still executing. Capture guest addresses and values,
-+	// never pointers to this stack frame; GuestMemory handles Android's VA mapping.
-+	auto queue_write = [&](auto data, bool timestamp) {
++	// AnyPS5 PacketMemory uses a drained CPU-store fallback when a label cannot be
++	// written directly on the GPU. Kyty's guest mappings can be write-protected by
++	// the buffer/image tracker, so publish on the GPU thread after real completion.
++	// This also prevents subsequent GPU buffer uploads from seeing an old label.
++	auto complete_write = [&](auto data, bool timestamp) {
 +		EXIT_IF(dst_gpu_addr == nullptr);
  		(void)command.Handle();
 -		GuestMemory::Copy(dst, &data, sizeof(data));
-+		GetScheduler().DeferPriorityOperation(
-+		    [&renderer = m_renderer, event_id = m_interrupt_event_id, dst_gpu_addr, data,
-+		     timestamp, with_interrupt, interrupt_context_id]() mutable {
-+			    if (timestamp) data = static_cast<decltype(data)>(Sync::ReadReferenceClock());
-+			    GuestMemory::Copy(dst_gpu_addr, &data, sizeof(data));
++		GetScheduler().Finish();
++		if (timestamp) data = static_cast<decltype(data)>(Sync::ReadReferenceClock());
++		GuestMemory::Copy(dst_gpu_addr, &data, sizeof(data));
  #if defined(KYTY_NOVA_FEX)
 -		NovaNoteGpuWrite(dst, data, static_cast<uint32_t>(m_interrupt_event_id), 'E');
-+			    NovaNoteGpuWrite(dst_gpu_addr, static_cast<uint64_t>(data),
-+			                     static_cast<uint32_t>(event_id), 'E');
++		NovaNoteGpuWrite(dst_gpu_addr, static_cast<uint64_t>(data),
++		                 static_cast<uint32_t>(m_interrupt_event_id), 'E');
  #endif
 -
 -		if (with_interrupt) {
 -			TriggerEopEventAtEndOfPipe(interrupt_context_id);
 -		}
-+			    if (with_interrupt) renderer.TriggerInterrupt(event_id, interrupt_context_id);
-+		    });
-+		// Even no-IRQ labels can be polled by a guest CPU or another GPU queue.
-+		// Submit the associated tick so the completion runner can make progress.
-+		GetScheduler().Flush();
++		if (with_interrupt) m_renderer.TriggerInterrupt(m_interrupt_event_id, interrupt_context_id);
  	};
-+	auto write32 = [&] { queue_write(static_cast<uint32_t>(value), false); };
++	auto write32 = [&] { complete_write(static_cast<uint32_t>(value), false); };
  
  	switch (event_write_source) {
  		case 0x01:
-@@ -1306,22 +1315,7 @@
+@@ -1306,22 +1285,7 @@
  					}
  				}
  			} else {
@@ -60,11 +121,11 @@
 -						TriggerEopEventAtEndOfPipe(interrupt_context_id);
 -					}
 -				};
-+				auto write64 = [&] { queue_write(static_cast<uint64_t>(value), event_write_source == 0x04); };
++				auto write64 = [&] { complete_write(static_cast<uint64_t>(value), event_write_source == 0x04); };
  
  				switch (cache_action) {
  					case 0x00:
-@@ -1365,7 +1359,7 @@
+@@ -1365,7 +1329,7 @@
  								break;
  							case 0x2b:
  							case 0x2d:

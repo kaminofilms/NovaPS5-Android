@@ -27,15 +27,19 @@ patches/kyty-anyps5-gpu-completion.patch is checked and applied to the EFFECTIVE
 source after all existing Android transforms. Editing vendor alone has no effect
 on the resulting APK. tools/ci/build-android-kyty.sh enforces this application.
 
-1. Actual 32/64-bit EOP label stores now run through the existing priority completion
-   queue after its Vulkan timeline semaphore reaches the submitted tick. IRQs run
-   in the same callback, after the label write. Values and guest addresses are
-   captured by value and copied through GuestMemory::Copy for high guest VAs.
+1. Actual 32/64-bit EOP label stores now wait for the existing scheduler's real
+   Vulkan timeline completion before publishing to guest memory. IRQs run after
+   the label write. This adapts AnyPS5 PacketMemory's drained CPU-store fallback,
+   rather than adding a second Vulkan buffer/memory ownership system.
+   GuestMemory::Copy remains on the GPU thread, preserving tracked-page fault
+   handling and high guest VA mapping. Subsequent GPU uploads see the new label.
 2. Timestamp values are sampled at completion rather than while recording.
-3. Even non-interrupt labels submit their recorded work so CPU and cross-queue
-   pollers can progress. This may increase queue submissions; performance requires
-   device measurement. Unknown event types remain rejected. Valid 0x2b/0x2d
-   cache-writeback completions can carry an IRQ, matching their non-cache forms.
+3. Even non-interrupt labels drain their recorded work so CPU and cross-queue
+   pollers can progress. This adds GPU/CPU synchronization and may reduce FPS;
+   performance requires device measurement. Unknown event types remain rejected.
+   Valid 0x2b/0x2d cache-writeback completions can carry an IRQ, matching their
+   non-cache forms. Removed the previous WAIT_REG_MEM timeout-success bypass:
+   unsatisfied waits remain suspended instead of pretending the producer finished.
 4. Existing RDNA -> IR -> SPIR-V stays in place. S_WAITCNT_VSCNT(0) now emits an
    OpMemoryBarrier at Device scope with AcquireRelease, UniformMemory and
    ImageMemory semantics, instead of an execution subgroup OpControlBarrier.
@@ -64,8 +68,8 @@ License texts and these notes are packaged in the APK assets/licenses directory.
 ## Validation and limits
 
 Tests compile production EOP and SPIR-V fence-emission bodies into host harnesses.
-They check delayed writes, store-before-IRQ, 32/64-bit sizing, timestamp timing,
-non-IRQ submission progress and rejection of unsupported events. spirv-tools
+They check GPU-completion-before-store, store-before-IRQ, 32/64-bit sizing, timestamp timing,
+non-IRQ completion progress and rejection of unsupported events. spirv-tools
 validates a minimal compute module containing the actual emitted fence operands;
 this does not validate every generated game shader or execute Adreno Vulkan.
 Existing startup, release-packet and FEX tests remain in the pipeline.
