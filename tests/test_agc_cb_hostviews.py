@@ -70,6 +70,8 @@ template<class T> T* Ptr(T* guest, uint64_t bytes) {
 ''' + extract('struct CommandBuffer {') + '\n' + '\n'.join(
     extract(x) for x in [
         'static uint32_t reg_indirect_native_op(',
+        'static constexpr bool is_trinity_mode(',
+        'static uint32_t reg_indirect_pm4_r(',
         'static bool is_native_reg_indirect_packet(',
         'static void reg_indirect_write_packet(',
         'static int reg_indirect_patch_set_address(',
