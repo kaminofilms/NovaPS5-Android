@@ -92,7 +92,7 @@ s = s.replace(anchor, msg + anchor, 1)
 p.write_text(s)
 print('NOVA_EOP: unsupported RELEASE_MEM packet diagnostics enabled')
 PY
-# Super Meat Boy 3D: RELEASE_MEM event 0x2d must write its 64-bit value
+# Super Meat Boy 3D: RELEASE_MEM events 0x2d and 0x2b must write their 64-bit values
 # and signal the requested EOP interrupt. Keep all other event combinations unchanged.
 python3 - "$work/kyty/src/graphics/guest_gpu/graphicsRun.cpp" <<'PY'
 import pathlib, sys
@@ -103,9 +103,9 @@ if s.count(needle) != 2:
 first = s.index(needle)
 if 'case 0x2d:' not in s[max(0,first-150):first]:
     raise SystemExit('NOVA_EOP_FIX: first guard is not event 0x2d')
-s = s[:first] + s[first:].replace(needle, 'if (event_index == 0x00 && (!with_interrupt || eop_event_type == 0x2d)) {', 1)
+s = s[:first] + s[first:].replace(needle, 'if (event_index == 0x00 && (!with_interrupt || eop_event_type == 0x2d || eop_event_type == 0x2b)) {', 1)
 p.write_text(s)
-assert s.count('(!with_interrupt || eop_event_type == 0x2d)') == 1
+assert s.count('(!with_interrupt || eop_event_type == 0x2d || eop_event_type == 0x2b)') == 1
 print('NOVA_EOP_FIX: 64-bit 0x2d write and interrupt enabled')
 PY
 # Execute the host regressions against the sources that are about to be compiled.
