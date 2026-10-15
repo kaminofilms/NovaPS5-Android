@@ -126,6 +126,9 @@ python3 "$repo/tests/test_agc_packet_fastpath.py" "$work/kyty"
 git -C "$work/kyty" apply --check "$repo/patches/kyty-agc-native-packets.patch"
 git -C "$work/kyty" apply "$repo/patches/kyty-agc-native-packets.patch"
 python3 "$repo/tests/test_agc_native_packets.py" "$work/kyty"
+# Native shader semantic metadata and AJM/Opus input/output guest views.
+python3 "$repo/tools/ci/patch-guest-hotpaths.py" "$work/kyty"
+python3 "$repo/tests/test_guest_hotpaths.py" "$work/kyty"
 cp "$repo/native/novafex/guest_memory.cpp" "$work/kyty/src/novaGuestMemory.cpp"
 cat >> "$work/kyty/CMakeLists.txt" <<'CMAKE'
 if(KYTY_ANDROID)
