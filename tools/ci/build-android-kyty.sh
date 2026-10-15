@@ -133,6 +133,11 @@ python3 "$repo/tests/test_guest_hotpaths.py" "$work/kyty"
 # and command buffer cursor paths, without changing PM4 packets or callback ABI.
 python3 "$repo/tools/ci/patch-agc-cb-hotpaths.py" "$work/kyty"
 python3 "$repo/tests/test_agc_cb_hostviews.py" "$work/kyty"
+# Persistent per-title Vulkan pipeline cache: android process exits without Kyty
+# destructor; snapshot live driver cache after pipeline warmup. Optimize high
+# guest-address AGC vertex metadata copies without altering Vulkan sync.
+python3 "$repo/tools/ci/patch-persistent-shaders.py" "$work/kyty"
+python3 "$repo/tests/test_persistent_shader_cache.py" "$work/kyty"
 cp "$repo/native/novafex/guest_memory.cpp" "$work/kyty/src/novaGuestMemory.cpp"
 cat >> "$work/kyty/CMakeLists.txt" <<'CMAKE'
 if(KYTY_ANDROID)
