@@ -35,7 +35,7 @@ once(src, "void PipelineCache::Save(bool preserve_cache) {", "snapshot method")
 once(src, "if (!preserve_cache) {\n\t\tm_graphics.device.destroyPipelineCache(", "normal shutdown still closes cache")
 assert "Common::File::RenameFile(temp_path, m_driver_cache_path)" in src, "atomic cache write lost"
 assert "XXH3_64bits(payload.data(), payload.size())" in src, "cache integrity lost"
-assert 'if (nova_count == 16u || (nova_count > 16u && nova_count % 64u == 0u))' in src
+assert 'if (nova_count == 1u || nova_count == 16u || (nova_count > 16u && nova_count % 64u == 0u))' in src
 assert src.count("Save(true);") == 2, "missing graphics or compute pipeline snapshot"
 for name in ["m_graphics_pipelines.emplace", "m_compute_pipelines.emplace"]:
     i = src.index(name)
