@@ -154,6 +154,10 @@ python3 "$repo/tools/ci/patch-0931-gpu-watch.py" "$work/kyty"
 python3 "$repo/tests/test_0931_gpu_wait_diag.py" "$work/kyty"
 python3 "$repo/tools/ci/patch-0931-pthread-guest-objects.py" "$work/kyty"
 python3 "$repo/tests/test_0931_pthread_xlat.py" "$work/kyty"
+# Large Unreal shader cache entries and deterministic guest stack-query outputs.
+python3 "$repo/tests/test_large_shader_archive.py"
+python3 "$repo/tools/ci/patch-0933-stack-outputs.py" "$work/kyty"
+python3 "$repo/tests/test_0933_stack_outputs.py" "$work/kyty"
 cp "$repo/native/novafex/guest_memory.cpp" "$work/kyty/src/novaGuestMemory.cpp"
 cat >> "$work/kyty/CMakeLists.txt" <<'CMAKE'
 if(KYTY_ANDROID)
