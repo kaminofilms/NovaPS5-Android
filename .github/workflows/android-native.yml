@@ -1,5 +1,5 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# Owner-approved 0.9.33 / 81 build: large shader cache and stack outputs.
+# Prepared 0.9.34 / 82; APK build requires owner approval.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
@@ -164,12 +164,12 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.33-android-arm64.apk" \
-            --version-name 0.9.33-android --version-code 81 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.34-android-arm64.apk" \
+            --version-name 0.9.34-android --version-code 82 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.33-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.33-android --version-code 81 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.34-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.34-android --version-code 82 | tee dist/apk/verify.txt
       - name: Verify packaged mesh driver
-        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.33-android-arm64.apk
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.34-android-arm64.apk
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -186,11 +186,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.9.33-android-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.9.33-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.9.33-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.33 large shader cache and stack outputs (CI ${GITHUB_SHA::7})" \
-            --notes "Native Android Kyty + NovaFEX. Fixes translated shader cache serialization rejecting vectors above 262144 elements, including Luna-sized source keys; retains the 16 MiB archive limit and exact-key validation. Initializes unknown sceKernelIsStack outputs while preserving error codes, and uses bounded guest views for output pointers. Host C++ regressions cover large shader roundtrips, malformed data, stack ranges and translated output pointers. Includes all 0.9.32 fixes. Android build and device results are separate validation; no game FPS or crash resolution claimed."
+          tag="v0.9.34-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.34-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.34-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.34 cache activation and Luna correlation (CI ${GITHUB_SHA::7})" \
+            --notes "Native Android Kyty + NovaFEX. Includes the architecture header explicitly so Android pipeline-cache snapshots and title fallback compile in. Adds bounded Luna-only BatchMap before/after records, recent mapping crash-trace entries, and APR submit/execute/read/event/completion correlation. Existing reservation and flexible-map tracing is retained. No fake GPU completion, forced waits, altered APR read semantics, mapping results, or mutex ABI changes. Includes 0.9.33 large shader cache and initialized stack outputs. Host regressions pass; phone logs must establish persistence, performance and crash behavior."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()
