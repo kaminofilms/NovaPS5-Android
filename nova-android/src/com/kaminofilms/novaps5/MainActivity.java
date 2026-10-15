@@ -345,7 +345,7 @@ public final class MainActivity extends Activity {
         graphicsHeading.setPadding(0, 22, 0, 8);
         box.addView(graphicsHeading);
         TextView graphicsNote = new TextView(this);
-        graphicsNote.setText("Preferences are saved for future renderer support. Resolution, FSR and frame limiting are not yet connected to Vulkan; selecting them will not change game rendering.");
+        graphicsNote.setText("Preferences are saved for future renderer support. Resolution, FSR and frame limiting are not yet connected to Vulkan; selecting them will not change game rendering. FSR requires an actual game frame; it cannot fix a black screen.");
         box.addView(graphicsNote);
         String[] resolutionOptions = {"0.5x", "0.75x", "1x", "1.5x", "2x"};
         Spinner resolution = new Spinner(this);
