@@ -52,7 +52,7 @@ constexpr uint32_t IT_SET_CONTEXT_REG_INDIRECT = 0x72;
 constexpr uint32_t IT_SET_SH_REG_INDIRECT = 0x73;
 constexpr uint32_t IT_SET_UCONFIG_REG_INDIRECT = 0x74;
 }
-constexpr int OK = 0;
+constexpr uint32_t RegIndirectPacketSizeDw = 5;\nconstexpr int OK = 0;
 constexpr int GRAPHICS5_ERROR_INVALID_PACKET = -22;
 enum class RegIndirectPacket { Cx, Sh, Uc };
 namespace GuestMemory {
@@ -67,7 +67,7 @@ template<class T> T* Ptr(T* guest, uint64_t bytes) {
     return guest;
 }
 }
-''' + extract('struct CommandBuffer {') + '\n' + '\n'.join(
+''' + extract('struct CommandBuffer {') + ';\n' + '\n'.join(
     extract(x) for x in [
         'static uint32_t reg_indirect_native_op(',
         'static constexpr bool is_trinity_mode(',
