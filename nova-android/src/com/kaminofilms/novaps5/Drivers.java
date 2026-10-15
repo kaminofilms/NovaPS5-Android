@@ -18,6 +18,7 @@ final class Drivers {
     static final String SYSTEM = "system";
     static final String BUNDLED_ASSET = "drivers/turnip-a8xx.zip";
     static final String BUNDLED_ID = "turnip-a8xx-bundled";
+    static final String BUNDLED_REVISION = "4893e09fef65271c434965cb8d5380a783115ca9c481cce8dfb81ae8f7395efc";
 
     static final class Driver {
         final String id, label, library;
@@ -37,6 +38,7 @@ final class Drivers {
         ArrayList<Driver> out = new ArrayList<>();
         File[] dirs = root(c).listFiles();
         if (dirs != null) for (File d : dirs) {
+            if (d.getName().startsWith(".")) continue;
             Driver driver = read(d);
             if (driver != null) out.add(driver);
         }
@@ -70,13 +72,41 @@ final class Drivers {
         return d == null ? "System Vulkan driver" : d.label;
     }
 
-    static void ensureBundled(Context c) {
+    static synchronized void ensureBundled(Context c) {
         File dir = new File(root(c), BUNDLED_ID);
-        if (read(dir) != null) return;
+        File marker = new File(dir, ".nova-bundle-version");
+        try {
+            if (read(dir) != null && marker.isFile() && BUNDLED_REVISION.equals(
+                    new String(java.nio.file.Files.readAllBytes(marker.toPath()), "UTF-8"))) return;
+        } catch (IOException ignored) { /* Reinstall an incomplete bundle. */ }
+        // Keep the stable ID so existing selections pick up the upgraded driver.
+        // Extract and validate before replacing the installed copy.
+        File stage = new File(root(c), ".bundled-installing");
+        File backup = new File(root(c), ".bundled-backup");
         try (InputStream in = c.getAssets().open(BUNDLED_ASSET)) {
-            unzip(in, dir);
+            // Recover if the process stopped between the two directory renames.
+            if (!dir.exists() && backup.exists() && !backup.renameTo(dir))
+                throw new IOException("Cannot recover the previous bundled driver");
+            MainActivity.deleteTree(stage);
+            unzip(in, stage);
+            if (read(stage) == null) throw new IOException("Invalid bundled driver");
+            java.nio.file.Files.write(new File(stage, ".nova-bundle-version").toPath(),
+                    BUNDLED_REVISION.getBytes("UTF-8"));
+            MainActivity.deleteTree(backup);
+            boolean hadPrevious = dir.exists();
+            if (hadPrevious && !dir.renameTo(backup))
+                throw new IOException("Cannot back up the previous bundled driver");
+            if (!stage.renameTo(dir)) {
+                if (hadPrevious && !backup.renameTo(dir))
+                    throw new IOException("Cannot restore the previous bundled driver");
+                throw new IOException("Cannot install the new bundled driver");
+            }
+            MainActivity.deleteTree(backup);
+            BootLog.write(c, "Bundled Turnip upgraded: 20261012 A8xx (compute mesh emulation)");
         } catch (Exception x) {
             BootLog.write(c, "Bundled Turnip unavailable: " + x);
+        } finally {
+            MainActivity.deleteTree(stage);
         }
     }
 
@@ -116,3 +146,4 @@ final class Drivers {
         }
     }
 }
+
