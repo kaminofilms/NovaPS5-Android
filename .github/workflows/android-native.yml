@@ -3,7 +3,7 @@ name: Nova PS5 Android-native (no DroidDeck)
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
   push:
-    branches: [android-native, feature/guest-va]
+    branches: [android-native, feature/guest-va, feature/anyps5-android-gpu]
   workflow_dispatch:
 permissions:
   contents: write
