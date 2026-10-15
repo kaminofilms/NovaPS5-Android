@@ -1,0 +1,97 @@
+--- a/src/graphics/host_gpu/graphicContext.h
++++ b/src/graphics/host_gpu/graphicContext.h
+@@ -36,6 +36,7 @@
+ 	bool                               depth_color_copy_enabled               = false;
+ 	bool                               supports_block_texel_view              = false;
+ 	bool                                      mesh_shader_enabled                   = false;
++	bool                                      mesh_wave32_control_enabled             = false;
+ 	vk::PhysicalDeviceMeshShaderPropertiesEXT mesh_shader_properties                = {};
+ 	uint32_t                           subgroup_size                         = 0;
+ 	uint32_t                           min_subgroup_size                     = 0;
+--- a/src/graphics/presentation/window/vulkanWindow.cpp
++++ b/src/graphics/presentation/window/vulkanWindow.cpp
+@@ -539,6 +539,11 @@
+ 	    (graphics.required_subgroup_size_stages & vk::ShaderStageFlagBits::eCompute) &&
+ 	    subgroup_size_control.minSubgroupSize <= 64 &&
+ 	    subgroup_size_control.maxSubgroupSize >= 64;
++	graphics.mesh_wave32_control_enabled = graphics.mesh_shader_enabled &&
++	    supported_features13.subgroupSizeControl == VK_TRUE &&
++	    (graphics.required_subgroup_size_stages & vk::ShaderStageFlagBits::eMeshEXT) &&
++	    subgroup_size_control.minSubgroupSize <= 32 &&
++	    subgroup_size_control.maxSubgroupSize >= 32;
+ 
+ 	LOGF("Vulkan subgroup: default=%u min=%u max=%u stages=0x%08x size_control=%s wave64=%s\n",
+ 	     graphics.subgroup_size, graphics.min_subgroup_size, graphics.max_subgroup_size,
+@@ -623,7 +628,8 @@
+ #endif
+ 	features13.robustImageAccess   = supported_features13.robustImageAccess;
+ 	features13.subgroupSizeControl =
+-	    graphics.compute_subgroup_size_control_enabled ? VK_TRUE : VK_FALSE;
++	    (graphics.compute_subgroup_size_control_enabled || graphics.mesh_wave32_control_enabled)
++	        ? VK_TRUE : VK_FALSE;
+ 
+ 	LOGF("Vulkan robustness: robustImageAccess=%s robustImageAccess2=%s\n",
+ 	     features13.robustImageAccess == VK_TRUE ? "true" : "false",
+--- a/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp
++++ b/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp
+@@ -1,4 +1,5 @@
+ #include "graphics/host_gpu/renderer/pipeline/pipelineCache.h"
++#include "graphics/host_gpu/renderer/pipeline/meshWorkgroup.h"
+ 
+ #include "common/assert.h"
+ #include "common/emulatorConfig.h"
+@@ -661,6 +662,14 @@
+ 		const auto& limits      = m_graphics.mesh_shader_properties;
+ 		const auto  logical_threads =
+ 		    mesh.threads_num[0] * mesh.threads_num[1] * mesh.threads_num[2];
++		mesh.host_subgroup_size = SelectMeshSubgroup(
++		    m_graphics.subgroup_size, mesh.wave_size, logical_threads,
++		    limits.maxMeshWorkGroupInvocations, limits.maxMeshWorkGroupSize[0],
++		    m_graphics.mesh_wave32_control_enabled);
++		if (mesh.host_subgroup_size != m_graphics.subgroup_size) {
++			LOGF("NOVA_MESH: guest_threads=%u guest_wave=%u host_subgroup=%u (two guest lanes per host invocation)\n",
++			     logical_threads, mesh.wave_size, mesh.host_subgroup_size);
++		}
+ 		const auto host_threads = ((logical_threads + mesh.wave_size - 1u) / mesh.wave_size) *
+ 		                          std::min(mesh.host_subgroup_size, mesh.wave_size);
+ 		if (host_threads > limits.maxMeshWorkGroupInvocations ||
+--- a/src/graphics/host_gpu/renderer/pipeline/shaders.cpp
++++ b/src/graphics/host_gpu/renderer/pipeline/shaders.cpp
+@@ -254,12 +254,18 @@
+ 	    rect_list && (tess_control_shader_module == nullptr || tess_eval_shader_module == nullptr));
+ 
+ 	vk::PipelineShaderStageCreateInfo shader_stages[4] {};
++	vk::PipelineShaderStageRequiredSubgroupSizeCreateInfo mesh_subgroup_size {};
+ 	uint32_t                          shader_stage_count = 0;
+ 	for (uint32_t i = 0; i < vertex_info.size(); i++) {
+ 		shader_stages[shader_stage_count++] = {.stage =
+ 		                                           NativeShaderStage(vertex_info[i].logical_stage),
+ 		                                       .module = programs.vertex[i].module,
+ 		                                       .pName  = "main"};
++	}
++	if (mesh && graphics.mesh_wave32_control_enabled &&
++	    vs_input_info.mesh.host_subgroup_size == 32u) {
++		mesh_subgroup_size.requiredSubgroupSize = 32u;
++		shader_stages[0].pNext = &mesh_subgroup_size;
+ 	}
+ 	if (rect_list) {
+ 		shader_stages[shader_stage_count++] = {.stage =
+--- /dev/null
++++ b/src/graphics/host_gpu/renderer/pipeline/meshWorkgroup.h
+@@ -0,0 +1,16 @@
++#pragma once
++#include <cstdint>
++
++namespace Libs::Graphics {
++// The emitter runs both guest wave64 halves on a host subgroup of 32.
++// Leave unsupported cases unchanged so the caller's limit checks reject them.
++constexpr uint32_t SelectMeshSubgroup(uint32_t native_size, uint32_t guest_wave,
++                                      uint32_t guest_threads, uint32_t max_invocations,
++                                      uint32_t max_x, bool can_require_32) {
++    if (guest_wave != 64u || native_size != 64u || !can_require_32) return native_size;
++    const uint64_t waves = (static_cast<uint64_t>(guest_threads) + 63u) / 64u;
++    if ((waves * 64u > max_invocations || waves * 64u > max_x) &&
++        waves * 32u <= max_invocations && waves * 32u <= max_x) return 32u;
++    return native_size;
++}
++} // namespace Libs::Graphics

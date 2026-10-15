@@ -115,6 +115,9 @@ git -C kyty apply --check "$repo/patches/kyty-android-shader-features.patch"
 git -C kyty apply "$repo/patches/kyty-android-shader-features.patch"
 git -C "$work/kyty" apply --check "$repo/patches/kyty-anyps5-compute-workgroups.patch"
 git -C "$work/kyty" apply "$repo/patches/kyty-anyps5-compute-workgroups.patch"
+git -C "$work/kyty" apply --check "$repo/patches/kyty-mesh-wave32.patch"
+git -C "$work/kyty" apply "$repo/patches/kyty-mesh-wave32.patch"
+python3 "$repo/tests/test_mesh_workgroup.py" "$work/kyty"
 python3 "$repo/tests/test_compute_workgroup.py" "$work/kyty"
 python3 "$repo/tests/test_shader_features.py" "$work/kyty"
 python3 "$repo/tests/test_gpu_completion.py" "$work/kyty"
@@ -170,3 +173,4 @@ ls -la "$out/lib"
 # Publish the exact patched renderer and its source dependencies alongside the APK.
 mkdir -p "$out/source"
 tar --exclude='.git' -czf "$out/source/Kyty-Android-corresponding-source.tar.gz" -C "$work" kyty adrenotools
+
