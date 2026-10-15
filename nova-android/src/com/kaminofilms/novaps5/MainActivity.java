@@ -339,6 +339,36 @@ public final class MainActivity extends Activity {
         driver.setText("GPU driver: " + Drivers.label(this));
         driver.setOnClickListener(v -> gpuDriver());
         box.addView(driver);
+        TextView graphicsHeading = new TextView(this);
+        graphicsHeading.setText("Exclusive Graphics (experimental)");
+        graphicsHeading.setTextSize(19);
+        graphicsHeading.setPadding(0, 22, 0, 8);
+        box.addView(graphicsHeading);
+        TextView graphicsNote = new TextView(this);
+        graphicsNote.setText("Preferences are saved for future renderer support. Resolution, FSR and frame limiting are not yet connected to Vulkan; selecting them will not change game rendering.");
+        box.addView(graphicsNote);
+        String[] resolutionOptions = {"0.5x", "0.75x", "1x", "1.5x", "2x"};
+        Spinner resolution = new Spinner(this);
+        resolution.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, resolutionOptions));
+        resolution.setSelection(Math.max(0, Math.min(4, prefs.getInt("graphics_resolution_index", 2))));
+        box.addView(resolution);
+        String[] fpsOptions = {"30 FPS", "40 FPS", "60 FPS", "90 FPS", "120 FPS", "Unlimited"};
+        Spinner fpsLimit = new Spinner(this);
+        fpsLimit.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, fpsOptions));
+        fpsLimit.setSelection(Math.max(0, Math.min(5, prefs.getInt("graphics_fps_index", 5))));
+        box.addView(fpsLimit);
+        String[] upscaleOptions = {"Bilinear", "FSR 1.0 (not yet implemented)"};
+        Spinner upscale = new Spinner(this);
+        upscale.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, upscaleOptions));
+        upscale.setSelection(Math.max(0, Math.min(1, prefs.getInt("graphics_upscale_index", 0))));
+        box.addView(upscale);
+        TextView sharpeningLabel = new TextView(this);
+        sharpeningLabel.setText("Sharpening preference (inactive)");
+        box.addView(sharpeningLabel);
+        SeekBar sharpening = new SeekBar(this);
+        sharpening.setMax(100);
+        sharpening.setProgress(prefs.getInt("graphics_sharpen", 0));
+        box.addView(sharpening);
         TextView opacityLabel = new TextView(this);
         opacityLabel.setText("Touch controller opacity");
         box.addView(opacityLabel);
@@ -412,7 +442,7 @@ public final class MainActivity extends Activity {
                 .setPositiveButton("Save", (d, w) -> {
                     String newKey = artKey.getText().toString().trim();
                     boolean keyChanged = !newKey.equals(prefs.getString("sgdb_key", ""));
-                    prefs.edit().putInt("opacity", opacity.getProgress() + 15).putBoolean("touch_controls", touch.isChecked()).putBoolean("show_fps", showFps.isChecked()).putBoolean("unreal_heap_hle", false).putString("sgdb_key", newKey).apply();
+                    prefs.edit().putInt("graphics_resolution_index", resolution.getSelectedItemPosition()).putInt("graphics_fps_index", fpsLimit.getSelectedItemPosition()).putInt("graphics_upscale_index", upscale.getSelectedItemPosition()).putInt("graphics_sharpen", sharpening.getProgress()).putInt("opacity", opacity.getProgress() + 15).putBoolean("touch_controls", touch.isChecked()).putBoolean("show_fps", showFps.isChecked()).putBoolean("unreal_heap_hle", false).putString("sgdb_key", newKey).apply();
                     if (keyChanged && !newKey.isEmpty()) io.execute(() -> fetchArt(true));
                 })
                 .setNegativeButton("Close", null).show();
