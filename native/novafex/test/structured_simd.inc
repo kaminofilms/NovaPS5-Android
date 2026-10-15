@@ -127,6 +127,21 @@
         Check("ST2 real signal return", target == slot + span + 16 &&
               std::memcmp(first + span - 16, expected, 16) == 0 &&
               std::memcmp(second, reinterpret_cast<uint8_t*>(expected)+16, 16) == 0);
+        // Exercise actual AArch64 SIGSEGV/sigreturn, not only synthetic ucontexts.
+        alignas(16) uint8_t contiguous_input[32];
+        for (unsigned i=0; i<32; ++i) contiguous_input[i]=uint8_t(33+i);
+        uint64_t dest = slot + span - 16;
+        asm volatile("ld1 {v1.16b, v2.16b}, [%1]\\n\\tst1 {v1.16b, v2.16b}, [%0], #32"
+                     : "+r"(dest) : "r"(contiguous_input) : "v1", "v2", "memory");
+        bool real_st1 = dest == slot+span+16 &&
+                        std::memcmp(first+span-16,contiguous_input,16)==0 &&
+                        std::memcmp(second,contiguous_input+16,16)==0;
+        Check("ST1 real signal return",real_st1);
+        alignas(16) uint8_t contiguous_output[32] {};
+        const uint64_t src=slot+span-16;
+        asm volatile("ld1 {v1.16b, v2.16b}, [%1]\\n\\tst1 {v1.16b, v2.16b}, [%0]"
+                     : : "r"(contiguous_output), "r"(src) : "v1", "v2", "memory");
+        Check("LD1 real signal return",std::memcmp(contiguous_output,contiguous_input,32)==0);
 #endif
         // Unmapped second slot: preserve destination, PC and base even with post-index.
         NovaFex::UnmapGuestVASlot(slot + span);
