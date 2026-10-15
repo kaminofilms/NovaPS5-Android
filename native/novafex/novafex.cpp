@@ -1184,8 +1184,12 @@ bool EmulateHighAccess(ucontext_t* uc, uint64_t fault) {
 	// Bionic's large zero fills use DC ZVA, Xt (including d50b7428: x8).
 	// It zeros the whole naturally aligned block, not merely the operand byte.
 	if ((insn & 0xffffffe0u) == 0xd50b7420u) {
-		uint64_t dczid;
+		uint64_t dczid = 0;
+#if defined(__aarch64__)
 		asm volatile("mrs %0, dczid_el0" : "=r"(dczid));
+#else
+		return false; // The synthetic host decoder has no architectural DCZID_EL0.
+#endif
 		if ((dczid & 16u) != 0 || rt == 31) return false;
 		const uint64_t bytes = uint64_t{4} << (dczid & 15u);
 		const uint64_t base = ReadX(uc, rt) & ~(bytes - 1);
