@@ -57,34 +57,6 @@ source = once(source,
 \t\t}
 \t}""",
               "title ID Android fallback")
-source = once(source,
-              """\tconst std::string_view git_hash     = KYTY_GIT_HASH;
-\tconst std::string_view git_revision = KYTY_GIT_REVISION;
-\tif (git_hash == "unknown" || git_revision == "unknown") {
-\t\tPipelineCacheLog("Vulkan pipeline cache: disabled (unknown git revision)");
-\t\treturn;
-\t}
-\tif (git_hash.ends_with("-dirty")) {
-\t\tPipelineCacheLog("Vulkan pipeline cache: disabled (dirty build)");
-\t\treturn;
-\t}""",
-              """#if !defined(KYTY_NOVA_FEX)
-\t// Vanilla desktop Kyty rejects dirty/unknown source revisions. The Nova
-\t// Android build always applies source overlays and has a renderer-specific,
-\t// driver UUID/ID/version + cache epoch signature, so keep the validated
-\t// cache enabled for it instead of disabling every build as "dirty".
-\tconst std::string_view git_hash     = KYTY_GIT_HASH;
-\tconst std::string_view git_revision = KYTY_GIT_REVISION;
-\tif (git_hash == "unknown" || git_revision == "unknown") {
-\t\tPipelineCacheLog("Vulkan pipeline cache: disabled (unknown git revision)");
-\t\treturn;
-\t}
-\tif (git_hash.ends_with("-dirty")) {
-\t\tPipelineCacheLog("Vulkan pipeline cache: disabled (dirty build)");
-\t\treturn;
-\t}
-#endif""",
-              "dirty build rejection")
 source = once(source, "void PipelineCache::Save() {",
               "void PipelineCache::Save(bool preserve_cache) {",
               "snapshot-aware Save")
