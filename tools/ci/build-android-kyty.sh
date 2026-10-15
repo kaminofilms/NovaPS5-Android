@@ -60,6 +60,22 @@ print('NOVA_GPU: guarded selector-3 asynchronous EOP handling enabled')
 PY
     fi
 done < "$repo/patches/linux-core.series"
+# Release performance profile: keep all guest GPU correctness and game-boot patches,
+# but disable the expensive per-write diagnostic ring in normal device builds.
+# NOVA_GPU_TRACE_WRITES=1 restores full write tracing for troubleshooting.
+if [[ "${NOVA_GPU_TRACE_WRITES:-0}" != "1" ]]; then
+    python3 - "$work/kyty/src/graphics/guest_gpu/graphicsRun.cpp" <<'PY'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1]); s = p.read_text()
+old = 'g_nova_writes[g_nova_write_pos++ % NOVA_WRITES] = {a, value, queue, kind};'
+new = '/* NOVA_PERF: omit hot-path GPU diagnostic ring writes in release builds */'
+if s.count(old) != 1:
+    raise SystemExit('NOVA_PERF: GPU diagnostic anchor changed; refusing edit')
+s = s.replace(old, new, 1)
+p.write_text(s)
+print('NOVA_PERF: hot-path GPU write diagnostics disabled (GPU wait semantics unchanged)')
+PY
+fi
 # Execute the host regressions against the sources that are about to be compiled.
 python3 "$repo/tests/test_native_startup.py" "$work/kyty"
 python3 "$repo/tests/test_release_mem.py" "$work/kyty"
