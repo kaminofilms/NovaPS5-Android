@@ -3,7 +3,7 @@ name: Nova PS5 Android-native (no DroidDeck)
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
   push:
-    branches: [android-native, feature/guest-va, feature/anyps5-android-gpu, fix/0923-arm64-ld1-boot, fix/0924-native-guest-hotpaths, fix/0925-agc-commandbuffer-hostviews, fix/0926-shader-cache-persistence, fix/0927-gpu-host-memory, fix/0929-renderer-performance]
+    branches: [android-native, feature/guest-va, feature/anyps5-android-gpu, fix/0923-arm64-ld1-boot, fix/0924-native-guest-hotpaths, fix/0925-agc-commandbuffer-hostviews, fix/0926-shader-cache-persistence, fix/0927-gpu-host-memory, fix/0929-renderer-performance, fix/0931-luna-super-meat-boy]
   workflow_dispatch:
 permissions:
   contents: write
@@ -163,12 +163,12 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.30-android-arm64.apk" \
-            --version-name 0.9.30-android --version-code 78 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.31-android-arm64.apk" \
+            --version-name 0.9.31-android --version-code 79 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.30-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.30-android --version-code 78 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.31-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.31-android --version-code 79 | tee dist/apk/verify.txt
       - name: Verify packaged mesh driver
-        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.30-android-arm64.apk
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.31-android-arm64.apk
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -185,10 +185,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.9.30-android-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.9.30-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.9.30-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.30 native wait and shader memory access fixes (CI ${GITHUB_SHA::7}, device test build)" \
+          tag="v0.9.31-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.31-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.31-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.31 native GPU watchpoint overhead reduction (CI ${GITHUB_SHA::7}, device test build)" \
             --notes "Native Android Kyty + NovaFEX. Fixes measured guest-access traps in wait-packet validation, packet predication, GPU query/boolean predication and shader creation/relative relocation. Retains original guest pointers, volatile query readiness, waits and real draw/dispatch results. Regression tests exercise production functions with inaccessible guest addresses and separate native backing. Includes earlier translated shader persistence, pipeline libraries and mesh support. Gameplay speed improvement still requires phone validation; new pipeline compilation can still stall."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
