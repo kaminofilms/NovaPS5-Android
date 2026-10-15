@@ -22,7 +22,7 @@ program=r'''
 struct ShaderComputeInputInfo {
  bool lds_storage=false,native_lds_int64_atomics=true,dispatch_thread_dimensions=false,async_compute=false,tg_size_en=false;
  uint32_t workgroup_register=0,wave_size=64,host_subgroup_size=32,thread_ids_num=0,lds_size_dwords=0,scratch_size_dwords=0;
- uint8_t float_mode=0xc0;uint32_t threads_num[3]={64,1,1};bool group_id[3]={false,false,false};
+ uint32_t max_workgroup_size_x=0;uint8_t float_mode=0xc0;uint32_t threads_num[3]={64,1,1};bool group_id[3]={false,false,false};
 ''' + selection+r'''
 };
 enum class ShaderType{Compute,Mesh,Vertex};

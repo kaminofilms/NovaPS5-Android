@@ -1,0 +1,155 @@
+--- a/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp
++++ b/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp
+@@ -149,9 +149,11 @@
+ 
+ bool ValidateShaderSpirv(const char* label, uint64_t shader_hash,
+                          const std::vector<uint32_t>& spirv) {
++#if !defined(__ANDROID__)
+ 	if (!Config::ShaderValidationEnabled()) {
+ 		return true;
+ 	}
++#endif
+ 	spvtools::SpirvTools tools(SPV_ENV_VULKAN_1_3);
+ 	std::string          messages;
+ 	tools.SetMessageConsumer([&messages](spv_message_level_t, const char*,
+@@ -163,6 +165,8 @@
+ 	if (tools.Validate(spirv)) {
+ 		return true;
+ 	}
++	std::fprintf(stderr, "NOVA_SPIRV_INVALID: %s hash=0x%016" PRIx64 "\n%s",
++	             label, shader_hash, messages.c_str());
+ 	spvtools::SpirvTools disassembler(SPV_ENV_VULKAN_1_2);
+ 	std::string          text;
+ 	disassembler.Disassemble(spirv, &text,
+@@ -746,9 +750,15 @@
+                                                ShaderComputeInputInfo&      input_info) {
+ 	input_info.host_subgroup_size = m_graphics.SupportsComputeWave64() ? 64u : 32u;
+ 	const auto        params      = PrepareProgram(regs, sh, input_info);
++	if (input_info.wave_size == 32u && m_graphics.compute_subgroup_size_control_enabled &&
++	    m_graphics.min_subgroup_size <= 32u && m_graphics.max_subgroup_size >= 32u) {
++		input_info.host_subgroup_size = 32u;
++	}
+ 	input_info.lds_storage = input_info.lds_size_dwords * 4u >
+ 	    m_graphics.GetPhysicalDeviceProperties().limits.maxComputeSharedMemorySize;
+ 	input_info.native_lds_int64_atomics = m_graphics.native_lds_int64_atomics_enabled;
++	input_info.max_workgroup_size_x =
++	    m_graphics.GetPhysicalDeviceProperties().limits.maxComputeWorkGroupSize[0];
+ 	uint32_t          push_data_cursor = 0;
+ 	return m_program_cache->Get(params, input_info, push_data_cursor);
+ }
+--- a/src/graphics/host_gpu/renderer/pipeline/shaders.cpp
++++ b/src/graphics/host_gpu/renderer/pipeline/shaders.cpp
+@@ -572,7 +572,9 @@
+ 	comp_shader_stage_info.module = compute_module;
+ 	comp_shader_stage_info.pName  = "main";
+ 	EXIT_IF(!input_info.stage);
+-	const auto wave_size = input_info.stage.program->wave_size;
++	// The emitter may lower one guest wave64 to two lanes per host invocation.
++	// Pipeline execution must use the same host subgroup selected for compilation.
++	const auto wave_size = input_info.host_subgroup_size;
+ 	if (graphics.compute_subgroup_size_control_enabled &&
+ 	    wave_size >= graphics.min_subgroup_size && wave_size <= graphics.max_subgroup_size) {
+ 		comp_subgroup_size.requiredSubgroupSize = wave_size;
+@@ -621,13 +623,15 @@
+ 		const auto& shader = *input_info.stage.program;
+ 		std::fprintf(stderr,
+ 		    "NOVA_COMPUTE_PIPELINE_FAILED: result=%s (%d) hash=0x%016" PRIx64
+-		    " local=%ux%ux%u guest_wave=%u host_subgroup=%u lds_bytes=%u storage_lds=%u shared_i64=%u buffer_i64=%u fp64=%u derivatives=%u\n",
++		    " local=%ux%ux%u guest_wave=%u host_subgroup=%u lds_bytes=%u storage_lds=%u shared_i64=%u buffer_i64=%u fp64=%u derivatives=%u linear_group=%u required_subgroup=%u\n",
+ 		    vk::to_string(result).c_str(), static_cast<int>(result), shader.shader_hash,
+ 		    input_info.threads_num[0], input_info.threads_num[1], input_info.threads_num[2],
+ 		    shader.wave_size, input_info.host_subgroup_size, input_info.lds_size_dwords * 4u,
+ 		    input_info.UsesStorageLds(shader.info.shared_int64_atomics) ? 1u : 0u,
+ 		    shader.info.shared_int64_atomics ? 1u : 0u, shader.info.buffer_int64_atomics ? 1u : 0u,
+-		    shader.info.float64 ? 1u : 0u, shader.info.compute_derivatives ? 1u : 0u);
++		    shader.info.float64 ? 1u : 0u, shader.info.compute_derivatives ? 1u : 0u,
++		    input_info.UsesLinearWorkgroup(shader.info.compute_derivatives) ? 1u : 0u,
++		    comp_subgroup_size.requiredSubgroupSize);
+ 	}
+ 
+ 	EXIT_NOT_IMPLEMENTED(result != vk::Result::eSuccess);
+--- a/src/graphics/shader/recompiler/backend/spirv/SpirvEmitter.cpp
++++ b/src/graphics/shader/recompiler/backend/spirv/SpirvEmitter.cpp
+@@ -221,6 +221,9 @@
+ 	    workgroup != nullptr && program.wave_size == 64u && workgroup->host_subgroup_size == 32u
+ 	        ? 2u
+ 	        : 1u;
++	state.linear_workgroup = program.stage == ShaderType::Compute &&
++	    state.lane_count == 1u && input_info.compute != nullptr &&
++	    input_info.compute->UsesLinearWorkgroup(program.info.compute_derivatives);
+ 	DefineModule(state);
+ 	ValidateNativeProgram(program, state.lds_storage_class == spv::StorageClassStorageBuffer);
+ 	EmitProgram(state);
+--- a/src/graphics/shader/recompiler/backend/spirv/spirvEmitterFlow.cpp
++++ b/src/graphics/shader/recompiler/backend/spirv/spirvEmitterFlow.cpp
+@@ -23,7 +23,7 @@
+ 	if (kind == IR::StageInputKind::LocalInvocationIndex) {
+ 		return EmitLocalInvocationIndex(state);
+ 	}
+-	if (state.lane_count == 2 && (kind == IR::StageInputKind::LocalInvocationId ||
++	if ((state.lane_count == 2 || state.linear_workgroup) && (kind == IR::StageInputKind::LocalInvocationId ||
+ 	                              kind == IR::StageInputKind::GlobalInvocationId)) {
+ 		const auto* cs      = ShaderWorkgroupInput(state.program.stage, state.input_info);
+ 		uint32_t    divisor = 1;
+--- a/src/graphics/shader/recompiler/backend/spirv/spirvEmitterInternal.h
++++ b/src/graphics/shader/recompiler/backend/spirv/spirvEmitterInternal.h
+@@ -121,6 +121,7 @@
+ 	uint32_t                                         shader_data_storage_variable = 0;
+ 	uint32_t                                         flattened_srt_variable  = 0;
+ 	spv::StorageClass                                lds_storage_class = spv::StorageClassFunction;
++	bool                                             linear_workgroup = false;
+ 	uint32_t                                         lds_base_dwords         = 0;
+ 	uint32_t                                         lds_variable            = 0;
+ 	uint32_t                                         lds_u64_variable        = 0;
+--- a/src/graphics/shader/recompiler/backend/spirv/spirvEmitterModule.cpp
++++ b/src/graphics/shader/recompiler/backend/spirv/spirvEmitterModule.cpp
+@@ -488,7 +488,7 @@
+ 		add_builtin(IR::StageInputKind::WorkgroupId, 3, "gl_WorkGroupID");
+ 		add_builtin(IR::StageInputKind::NumWorkgroups, 3, "gl_NumWorkGroups");
+ 	}
+-	if (state.lane_count == 2) {
++	if (state.lane_count == 2 || state.linear_workgroup) {
+ 		add_builtin(IR::StageInputKind::LocalInvocationIndex, 1, "gl_LocalInvocationIndex");
+ 		if (std::ranges::any_of(state.inputs, [](const InputBinding& input) {
+ 			    return input.kind == IR::StageInputKind::GlobalInvocationId;
+@@ -824,6 +824,10 @@
+ 				local_x = 2u;
+ 			}
+ 		}
++		if (state.linear_workgroup) {
++			local_x *= local_y * local_z;
++			local_y = local_z = 1u;
++		}
+ 		state.builder.AddExecutionMode(state.main_func, spv::ExecutionModeLocalSize, local_x,
+ 		                               local_y, local_z);
+ 	}
+--- a/src/graphics/shader/shader.cpp
++++ b/src/graphics/shader/shader.cpp
+@@ -713,6 +713,7 @@
+ 	key.push_back(static_cast<uint32_t>(info.tg_size_en));
+ 	key.push_back(static_cast<uint32_t>(info.lds_storage));
+ 	key.push_back(static_cast<uint32_t>(info.native_lds_int64_atomics));
++	key.push_back(info.max_workgroup_size_x);
+ }
+ 
+ ShaderParams PrepareProgram(const HW::VertexShaderInfo& regs, const HW::Context& context,
+--- a/src/graphics/shader/shader.h
++++ b/src/graphics/shader/shader.h
+@@ -154,6 +154,17 @@
+ 	bool               dispatch_thread_dimensions = false;
+ 	bool               lds_storage                = false;
+ 	bool               native_lds_int64_atomics    = true;
++	uint32_t           max_workgroup_size_x       = 0;
++	// Canonical physical shape; guest local/global IDs are reconstructed from
++	// LocalInvocationIndex. Quad derivatives retain their native arrangement.
++	[[nodiscard]] bool UsesLinearWorkgroup(bool derivatives) const noexcept {
++		const uint64_t x = threads_num[0] != 0u ? threads_num[0] : 1u;
++		const uint64_t y = threads_num[1] != 0u ? threads_num[1] : 1u;
++		const uint64_t z = threads_num[2] != 0u ? threads_num[2] : 1u;
++		return !derivatives && (y > 1u || z > 1u) &&
++		       x <= max_workgroup_size_x && y <= max_workgroup_size_x / x &&
++		       z <= max_workgroup_size_x / (x * y);
++	}
+ 	// Keep ordinary LDS in fast workgroup memory. Only shaders needing unsupported
+ 	// native 64-bit LDS atomics use the existing per-workgroup storage-buffer ABI.
+ 	[[nodiscard]] bool UsesStorageLds(bool shared_int64_atomics) const noexcept {
