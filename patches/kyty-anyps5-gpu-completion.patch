@@ -67,7 +67,7 @@
  #endif
  		SuspendPm4();
  	}
-@@ -1261,20 +1237,23 @@
+@@ -1261,20 +1237,25 @@
  		default: EXIT("unknown interrupt_selector\n");
  	}
  
@@ -84,6 +84,8 @@
  		(void)command.Handle();
 -		GuestMemory::Copy(dst, &data, sizeof(data));
 +		GetScheduler().Finish();
++		// Retire earlier IRQ-only callbacks before delivering this packet's IRQ.
++		GetScheduler().WaitPriorityOperations(GetScheduler().CurrentTick() - 1);
 +		if (timestamp) data = static_cast<decltype(data)>(Sync::ReadReferenceClock());
 +		GuestMemory::Copy(dst_gpu_addr, &data, sizeof(data));
  #if defined(KYTY_NOVA_FEX)
@@ -101,7 +103,7 @@
  
  	switch (event_write_source) {
  		case 0x01:
-@@ -1306,22 +1285,7 @@
+@@ -1306,22 +1287,7 @@
  					}
  				}
  			} else {
@@ -125,7 +127,7 @@
  
  				switch (cache_action) {
  					case 0x00:
-@@ -1365,7 +1329,7 @@
+@@ -1365,7 +1331,7 @@
  								break;
  							case 0x2b:
  							case 0x2d:

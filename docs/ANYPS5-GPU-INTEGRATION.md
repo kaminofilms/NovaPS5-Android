@@ -28,7 +28,7 @@ source after all existing Android transforms. Editing vendor alone has no effect
 on the resulting APK. tools/ci/build-android-kyty.sh enforces this application.
 
 1. Actual 32/64-bit EOP label stores now wait for the existing scheduler's real
-   Vulkan timeline completion before publishing to guest memory. IRQs run after
+   Vulkan timeline completion before publishing to guest memory. Earlier priority callbacks retire before this packet; its IRQ runs after
    the label write. This adapts AnyPS5 PacketMemory's drained CPU-store fallback,
    rather than adding a second Vulkan buffer/memory ownership system.
    GuestMemory::Copy remains on the GPU thread, preserving tracked-page fault

@@ -45,6 +45,8 @@ struct Scheduler {
  void Run(){while(!pending.empty() && pending.front().tick<=completed){auto f=std::move(pending.front().fn);pending.erase(pending.begin());f();}}
  void Complete(){completed=submitted;gpu_finished=true;Run();}
  void Finish(){Flush();Complete();}
+ unsigned CurrentTick(){return tick;}
+ void WaitPriorityOperations(unsigned t){assert(completed>=t);Run();}
 };
 struct CommandProcessor {
  Renderer m_renderer; unsigned m_interrupt_event_id=7;Scheduler scheduler;Buffer command;
