@@ -108,6 +108,10 @@ p.write_text(s)
 assert s.count('(!with_interrupt || eop_event_type == 0x2d || eop_event_type == 0x2b)') == 1
 print('NOVA_EOP_FIX: 64-bit 0x2d write and interrupt enabled')
 PY
+# AnyPS5-derived GPU completion/shader adaptation must reach the compiled source.
+git -C kyty apply --check "$repo/patches/kyty-anyps5-gpu-completion.patch"
+git -C kyty apply "$repo/patches/kyty-anyps5-gpu-completion.patch"
+python3 "$repo/tests/test_gpu_completion.py" "$work/kyty"
 # Execute the host regressions against the sources that are about to be compiled.
 python3 "$repo/tests/test_native_startup.py" "$work/kyty"
 python3 "$repo/tests/test_release_mem.py" "$work/kyty"
@@ -156,3 +160,7 @@ done | tee "$out/logs/android-libs.txt"
 ls -la "$out/lib"
 
 
+
+# Publish the exact patched renderer and its source dependencies alongside the APK.
+mkdir -p "$out/source"
+tar --exclude='.git' -czf "$out/source/Kyty-Android-corresponding-source.tar.gz" -C "$work" kyty adrenotools

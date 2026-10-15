@@ -1,0 +1,143 @@
+--- a/src/graphics/guest_gpu/graphicsRun.cpp
++++ b/src/graphics/guest_gpu/graphicsRun.cpp
+@@ -1261,20 +1261,29 @@
+ 		default: EXIT("unknown interrupt_selector\n");
+ 	}
+ 
+-	auto write32 = [&] {
+-		auto* dst  = static_cast<uint32_t*>(dst_gpu_addr);
+-		auto  data = static_cast<uint32_t>(value);
+-		EXIT_IF(dst == nullptr);
++	// AnyPS5 PacketMemory orders a label store and its IRQ after recorded GPU work.
++	// Use Kyty's timeline-backed completion queue instead of publishing the label
++	// immediately while Vulkan is still executing. Capture guest addresses and values,
++	// never pointers to this stack frame; GuestMemory handles Android's VA mapping.
++	auto queue_write = [&](auto data, bool timestamp) {
++		EXIT_IF(dst_gpu_addr == nullptr);
+ 		(void)command.Handle();
+-		GuestMemory::Copy(dst, &data, sizeof(data));
++		GetScheduler().DeferPriorityOperation(
++		    [&renderer = m_renderer, event_id = m_interrupt_event_id, dst_gpu_addr, data,
++		     timestamp, with_interrupt, interrupt_context_id]() mutable {
++			    if (timestamp) data = static_cast<decltype(data)>(Sync::ReadReferenceClock());
++			    GuestMemory::Copy(dst_gpu_addr, &data, sizeof(data));
+ #if defined(KYTY_NOVA_FEX)
+-		NovaNoteGpuWrite(dst, data, static_cast<uint32_t>(m_interrupt_event_id), 'E');
++			    NovaNoteGpuWrite(dst_gpu_addr, static_cast<uint64_t>(data),
++			                     static_cast<uint32_t>(event_id), 'E');
+ #endif
+-
+-		if (with_interrupt) {
+-			TriggerEopEventAtEndOfPipe(interrupt_context_id);
+-		}
++			    if (with_interrupt) renderer.TriggerInterrupt(event_id, interrupt_context_id);
++		    });
++		// Even no-IRQ labels can be polled by a guest CPU or another GPU queue.
++		// Submit the associated tick so the completion runner can make progress.
++		GetScheduler().Flush();
+ 	};
++	auto write32 = [&] { queue_write(static_cast<uint32_t>(value), false); };
+ 
+ 	switch (event_write_source) {
+ 		case 0x01:
+@@ -1306,22 +1315,7 @@
+ 					}
+ 				}
+ 			} else {
+-				if (event_write_source == 0x04) {
+-					value = Sync::ReadReferenceClock();
+-				}
+-				auto write64 = [&] {
+-					auto* dst = static_cast<uint64_t*>(dst_gpu_addr);
+-					EXIT_IF(dst == nullptr);
+-					(void)command.Handle();
+-					GuestMemory::Copy(dst, &value, sizeof(value));
+-#if defined(KYTY_NOVA_FEX)
+-					NovaNoteGpuWrite(dst, static_cast<uint64_t>(value), static_cast<uint32_t>(m_interrupt_event_id), 'E');
+-#endif
+-
+-					if (with_interrupt) {
+-						TriggerEopEventAtEndOfPipe(interrupt_context_id);
+-					}
+-				};
++				auto write64 = [&] { queue_write(static_cast<uint64_t>(value), event_write_source == 0x04); };
+ 
+ 				switch (cache_action) {
+ 					case 0x00:
+@@ -1365,7 +1359,7 @@
+ 								break;
+ 							case 0x2b:
+ 							case 0x2d:
+-								if (event_index == 0x00 && !with_interrupt) {
++								if (event_index == 0x00) {
+ 									write64();
+ 									return;
+ 								}
+--- a/src/graphics/shader/recompiler/backend/spirv/spirvEmitterFlow.cpp
++++ b/src/graphics/shader/recompiler/backend/spirv/spirvEmitterFlow.cpp
+@@ -622,11 +622,15 @@
+ 
+ void EmitVoid(ValueEmitContext&) {}
+ 
++// Adapted from AnyPS5's device-scope memory-fence emission. S_WAITCNT_VSCNT
++// completes this invocation's vector stores; it is not a cross-lane rendezvous.
++// A subgroup control barrier here requires uniform control flow and can hang
++// divergent shaders. S_BARRIER keeps its explicit workgroup control barrier.
+ void EmitStoreCompletion(EmitterState& state) {
+ 	state.builder.AddFunction(
+-	    spv::OpControlBarrier, ConstantU32(state, spv::ScopeSubgroup),
+-	    ConstantU32(state, spv::ScopeDevice),
+-	    ConstantU32(state, spv::MemorySemanticsReleaseMask | spv::MemorySemanticsUniformMemoryMask |
++	    spv::OpMemoryBarrier, ConstantU32(state, spv::ScopeDevice),
++	    ConstantU32(state, spv::MemorySemanticsAcquireReleaseMask |
++	                          spv::MemorySemanticsUniformMemoryMask |
+ 	                          spv::MemorySemanticsImageMemoryMask));
+ }
+ 
+--- a/src/graphics/presentation/window/swapchain.cpp
++++ b/src/graphics/presentation/window/swapchain.cpp
+@@ -22,6 +22,9 @@
+ #include <algorithm>
+ #include <array>
+ #include <atomic>
++#include <chrono>
++#include <cstdlib>
++#include <thread>
+ #include <limits>
+ #include <memory>
+ #include <vector>
+@@ -1050,6 +1053,23 @@
+ 
+ void Presenter::Impl::Present() {
+ 	KYTY_PROFILER_FUNCTION();
++#if defined(KYTY_ANDROID)
++	// Pace real presentation on its own thread, after frame completion. No guest
++	// timestamps or game simulation clocks are changed. Unlimited is the default.
++	static const int fps_cap = [] {
++		const char* text = std::getenv("NOVA_FPS_CAP");
++		const int value = text == nullptr ? 0 : std::atoi(text);
++		return value == 30 || value == 40 || value == 60 || value == 90 || value == 120 ? value : 0;
++	}();
++	static auto last_present = std::chrono::steady_clock::time_point {};
++	if (fps_cap != 0) {
++		const auto interval = std::chrono::nanoseconds(1000000000ll / fps_cap);
++		const auto now = std::chrono::steady_clock::now();
++		if (last_present != std::chrono::steady_clock::time_point {} && now < last_present + interval)
++			std::this_thread::sleep_until(last_present + interval);
++		last_present = std::chrono::steady_clock::now();
++	}
++#endif
+ 
+ 	const auto overlay_visual = GetSystemOverlayVisualState();
+ 	// Keep black/blank flips in the current color space; only real main-bus frames switch it.
+--- a/src/graphics/shader/recompiler/ir/passes/ShaderInfoCollection.cpp
++++ b/src/graphics/shader/recompiler/ir/passes/ShaderInfoCollection.cpp
+@@ -516,7 +516,7 @@
+ 			break;
+ 		case ValueOpcode::ReadConst: info.uses_flattened_srt = true; break;
+ 		case ValueOpcode::BitwiseXor32: info.has_bitwise_xor = true; break;
+-		case ValueOpcode::StoreCompletion: info.subgroup_barrier = true; break;
++		case ValueOpcode::StoreCompletion: break; // Device memory fence; no subgroup rendezvous.
+ 		case ValueOpcode::BvhIntersect: info.bvh = true; break;
+ 		case ValueOpcode::ConditionRef:
+ 			info.subgroup_ballot |=

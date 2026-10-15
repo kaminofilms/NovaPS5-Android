@@ -86,6 +86,11 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
             Os.setenv("HOME", work.getPath(), true);
             Os.setenv("TMPDIR", getCacheDir().getPath(), true);
             Os.setenv("NOVA_RELAXED_VULKAN", "1", true);
+            int[] caps = {30, 40, 60, 90, 120, 0};
+            int capIndex = getSharedPreferences("nova", 0).getInt("graphics_fps_index", 5);
+            int cap = caps[Math.max(0, Math.min(caps.length - 1, capIndex))];
+            Os.setenv("NOVA_FPS_CAP", Integer.toString(cap), true);
+            BootLog.write(this, "GPU completion: timeline-ordered labels; presentation cap: " + (cap == 0 ? "unlimited" : cap));
             Os.setenv("NOVA_LIBC_HLE", homebrewLibc() ? "1" : "0", true);
             // Guest addresses above the phone's 39-bit (512 GB) address space are translated in
             // FEX (libc's 512/768 GB arena). Dead Cells does not need it and keeps the direct path.
