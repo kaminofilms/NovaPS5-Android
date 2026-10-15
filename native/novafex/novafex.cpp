@@ -1214,13 +1214,17 @@ bool EmulateHighAccess(ucontext_t* uc, uint64_t fault) {
 		return true;
 	}
 
-	// Advanced SIMD ST2/LD2 (multiple structures), not the lane or SVE families.
-	// ARM encoding: 0 Q 001100 post L 0 Rm 1000 size Rn Rt.
-	if ((insn & 0xBF20F000u) == 0x0C008000u) {
+	// Advanced SIMD LD1/ST1 (two contiguous vectors) and LD2/ST2 (interleaved
+	// two-structure vectors), not lane or SVE variants. Bit 13 chooses the layout;
+	// all other opcode bits are identical for the two-register forms.
+	// A real Bionic memcpy faulted on 4c40a021: LD1 {v1.16b, v2.16b}, [x1].
+	// Keep the original guest address, vector register wrap, and post-index semantics.
+	if ((insn & 0xBF20D000u) == 0x0C008000u) {
 		const bool post = (insn >> 23) & 1, load = (insn >> 22) & 1;
+		const bool contiguous = (insn & (1u << 13)) != 0;
 		const unsigned rm = (insn >> 16) & 31, element = 1u << ((insn >> 10) & 3);
 		const unsigned width = (insn & (1u << 30)) ? 16 : 8, total = width * 2;
-		if ((!post && rm != 0) || (width == 8 && element == 8)) return false;
+		if (!post && rm != 0) return false;
 		const uint64_t base = ReadBase(uc, rn);
 		if (base < FEXCore::Nova::kGuestVALowLimit || base > (uint64_t{1} << 47) - total ||
 		    (rn == 31 && (base & 15))) return false;
@@ -1244,7 +1248,8 @@ bool EmulateHighAccess(ucontext_t* uc, uint64_t fault) {
 		for (unsigned lane = 0; lane < width / element; ++lane) {
 			for (unsigned reg = 0; reg < 2; ++reg) {
 				for (unsigned byte = 0; byte < element; ++byte) {
-					const unsigned offset = (lane * 2 + reg) * element + byte;
+					const unsigned offset = contiguous ? reg * width + lane * element + byte
+					                                   : (lane * 2 + reg) * element + byte;
 					if (load) vectors[reg][lane * element + byte] = data[offset];
 					else *addresses[offset] = vectors[reg][lane * element + byte];
 				}
