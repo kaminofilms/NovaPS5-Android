@@ -1207,7 +1207,7 @@ bool FlipQueue::Flip(uint32_t micros) {
 		static std::atomic<uint64_t> no_owner_count {0};
 		const auto count = ++no_owner_count;
 		if (count == 1 || count % 240 == 0) {
-			std::fprintf(stderr, "NOVA_FLIP_DIAG: no owner, gpu_requests=%zu cpu_requests=%zu polls=%llu\\n",
+			std::fprintf(stderr, "NOVA_FLIP_DIAG: no owner, gpu_requests=%zu cpu_requests=%zu polls=%llu\n",
 			             m_requests.size(), m_cpu_requests.size(),
 			             static_cast<unsigned long long>(count));
 		}
@@ -1223,7 +1223,7 @@ bool FlipQueue::Flip(uint32_t micros) {
 		static std::atomic<uint64_t> blocked_count {0};
 		const auto count = ++blocked_count;
 		if (count == 1 || count % 240 == 0) {
-			std::fprintf(stderr, "NOVA_FLIP_DIAG: group=%llu blocked, gpu_requests=%zu cpu_requests=%zu polls=%llu\\n",
+			std::fprintf(stderr, "NOVA_FLIP_DIAG: group=%llu blocked, gpu_requests=%zu cpu_requests=%zu polls=%llu\n",
 			             static_cast<unsigned long long>(group), m_requests.size(), m_cpu_requests.size(),
 			             static_cast<unsigned long long>(count));
 		}
