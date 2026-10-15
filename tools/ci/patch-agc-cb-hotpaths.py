@@ -131,5 +131,34 @@ replace_once(
     "AgcUnknownIkfdtRIqCE indirect buffer rewrite",
 )
 
+
+# 0.9.28: alias packet storage only; encoded and returned addresses stay guest.
+def patch_function(name, transform):
+    global s
+    begin = s.index("int KYTY_SYSV_ABI " + name + "(")
+    end = s.index("\n}\n", begin) + 3
+    body = s[begin:end]
+    updated = transform(body)
+    if updated == body:
+        raise SystemExit("NOVA_AGC_PERF: missing anchor in " + name)
+    s = s[:begin] + updated + s[end:]
+
+patch_function("AgcWriteDataPatchSetAddressOrOffset", lambda b: b.replace(
+    "\tEXIT_NOT_IMPLEMENTED(cmd == nullptr);",
+    "\tEXIT_NOT_IMPLEMENTED(cmd == nullptr);\n\tcmd = GuestMemory::Ptr(cmd, uint64_t {4} * sizeof(uint32_t));", 1))
+patch_function("AgcQueueEndOfPipeActionPatchAddress", lambda b: b.replace(
+    "\tEXIT_NOT_IMPLEMENTED(cmd == nullptr);",
+    "\tEXIT_NOT_IMPLEMENTED(cmd == nullptr);\n\tcmd = GuestMemory::Ptr(cmd, uint64_t {5} * sizeof(uint32_t));", 1))
+patch_function("AgcGetDataPacketPayloadAddress", lambda b: b.replace(
+    "\tEXIT_NOT_IMPLEMENTED(addr == nullptr);",
+    "\tEXIT_NOT_IMPLEMENTED(addr == nullptr);\n\taddr = GuestMemory::Ptr(addr, sizeof(*addr));", 1).replace(
+    "\tauto cmd_id = cmd[0];",
+    "\tconst auto cmd_id = *GuestMemory::Ptr(cmd, sizeof(*cmd));", 1))
+patch_function("AgcWaitRegMemPatchAddress", lambda b: b.replace(
+    "\tconst auto vaddr = reinterpret_cast<uint64_t>(address);",
+    "\tcmd = GuestMemory::Ptr(cmd, uint64_t {4} * sizeof(uint32_t));\n"
+    "\twait = GuestMemory::Ptr(wait, uint64_t {4} * sizeof(uint32_t));\n"
+    "\tconst auto vaddr = reinterpret_cast<uint64_t>(address);", 1))
+
 source.write_text(s)
 print("NOVA_AGC_PERF: translated command-buffer cursor and indirect PM4 register-patch hot paths")
