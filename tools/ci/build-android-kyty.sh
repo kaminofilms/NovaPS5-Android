@@ -97,17 +97,13 @@ PY
 python3 - "$work/kyty/src/graphics/guest_gpu/graphicsRun.cpp" <<'PY'
 import pathlib, sys
 p = pathlib.Path(sys.argv[1]); s = p.read_text()
-old = '''case 0x2b:
-			case 0x2d:
-			case 0x30:
-				if (event_index == 0x00 && !with_interrupt) {'''
-new = '''case 0x2b:
-			case 0x2d:
-			case 0x30:
-				if (event_index == 0x00 && (!with_interrupt || eop_event_type == 0x2d)) {'''
-if s.count(old) != 2:
-    raise SystemExit('NOVA_EOP_FIX: expected both cache-action dispatch anchors not found')
-s = s.replace(old, new, 1)
+needle = 'if (event_index == 0x00 && !with_interrupt) {'
+if s.count(needle) != 2:
+    raise SystemExit('NOVA_EOP_FIX: expected two 64-bit no-interrupt guards')
+first = s.index(needle)
+if 'case 0x2d:' not in s[max(0,first-150):first]:
+    raise SystemExit('NOVA_EOP_FIX: first guard is not event 0x2d')
+s = s[:first] + s[first:].replace(needle, 'if (event_index == 0x00 && (!with_interrupt || eop_event_type == 0x2d)) {', 1)
 p.write_text(s)
 assert s.count('(!with_interrupt || eop_event_type == 0x2d)') == 1
 print('NOVA_EOP_FIX: 64-bit 0x2d write and interrupt enabled')
