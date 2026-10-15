@@ -70,20 +70,20 @@
  	EXIT_NOT_IMPLEMENTED(result != vk::Result::eSuccess);
 --- a/src/graphics/host_gpu/renderer/pipeline/shaders.cpp
 +++ b/src/graphics/host_gpu/renderer/pipeline/shaders.cpp
-@@ -609,6 +609,15 @@
+@@ -609,4 +609,14 @@
  	result = graphics.device.createComputePipelines(driver_cache, 1, &info, nullptr,
  	                                                &pipeline.pipeline);
 +	// Some Android Vulkan drivers reject cached compute pipelines with a generic
 +	// ERROR_UNKNOWN. Reattempt identical SPIR-V/layout once with no driver cache.
 +	// This never changes shader semantics or silently skips a dispatch.
 +	if (result != vk::Result::eSuccess && driver_cache != nullptr) {
-+		LOGF("NOVA_COMPUTE_CACHE_RETRY: original=%s retrying without driver cache\\n",
++		LOGF("NOVA_COMPUTE_CACHE_RETRY: original=%s retrying without driver cache\n",
 +		     vk::to_string(result).c_str());
 +		pipeline.pipeline = nullptr;
 +		result = graphics.device.createComputePipelines(nullptr, 1, &info, nullptr,
 +		                                                &pipeline.pipeline);
 +	}
- 	LOGF("PipelineTrace: vkCreateComputePipelines done result=%s pipeline=%p\\n",
+ 	LOGF("PipelineTrace: vkCreateComputePipelines done result=%s pipeline=%p\n",
  	     vk::to_string(result).c_str(), static_cast<void*>(pipeline.pipeline));
 --- a/src/graphics/shader/recompiler/backend/spirv/SpirvEmitter.cpp
 +++ b/src/graphics/shader/recompiler/backend/spirv/SpirvEmitter.cpp
