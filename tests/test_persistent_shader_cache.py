@@ -24,7 +24,8 @@ once(src, 'return fmt::format("NovaPC26:{}:', "render-version driver signature")
 for tok in ('properties.pipelineCacheUUID', 'properties.vendorID', 'properties.deviceID',
             'properties.driverVersion', 'KYTY_GIT_REVISION'):
     assert tok in src, f"missing driver cache validation: {tok}"
-assert '#if !defined(KYTY_NOVA_FEX)' in src, "missing Android patched-source exception"
+# Nova's pinned base patch already removes the upstream dirty-build gate.
+assert 'if (git_hash.ends_with("-dirty"))' not in src, "dirty source still blocks cache"
 assert 'm_driver_cache_path     = std::filesystem::path("_PipelineCache") / (title_id + ".bin");' in src
 assert 'std::getenv("NOVA_CACHE_TITLE_ID")' in src, "missing title fallback"
 assert 'Os.setenv("NOVA_CACHE_TITLE_ID", cacheTitleId, true);' in java
