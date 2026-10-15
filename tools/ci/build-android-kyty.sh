@@ -138,6 +138,9 @@ python3 "$repo/tests/test_agc_cb_hostviews.py" "$work/kyty"
 # guest-address AGC vertex metadata copies without altering Vulkan sync.
 python3 "$repo/tools/ci/patch-persistent-shaders.py" "$work/kyty"
 python3 "$repo/tests/test_persistent_shader_cache.py" "$work/kyty"
+# 0.9.27: bounded host views for measured GPU-result/interpolant traps.
+python3 "$repo/tools/ci/patch-gpu-hotpaths.py" "$work/kyty"
+python3 "$repo/tests/test_gpu_hotpaths.py" "$work/kyty"
 cp "$repo/native/novafex/guest_memory.cpp" "$work/kyty/src/novaGuestMemory.cpp"
 cat >> "$work/kyty/CMakeLists.txt" <<'CMAKE'
 if(KYTY_ANDROID)
@@ -200,5 +203,6 @@ ls -la "$out/lib"
 # Publish the exact patched renderer and its source dependencies alongside the APK.
 mkdir -p "$out/source"
 tar --exclude='.git' -czf "$out/source/Kyty-Android-corresponding-source.tar.gz" -C "$work" kyty adrenotools
+
 
 

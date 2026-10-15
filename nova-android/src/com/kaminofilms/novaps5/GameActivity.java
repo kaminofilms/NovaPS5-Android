@@ -90,6 +90,15 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
             } else {
                 Os.unsetenv("NOVA_CACHE_TITLE_ID");
             }
+            // Mesa's shader binary cache persists across process termination and updates.
+            File mesaCache = new File(getFilesDir(), "mesa-shader-cache");
+            if (!mesaCache.isDirectory() && !mesaCache.mkdirs()) {
+                throw new java.io.IOException("Could not create Mesa shader cache");
+            }
+            Os.setenv("MESA_SHADER_CACHE_DIR", mesaCache.getPath(), true);
+            Os.setenv("MESA_SHADER_CACHE_MAX_SIZE", "1G", true);
+            Os.setenv("MESA_SHADER_CACHE_DISABLE", "false", true);
+            BootLog.write(this, "Mesa shader cache: " + mesaCache.getPath());
             Os.setenv("HOME", work.getPath(), true);
             Os.setenv("TMPDIR", getCacheDir().getPath(), true);
             Os.setenv("NOVA_RELAXED_VULKAN", "1", true);
@@ -293,4 +302,5 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
         super.onPause();
     }
 }
+
 
