@@ -148,6 +148,7 @@ python3 "$repo/tests/test_pipeline_libraries.py" "$work/kyty"
 # 0.9.30: measured wait validation, query reads and shader-relative relocations.
 python3 "$repo/tools/ci/patch-measured-accesses.py" "$work/kyty"
 python3 "$repo/tests/test_measured_accesses.py" "$work/kyty"
+python3 "$repo/tools/ci/patch-0931-gpu-watch.py" "$work/kyty"
 cp "$repo/native/novafex/guest_memory.cpp" "$work/kyty/src/novaGuestMemory.cpp"
 cat >> "$work/kyty/CMakeLists.txt" <<'CMAKE'
 if(KYTY_ANDROID)
