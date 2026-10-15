@@ -83,6 +83,13 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
         try {
             Os.setenv("NOVA_LOG_FILE", log.getPath(), true);
             Os.setenv("NOVA_WORKDIR", work.getPath(), true);
+            // Vulkan driver pipeline cache is sandboxed per metadata title ID.
+            String cacheTitleId = titleId(new File(game));
+            if (cacheTitleId.matches("[A-Za-z0-9_-]{3,48}")) {
+                Os.setenv("NOVA_CACHE_TITLE_ID", cacheTitleId, true);
+            } else {
+                Os.unsetenv("NOVA_CACHE_TITLE_ID");
+            }
             Os.setenv("HOME", work.getPath(), true);
             Os.setenv("TMPDIR", getCacheDir().getPath(), true);
             Os.setenv("NOVA_RELAXED_VULKAN", "1", true);
