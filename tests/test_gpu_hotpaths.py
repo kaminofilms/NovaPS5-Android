@@ -78,6 +78,16 @@ int main() {
    assert(std::memcmp(&guest_gs,GuestMemory::memory.data()+256,sizeof(guest_gs))==0);
   }
  }
+ // With no PS inputs the original does not touch GS. An invalid GS must
+ // remain ignored rather than becoming a speculative descriptor read.
+ for(unsigned version=0;version<2;++version) {
+  std::array<ShaderRegister,32> expected{};
+  auto* preg=reinterpret_cast<ShaderRegister*>(GuestMemory::base+4096);
+  auto* ignored_gs=reinterpret_cast<Shader*>(1);
+  if(version) { original::AgcCreateInterpolantMapping2(expected.data(),ignored_gs,nullptr); native::AgcCreateInterpolantMapping2(preg,ignored_gs,nullptr); }
+  else { original::AgcCreateInterpolantMapping(expected.data(),ignored_gs,nullptr); native::AgcCreateInterpolantMapping(preg,ignored_gs,nullptr); }
+  assert(std::memcmp(expected.data(),GuestMemory::memory.data()+4096,sizeof(expected))==0);
+ }
  uint32_t event_index=1; uint64_t event_address=GuestMemory::base+6144;
  uint64_t m_synthetic_occlusion_counter=19;
  auto* values=reinterpret_cast<uint64_t*>(GuestMemory::memory.data()+6144);

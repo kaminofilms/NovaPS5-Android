@@ -35,9 +35,12 @@ for name in ['AgcCreateInterpolantMapping', 'AgcCreateInterpolantMapping2']:
 #if defined(KYTY_NOVA_FEX)
 \tShader native_ps {}, native_gs {};
 \tif (ps != nullptr) { native_ps = nova_interpolant_shader(ps); ps = &native_ps; }
-\tif (gs != nullptr) { native_gs = nova_interpolant_shader(gs); gs = &native_gs; }
 \tconst uint64_t output_count = std::max<uint64_t>(32u, ps ? ps->num_input_semantics : 0u);
 \tregs = GuestMemory::Ptr(regs, output_count * sizeof(ShaderRegister));
+#endif''')
+    body = once(body, '\tEXIT_NOT_IMPLEMENTED(gs == nullptr);', '''\tEXIT_NOT_IMPLEMENTED(gs == nullptr);
+#if defined(KYTY_NOVA_FEX)
+\tnative_gs = nova_interpolant_shader(gs); gs = &native_gs;
 #endif''')
     agc = agc[:start] + body + agc[end:]
 gpu = once(gpu, 'auto*              results      = reinterpret_cast<volatile uint64_t*>(event_address);',
