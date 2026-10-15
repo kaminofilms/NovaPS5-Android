@@ -141,6 +141,10 @@ python3 "$repo/tests/test_persistent_shader_cache.py" "$work/kyty"
 # 0.9.27: bounded host views for measured GPU-result/interpolant traps.
 python3 "$repo/tools/ci/patch-gpu-hotpaths.py" "$work/kyty"
 python3 "$repo/tests/test_gpu_hotpaths.py" "$work/kyty"
+python3 "$repo/tools/ci/patch-renderer-performance.py" "$work/kyty"
+python3 "$repo/tests/test_translated_shader_disk.py" "$work/kyty"
+python3 "$repo/tests/test_render_overhead.py" "$work/kyty"
+python3 "$repo/tests/test_pipeline_libraries.py" "$work/kyty"
 cp "$repo/native/novafex/guest_memory.cpp" "$work/kyty/src/novaGuestMemory.cpp"
 cat >> "$work/kyty/CMakeLists.txt" <<'CMAKE'
 if(KYTY_ANDROID)

@@ -1,0 +1,11 @@
+# NovaPS5 0.9.29
+
+Retains native Android Kyty + NovaFEX and prior AGC packet memory fixes.
+
+Adds versioned, per-title and driver-specific translated SPIR-V artifacts with serialized renderer metadata. Keys include exact source and linked call code, stage static state, wave size, push-data cursor and canonical resource specialization. Metadata is serialized field by field, not as vector/pointer object storage. Exact keys and XXH3 integrity checks reject stale/corrupt entries; writes use temporary files and atomic rename. Individual artifacts are bounded at 16 MiB and title-directory writes stop at a 256 MiB budget. Frontend translation/resource analysis still runs on first source use; this cache skips backend optimization/SPIR-V generation on an artifact hit.
+
+Enables VK_EXT_graphics_pipeline_library only with the KHR dependency, feature and fast-link property. Libraries reuse vertex input, pre-rasterization shader, fragment shader and fragment output parts with exact layout and static state keys. Dynamic rendering, original descriptor sets and push constants are retained. Rect-list and tessellation retain original monolithic pipelines; errors disable GPL and retry the original path. Libraries are destroyed with their owning renderer. No draw is skipped. This implements synchronous fast linking; background LTO and whole-game pipeline prewarming are not included.
+
+Repeated consecutive graphics pipeline keys avoid a full map hash/probe. Repeated graphics pipeline binds are suppressed only within one native command buffer, reset at every begin. Empty flushes are skipped only with no recorded handle use, no external semaphore waits/signals and no pending/active callbacks. Explicit waits, real GPU work and completion notifications retain their existing path. This reduces redundant submissions; it does not combine nonempty command lists or change their ordering.
+
+Validation: shader metadata roundtrip, every truncation and single-byte corruption; all 64 empty/work/semaphore/callback combinations; production GPL creation/linking and state-reuse checks with Vulkan validation on lavapipe; full Android native build and packaged APK checks. These checks do not establish a gameplay FPS increase on Adreno.
