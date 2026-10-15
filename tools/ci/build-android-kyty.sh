@@ -163,6 +163,9 @@ python3 "$repo/tools/ci/patch-0934-cache-activation.py" "$work/kyty"
 python3 "$repo/tests/test_0934_cache_activation.py" "$work/kyty"
 python3 "$repo/tools/ci/patch-0934-luna-correlation.py" "$work/kyty"
 python3 "$repo/tests/test_0934_luna_correlation.py" "$work/kyty"
+# 0.9.35: explicit successful-map guest pointer and processed-count publication.
+python3 "$repo/tools/ci/patch-0935-batch-map-writeback.py" "$work/kyty"
+python3 "$repo/tests/test_0935_batch_map_writeback.py" "$work/kyty"
 cp "$repo/native/novafex/guest_memory.cpp" "$work/kyty/src/novaGuestMemory.cpp"
 cat >> "$work/kyty/CMakeLists.txt" <<'CMAKE'
 if(KYTY_ANDROID)
