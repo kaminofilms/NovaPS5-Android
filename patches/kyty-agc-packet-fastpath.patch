@@ -1,0 +1,81 @@
+--- a/src/libs/agc.cpp
++++ b/src/libs/agc.cpp
+@@ -3369,19 +3369,26 @@
+ 		return nullptr;
+ 	}
+ 
+-	cmd[0] = KYTY_PM4(6, Pm4::IT_COPY_DATA, 0u);
+-	cmd[1] = ((static_cast<uint32_t>(src) >> 1u) & 0xfu) |
++	// Stage the packet so native stores never fault on guest virtual addresses.
++	uint32_t packet[6];
++	packet[0] = KYTY_PM4(6, Pm4::IT_COPY_DATA, 0u);
++	packet[1] = ((static_cast<uint32_t>(src) >> 1u) & 0xfu) |
+ 	         (((static_cast<uint32_t>(dst) >> 1u) & 0xfu) << 8u) |
+ 	         ((static_cast<uint32_t>(src_cache_policy) & 0x3u) << 13u) |
+ 	         ((static_cast<uint32_t>(item_size) & 0x1u) << 16u) |
+ 	         ((static_cast<uint32_t>(write_confirm) & 0x1u) << 20u) |
+ 	         ((static_cast<uint32_t>(dst_cache_policy) & 0x3u) << 25u) |
+ 	         ((static_cast<uint32_t>(src) & 0x1u) << 30u);
+-	cmd[2] = static_cast<uint32_t>(src_address_or_immediate & 0xffffffffu);
+-	cmd[3] = static_cast<uint32_t>((src_address_or_immediate >> 32u) & 0xffffffffu);
+-	cmd[4] = static_cast<uint32_t>(dst_address & 0xffffffffu);
+-	cmd[5] = static_cast<uint32_t>((dst_address >> 32u) & 0xffffffffu);
+-
++	packet[2] = static_cast<uint32_t>(src_address_or_immediate & 0xffffffffu);
++	packet[3] = static_cast<uint32_t>((src_address_or_immediate >> 32u) & 0xffffffffu);
++	packet[4] = static_cast<uint32_t>(dst_address & 0xffffffffu);
++	packet[5] = static_cast<uint32_t>((dst_address >> 32u) & 0xffffffffu);
++
++#if KYTY_NOVA_FEX
++	NovaGuest::Copy(cmd, packet, sizeof(packet));
++#else
++	std::memcpy(cmd, packet, sizeof(packet));
++#endif
+ 	return cmd;
+ }
+ 
+@@ -4018,13 +4025,14 @@
+ 		return nullptr;
+ 	}
+ 
+-	cmd[0] = KYTY_PM4(AGC_WAIT_USER_DATA_BEGIN_DW, Pm4::IT_SET_UCONFIG_REG, 1u);
+-	cmd[1] = AGC_INTERNAL_DATA_REGISTER;
+-	cmd[2] = (wait32 ? AGC_WAIT_USER_DATA_BEGIN_32_TAG : AGC_WAIT_USER_DATA_BEGIN_64_TAG) |
++	uint32_t packet[AGC_WAIT_USER_DATA_BEGIN_DW + 9u + AGC_INTERNAL_DATA_PACKET_SIZE_DW];
++	packet[0] = KYTY_PM4(AGC_WAIT_USER_DATA_BEGIN_DW, Pm4::IT_SET_UCONFIG_REG, 1u);
++	packet[1] = AGC_INTERNAL_DATA_REGISTER;
++	packet[2] = (wait32 ? AGC_WAIT_USER_DATA_BEGIN_32_TAG : AGC_WAIT_USER_DATA_BEGIN_64_TAG) |
+ 	         static_cast<uint32_t>((address_value >> 32u) & 0xffffu);
+-	cmd[3] = static_cast<uint32_t>(address_value);
+-
+-	auto* wait = cmd + AGC_WAIT_USER_DATA_BEGIN_DW;
++	packet[3] = static_cast<uint32_t>(address_value);
++
++	auto* wait = packet + AGC_WAIT_USER_DATA_BEGIN_DW;
+ 	auto* end  = wait + wait_dw;
+ 	write_agc_internal_data_packet(end, AGC_WAIT_USER_DATA_END_TAG);
+ 
+@@ -4037,6 +4045,11 @@
+ 		wait[5] = static_cast<uint32_t>(mask);
+ 		wait[6] = poll;
+ 
++#if KYTY_NOVA_FEX
++	NovaGuest::Copy(cmd, packet, total_dw * sizeof(uint32_t));
++#else
++	std::memcpy(cmd, packet, total_dw * sizeof(uint32_t));
++#endif
+ 		return cmd;
+ 	}
+ 
+@@ -4050,6 +4063,11 @@
+ 	wait[7] = static_cast<uint32_t>(mask >> 32u);
+ 	wait[8] = poll;
+ 
++#if KYTY_NOVA_FEX
++	NovaGuest::Copy(cmd, packet, total_dw * sizeof(uint32_t));
++#else
++	std::memcpy(cmd, packet, total_dw * sizeof(uint32_t));
++#endif
+ 	return cmd;
+ }
+ 
