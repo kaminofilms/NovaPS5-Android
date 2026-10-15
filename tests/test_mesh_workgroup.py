@@ -14,6 +14,9 @@ using Libs::Graphics::SelectMeshSubgroup;
 int main() {
     // PPSA31162: three guest wave64s fit in three host wave32s.
     static_assert(SelectMeshSubgroup(64, 64, 192, 128, 128, true) == 32);
+    static_assert(SelectMeshSubgroup(128, 64, 192, 128, 128, true) == 32);
+    static_assert(SelectMeshSubgroup(128, 64, 192, 128, 128, false) == 128);
+    static_assert(SelectMeshSubgroup(128, 32, 192, 128, 128, true) == 128);
     static_assert(SelectMeshSubgroup(64, 64, 128, 128, 128, true) == 64);
     static_assert(SelectMeshSubgroup(64, 64, 256, 128, 128, true) == 32);
     // No unsupported feature/limit bypass, including the per-axis limit.
@@ -22,8 +25,8 @@ int main() {
     static_assert(SelectMeshSubgroup(64, 64, 257, 128, 128, true) == 64);
     static_assert(SelectMeshSubgroup(64, 32, 192, 128, 128, true) == 64);
     static_assert(SelectMeshSubgroup(32, 64, 192, 128, 128, false) == 32);
-    for (unsigned guest : {192u, 256u}) {
-        auto width = SelectMeshSubgroup(64, 64, guest, 128, 128, true);
+    for (unsigned native : {64u, 128u}) for (unsigned guest : {192u, 256u}) {
+        auto width = SelectMeshSubgroup(native, 64, guest, 128, 128, true);
         unsigned host = (guest + 63u) / 64u * width;
         assert(host <= 128);
         std::set<unsigned> lanes;
