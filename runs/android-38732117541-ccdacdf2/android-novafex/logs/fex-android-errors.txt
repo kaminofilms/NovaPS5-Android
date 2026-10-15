@@ -1,0 +1,3 @@
+FAILED: [code=1] Source/Tools/NovaFex/CMakeFiles/novafex_test_static.dir/test/novafex_test.cpp.o 
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/Source/Tools/NovaFex/test/structured_simd.inc:134:22: error: unexpected token in argument list
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/fex/Source/Tools/NovaFex/test/structured_simd.inc:142:22: error: unexpected token in argument list
