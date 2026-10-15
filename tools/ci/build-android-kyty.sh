@@ -158,6 +158,11 @@ python3 "$repo/tests/test_0931_pthread_xlat.py" "$work/kyty"
 python3 "$repo/tests/test_large_shader_archive.py"
 python3 "$repo/tools/ci/patch-0933-stack-outputs.py" "$work/kyty"
 python3 "$repo/tests/test_0933_stack_outputs.py" "$work/kyty"
+# 0.9.34: explicit Android cache guards and bounded Luna correlation.
+python3 "$repo/tools/ci/patch-0934-cache-activation.py" "$work/kyty"
+python3 "$repo/tests/test_0934_cache_activation.py" "$work/kyty"
+python3 "$repo/tools/ci/patch-0934-luna-correlation.py" "$work/kyty"
+python3 "$repo/tests/test_0934_luna_correlation.py" "$work/kyty"
 cp "$repo/native/novafex/guest_memory.cpp" "$work/kyty/src/novaGuestMemory.cpp"
 cat >> "$work/kyty/CMakeLists.txt" <<'CMAKE'
 if(KYTY_ANDROID)
