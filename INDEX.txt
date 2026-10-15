@@ -183,3 +183,4 @@ runs/android-38732827256-5c34f846 android novafex=success test=success ffmpeg=su
 runs/android-38738102894-8928989c android novafex=success test=success ffmpeg=success kyty=success apk=success
 runs/android-38744868213-c196fab2 android novafex=success test=success ffmpeg=success kyty=failure apk=skipped
 runs/android-38745719029-22d998e9 android novafex=success test=success ffmpeg=success kyty=failure apk=skipped
+runs/android-38746100932-29a34b09 android novafex=success test=success ffmpeg=success kyty=success apk=success
