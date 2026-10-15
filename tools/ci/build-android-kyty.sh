@@ -129,6 +129,10 @@ python3 "$repo/tests/test_agc_native_packets.py" "$work/kyty"
 # Native shader semantic metadata and AJM/Opus input/output guest views.
 python3 "$repo/tools/ci/patch-guest-hotpaths.py" "$work/kyty"
 python3 "$repo/tests/test_guest_hotpaths.py" "$work/kyty"
+# 0.9.25: prevent repetitive native ARM64 guest faults in AGC Cx register patches
+# and command buffer cursor paths, without changing PM4 packets or callback ABI.
+python3 "$repo/tools/ci/patch-agc-cb-hotpaths.py" "$work/kyty"
+python3 "$repo/tests/test_agc_cb_hostviews.py" "$work/kyty"
 cp "$repo/native/novafex/guest_memory.cpp" "$work/kyty/src/novaGuestMemory.cpp"
 cat >> "$work/kyty/CMakeLists.txt" <<'CMAKE'
 if(KYTY_ANDROID)
