@@ -81,7 +81,7 @@ snapshot = """\t// Native Android kills the game process on Exit Game. Save an e
 \t// driver objects already in flight and synchronization are untouched.
 #if defined(KYTY_NOVA_FEX)
 \tconst size_t nova_count = m_graphics_pipelines.size() + m_compute_pipelines.size();
-\tif (nova_count == 16u || (nova_count > 16u && nova_count % 64u == 0u)) {
+\tif (nova_count == 1u || nova_count == 16u || (nova_count > 16u && nova_count % 64u == 0u)) {
 \t\tSave(true);
 \t}
 #endif
