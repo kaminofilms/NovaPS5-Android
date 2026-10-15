@@ -166,7 +166,7 @@ jobs:
             --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.23-android-arm64.apk" \
             --version-name 0.9.23-android --version-code 71 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.23-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.23-android --version-code 70 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.23-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.23-android --version-code 71 | tee dist/apk/verify.txt
       - name: Verify packaged mesh driver
         run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.23-android-arm64.apk
       - uses: actions/upload-artifact@v4
