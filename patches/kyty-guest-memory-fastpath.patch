@@ -1,0 +1,40 @@
+--- a/src/libs/agc.cpp
++++ b/src/libs/agc.cpp
+@@ -1,4 +1,5 @@
+ #include "libs/agc.h"
++#include "common/novaFex.h"
+ 
+ #include "common/assert.h"
+ #include "common/emulatorConfig.h"
+@@ -2094,17 +2095,23 @@
+ 	const uint32_t packet_action      = static_cast<uint32_t>(action) & 0x3fu;
+ 	const uint32_t packet_event_index = (action >= 0x2fu ? 6u : 5u);
+ 
+-	cmd[0] = KYTY_PM4(8, Pm4::IT_NOP, Pm4::R_RELEASE_MEM);
+-	cmd[1] = packet_action | (packet_event_index << 8u) | ((packet_gcr_cntl & 0xfffu) << 12u) |
++	uint32_t packet[8];
++	packet[0] = KYTY_PM4(8, Pm4::IT_NOP, Pm4::R_RELEASE_MEM);
++	packet[1] = packet_action | (packet_event_index << 8u) | ((packet_gcr_cntl & 0xfffu) << 12u) |
+ 	         ((static_cast<uint32_t>(cache_policy) & 0x3u) << 25u);
+-	cmd[2] = ((static_cast<uint32_t>(dst) & 0x3u) << 16u) |
++	packet[2] = ((static_cast<uint32_t>(dst) & 0x3u) << 16u) |
+ 	         ((static_cast<uint32_t>(interrupt) & 0x7u) << 24u) |
+ 	         ((static_cast<uint32_t>(data_sel) & 0x7u) << 29u);
+-	cmd[3] = static_cast<uint32_t>(address_value & 0xfffffffcu);
+-	cmd[4] = static_cast<uint32_t>((address_value >> 32u) & 0xffffffffu);
+-	cmd[5] = static_cast<uint32_t>(packet_data & 0xffffffffu);
+-	cmd[6] = static_cast<uint32_t>((packet_data >> 32u) & 0xffffffffu);
+-	cmd[7] = interrupt_ctx_id & 0x07ffffffu;
++	packet[3] = static_cast<uint32_t>(address_value & 0xfffffffcu);
++	packet[4] = static_cast<uint32_t>((address_value >> 32u) & 0xffffffffu);
++	packet[5] = static_cast<uint32_t>(packet_data & 0xffffffffu);
++	packet[6] = static_cast<uint32_t>((packet_data >> 32u) & 0xffffffffu);
++	packet[7] = interrupt_ctx_id & 0x07ffffffu;
++#if defined(KYTY_NOVA_FEX)
++	NovaGuest::Copy(cmd, packet, sizeof(packet));
++#else
++	std::memcpy(cmd, packet, sizeof(packet));
++#endif
+ 	return cmd;
+ }
+ 

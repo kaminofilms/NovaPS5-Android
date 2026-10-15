@@ -28,6 +28,7 @@
 namespace {
 
 int g_failures = 0;
+volatile sig_atomic_t g_host_faults = 0;
 
 void Check(const char* name, bool ok, const char* detail = "") {
 	std::printf("NOVAFEX_TEST: %-28s %s %s\n", name, ok ? "PASS" : "FAIL", detail);
@@ -36,6 +37,7 @@ void Check(const char* name, bool ok, const char* detail = "") {
 }
 
 void FaultHandler(int signal, siginfo_t* info, void* ucontext) {
+	g_host_faults = g_host_faults + 1;
 	if (NovaFex::HandleHostFault(signal, info, ucontext)) {
 		return;
 	}
@@ -443,6 +445,43 @@ int main() {
 		Check("host access to guest VA", ok);
 	}
 #include "structured_simd.inc"
+	// Bionic bulk zeroing and explicit DC ZVA on a translated high guest address.
+	{
+		const uint64_t guest = 0x8fc0000000ull + 0x300000;
+		const uint64_t host = NovaFex::TranslateGuestVA(guest);
+		mprotect(reinterpret_cast<void*>(host), 0x10000, PROT_READ | PROT_WRITE);
+		void* (*volatile fill)(void*, int, size_t) = &std::memset;
+		void* (*volatile copy)(void*, const void*, size_t) = &std::memcpy;
+		int (*volatile compare)(const void*, const void*, size_t) = &std::memcmp;
+		uint8_t expected[8192];
+		fill(expected, 0xa5, sizeof(expected));
+		const auto before = g_host_faults;
+		void* result = fill(reinterpret_cast<void*>(guest), 0xa5, sizeof(expected));
+		uint8_t back[8192];
+		copy(back, reinterpret_cast<void*>(guest), sizeof(back));
+		const bool equal = compare(reinterpret_cast<void*>(guest), expected, sizeof(expected)) == 0;
+		const bool no_faults = g_host_faults == before;
+		Check("bulk guest memory no signals", result == reinterpret_cast<void*>(guest) &&
+		      equal && no_faults && std::memcmp(back, expected, sizeof(back)) == 0);
+		uint64_t dczid;
+		asm volatile("mrs %0, dczid_el0" : "=r"(dczid));
+		if ((dczid & 16u) == 0) {
+			const uint64_t bytes = uint64_t{4} << (dczid & 15u);
+			if (bytes <= 8192) {
+				fill(reinterpret_cast<void*>(host), 0xa5, bytes * 3);
+				const auto operand = (guest + bytes - 1) & ~(bytes - 1);
+				const auto pointer = operand + bytes + 1;
+				asm volatile("dc zva, %0" :: "r"(pointer) : "memory");
+				bool exact = true;
+				for (uint64_t i = 0; i < bytes * 3; ++i) {
+					const auto address = guest + i;
+					const uint8_t want = address >= operand + bytes && address < operand + bytes * 2 ? 0 : 0xa5;
+					exact &= reinterpret_cast<uint8_t*>(host)[i] == want;
+				}
+				Check("DC ZVA translated block", exact);
+			}
+		}
+	}
 	// Overheads.
 	{
 		// loop(n): push rbx; mov rbx,rdi; L: call gate(HostInc); dec rbx; jnz L; pop rbx; ret
@@ -477,4 +516,5 @@ int main() {
 	std::printf("NOVAFEX_TEST: %s (%d failures)\n", g_failures ? "FAILED" : "ALL PASS", g_failures);
 	return g_failures ? 1 : 0;
 }
+
 

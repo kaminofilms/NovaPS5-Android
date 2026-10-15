@@ -15,7 +15,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Android")
 	target_link_libraries(novafex PRIVATE log dl)
 
 	# Static bionic test binary: runs on any Linux arm64 kernel without Android's linker.
-	add_executable(novafex_test_static test/novafex_test.cpp novafex.cpp novafex_arm64.S)
+	add_executable(novafex_test_static test/novafex_test.cpp novafex.cpp novafex_arm64.S guest_memory.cpp)
+	target_link_options(novafex_test_static PRIVATE -Wl,--wrap=memset,--wrap=memcpy,--wrap=memmove,--wrap=memcmp)
 	target_include_directories(novafex_test_static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_BINARY_DIR}/generated)
 	target_link_libraries(novafex_test_static PRIVATE FEXCore Common JemallocDummy)
 	target_compile_definitions(novafex_test_static PRIVATE NOVAFEX_STATIC_TEST=1)
@@ -26,3 +27,4 @@ else()
 	target_link_options(novafex_test PRIVATE -rdynamic)
 	set_target_properties(novafex_test PROPERTIES BUILD_RPATH "$ORIGIN")
 endif()
+

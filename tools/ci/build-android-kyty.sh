@@ -118,6 +118,15 @@ git -C "$work/kyty" apply "$repo/patches/kyty-anyps5-compute-workgroups.patch"
 git -C "$work/kyty" apply --check "$repo/patches/kyty-mesh-wave32.patch"
 git -C "$work/kyty" apply "$repo/patches/kyty-mesh-wave32.patch"
 python3 "$repo/tests/test_mesh_workgroup.py" "$work/kyty"
+git -C "$work/kyty" apply --check "$repo/patches/kyty-guest-memory-fastpath.patch"
+git -C "$work/kyty" apply "$repo/patches/kyty-guest-memory-fastpath.patch"
+cp "$repo/native/novafex/guest_memory.cpp" "$work/kyty/src/novaGuestMemory.cpp"
+cat >> "$work/kyty/CMakeLists.txt" <<'CMAKE'
+if(KYTY_ANDROID)
+    target_sources(kyty_emulator PRIVATE "${KYTY_SOURCE_DIR}/novaGuestMemory.cpp")
+    target_link_options(kyty_emulator PRIVATE -Wl,--wrap=memset,--wrap=memcpy,--wrap=memmove,--wrap=memcmp)
+endif()
+CMAKE
 python3 "$repo/tests/test_compute_workgroup.py" "$work/kyty"
 python3 "$repo/tests/test_shader_features.py" "$work/kyty"
 python3 "$repo/tests/test_gpu_completion.py" "$work/kyty"
@@ -173,4 +182,5 @@ ls -la "$out/lib"
 # Publish the exact patched renderer and its source dependencies alongside the APK.
 mkdir -p "$out/source"
 tar --exclude='.git' -czf "$out/source/Kyty-Android-corresponding-source.tar.gz" -C "$work" kyty adrenotools
+
 

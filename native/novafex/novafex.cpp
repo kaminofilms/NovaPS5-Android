@@ -1181,6 +1181,23 @@ bool EmulateHighAccess(ucontext_t* uc, uint64_t fault) {
 	const uint32_t rt = insn & 31, rn = (insn >> 5) & 31;
 	const uint32_t size = insn >> 30;
 
+	// Bionic's large zero fills use DC ZVA, Xt (including d50b7428: x8).
+	// It zeros the whole naturally aligned block, not merely the operand byte.
+	if ((insn & 0xffffffe0u) == 0xd50b7420u) {
+		uint64_t dczid;
+		asm volatile("mrs %0, dczid_el0" : "=r"(dczid));
+		if ((dczid & 16u) != 0 || rt == 31) return false;
+		const uint64_t bytes = uint64_t{4} << (dczid & 15u);
+		const uint64_t base = ReadX(uc, rt) & ~(bytes - 1);
+		const auto host = TranslateGuestVA(base);
+		if (base < FEXCore::Nova::kGuestVALowLimit || host == base) return false;
+		// Slot boundaries are aligned more coarsely than any architectural ZVA block.
+		// Preserve Xt: libc advances its original guest pointer after this instruction.
+		std::memset(reinterpret_cast<void*>(host), 0, bytes);
+		uc->uc_mcontext.pc += 4;
+		return true;
+	}
+
 	// Advanced SIMD ST2/LD2 (multiple structures), not the lane or SVE families.
 	// ARM encoding: 0 Q 001100 post L 0 Rm 1000 size Rn Rt.
 	if ((insn & 0xBF20F000u) == 0x0C008000u) {
@@ -1453,4 +1470,5 @@ extern "C" __attribute__((visibility("hidden"))) void nova_bridge_call(uint64_t 
 	q[0] = args.ret_vec[0];
 	q[1] = args.ret_vec[1];
 }
+
 
