@@ -105,8 +105,8 @@ new = '''case 0x2b:
 			case 0x2d:
 			case 0x30:
 				if (event_index == 0x00 && (!with_interrupt || eop_event_type == 0x2d)) {'''
-if s.count(old) != 1:
-    raise SystemExit('NOVA_EOP_FIX: expected cache_action 0x00 dispatch anchor not found exactly once')
+if s.count(old) != 2:
+    raise SystemExit('NOVA_EOP_FIX: expected both cache-action dispatch anchors not found')
 s = s.replace(old, new, 1)
 p.write_text(s)
 assert s.count('(!with_interrupt || eop_event_type == 0x2d)') == 1
