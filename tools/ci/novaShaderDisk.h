@@ -34,7 +34,7 @@ struct Archive {
             }
         } else if constexpr (IsVector<T>::value || std::is_same_v<T,std::string>) {
             uint32_t n=static_cast<uint32_t>(v.size()); Value(n);
-            if (!ok || n > 262144u || (reading && n > bytes.size()-cursor)) {ok=false; return;}
+            if (!ok || n > Limit || (reading && n > bytes.size()-cursor)) {ok=false; return;}
             if (reading) v.resize(n);
             for (auto& x:v) Value(x);
         } else if constexpr (IsArray<T>::value) {
