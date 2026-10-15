@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <cstdio>
 #include <fmt/format.h>
 #include <list>
 #include <thread>
@@ -1202,6 +1203,14 @@ bool FlipQueue::Flip(uint32_t micros) {
 	const auto owner = std::find_if(m_requests.begin(), m_requests.end(),
 	                               [](const auto& r) { return r.group == r.id; });
 	if (owner == m_requests.end()) {
+		// Diagnostic only: distinguish absent GPU flips from blocked presentation.
+		static std::atomic<uint64_t> no_owner_count {0};
+		const auto count = ++no_owner_count;
+		if (count == 1 || count % 240 == 0) {
+			std::fprintf(stderr, "NOVA_FLIP_DIAG: no owner, gpu_requests=%zu cpu_requests=%zu polls=%llu\\n",
+			             m_requests.size(), m_cpu_requests.size(),
+			             static_cast<unsigned long long>(count));
+		}
 		m_mutex.Unlock();
 		return false;
 	}
@@ -1211,6 +1220,13 @@ bool FlipQueue::Flip(uint32_t micros) {
 	    std::any_of(m_requests.begin(), m_requests.end(), [group](const auto& r) {
 		    return r.group == group && r.state != RequestState::Ready;
 	    })) {
+		static std::atomic<uint64_t> blocked_count {0};
+		const auto count = ++blocked_count;
+		if (count == 1 || count % 240 == 0) {
+			std::fprintf(stderr, "NOVA_FLIP_DIAG: group=%llu blocked, gpu_requests=%zu cpu_requests=%zu polls=%llu\\n",
+			             static_cast<unsigned long long>(group), m_requests.size(), m_cpu_requests.size(),
+			             static_cast<unsigned long long>(count));
+		}
 		m_mutex.Unlock();
 		return false;
 	}
