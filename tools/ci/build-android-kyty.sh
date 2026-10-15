@@ -123,6 +123,9 @@ git -C "$work/kyty" apply "$repo/patches/kyty-guest-memory-fastpath.patch"
 git -C "$work/kyty" apply --check "$repo/patches/kyty-agc-packet-fastpath.patch"
 git -C "$work/kyty" apply "$repo/patches/kyty-agc-packet-fastpath.patch"
 python3 "$repo/tests/test_agc_packet_fastpath.py" "$work/kyty"
+git -C "$work/kyty" apply --check "$repo/patches/kyty-agc-native-packets.patch"
+git -C "$work/kyty" apply "$repo/patches/kyty-agc-native-packets.patch"
+python3 "$repo/tests/test_agc_native_packets.py" "$work/kyty"
 cp "$repo/native/novafex/guest_memory.cpp" "$work/kyty/src/novaGuestMemory.cpp"
 cat >> "$work/kyty/CMakeLists.txt" <<'CMAKE'
 if(KYTY_ANDROID)

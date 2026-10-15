@@ -343,13 +343,21 @@ std::atomic<uint64_t> g_game_frames {0};
 // Emulator (host) loads/stores to translated guest addresses that had to be emulated in the
 // fault handler: each costs a signal round trip, so a high count names a slow path. The faulting
 // host pcs are recorded lock-free here and named by the watchdog thread.
-constexpr int kEmuSites = 48;
+constexpr int kEmuSites = 2048;
+constexpr int kEmuProbes = 16;
+static_assert(std::atomic<uint64_t>::is_always_lock_free);
 std::atomic<uint64_t> g_host_emulated {0};
+std::atomic<uint64_t> g_emu_untracked {0};
 std::atomic<uint64_t> g_emu_site_pc[kEmuSites] {};
 std::atomic<uint64_t> g_emu_site_count[kEmuSites] {};
 void NoteHostEmulation(uint64_t pc) {
 	g_host_emulated.fetch_add(1, std::memory_order_relaxed);
-	for (int i = 0; i < kEmuSites; i++) {
+	// Bounded hashed lookup avoids scanning a full early-boot table on every fault.
+	// Keep the exact total, and account explicitly for sites that do not fit.
+	const uint64_t key = (pc >> 2) * 0x9e3779b97f4a7c15ull;
+	const int first = static_cast<int>((key ^ (key >> 32)) & (kEmuSites - 1));
+	for (int probe = 0; probe < kEmuProbes; probe++) {
+		const int i = (first + probe) & (kEmuSites - 1);
 		uint64_t current = g_emu_site_pc[i].load(std::memory_order_relaxed);
 		if (current == 0) {
 			if (g_emu_site_pc[i].compare_exchange_strong(current, pc, std::memory_order_relaxed)) {
@@ -361,6 +369,7 @@ void NoteHostEmulation(uint64_t pc) {
 			return;
 		}
 	}
+	g_emu_untracked.fetch_add(1, std::memory_order_relaxed);
 }
 // Names a host code address as "symbol+0x..", or "library+0x.." without a symbol.
 void DescribeHostPc(uint64_t pc, char* out, size_t size) {
@@ -383,6 +392,9 @@ void DescribeHostPc(uint64_t pc, char* out, size_t size) {
 }
 // The busiest emulation sites (watchdog thread only).
 void ReportHostEmulationSites(int limit) {
+	std::fprintf(stderr, "NOVA_FEX: host access tracking total=%llu untracked=%llu capacity=%d\n",
+	             static_cast<unsigned long long>(g_host_emulated.load(std::memory_order_relaxed)),
+	             static_cast<unsigned long long>(g_emu_untracked.load(std::memory_order_relaxed)), kEmuSites);
 	struct Site {
 		uint64_t pc, count;
 	};

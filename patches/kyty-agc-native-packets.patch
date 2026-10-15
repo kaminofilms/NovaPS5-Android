@@ -1,0 +1,1075 @@
+--- a/src/libs/agc.cpp
++++ b/src/libs/agc.cpp
+@@ -1,5 +1,6 @@
+ #include "libs/agc.h"
+ #include "common/novaFex.h"
++#include "common/guestMemory.h"
+ 
+ #include "common/assert.h"
+ #include "common/emulatorConfig.h"
+@@ -314,6 +315,19 @@
+ 		return ret_ptr;
+ 	}
+ };
++
++// A native alias is valid only while this CommandBuffer fits in one guest slot.
++// Grow callbacks must receive the original guest object, never its host alias.
++static uint32_t* allocate_guest_packet(CommandBuffer* guest_buf, uint32_t size_dw) {
++	auto* host_buf = GuestMemory::Ptr(guest_buf, sizeof(CommandBuffer));
++	if (host_buf != guest_buf && size_dw != 0 && host_buf->GetAvailableSizeDW() >= size_dw) {
++		auto* result = host_buf->cursor_up;
++		host_buf->cursor_up += size_dw;
++		return result;
++	}
++	return guest_buf->AllocateDW(size_dw);
++}
++
+ 
+ struct Label {
+ 	volatile uint64_t m_value;
+@@ -1575,13 +1589,15 @@
+ 
+ 	uint32_t*  first  = nullptr;
+ 	const auto append = [&](uint32_t segment_size_dw) {
+-		auto* segment = buf->AllocateDW(segment_size_dw);
++		const uint32_t segment_dw = segment_size_dw;
++		auto* segment_guest = allocate_guest_packet(buf, segment_dw);
++		auto* segment = GuestMemory::Ptr(segment_guest, uint64_t {segment_dw} * sizeof(uint32_t));
+ 		if (segment == nullptr) {
+ 			return false;
+ 		}
+ 		std::fill_n(segment, segment_size_dw, 0u);
+ 		if (first == nullptr) {
+-			first      = segment;
++			first      = segment_guest;
+ 			segment[0] = KYTY_PM4(segment_size_dw, Pm4::IT_NOP, Pm4::R_CONTEXT_STATE);
+ 			segment[1] = operation;
+ 		} else {
+@@ -1727,7 +1743,9 @@
+ 		return nullptr;
+ 	}
+ 
+-	auto* cmd = buf->AllocateDW(size_in_dwords);
++	const uint32_t cmd_dw = size_in_dwords;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		return nullptr;
+@@ -1735,7 +1753,7 @@
+ 
+ 	cmd[0] = KYTY_PM4(size_in_dwords, Pm4::IT_NOP, Pm4::R_ZERO);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t KYTY_SYSV_ABI AgcCbNopGetSize(uint32_t size_in_dwords) {
+@@ -1760,7 +1778,9 @@
+ 		return nullptr;
+ 	}
+ 
+-	auto* cmd = buf->AllocateDW(5);
++	const uint32_t cmd_dw = 5;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		return nullptr;
+@@ -1772,7 +1792,7 @@
+ 	cmd[3] = thread_group_z;
+ 	cmd[4] = (modifier & 0xa038u) | 0x41u;
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t KYTY_SYSV_ABI AgcCbDispatchGetSize() {
+@@ -1833,7 +1853,9 @@
+ 
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 
+-	auto* cmd = buf->AllocateDW(BranchPacketSizeDw);
++	const uint32_t cmd_dw = BranchPacketSizeDw;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		LOGF_COLOR(Log::Color::Red, "\t failed to allocate branch packet\n");
+@@ -1856,7 +1878,7 @@
+ 	write_branch_target(cmd + 8, then_vaddr, cache_policy1, size_in_dwords1);
+ 	write_branch_target(cmd + 11, else_vaddr, cache_policy2, size_in_dwords2);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcCbSetShRegisterRangeDirect(CommandBuffer* buf, uint32_t offset,
+@@ -1875,7 +1897,9 @@
+ 
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 
+-	auto* cmd = buf->AllocateDW(num_values + 2);
++	const uint32_t cmd_dw = num_values + 2;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		LOGF_COLOR(Log::Color::Red, "\t failed to allocate set-register-range command\n");
+@@ -1889,7 +1913,7 @@
+ 		memcpy(cmd + 2, values, static_cast<size_t>(num_values) * 4);
+ 	}
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t KYTY_SYSV_ABI AgcCbSetShRegisterRangeDirectGetSize(uint32_t num_values) {
+@@ -1915,6 +1939,7 @@
+ 
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 	EXIT_NOT_IMPLEMENTED(regs == nullptr);
++	regs = GuestMemory::Ptr(regs, uint64_t {num_regs} * sizeof(ShaderRegister));
+ 
+ 	std::vector<ShaderRegister> local_regs(num_regs);
+ 	for (uint32_t i = 0; i < num_regs; i++) {
+@@ -1932,7 +1957,9 @@
+ 
+ 		if (flush) {
+ 			const auto run_count = i - run_start_index;
+-			auto*      cmd       = buf->AllocateDW(run_count + 2u);
++			const uint32_t cmd_dw = run_count + 2u;
++			auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++			auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 			if (cmd == nullptr) {
+ 				LOGF_COLOR(Log::Color::Red,
+@@ -1941,7 +1968,7 @@
+ 			}
+ 
+ 			if (first_cmd == nullptr) {
+-				first_cmd = cmd;
++				first_cmd = cmd_guest;
+ 			}
+ 
+ 			cmd[0] = KYTY_PM4(run_count + 2u, Pm4::IT_SET_SH_REG, 0u);
+@@ -1980,6 +2007,7 @@
+ 
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 	EXIT_NOT_IMPLEMENTED(regs == nullptr);
++	regs = GuestMemory::Ptr(regs, uint64_t {num_regs} * sizeof(ShaderRegister));
+ 
+ 	// Original implementation stages register values in a temporary DWORD array. It reads each new run only
+ 	// after the preceding run has been allocated, so preserve that ordering around grow callbacks.
+@@ -2004,11 +2032,13 @@
+ 		}
+ 
+ 		const auto run_count = i - run_start_index;
+-		auto*      cmd       = buf->AllocateDW(run_count + 2u);
++		const uint32_t cmd_dw = run_count + 2u;
++		auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++		auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 		if (cmd != nullptr) {
+ 			if (first_cmd == nullptr) {
+-				first_cmd = cmd;
++				first_cmd = cmd_guest;
+ 			}
+ 
+ 			cmd[0] = KYTY_PM4(run_count + 2u, Pm4::IT_SET_UCONFIG_REG, 0u);
+@@ -2129,14 +2159,16 @@
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 	EXIT_NOT_IMPLEMENTED((op & ~0x1c2u) != 0);
+ 
+-	auto* cmd = buf->AllocateDW(2);
++	const uint32_t cmd_dw = 2;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	EXIT_NOT_IMPLEMENTED(cmd == nullptr);
+ 
+ 	cmd[0] = KYTY_PM4(2, Pm4::IT_NOP, Pm4::R_DISPATCH_RESET);
+ 	cmd[1] = 0;
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcDcbResetQueue(CommandBuffer* buf, uint32_t op, uint32_t state) {
+@@ -2149,14 +2181,16 @@
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 	EXIT_NOT_IMPLEMENTED((op & ~0xfffu) != 0);
+ 
+-	auto* cmd = buf->AllocateDW(2);
++	const uint32_t cmd_dw = 2;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	EXIT_NOT_IMPLEMENTED(cmd == nullptr);
+ 
+ 	cmd[0] = KYTY_PM4(2, Pm4::IT_CLEAR_STATE, 0u);
+ 	cmd[1] = state & 0xfu;
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcDcbWaitUntilSafeForRendering(CommandBuffer* buf,
+@@ -2170,7 +2204,9 @@
+ 
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 
+-	auto* cmd = buf->AllocateDW(7);
++	const uint32_t cmd_dw = 7;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	EXIT_NOT_IMPLEMENTED(cmd == nullptr);
+ 
+@@ -2182,7 +2218,7 @@
+ 	cmd[5] = 0;
+ 	cmd[6] = 0;
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcDcbSetWorkloadsActive(CommandBuffer* buf, uint32_t stream_id,
+@@ -2222,7 +2258,9 @@
+ 		}
+ 	}
+ 
+-	auto* cmd = buf->AllocateDW(WORKLOAD_ACTIVE_PACKET_SIZE_DW);
++	const uint32_t cmd_dw = WORKLOAD_ACTIVE_PACKET_SIZE_DW;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 	if (cmd == nullptr) {
+ 		return nullptr;
+ 	}
+@@ -2234,7 +2272,7 @@
+ 	cmd[2] = static_cast<uint32_t>(workload_mask & 0xffffffffu);
+ 	cmd[3] = static_cast<uint32_t>((workload_mask >> 32u) & 0xffffffffu);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcDcbSetWorkloadComplete(CommandBuffer* buf, uint32_t stream_id,
+@@ -2257,7 +2295,9 @@
+ 		}
+ 	}
+ 
+-	auto* cmd = buf->AllocateDW(WORKLOAD_COMPLETE_PACKET_SIZE_DW);
++	const uint32_t cmd_dw = WORKLOAD_COMPLETE_PACKET_SIZE_DW;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 	if (cmd == nullptr) {
+ 		return nullptr;
+ 	}
+@@ -2272,7 +2312,7 @@
+ 	cmd[3] = static_cast<uint32_t>(workload_clear_mask & 0xffffffffu);
+ 	cmd[4] = static_cast<uint32_t>((workload_clear_mask >> 32u) & 0xffffffffu);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcDcbSetShRegisterDirect(CommandBuffer* buf, ShaderRegister reg) {
+@@ -2280,7 +2320,9 @@
+ 
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 
+-	auto* cmd = buf->AllocateDW(3);
++	const uint32_t cmd_dw = 3;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		LOGF_COLOR(Log::Color::Red, "\t failed to allocate set-sh-register-direct command\n");
+@@ -2291,7 +2333,7 @@
+ 	cmd[1] = reg.offset & 0xffffu;
+ 	cmd[2] = reg.value;
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcDcbSetCxRegisterDirect(CommandBuffer* buf, ShaderRegister reg) {
+@@ -2299,7 +2341,9 @@
+ 
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 
+-	auto* cmd = buf->AllocateDW(3);
++	const uint32_t cmd_dw = 3;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		LOGF_COLOR(Log::Color::Red, "\t failed to allocate set-cx-register-direct command\n");
+@@ -2310,7 +2354,7 @@
+ 	cmd[1] = reg.offset & 0xffffu;
+ 	cmd[2] = reg.value;
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t KYTY_SYSV_ABI AgcDcbSetCxRegisterDirectGetSize() {
+@@ -2324,7 +2368,9 @@
+ 
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 
+-	auto* cmd = buf->AllocateDW(3);
++	const uint32_t cmd_dw = 3;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		LOGF_COLOR(Log::Color::Red, "\t failed to allocate set-uc-register-direct command\n");
+@@ -2335,7 +2381,7 @@
+ 	cmd[1] = reg.offset & 0xffffu;
+ 	cmd[2] = reg.value;
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcDcbSetCxRegistersIndirect(CommandBuffer*                 buf,
+@@ -2349,7 +2395,9 @@
+ 
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 
+-	auto* cmd = buf->AllocateDW(RegIndirectPacketSizeDw);
++	const uint32_t cmd_dw = RegIndirectPacketSizeDw;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	EXIT_NOT_IMPLEMENTED(cmd == nullptr);
+ 
+@@ -2357,7 +2405,7 @@
+ 
+ 	reg_indirect_write_packet(cmd, vaddr, num_regs, RegIndirectPacket::Cx);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint64_t KYTY_SYSV_ABI AgcDcbSetCxRegistersIndirectGetSize() {
+@@ -2376,7 +2424,9 @@
+ 
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 
+-	auto* cmd = buf->AllocateDW(RegIndirectPacketSizeDw);
++	const uint32_t cmd_dw = RegIndirectPacketSizeDw;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	EXIT_NOT_IMPLEMENTED(cmd == nullptr);
+ 
+@@ -2384,7 +2434,7 @@
+ 
+ 	reg_indirect_write_packet(cmd, vaddr, num_regs, RegIndirectPacket::Sh);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint64_t KYTY_SYSV_ABI AgcDcbSetShRegistersIndirectGetSize() {
+@@ -2404,7 +2454,9 @@
+ 
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 
+-	auto* cmd = buf->AllocateDW(RegIndirectPacketSizeDw);
++	const uint32_t cmd_dw = RegIndirectPacketSizeDw;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	EXIT_NOT_IMPLEMENTED(cmd == nullptr);
+ 
+@@ -2412,7 +2464,7 @@
+ 
+ 	reg_indirect_write_packet(cmd, vaddr, num_regs, RegIndirectPacket::Uc);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcDcbSetIndexSize(CommandBuffer* buf, uint8_t index_size,
+@@ -2424,7 +2476,9 @@
+ 	     index_size, cache_policy);
+ 
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+-	auto* cmd = buf->AllocateDW(3);
++	const uint32_t cmd_dw = 3;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	EXIT_NOT_IMPLEMENTED(cmd == nullptr);
+ 
+@@ -2432,7 +2486,7 @@
+ 	cmd[1] = 0x20000000u | Pm4::VGT_INDEX_TYPE;
+ 	cmd[2] = 0x400u | (index_size & 0x3u) | ((cache_policy & 0x3u) << 6u);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcDcbSetIndexBuffer(CommandBuffer* buf, uint64_t index_addr) {
+@@ -2443,7 +2497,9 @@
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 	EXIT_NOT_IMPLEMENTED((index_addr & 1u) != 0);
+ 
+-	auto* cmd = buf->AllocateDW(3);
++	const uint32_t cmd_dw = 3;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	EXIT_NOT_IMPLEMENTED(cmd == nullptr);
+ 
+@@ -2451,7 +2507,7 @@
+ 	cmd[1] = static_cast<uint32_t>(index_addr & 0xffffffffu);
+ 	cmd[2] = static_cast<uint32_t>((index_addr >> 32u) & 0xffffffffu);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcDcbSetIndexCount(CommandBuffer* buf, uint32_t index_count) {
+@@ -2461,14 +2517,16 @@
+ 
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 
+-	auto* cmd = buf->AllocateDW(2);
++	const uint32_t cmd_dw = 2;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	EXIT_NOT_IMPLEMENTED(cmd == nullptr);
+ 
+ 	cmd[0] = KYTY_PM4(2, Pm4::IT_INDEX_BUFFER_SIZE, 0u);
+ 	cmd[1] = index_count;
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcDcbSetNumInstances(CommandBuffer* buf, uint32_t num_instances) {
+@@ -2480,7 +2538,9 @@
+ 		return nullptr;
+ 	}
+ 
+-	auto* cmd = buf->AllocateDW(2);
++	const uint32_t cmd_dw = 2;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		return nullptr;
+@@ -2489,7 +2549,7 @@
+ 	cmd[0] = KYTY_PM4(2, Pm4::IT_NUM_INSTANCES, 0u);
+ 	cmd[1] = num_instances;
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t KYTY_SYSV_ABI AgcDcbSetNumInstancesGetSize() {
+@@ -2576,7 +2636,9 @@
+ 	EXIT_NOT_IMPLEMENTED(index_addr == nullptr);
+ 	EXIT_NOT_IMPLEMENTED((reinterpret_cast<uint64_t>(index_addr) & 1u) != 0);
+ 
+-	auto* cmd = buf->AllocateDW(6);
++	const uint32_t cmd_dw = 6;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	EXIT_NOT_IMPLEMENTED(cmd == nullptr);
+ 
+@@ -2589,7 +2651,7 @@
+ 	cmd[4] = index_count;
+ 	cmd[5] = decode_draw_index_initiator(modifier);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t KYTY_SYSV_ABI AgcDcbDrawIndexGetSize() {
+@@ -2617,7 +2679,9 @@
+ 	EXIT_NOT_IMPLEMENTED(object_ids == nullptr);
+ 	EXIT_NOT_IMPLEMENTED((reinterpret_cast<uint64_t>(index_addr) & 1u) != 0);
+ 
+-	auto* cmd = buf->AllocateDW(9);
++	const uint32_t cmd_dw = 9;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	EXIT_NOT_IMPLEMENTED(cmd == nullptr);
+ 
+@@ -2634,7 +2698,7 @@
+ 	cmd[7] = instance_count;
+ 	cmd[8] = decode_draw_index_initiator(modifier) | 0x80u;
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t KYTY_SYSV_ABI AgcDcbDrawIndexMultiInstancedGetSize() {
+@@ -2684,7 +2748,9 @@
+ 
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 
+-	auto* cmd = buf->AllocateDW(3);
++	const uint32_t cmd_dw = 3;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	EXIT_NOT_IMPLEMENTED(cmd == nullptr);
+ 
+@@ -2692,7 +2758,7 @@
+ 	cmd[1] = index_count;
+ 	cmd[2] = decode_draw_index_initiator(modifier) | 0x2u;
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t KYTY_SYSV_ABI AgcDcbDrawIndexAutoGetSize() {
+@@ -2712,7 +2778,9 @@
+ 
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 
+-	auto* cmd = buf->AllocateDW(5);
++	const uint32_t cmd_dw = 5;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	EXIT_NOT_IMPLEMENTED(cmd == nullptr);
+ 
+@@ -2722,7 +2790,7 @@
+ 	cmd[3] = index_count;
+ 	cmd[4] = decode_draw_index_initiator(modifier);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t KYTY_SYSV_ABI AgcDcbDrawIndexOffsetGetSize() {
+@@ -2741,7 +2809,9 @@
+ 
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 
+-	auto* cmd = buf->AllocateDW(4);
++	const uint32_t cmd_dw = 4;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	EXIT_NOT_IMPLEMENTED(cmd == nullptr);
+ 
+@@ -2752,7 +2822,7 @@
+ 	cmd[2] = static_cast<uint32_t>(addr) & ~0x7u;
+ 	cmd[3] = static_cast<uint32_t>(addr >> 32u);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcDcbDrawIndexIndirect(CommandBuffer* buf, uint32_t data_offset_in_bytes,
+@@ -2765,7 +2835,9 @@
+ 
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 
+-	auto* cmd = buf->AllocateDW(5);
++	const uint32_t cmd_dw = 5;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	EXIT_NOT_IMPLEMENTED(cmd == nullptr);
+ 
+@@ -2779,7 +2851,7 @@
+ 	cmd[3] = static_cast<uint32_t>(patch_offsets >> 32u);
+ 	cmd[4] = decode_draw_index_initiator(modifier);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcDcbDrawIndirect(CommandBuffer* buf, uint32_t data_offset_in_bytes,
+@@ -2792,7 +2864,9 @@
+ 
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 
+-	auto* cmd = buf->AllocateDW(5);
++	const uint32_t cmd_dw = 5;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	EXIT_NOT_IMPLEMENTED(cmd == nullptr);
+ 
+@@ -2804,7 +2878,7 @@
+ 	cmd[3] = static_cast<uint32_t>(patch_offsets >> 32u);
+ 	cmd[4] = decode_indirect_draw_initiator(modifier);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcDcbDrawIndirectMulti(CommandBuffer*       buf,
+@@ -2832,7 +2906,9 @@
+ 	constexpr uint32_t total_size_dw =
+ 	    AGC_INTERNAL_DATA_PACKET_SIZE_DW + draw_packet_size_dw +
+ 	    AGC_INTERNAL_DATA_PACKET_SIZE_DW;
+-	auto* cmd = buf->AllocateDW(total_size_dw);
++	const uint32_t cmd_dw = total_size_dw;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 	if (cmd == nullptr) {
+ 		return nullptr;
+ 	}
+@@ -2865,7 +2941,7 @@
+ 	draw[8] = stride_in_bytes;
+ 	draw[9] = decode_indirect_draw_initiator(modifier);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcDcbDrawIndexIndirectMulti(CommandBuffer*       buf,
+@@ -2888,7 +2964,9 @@
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 	EXIT_NOT_IMPLEMENTED((count_indirect & ~1u) != 0);
+ 
+-	auto* cmd = buf->AllocateDW(10);
++	const uint32_t cmd_dw = 10;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	EXIT_NOT_IMPLEMENTED(cmd == nullptr);
+ 
+@@ -2917,7 +2995,7 @@
+ 	cmd[8] = stride_in_bytes;
+ 	cmd[9] = decode_draw_index_initiator(modifier);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t KYTY_SYSV_ABI AgcDcbDrawIndirectGetSize() {
+@@ -2936,7 +3014,9 @@
+ 
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 
+-	auto* cmd = buf->AllocateDW(3);
++	const uint32_t cmd_dw = 3;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	EXIT_NOT_IMPLEMENTED(cmd == nullptr);
+ 
+@@ -2944,7 +3024,7 @@
+ 	cmd[1] = data_offset_in_bytes;
+ 	cmd[2] = (flags & 0xa038u) | 0x41u;
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t KYTY_SYSV_ABI AgcDcbDispatchIndirectGetSize() {
+@@ -2968,7 +3048,9 @@
+ 	EXIT_NOT_IMPLEMENTED(event_type > 0x3fu);
+ 
+ 	const bool addressed_event = ((event_type & 0xfeu) == 0x38u);
+-	auto*      cmd             = buf->AllocateDW(addressed_event ? 4u : 2u);
++	const uint32_t cmd_dw = addressed_event ? 4u : 2u;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	EXIT_NOT_IMPLEMENTED(cmd == nullptr);
+ 
+@@ -2986,7 +3068,7 @@
+ 		cmd[1] = event_type & 0x3fu;
+ 	}
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint64_t KYTY_SYSV_ABI AgcDcbEventWriteGetSize(uint8_t event_type) {
+@@ -3001,7 +3083,9 @@
+ 		return nullptr;
+ 	}
+ 
+-	auto* cmd = buf->AllocateDW(2);
++	const uint32_t cmd_dw = 2;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		return nullptr;
+@@ -3010,7 +3094,7 @@
+ 	cmd[0] = KYTY_PM4(2, Pm4::IT_EVENT_WRITE, 0u);
+ 	cmd[1] = (static_cast<uint32_t>(event_type) & 0x3fu) | (event_type == 7u ? 0x400u : 0u);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcDcbAcquireMem(CommandBuffer* buf, uint8_t engine, uint32_t cb_db_op,
+@@ -3062,7 +3146,9 @@
+ 		}
+ 	}
+ 
+-	auto* cmd = buf->AllocateDW(8);
++	const uint32_t cmd_dw = 8;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		LOGF_COLOR(Log::Color::Red, "\t failed to allocate acquire_mem packet\n");
+@@ -3078,7 +3164,7 @@
+ 	cmd[6] = poll_cycles / 40;
+ 	cmd[7] = gcr_cntl;
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t KYTY_SYSV_ABI AgcDcbAcquireMemGetSize() {
+@@ -3120,7 +3206,9 @@
+ 		return nullptr;
+ 	}
+ 
+-	auto* cmd = buf->AllocateDW(5);
++	const uint32_t cmd_dw = 5;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		LOGF_COLOR(Log::Color::Red, "\t failed to allocate condExec packet\n");
+@@ -3135,7 +3223,7 @@
+ 	cmd[3] = 0;
+ 	cmd[4] = num_dwords & 0x3fffu;
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t KYTY_SYSV_ABI AgcDcbCondExecGetSize() {
+@@ -3161,7 +3249,9 @@
+ 		return nullptr;
+ 	}
+ 
+-	auto* cmd = buf->AllocateDW(4);
++	const uint32_t cmd_dw = 4;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 	if (cmd == nullptr) {
+ 		return nullptr;
+ 	}
+@@ -3173,7 +3263,7 @@
+ 	cmd[3] = 0x0f900000u | ((static_cast<uint32_t>(cache_policy) & 0x3u) << 28u) |
+ 	         (size_in_dwords & 0xfffffu);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t KYTY_SYSV_ABI AgcAcbJumpGetSize() {
+@@ -3219,7 +3309,9 @@
+ 		default: break;
+ 	}
+ 
+-	auto* cmd = buf->AllocateDW(7);
++	const uint32_t cmd_dw = 7;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		return nullptr;
+@@ -3241,7 +3333,7 @@
+ 	         ((static_cast<uint32_t>(wait_for_previous) & 0x1u) << 30u) |
+ 	         ((static_cast<uint32_t>(write_confirm) & 0x1u) << 31u);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcAcbCopyData(CommandBuffer* buf, uint8_t dst, uint8_t dst_cache_policy,
+@@ -3252,7 +3344,9 @@
+ 		return nullptr;
+ 	}
+ 
+-	auto* cmd = buf->AllocateDW(6);
++	const uint32_t cmd_dw = 6;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		return nullptr;
+@@ -3269,7 +3363,7 @@
+ 	cmd[4] = static_cast<uint32_t>(dst_address & 0xffffffffu);
+ 	cmd[5] = static_cast<uint32_t>((dst_address >> 32u) & 0xffffffffu);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint64_t KYTY_SYSV_ABI AgcAcbCopyDataGetSize() {
+@@ -3291,7 +3385,9 @@
+ 		return nullptr;
+ 	}
+ 
+-	auto* cmd = buf->AllocateDW(4);
++	const uint32_t cmd_dw = 4;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		return nullptr;
+@@ -3304,7 +3400,7 @@
+ 	cmd[2] = static_cast<uint32_t>((args_addr >> 32u) & 0xffffffffu);
+ 	cmd[3] = (modifier & 0xa038u) | 0x41u;
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcAcbWriteData(CommandBuffer* buf, uint8_t dst, uint8_t cache_policy,
+@@ -3315,7 +3411,9 @@
+ 		return nullptr;
+ 	}
+ 
+-	auto* cmd = buf->AllocateDW(4u + num_dwords);
++	const uint32_t cmd_dw = 4u + num_dwords;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		return nullptr;
+@@ -3331,7 +3429,7 @@
+ 
+ 	memcpy(cmd + 4, data, static_cast<size_t>(num_dwords) * 4u);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcDcbStallCommandBufferParser(CommandBuffer* buf) {
+@@ -3339,14 +3437,16 @@
+ 
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 
+-	auto* cmd = buf->AllocateDW(2);
++	const uint32_t cmd_dw = 2;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	EXIT_NOT_IMPLEMENTED(cmd == nullptr);
+ 
+ 	cmd[0] = KYTY_PM4(2, Pm4::IT_PFP_SYNC_ME, 0u);
+ 	cmd[1] = 0;
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcDcbCopyData(CommandBuffer* buf, uint8_t dst, uint8_t dst_cache_policy,
+@@ -3423,7 +3523,9 @@
+ 		default: break;
+ 	}
+ 
+-	auto* cmd = buf->AllocateDW(7);
++	const uint32_t cmd_dw = 7;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		return nullptr;
+@@ -3447,7 +3549,7 @@
+ 	         ((static_cast<uint32_t>(wait_for_previous) & 0x1u) << 30u) |
+ 	         ((static_cast<uint32_t>(write_confirm) & 0x1u) << 31u);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcDcbJump(CommandBuffer* buf, uint8_t mode, uint8_t cache_policy,
+@@ -3464,7 +3566,9 @@
+ 		return nullptr;
+ 	}
+ 
+-	auto* cmd = buf->AllocateDW(4);
++	const uint32_t cmd_dw = 4;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		return nullptr;
+@@ -3478,7 +3582,7 @@
+ 	cmd[3] = 0x0f200000u | ((static_cast<uint32_t>(cache_policy) & 0x3u) << 28u) |
+ 	         ((static_cast<uint32_t>(mode) & 0x1u) << 20u) | (size_in_dwords & 0xfffffu);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t KYTY_SYSV_ABI AgcDcbJumpGetSize() {
+@@ -3502,7 +3606,9 @@
+ 		return nullptr;
+ 	}
+ 
+-	auto* cmd = buf->AllocateDW(2);
++	const uint32_t cmd_dw = 2;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		return nullptr;
+@@ -3511,7 +3617,7 @@
+ 	cmd[0] = KYTY_PM4(2, Pm4::IT_REWIND, 0u);
+ 	cmd[1] = (initial_state & 0x1u) << 31u;
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcDcbSetPredication(CommandBuffer* buf, uint8_t condition, uint8_t op,
+@@ -3530,7 +3636,9 @@
+ 		return nullptr;
+ 	}
+ 
+-	auto* cmd = buf->AllocateDW(4);
++	const uint32_t cmd_dw = 4;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		return nullptr;
+@@ -3547,7 +3655,7 @@
+ 
+ 	(void)count_in_dwords;
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcUnknownKRzWekV120(CommandBuffer* buf, uint32_t arg1, uint32_t arg2,
+@@ -3565,7 +3673,9 @@
+ 		return nullptr;
+ 	}
+ 
+-	auto* cmd = buf->AllocateDW(3);
++	const uint32_t cmd_dw = 3;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		return nullptr;
+@@ -3581,7 +3691,7 @@
+ 
+ 	cmd[2] = word8;
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ int KYTY_SYSV_ABI AgcDmaDataPatchSetDstAddressOrOffset(uint32_t* cmd,
+@@ -3765,7 +3875,9 @@
+ 		return nullptr;
+ 	}
+ 
+-	auto* cmd = buf->AllocateDW(4 + num_dwords);
++	const uint32_t cmd_dw = 4 + num_dwords;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		LOGF_COLOR(Log::Color::Red, "\t failed to allocate command\n");
+@@ -3785,7 +3897,7 @@
+ 
+ 	memcpy(cmd + 4, data, static_cast<size_t>(num_dwords) * 4);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t KYTY_SYSV_ABI AgcDcbWriteDataGetSize(uint32_t num_dwords) {
+@@ -3817,7 +3929,9 @@
+ 		return nullptr;
+ 	}
+ 
+-	auto* cmd = buf->AllocateDW(5);
++	const uint32_t cmd_dw = 5;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		return nullptr;
+@@ -3834,7 +3948,7 @@
+ 	         ((static_cast<uint32_t>(force_reset) & 0x1u) << 18u) | ((reset_count & 0xffu) << 10u) |
+ 	         ((reporting_interval_in_100k_clocks & 0xffu) << 2u);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ static uint32_t* get_agc_wait_packet(uint32_t* cmd) {
+@@ -4100,7 +4214,9 @@
+ 	const auto len            = strlen(str) + 1;
+ 	const auto payload_dwords = static_cast<uint32_t>((len + 3) / 4);
+ 	const auto size           = 1u + (payload_dwords == 0 ? 1u : payload_dwords);
+-	auto*      cmd            = buf->AllocateDW(size);
++	const uint32_t cmd_dw = size;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		return nullptr;
+@@ -4110,7 +4226,7 @@
+ 	memset(cmd + 1, 0, static_cast<size_t>(size - 1) * sizeof(uint32_t));
+ 	memcpy(cmd + 1, str, len);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcDcbSetMarker(CommandBuffer* buf, const char* str, uint32_t color) {
+@@ -4130,7 +4246,9 @@
+ 		return nullptr;
+ 	}
+ 
+-	auto* cmd = buf->AllocateDW(2);
++	const uint32_t cmd_dw = 2;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	if (cmd == nullptr) {
+ 		return nullptr;
+@@ -4139,7 +4257,7 @@
+ 	cmd[0] = KYTY_PM4(2, Pm4::IT_NOP, Pm4::R_POP_MARKER);
+ 	cmd[1] = 0;
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ uint32_t* KYTY_SYSV_ABI AgcAcbPopMarker(CommandBuffer* buf) {
+@@ -4159,7 +4277,9 @@
+ 
+ 	EXIT_NOT_IMPLEMENTED(buf == nullptr);
+ 
+-	auto* cmd = buf->AllocateDW(6);
++	const uint32_t cmd_dw = 6;
++	auto* cmd_guest = allocate_guest_packet(buf, cmd_dw);
++	auto* cmd = GuestMemory::Ptr(cmd_guest, uint64_t {cmd_dw} * sizeof(uint32_t));
+ 
+ 	EXIT_NOT_IMPLEMENTED(cmd == nullptr);
+ 
+@@ -4170,7 +4290,7 @@
+ 	cmd[4] = static_cast<uint32_t>(static_cast<uint64_t>(flip_arg) & 0xffffffffu);
+ 	cmd[5] = static_cast<uint32_t>((static_cast<uint64_t>(flip_arg) >> 32u) & 0xffffffffu);
+ 
+-	return cmd;
++	return cmd_guest;
+ }
+ 
+ } // namespace Gen5
