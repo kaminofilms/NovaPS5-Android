@@ -57,6 +57,18 @@ bool RegisterVerifiedCheckpointObject(uint64_t guest_base) {
 bool ReadWatchpointTrace(size_t index, NovaFexWatchpoint::TraceRecord* out) {
   return out && NovaFexWatchpoint::TryReadTrace(index, *out);
 }
+
+static void DumpWatchpointTrace() {
+  NovaFexWatchpoint::TraceRecord record;
+  for (size_t i = 0; i < NovaFexWatchpoint::TRACE_CAPACITY; ++i) {
+    if (!ReadWatchpointTrace(i, &record)) continue;
+    std::fprintf(stderr, "NOVA_STORE_INTENT: seq=%llu object=0x%llx fields=%u guest_rip=0x%llx guest_address=0x%llx width=%u payload=0x%llx host_tid=%u attempted=1 completion=unobserved\n",
+      static_cast<unsigned long long>(record.sequence), static_cast<unsigned long long>(record.matched_base),
+      unsigned(record.fields), static_cast<unsigned long long>(record.intent.guest_rip),
+      static_cast<unsigned long long>(record.intent.guest_address), unsigned(record.intent.width),
+      static_cast<unsigned long long>(record.intent.payload), record.intent.host_thread_id);
+  }
+}
 namespace {
 std::atomic<void (*)()> g_freeze_hook {nullptr};
 
@@ -1039,6 +1051,7 @@ void SetFreezeReportHook(void (*hook)()) {
 }
 
 void ReportGuestFault(void* ucontext) {
+	DumpWatchpointTrace();
 	auto* uc = static_cast<ucontext_t*>(ucontext);
 	if (uc == nullptr) return;
 	const uint64_t pc = uc->uc_mcontext.pc;

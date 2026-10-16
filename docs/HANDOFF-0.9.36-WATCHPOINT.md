@@ -47,8 +47,8 @@ base as unconditionally a guest address.
 
 `NovaFex::RegisterVerifiedCheckpointObject(base)` is an explicit API. Caller must
 prove the object identity and pin mappings/lifetime. No production Luna caller
-has been established. `ReadWatchpointTrace` provides bounded consumption; a
-production session-log/fault dump consumer is also still needed.
+has been established. `ReadWatchpointTrace` provides bounded consumption. ReportGuestFault now drains
+at most 1024 records as NOVA_STORE_INTENT lines with completion=unobserved.
 
 ## Tests and CI
 
@@ -72,7 +72,10 @@ First validation run:
 https://github.com/kaminofilms/NovaPS5-Android/actions/runs/38834453560
 
 Do not assume this run passed: inspect final jobs and logs. Repair actual
-compilation/test errors. The initial source commit is
+compilation/test errors. Compilation succeeded after adding the architectural FPSR encoding missing from
+the pinned emitter enum. Run 38834871850 built Android FEX and the bridge at
+29153a024437634bb416b1394186f0f1c2fee3cb. Its runtime result must still be checked.
+The initial source commit is
 `ecf66954892eabe63c80b24cd6d0b765d5e2fb2f`.
 
 ## Blocking gaps before a useful device APK
@@ -84,11 +87,13 @@ compilation/test errors. The initial source commit is
    first writer was caught. Bind registration and any mapping lifetime policy to
    verified object identity. Immutable slots must not outlive/reclassify reused
    allocations without a proven lifetime policy.
-2. Wire bounded trace consumption into actual device boot/fault logs. Until this
-   exists, the API alone will not produce writer records in the owner's log.
+2. Confirm ReportGuestFault is reached on the actual Luna failure. It now emits
+   bounded NOVA_STORE_INTENT records. A full ring drops later records until drained;
+   select an earlier safe drain point if real traces demonstrate this is needed.
 3. Add actual AArch64 differential coverage for every effective-address mode,
    SIMD/FPCR/FPSR preservation and synchronous fault versus successful stores.
-   Current scalar tests cover widths, zero source, RIP/payload/address and flags;
+   The added scalar tests cover widths, zero source, RIP/payload/address, flags,
+   a live XMM value, indexed/extended addresses and successful/faulting stores;
    do not claim the full requested validation matrix is complete.
 4. Establish whether the offending writer is StoreMem. Production enables TSO;
    StoreMemTSO is intentionally outside this task. Do not silently disable TSO
@@ -118,3 +123,8 @@ keep application ID and all user data. Verify signatures/certificate continuity,
 ARM64 libraries, version, packaging and published artifact. Do not substitute
 0.9.35 or a source archive for the requested APK. No 0.9.36 APK has been produced
 by the initial integration commit.
+
+Prior-context check: the earlier review explicitly left runtime object identity,
+object address, constructor/property-population location and writer RIP unresolved.
+The reported memcpy RIP 0x910003fc6 is a crash site, not a proven corrupting writer.
+Do not arm a guessed object based on that RIP or on 0x42c80000.

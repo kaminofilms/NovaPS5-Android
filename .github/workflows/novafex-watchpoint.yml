@@ -22,7 +22,9 @@ jobs:
         with:
           path: ~/.cache/ccache
           key: android-fex-0936-${{ github.sha }}
-          restore-keys: android-fex-ccache-14c92681f4d62cf84d901460e0358de09c8847a7-
+          restore-keys: |
+            android-fex-0936-
+            android-fex-ccache-14c92681f4d62cf84d901460e0358de09c8847a7-
       - name: Compile pinned FEX and Android ARM64 bridge
         run: |
           export ANDROID_NDK=$ANDROID_NDK_LATEST_HOME
@@ -55,6 +57,11 @@ jobs:
           set -o pipefail
           timeout 300s dist/novafex/novafex_test_static 2>&1 | tee scalar-runtime.txt
           grep -q 'NOVAFEX_TEST: ALL PASS' scalar-runtime.txt
+      - name: Successful and synchronous faulting original stores
+        run: |
+          set -o pipefail
+          NOVA_WATCHPOINT_FAULT_TEST=success timeout 60s dist/novafex/novafex_test_static 2>&1 | tee success-runtime.txt
+          NOVA_WATCHPOINT_FAULT_TEST=fault timeout 60s dist/novafex/novafex_test_static 2>&1 | tee fault-runtime.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:

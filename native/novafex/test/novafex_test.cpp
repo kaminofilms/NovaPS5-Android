@@ -30,6 +30,8 @@ namespace {
 
 int g_failures = 0;
 volatile sig_atomic_t g_host_faults = 0;
+volatile sig_atomic_t g_watchpoint_fault = 0;
+uint64_t g_watchpoint_fault_address = 0, g_watchpoint_fault_rip = 0;
 
 void Check(const char* name, bool ok, const char* detail = "") {
 	std::printf("NOVAFEX_TEST: %-28s %s %s\n", name, ok ? "PASS" : "FAIL", detail);
@@ -38,6 +40,25 @@ void Check(const char* name, bool ok, const char* detail = "") {
 }
 
 void FaultHandler(int signal, siginfo_t* info, void* ucontext) {
+	if (g_watchpoint_fault) {
+		NovaFexWatchpoint::TraceRecord record;
+		unsigned found = 0;
+		bool valid = signal == SIGSEGV && reinterpret_cast<uint64_t>(info->si_addr) == g_watchpoint_fault_address;
+		for (size_t i = 0; i < NovaFexWatchpoint::TRACE_CAPACITY; ++i) {
+			if (!NovaFex::ReadWatchpointTrace(i, &record)) continue;
+			++found;
+			valid &= record.intent.guest_rip == g_watchpoint_fault_rip &&
+			         record.intent.guest_address == g_watchpoint_fault_address &&
+			         record.intent.payload == 0x42c80000 && record.intent.width == 8 &&
+			         record.attempted && !record.completed;
+		}
+		const bool passed = valid && found == 1;
+		const char pass[] = "NOVA_WATCHPOINT_FAULT: PASS (attempt only; original SIGSEGV)\n";
+		const char fail[] = "NOVA_WATCHPOINT_FAULT: FAIL\n";
+		if (passed) (void)!write(1, pass, sizeof(pass) - 1);
+		else (void)!write(1, fail, sizeof(fail) - 1);
+		_exit(passed ? 0 : 1);
+	}
 	g_host_faults = g_host_faults + 1;
 	if (NovaFex::HandleHostFault(signal, info, ucontext)) {
 		return;
@@ -170,6 +191,8 @@ bool SeccompTrapToEnosys() {
 } // namespace
 
 int main() {
+	const char* watchpoint_store_test = getenv("NOVA_WATCHPOINT_FAULT_TEST");
+	if (watchpoint_store_test) setenv("FEX_TSOENABLED", "0", 1);
 	Check("seccomp SIGSYS -> ENOSYS", SeccompTrapToEnosys());
 
 	struct sigaction sa {};
@@ -185,6 +208,32 @@ int main() {
 	GuestCode code;
 	code.base = static_cast<uint8_t*>(mmap(nullptr, 1 << 16, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
 	NovaFex::RegisterGuestCodeRange(reinterpret_cast<uint64_t>(code.base), 1 << 16);
+	if (watchpoint_store_test) {
+		const size_t page = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+		auto* object = static_cast<uint8_t*>(mmap(nullptr, page, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+		if (object == MAP_FAILED) return 1;
+		const auto base = reinterpret_cast<uint64_t>(object);
+		if (!NovaFex::RegisterVerifiedCheckpointObject(base)) return 1;
+		const auto store = code.Emit({0x48,0x89,0x77,0x38,0xc3});
+		const bool fault = std::strcmp(watchpoint_store_test, "fault") == 0;
+		if (fault) {
+			g_watchpoint_fault_address = base + 0x38;
+			g_watchpoint_fault_rip = store;
+			g_watchpoint_fault = 1;
+			if (mprotect(object, page, PROT_NONE)) return 1;
+		}
+		NovaFex::CallGuest(store, base, 0x42c80000);
+		if (fault) return 1; // fault suppression is a test failure
+		NovaFexWatchpoint::TraceRecord record;
+		const bool exact = NovaFex::ReadWatchpointTrace(0, &record) &&
+		                   record.intent.guest_rip == store && record.intent.guest_address == base + 0x38 &&
+		                   record.intent.payload == 0x42c80000 && record.intent.width == 8 &&
+		                   record.attempted && !record.completed;
+		uint64_t stored = 0;
+		std::memcpy(&stored, object + 0x38, 8);
+		Check("successful original scalar store", exact && stored == 0x42c80000);
+		return g_failures ? 1 : 0;
+	}
 
 	// add(a, b): lea rax, [rdi+rsi]; ret
 	const uint64_t add = code.Emit({0x48, 0x8D, 0x04, 0x37, 0xC3});

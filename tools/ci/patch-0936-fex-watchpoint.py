@@ -6,6 +6,7 @@ import sys
 root = Path(sys.argv[1])
 p = root / 'FEXCore/Source/Interface/Core/JIT/MemoryOps.cpp'
 s = p.read_text()
+assert 'Nova 0.9.36: scalar intents only' not in s, 'watchpoint patch already applied'
 start = s.index('DEF_OP(StoreMem) {')
 end = s.index('\nDEF_OP(', start + 1)
 body = s[start:end]

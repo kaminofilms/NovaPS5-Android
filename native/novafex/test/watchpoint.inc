@@ -34,4 +34,33 @@ if (getenv("NOVA_WATCHPOINT_SCALAR_TEST")) {
   // cmp; mov [rdi+0x40],rsi; sete al; movzx eax,al; ret.
   const auto flags = code.Emit({0x48,0x39,0xf6,0x48,0x89,0x77,0x40,0x0f,0x94,0xc0,0x0f,0xb6,0xc0,0xc3});
   Check("scalar condition flags preserved", NovaFex::CallGuest(flags, base, payload) == 1);
+  while (NovaFex::ReadWatchpointTrace(5, &record)) {}
+  // Live SIMD source must survive the C++ callback as well as GPR operands.
+  const auto simd_live = code.Emit({0x66,0x48,0x0f,0x6e,0xc6,0x48,0x89,0x77,0x40,
+                                   0x66,0x48,0x0f,0x7e,0xc0,0xc3});
+  Check("scalar live SIMD preserved", NovaFex::CallGuest(simd_live, base, payload) == payload);
+  for (size_t i = 0; i < NovaFexWatchpoint::TRACE_CAPACITY; ++i) NovaFex::ReadWatchpointTrace(i, &record);
+  // Differential guest addressing: scaled full-width index, negative
+  // displacement, sign-extended 32-bit index and zero-extended 32-bit index.
+  const auto indexed = code.Emit({0x89,0x54,0xb7,0x38,0xc3});
+  const auto negative = code.Emit({0x89,0x57,0xff,0xc3});
+  const auto signed_index = code.Emit({0x48,0x63,0xf6,0x89,0x54,0xb7,0x38,0xc3});
+  const auto unsigned_index = code.Emit({0x89,0xf6,0x89,0x54,0xb7,0x38,0xc3});
+  bool addresses = true;
+  for (unsigned n = 0; n < 32; ++n) {
+    const uint64_t index = n * 13;
+    NovaFex::CallGuest(indexed, base - index * 4, index, payload + n);
+    NovaFex::CallGuest(negative, base + 0x39, 0, payload + n);
+    NovaFex::CallGuest(signed_index, base + 4, UINT64_C(0xffffffff), payload + n);
+    NovaFex::CallGuest(unsigned_index, base - 4, UINT64_C(0x123400000001), payload + n);
+    unsigned records = 0;
+    for (size_t i = 0; i < NovaFexWatchpoint::TRACE_CAPACITY; ++i) {
+      if (!NovaFex::ReadWatchpointTrace(i, &record)) continue;
+      addresses &= record.intent.guest_address == base + 0x38 && record.intent.width == 4 &&
+                   record.intent.payload == static_cast<uint32_t>(payload + n);
+      ++records;
+    }
+    addresses &= records == 4;
+  }
+  Check("scalar addressing differential", addresses);
 }
