@@ -1,3 +1,5 @@
+> Latest release: **versionCode 89**, source `1b334a297bf96e6670b55bb04eab27900fcdcdac`, all CI gates passed. Ever Forward now records eligible EOP labels on the GPU. See [Ever Forward GPU-label handoff](EVER-FORWARD-GPU-LABELS-20261016.md) for APK, verification, exact files and the next-log continuation prompt. FPS gains await phone testing; Dead Cells retains versionCode 88 behavior.
+
 # Latest focus — Ever waits and Dead Cells regression, versionCode 88
 
 Read [EVER-DEAD-CELLS-SYNC-20261016.md](EVER-DEAD-CELLS-SYNC-20261016.md).
