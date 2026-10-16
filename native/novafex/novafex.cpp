@@ -466,12 +466,26 @@ void ReportHostEmulationSites(int limit) {
 }
 
 // Stall diagnostics: every host thread prints its own native backtrace on SIGRTMIN+6.
-void DumpSelf(int, siginfo_t*, void*) {
+void DumpSelf(int, siginfo_t*, void* ucontext) {
 	void* frames[40];
 	const int count = backtrace(frames, 40);
 	char header[96];
 	const int n = std::snprintf(header, sizeof(header), "NOVA_FEX: --- stack of tid %d ---\n", static_cast<int>(gettid()));
 	(void)!write(2, header, static_cast<size_t>(n));
+	// Android unwinding may stop at the signal trampoline. Preserve the actual
+	// interrupted location independently; these are native addresses, not guest RIPs.
+	if (const auto* uc = static_cast<const ucontext_t*>(ucontext)) {
+		char context[240];
+		const int length = std::snprintf(context, sizeof(context),
+		    "NOVA_FEX: interrupted tid=%d pc=0x%llx lr=0x%llx sp=0x%llx fp=0x%llx (native)\n",
+		    static_cast<int>(gettid()), static_cast<unsigned long long>(uc->uc_mcontext.pc),
+		    static_cast<unsigned long long>(uc->uc_mcontext.regs[30]),
+		    static_cast<unsigned long long>(uc->uc_mcontext.sp),
+		    static_cast<unsigned long long>(uc->uc_mcontext.regs[29]));
+		if (length > 0 && static_cast<size_t>(length) < sizeof(context)) {
+			(void)!write(2, context, static_cast<size_t>(length));
+		}
+	}
 	backtrace_symbols_fd(frames, count, 2);
 }
 

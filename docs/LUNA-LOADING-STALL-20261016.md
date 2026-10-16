@@ -69,3 +69,27 @@ table. The pasted tail starts at tid 13580 and omits the relevant earlier
 threads. Capture while the game window remains visible; preserve existing caches
 and app data. Inspect the actual GPU-worker frame before changing synchronization
 or calling the loading stall fixed. The CheckpointName writer is still unproven.
+
+## Export received during this investigation
+
+The owner supplied lunalog.txt (430839 bytes). Its startup records confirm the
+profile armed at base 0x900000000 and registered SaveGameInstanceData object
+0x81c0f019e0 with vtable 0x906f114f0. No NOVA_STORE_INTENT records appear. The
+production TSO/SIMD exclusions still apply; absence of scalar records does not
+establish that all writes were correct.
+
+Heartbeats show sustained roughly 5.0–5.6 game FPS for several minutes before
+the no-window pause, with guest frames increasing to 1799. The detailed native
+stack dump is at the later 20-second background pause. Guest main thread 13534
+is in pthread_cond_timedwait; RenderThread 13616 waits for synchronous unmap;
+priority callback workers 13524/13529 are asleep awaiting operations. The GPU
+worker's native trace (tid 13531) stops at the signal trampoline. There is no
+foreground native-PC sample or timing breakdown establishing the loading-screen
+bottleneck. The later heartbeat resumes frame progress to 1973.
+
+DumpSelf now writes the interrupted native PC/LR/SP/FP directly from the kernel
+ucontext before printing its ordinary backtrace, so signal-unwinder failure
+cannot discard those addresses. They are explicitly native PCs and must not
+be presented as guest RIPs. The handler does not modify registers, advance PC,
+change waits or fabricate completion. This is bundled with the real controller
+and JIT code-size changes, not claimed as a loading fix on its own.
