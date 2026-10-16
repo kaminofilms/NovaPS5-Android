@@ -63,6 +63,7 @@ enum class ReadbackField : unsigned { Calls, ZeroCopy, Bytes, Ranges, TrackerRan
 inline constexpr unsigned ReadbackCallers = unsigned(ReadbackCaller::Count);
 inline constexpr unsigned ReadbackFields = unsigned(ReadbackField::Count);
 inline std::array<std::array<std::atomic<uint64_t>, ReadbackFields>, ReadbackCallers> readback_totals {};
+inline const auto readback_start = std::chrono::steady_clock::now();
 inline void AddReadback(ReadbackCaller caller, ReadbackField field, uint64_t value) noexcept {
     if (unsigned(caller) < ReadbackCallers)
         readback_totals[unsigned(caller)][unsigned(field)].fetch_add(value, std::memory_order_relaxed);
@@ -103,7 +104,7 @@ inline void DumpReadbackCounters() noexcept {
     static std::atomic_flag dumping = ATOMIC_FLAG_INIT;
     if (dumping.test_and_set(std::memory_order_acquire)) return;
     using Clock = std::chrono::steady_clock;
-    static auto begin = Clock::now() - std::chrono::seconds(5);
+    static auto begin = readback_start;
     static std::array<std::array<uint64_t, ReadbackFields>, ReadbackCallers> previous {};
     const auto end = Clock::now();
     if (end - begin < std::chrono::seconds(5)) {
