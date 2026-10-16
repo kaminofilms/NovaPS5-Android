@@ -152,6 +152,8 @@ jobs:
           path: dist/kyty
           retention-days: 7
   apk:
+    # Compile/test source-only commits without creating another device APK.
+    if: ${{ !contains(github.event.head_commit.message, '[source-only]') }}
     needs: [kyty, novafex-test]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
