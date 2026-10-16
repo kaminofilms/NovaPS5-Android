@@ -1,3 +1,13 @@
+# Latest focus — Ever Forward performance, versionCode 87
+
+The owner paused Luna loading work and selected Ever Forward first, then Meat Boy.
+Read [EVER-FORWARD-PERFORMANCE-20261016.md](EVER-FORWARD-PERFORMANCE-20261016.md)
+for filtered device evidence, exact paths, implementation, validation and next-log
+instructions. VersionCode 87 source is e16c3251b50731992f2aff246873e87ae72bde1f,
+CI run 38904660114 passed compilation, native regressions, sanitizer tests and APK
+verification. [Download versionCode 87](https://github.com/kaminofilms/NovaPS5-Android/releases/download/v0.9.36-android-e16c325/NovaPS5-0.9.36-android-arm64.apk). Do not attribute the previous game's appended FPS samples to
+Ever Forward. Performance improvements and 30/60-FPS gameplay require phone proof.
+
 # NovaPS5 0.9.36 — constructor watchpoint handoff
 
 ## Latest continuation: loading-screen report and versionCode 86
