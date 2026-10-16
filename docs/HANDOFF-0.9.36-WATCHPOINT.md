@@ -1,3 +1,5 @@
+> Latest release: **versionCode 90**, source `59de40023d449288b6421f4d737df8f4fc58aaf8`, all six CI jobs passed. Owner testing proved versionCode 89 remained about 3 FPS as waits moved into readback. VersionCode 90 adds exact coherent PM4 fetches to avoid adjacent-label protected-page faults. See [PM4 fetch handoff](EVER-FORWARD-PM4-FETCH-20261016.md) for APK, exact files, validation and continuation prompt. Device results remain pending.
+
 > Latest release: **versionCode 89**, source `1b334a297bf96e6670b55bb04eab27900fcdcdac`, all CI gates passed. Ever Forward now records eligible EOP labels on the GPU. See [Ever Forward GPU-label handoff](EVER-FORWARD-GPU-LABELS-20261016.md) for APK, verification, exact files and the next-log continuation prompt. FPS gains await phone testing; Dead Cells retains versionCode 88 behavior.
 
 # Latest focus — Ever waits and Dead Cells regression, versionCode 88
