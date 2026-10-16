@@ -107,3 +107,68 @@ the previous ARM runner reported SVE256=0 and AFP=0. End-to-end address tests do
 not directly prove every raw-IR helper branch, since NovaAddressTranslation may
 materialize offsets first. The existing constant-scaling discrepancy in that
 pass is a separate unproven concern, not an established Luna cause.
+
+## Completed release and verification
+
+Source / tested APK commit: `55ad2a60abbedfa3f2df3002d5530908ca234a57`.
+Successful full run:
+https://github.com/kaminofilms/NovaPS5-Android/actions/runs/38890414120
+Release:
+https://github.com/kaminofilms/NovaPS5-Android/releases/tag/v0.9.36-android-55ad2a6
+Direct APK:
+https://github.com/kaminofilms/NovaPS5-Android/releases/download/v0.9.36-android-55ad2a6/NovaPS5-0.9.36-android-arm64.apk
+
+APK size: 20601452 bytes.
+APK SHA256: b71246e76e535494bb8fdb2826a673dc7a3cd44242ba1719a62d275cedea93c1
+Signing certificate SHA256:
+21882443635874231d80b57100a172d2f090b25047e6fa068edc29734cda2ae0
+
+All workflow jobs succeeded: novafex, novafex-test, ffmpeg, kyty, apk and logs.
+Full host ASan/UBSan and ELF/SELF fixture tests passed. Actual ARM64 bionic
+execution passed the original regressions, scalar RIP/address/payload/width/zero,
+flags/SIMD and addressing checks, genuine successful/SIGSEGV store tests, and
+signature rejection plus automatic constructor registration and retirement in
+both production-TSO and scalar-test modes. Expected registration and retirement
+records appeared in the ARM64 fixture logs; they are not owner-device records.
+
+Kyty compilation/linkage and all existing compatibility/renderer checks passed.
+Packaging verifier reported NOVA_NATIVE_APK: ALL PASS, including the original
+certificate, application ID, version, AArch64 libraries, Android dependencies,
+16 KB page alignment and expected JNI/API exports. Bundled Turnip verification
+passed. GitHub release API confirms the APK asset is uploaded and its SHA256
+matches the digest above. No manual test gate was removed or bypassed.
+
+The version/signing/package requirements for updating 0.9.35 are verified;
+installation on the owner's Red Magic 11 Pro is still unperformed. Preserve all
+app data and install as an update. Reproduce the same Luna failure and export
+FULL boot logs, since the Key lines summary may omit the new trace records.
+The writer/root cause and successful Luna boot remain unverified.
+
+## Exact changed repository paths against the protected baseline
+
+- .github/workflows/android-native.yml
+- .github/workflows/novafex-watchpoint.yml
+- tools/ci/build-android-novafex.sh
+- tools/ci/build-android-kyty.sh
+- tools/ci/patch-0936-fex-watchpoint.py
+- tools/ci/patch-0936-luna-constructor.py
+- tools/analysis/inspect_luna_elf.py
+- native/novafex/CMakeLists.txt
+- native/novafex/novafex.h
+- native/novafex/novafex.cpp
+- native/novafex/watchpoint/NovaFexWatchpoint.safe.hpp
+- native/novafex/watchpoint/NovaFexTraceRing.hpp
+- native/novafex/watchpoint/NovaFexWatchpointBridge.cpp
+- native/novafex/watchpoint/NovaFexLunaProfile.hpp
+- native/novafex/test/novafex_test.cpp
+- native/novafex/test/watchpoint.inc
+- native/novafex/test/luna_constructor.inc
+- tests/test_0936_watchpoint.cpp
+- tests/test_luna_elf_inspect.py
+- docs/LUNA-0936-BINARY-EVIDENCE.md
+- docs/HANDOFF-0.9.36-WATCHPOINT.md
+
+The staged FEX source patch changes MemoryOps.cpp (scalar StoreMem only) and
+MiscOps.cpp (typed constructor/destructor GuestOpcode boundaries). The staged
+Kyty source patch changes loader/runtimeLinker.cpp. No renderer source or
+StoreMemTSO/SIMD/SVE store implementation was changed.

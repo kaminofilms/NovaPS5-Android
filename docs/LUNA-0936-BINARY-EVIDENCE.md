@@ -91,3 +91,14 @@ python3 tools/analysis/inspect_luna_elf.py /path/to/eboot.bin --xrefs --output l
 The tool marks code references as candidate instruction boundaries and reports
 its unsupported relocation variants. It does not execute, decrypt or modify
 the supplied executable, and does not publish the executable.
+
+Dynamic-symbol cross-check: DT_HASH reports 2375 symbols and 2375 buckets.
+Searching their names for register/construct/checkpoint/factory/savegame found
+no descriptive matches. Examples are NID-style names such as bzQExy189ZI#3#1.
+The class identity above therefore comes from metadata linkage and instruction
+operands, not an invented exported constructor symbol.
+
+The resulting typed registration/lifetime integration passed Android ARM64
+runtime tests and was released in NovaPS5 0.9.36 at source commit
+55ad2a60abbedfa3f2df3002d5530908ca234a57, CI run 38890414120. This is not proof
+that the full game booted or that the corrupting writer has been identified.
