@@ -95,7 +95,34 @@ edit(gr, '\t/* NOVA_PERF: omit hot-path GPU diagnostic ring writes in release bu
      '\t\tconst char* title = std::getenv("NOVA_CACHE_TITLE_ID");\n'
      '\t\treturn title && std::string_view(title) == "PPSA15552";\n'
      '\t}();\n'
-     '\tif (nova_history) g_nova_writes[g_nova_write_pos++ % NOVA_WRITES] = {a, value, queue, kind};')
+     '\tif (nova_history) {\n\t\tstd::lock_guard lock(g_nova_writes_mutex);\n'
+     '\t\tg_nova_writes[g_nova_write_pos++ % NOVA_WRITES] = {a, value, queue, kind};\n\t}')
+edit(gr, 'uint32_t              g_nova_write_pos = 0;',
+     '''uint32_t              g_nova_write_pos = 0;
+std::mutex g_nova_writes_mutex;
+struct NovaGpuWriteSnapshot {
+    uint32_t total;
+    std::vector<NovaGpuWrite> recent;
+};
+NovaGpuWriteSnapshot NovaSnapshotGpuWrites(uint32_t limit) {
+    std::lock_guard lock(g_nova_writes_mutex);
+    NovaGpuWriteSnapshot snapshot {g_nova_write_pos, {}};
+    const auto count = std::min({limit, g_nova_write_pos, NOVA_WRITES});
+    snapshot.recent.reserve(count);
+    for (uint32_t i = 0; i < count; ++i)
+        snapshot.recent.push_back(g_nova_writes[(g_nova_write_pos - 1 - i) % NOVA_WRITES]);
+    return snapshot;
+}''')
+edit(gr, '\tstd::fprintf(stderr, "NOVA_GPU: state at freeze (%u GPU writes so far):\\n", g_nova_write_pos);',
+     '\tconst auto snapshot = NovaSnapshotGpuWrites(12);\n'
+     '\tstd::fprintf(stderr, "NOVA_GPU: state at freeze (%u GPU writes so far):\\n", snapshot.total);')
+edit(gr, '\tfor (uint32_t i = 0; i < 12 && i < g_nova_write_pos; i++) {\n\t\tconst auto& w = g_nova_writes[(g_nova_write_pos - 1 - i) % NOVA_WRITES];',
+     '\tfor (const auto& w : snapshot.recent) {')
+edit(gr, '\t\t\tuint32_t shown = 0;\n\t\t\tfor (uint32_t i = 0; i < NOVA_WRITES && i < g_nova_write_pos; i++) {\n\t\t\t\tconst auto& w = g_nova_writes[(g_nova_write_pos - 1 - i) % NOVA_WRITES];',
+     '\t\t\tuint32_t shown = 0;\n\t\t\tconst auto snapshot = NovaSnapshotGpuWrites(NOVA_WRITES);\n'
+     '\t\t\tfor (uint32_t i = 0; i < snapshot.recent.size(); i++) {\n\t\t\t\tconst auto& w = snapshot.recent[i];')
+edit(gr, 'if (shown == 0 && g_nova_write_pos == 0)', 'if (shown == 0 && snapshot.total == 0)')
+edit(gr, 'std::min<uint32_t>(g_nova_write_pos, NOVA_WRITES)', 'static_cast<uint32_t>(snapshot.recent.size())')
 edit(gr, 'GPU write history is disabled in this build (NOVA_GPU_TRACE_WRITES=1 enables it); later writes to this label are reported as NOVA_GPU_WATCH',
      'No GPU writes recorded in bounded history (enabled for Dead Cells); later writes to this label are reported as NOVA_GPU_WATCH')
 

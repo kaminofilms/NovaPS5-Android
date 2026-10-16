@@ -168,7 +168,7 @@ assert 'if (with_interrupt) m_renderer.TriggerInterrupt' in graphics_source
 ring_declarations = graphics_source[graphics_source.index('struct NovaGpuWrite {'):graphics_source.index('std::atomic<uint64_t> g_nova_watch_addr')]
 ring_start = graphics_source.index('\tconst auto a = reinterpret_cast<uint64_t>(addr);', graphics_source.index('void NovaNoteGpuWrite'))
 ring_body = graphics_source[ring_start:graphics_source.index('\tconst auto watch =', ring_start)]
-ring_test = '#include "novaRenderCosts.h"\n#include <cassert>\n' + ring_declarations + '\nvoid Note(const void* addr,uint64_t value,uint32_t queue,char kind){\n' + ring_body + r'''
+ring_test = '#include "novaRenderCosts.h"\n#include <cassert>\n#include <mutex>\n#include <vector>\n#include <thread>\n#include <atomic>\n#include <algorithm>\n' + ring_declarations + '\nvoid Note(const void* addr,uint64_t value,uint32_t queue,char kind){\n' + ring_body + r'''
 }
 int main(){
  const char* title=std::getenv("NOVA_CACHE_TITLE_ID");
@@ -176,7 +176,12 @@ int main(){
  for(uint64_t i=0;i<4096+17;++i)Note(reinterpret_cast<void*>(0x1000+i*8),i,3,'E');
  assert(g_nova_write_pos==(enabled?4096+17:0));
  if(enabled){const auto& last=g_nova_writes[(g_nova_write_pos-1)%NOVA_WRITES];assert(last.value==4096+16&&last.kind=='E'&&last.queue==3);}
- std::puts("NOVA_LABEL_HISTORY_TEST: title-scoped bounded producer history/wrap PASS");
+ std::atomic<bool> stop=false;
+ std::thread reader([&]{while(!stop){auto s=NovaSnapshotGpuWrites(4096);assert(s.recent.size()<=4096);for(const auto& w:s.recent){assert(w.addr==0x1000+w.value*8&&w.queue==3&&w.kind=='E');}}});
+ std::thread writer([&]{for(uint64_t i=0;i<20000;++i)Note(reinterpret_cast<void*>(0x1000+i*8),i,3,'E');});
+ writer.join();stop=true;reader.join();
+ assert(g_nova_write_pos==(enabled?4096+17+20000:0));
+ std::puts("NOVA_LABEL_HISTORY_TEST: title-scoped bounded producer history/wrap/concurrent snapshots PASS");
 }
 '''
 with tempfile.TemporaryDirectory() as directory:
