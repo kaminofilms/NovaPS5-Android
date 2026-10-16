@@ -1,5 +1,61 @@
 # NovaPS5 0.9.36 — constructor watchpoint handoff
 
+## October 16 device-log continuation: cross-slot load
+
+Read `LUNA-0936-CROSS-SLOT.md` before the historical release details below.
+Latest tested APK source: 56282b0a1751f72667c48ff953b85faa25698185.
+All CI jobs passed: https://github.com/kaminofilms/NovaPS5-Android/actions/runs/38896361820
+Direct updated APK: https://github.com/kaminofilms/NovaPS5-Android/releases/download/v0.9.36-android-56282b0/NovaPS5-0.9.36-android-arm64.apk
+VersionCode 85 supersedes the historical versionCode 84 below.
+APK SHA256: e9e6be563b3961b4823c850048eda7dcdbc31a32810ba2cebf35f9051a0cba3d.
+No NX809J execution of this updated APK has been observed yet.
+The owner reports Luna progresses farther and Meat Boy reaches gameplay at
+roughly 1 FPS. Luna logs 959 game frames and sampled 3–5.5 FPS, then faults at
+libc.prx+0x3fe8 (`vmovdqu xmm7,[rsi+0x70]`). RSI=0x903fffff83 gives guest
+EA=0x903ffffff3, a 16-byte read crossing the 1 GiB slot boundary after 13 bytes.
+The translated host read starts at 0x1083fffff3 and faults at 0x1084000000.
+The native instruction is `ldr q23,[x20]`. Translation of just the start address
+is incorrect across independently backed slots, even if neighboring host memory
+happens to be readable. The pasted log does not prove the next guest slot is
+mapped, so a genuine guest-memory fault may still remain after this correction.
+
+`tools/ci/patch-0936-cross-slot-load.py` adds NovaLoad128, retaining guest EA
+for 128-bit FPR LoadMem/LoadMemTSO. A flag-preserving guard selects the normal
+vector load or individually translated byte reads into reserved temporaries.
+Destination commit follows all reads; missing/protected backing faults normally
+with original guest RIP. The original TSO load barrier is retained. There are no
+callbacks, stack changes, exception skipping or modifications to store paths.
+Other widths, masked/paired operations and bulk REP crossing remain outside this
+fix. The tests cover all 15 split alignments, same-slot loads, readable poisoned
+host neighbors, ZF, genuine unmapped/protected faults and exact fault RIP in both
+TSO modes. The revised APK retains versionName 0.9.36-android and uses versionCode
+85, preserving package and signing identity. Actual install/update on NX809J is
+still an owner-device check.
+
+For the next full Luna log, check the installed build identity and preserve
+startup NOVA_LUNA_PROFILE/NOVA_LUNA_OBJECT output, NOVA_STORE_INTENT records,
+game-frame heartbeats, and the complete next fault with native instruction bytes,
+guest RIP/registers, module ranges and memory trace. A next-slot read fault is
+evidence to inspect mappings/protections and the original copy source, not a
+reason to return zero data. There is still no captured corrupting CheckpointName
+writer in the pasted log; do not conflate this copy-load defect with the earlier
+float-100 symptom or suppress either one.
+
+For Meat Boy, cumulative hostemu offset libmain.so+0x823a54 is a byte output
+store in RandomGetRandomNumber (libNet.cpp). Its count remains 4864 during later
+samples; it is not evidence of ongoing overhead. AgcCreatePrimState (agc.cpp)
+counts rise, shader variants continue compiling, and available RAM reaches
+772 MB. Compare a repeat of the same scene with existing caches intact. Obtain
+per-interval compilation time, GPU submission/fence wait durations and memory
+data before selecting a performance change. The isolated 37.3-FPS heartbeat is
+not steady gameplay performance; later samples are 1.0–1.1. No renderer/scheduler
+bypass or performance improvement is claimed by this patch.
+
+Continue debugging from the new log, verify the actual current branch head and
+CI results, and preserve the protected 0.9.35 baseline. Do not guess object
+addresses or initialization sites, fake store completion, clear caches or alter
+the backend. Execute reproducible tests and report unavailable device coverage.
+
 Continue on `fix/novaps5-0936-luna-watchpoint` in kaminofilms/NovaPS5-Android.
 Protected 0.9.35 baseline: 26fae46b7e1b6e81b408b8385006a059bffe9c8e.
 Owner authorized source edits, pushes, CI and a signed 0.9.36 APK after gates pass.
@@ -8,7 +64,7 @@ must remain. Do not change renderer compatibility, TSO, app ID, signing identity
 saves, shader caches or imported drivers. Do not claim a game boot/FPS without
 owner-device evidence.
 
-## Current implementation
+## Original watchpoint implementation (55ad2a6)
 
 The scalar StoreMem hook materializes exact native store addresses and captures
 source-register payload plus FEX GuestOpcode RIP. PushDynamicRegs/SpillStaticRegs
@@ -49,7 +105,7 @@ Logging includes sequence, matched object/fields, guest RIP/address, width,
 payload and HOST thread ID. Never call that a guest scheduler ID. Records may
 need ordering by sequence. A full ring drops later records until consumed.
 
-## CI and packaging
+## Original watchpoint CI and packaging
 
 Existing .github/workflows/android-native.yml now carries all gates in one run,
 with Kyty build waiting for novafex-test. The older dedicated watchpoint workflow
@@ -108,7 +164,7 @@ not directly prove every raw-IR helper branch, since NovaAddressTranslation may
 materialize offsets first. The existing constant-scaling discrepancy in that
 pass is a separate unproven concern, not an established Luna cause.
 
-## Completed release and verification
+## Earlier release and verification (versionCode 84)
 
 Source / tested APK commit: `55ad2a60abbedfa3f2df3002d5530908ca234a57`.
 Successful full run:
@@ -150,6 +206,7 @@ The writer/root cause and successful Luna boot remain unverified.
 - .github/workflows/novafex-watchpoint.yml
 - tools/ci/build-android-novafex.sh
 - tools/ci/build-android-kyty.sh
+- tools/ci/patch-0936-cross-slot-load.py
 - tools/ci/patch-0936-fex-watchpoint.py
 - tools/ci/patch-0936-luna-constructor.py
 - tools/analysis/inspect_luna_elf.py
@@ -161,14 +218,18 @@ The writer/root cause and successful Luna boot remain unverified.
 - native/novafex/watchpoint/NovaFexWatchpointBridge.cpp
 - native/novafex/watchpoint/NovaFexLunaProfile.hpp
 - native/novafex/test/novafex_test.cpp
+- native/novafex/test/cross_slot_load.inc
 - native/novafex/test/watchpoint.inc
 - native/novafex/test/luna_constructor.inc
 - tests/test_0936_watchpoint.cpp
 - tests/test_luna_elf_inspect.py
+- docs/LUNA-0936-CROSS-SLOT.md
 - docs/LUNA-0936-BINARY-EVIDENCE.md
 - docs/HANDOFF-0.9.36-WATCHPOINT.md
 
-The staged FEX source patch changes MemoryOps.cpp (scalar StoreMem only) and
-MiscOps.cpp (typed constructor/destructor GuestOpcode boundaries). The staged
-Kyty source patch changes loader/runtimeLinker.cpp. No renderer source or
-StoreMemTSO/SIMD/SVE store implementation was changed.
+The staged FEX source patches change MemoryOps.cpp (scalar StoreMem intents
+and the new NovaLoad128 load), MiscOps.cpp (typed constructor/destructor
+GuestOpcode boundaries), IR.json and NovaAddressTranslationPass.cpp (retaining
+guest EA for the boundary-aware 128-bit load). The staged Kyty source patch
+changes loader/runtimeLinker.cpp. No renderer source or StoreMemTSO/SIMD/SVE
+store implementation was changed.
