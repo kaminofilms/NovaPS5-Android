@@ -128,3 +128,47 @@ Prior-context check: the earlier review explicitly left runtime object identity,
 object address, constructor/property-population location and writer RIP unresolved.
 The reported memcpy RIP 0x910003fc6 is a crash site, not a proven corrupting writer.
 Do not arm a guessed object based on that RIP or on 0x42c80000.
+
+## Final verified results from this turn
+
+Tested source commit: `1251c9e80c615196ef507c8f71bd39abfaa6066a`.
+Final successful validation run:
+https://github.com/kaminofilms/NovaPS5-Android/actions/runs/38835231143
+
+Both jobs succeeded. CI passed full host ASan/UBSan tests, Android ARM64 FEX and
+bridge compilation/linkage, the original FEX runtime regression configuration,
+scalar widths/RIP/address/payload/zero/flags tests, live XMM preservation,
+32 iterations of indexed/negative/signed/unsigned address differential tests,
+and fresh-process successful store and original synchronous SIGSEGV tests.
+The fault test confirmed one attempted record and no reported completion.
+
+Runner features reported SVE256=0 and AFP=0. Do not claim target-device,
+SVE256, AFP-specific or exhaustive machine-state validation. End-to-end guest
+address tests are not direct coverage proof of every helper switch branch:
+NovaAddressTranslation can materialize the EA before StoreMem. A dedicated
+raw-IR/emitter differential matrix remains useful before broader deployment.
+No target-device game execution, captured Luna corrupting writer or root-cause
+fix was established. No Kyty/APK packaging/signing/update-install verification
+was performed, because actual Luna early registration is still unimplemented.
+No 0.9.36 APK/release exists from this work.
+
+## Exact repository files changed
+
+- .github/workflows/novafex-watchpoint.yml
+- tools/ci/build-android-novafex.sh
+- tools/ci/patch-0936-fex-watchpoint.py
+- native/novafex/CMakeLists.txt
+- native/novafex/novafex.h
+- native/novafex/novafex.cpp
+- native/novafex/watchpoint/NovaFexWatchpoint.safe.hpp
+- native/novafex/watchpoint/NovaFexTraceRing.hpp
+- native/novafex/watchpoint/NovaFexWatchpointBridge.cpp
+- native/novafex/test/novafex_test.cpp
+- native/novafex/test/watchpoint.inc
+- tests/test_0936_watchpoint.cpp
+- docs/HANDOFF-0.9.36-WATCHPOINT.md
+
+The staged upstream file changed by the build patch is
+FEXCore/Source/Interface/Core/JIT/MemoryOps.cpp. A source comparison verified
+that removing the injected scalar hook/includes restores the upstream file
+exactly. No StoreMemTSO, SIMD or SVE store implementation was changed.
