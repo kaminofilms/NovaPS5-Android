@@ -1,6 +1,32 @@
 # NovaPS5 0.9.36 — constructor watchpoint handoff
 
-## October 16 device-log continuation: cross-slot load
+## Latest continuation: loading-screen report and versionCode 86
+
+Read `LUNA-LOADING-STALL-20261016.md` first. It contains the received full-log
+findings, exact changed paths, validation and the detailed next-log prompt.
+Latest tested APK source: `52d1eac5b0c0360d1b96d48a795d84dae6c1b68d`.
+Successful CI: https://github.com/kaminofilms/NovaPS5-Android/actions/runs/38900422917
+APK: https://github.com/kaminofilms/NovaPS5-Android/releases/download/v0.9.36-android-52d1eac/NovaPS5-0.9.36-android-arm64.apk
+VersionCode 86 supersedes the historical 85/84 sections below.
+SHA256: `8aa72c79e5822eec0d910bdf58cd70ab45c2a664f7c12219a19fa314a021c74d`.
+
+The owner reports no crash but a loading screen at roughly 1 FPS. The complete
+export shows a signature-armed profile and constructor-registered object
+0x81c0f019e0, sustained roughly 5.0–5.6 game FPS, and a later background window
+pause followed by resumed frame progress. No scalar store intents appear.
+The native GPU-worker stack stops at the signal trampoline, so foreground
+loading/performance has not been assigned a verified root cause.
+
+The batched update removes sixteenfold emitted translation duplication using
+one runtime byte loop, fills identical controller packets in host-local storage
+then copies through GuestMemory::Copy, and captures interrupted native PC/LR
+independently of ordinary backtrace output. Full release CI passed controller
+packet/sanitizer checks, original ARM64 regressions, crossing loads/flags/true
+faults/exact RIP in both TSO modes, Kyty compilation and APK verification.
+This is not a demonstrated loading completion or FPS improvement on NX809J.
+Install/update and compare the same scene while preserving app data/caches.
+
+## Earlier October 16 continuation: cross-slot load (versionCode 85)
 
 Read `LUNA-0936-CROSS-SLOT.md` before the historical release details below.
 Latest tested APK source: 56282b0a1751f72667c48ff953b85faa25698185.
@@ -223,6 +249,9 @@ The writer/root cause and successful Luna boot remain unverified.
 - native/novafex/test/luna_constructor.inc
 - tests/test_0936_watchpoint.cpp
 - tests/test_luna_elf_inspect.py
+- tests/test_controller_output.py
+- tools/ci/patch-controller-output.py
+- docs/LUNA-LOADING-STALL-20261016.md
 - docs/LUNA-0936-CROSS-SLOT.md
 - docs/LUNA-0936-BINARY-EVIDENCE.md
 - docs/HANDOFF-0.9.36-WATCHPOINT.md
@@ -230,6 +259,6 @@ The writer/root cause and successful Luna boot remain unverified.
 The staged FEX source patches change MemoryOps.cpp (scalar StoreMem intents
 and the new NovaLoad128 load), MiscOps.cpp (typed constructor/destructor
 GuestOpcode boundaries), IR.json and NovaAddressTranslationPass.cpp (retaining
-guest EA for the boundary-aware 128-bit load). The staged Kyty source patch
-changes loader/runtimeLinker.cpp. No renderer source or StoreMemTSO/SIMD/SVE
+guest EA for the boundary-aware 128-bit load). The staged Kyty source patches
+change loader/runtimeLinker.cpp and libs/controller.cpp. No renderer source or StoreMemTSO/SIMD/SVE
 store implementation was changed.
