@@ -100,3 +100,80 @@ skip coherent GPU results based solely on an address-disjoint one-byte fault.
 
 Follow-up handoff must record the final commit, CI run/job/artifact IDs, APK verification
 and signing results, and any failures. CI/device results supersede these local observations.
+
+## Final release evidence — October 16, 2026
+
+APK source commit: **`5e007e6ac85a4dc1bb2936d122df3aa0eb240dc1`**.
+Initial implementation: `1d59cfd6641b65e2c1a7ca9c58f3a1a556c2ff9b`; the final commit
+corrects the first sampling window to use actual time from counter initialization.
+Branch remains `fix/novaps5-0936-luna-watchpoint`. A documentation-only follow-up records
+these results and does not change the compiled APK source.
+
+All six jobs succeeded in run **38940869683**:
+https://github.com/kaminofilms/NovaPS5-Android/actions/runs/38940869683
+
+| Job | ID | Result |
+| --- | --- | --- |
+| FFmpeg | 117108230781 | Passed/cache restored |
+| NovaFEX NDK | 117108230867 | Passed |
+| Native ARM64 tests | 117108938236 | Passed |
+| Kyty renderer | 117109046318 | Passed |
+| Signed APK verification/publication | 117111572581 | Passed |
+| Log archival | 117112067903 | Passed |
+
+CI explicitly ran both 19-test normal/sanitizer readback suites, ten normal plus ten
+sanitized production ordering runs, existing render-cost/PM4/RELEASE_MEM regressions,
+SPIR-V validation and the Vulkan label harness. The latter executed 512 production staged
+32/64-bit writes with **zero synchronization validation errors**. Full Android ARM64
+renderer compilation passed. The CI ASan/UBSan executions passed without the local
+LeakSanitizer workaround. These are component/runtime-harness sanitizer checks, not a
+claim that the complete Android emulator was compiled with ASan or tested on the phone.
+No test failures were bypassed. The earlier run `38940399980` was superseded/cancelled
+for the initial-window correction and is not the release evidence.
+
+| Artifact | ID |
+| --- | --- |
+| android-apk | 12062599879 |
+| android-kyty | 12062364448 |
+| android-novafex | 12063666510 |
+| android-novafex-test | 12062942240 |
+| android-ffmpeg | 12062618044 |
+
+APK only (20,621,932 bytes):
+https://github.com/kaminofilms/NovaPS5-Android/releases/download/v0.9.37-android-5e007e6/NovaPS5-0.9.37-android-arm64.apk
+
+Release:
+https://github.com/kaminofilms/NovaPS5-Android/releases/tag/v0.9.37-android-5e007e6
+
+VersionName **0.9.37-android**, versionCode **91**. The owner explicitly selected 91
+instead of the handoff's stale 88 so Android can update the current versionCode 90.
+APK SHA-256: `a77395f4e801f568d6d1368a62514135d33648aa97f41fc97d989f99ec6e8faa`.
+Signing certificate SHA-256: `21882443635874231d80b57100a172d2f090b25047e6fa068edc29734cda2ae0`.
+`verify_native_apk.py` reported signed with the Nova test key, package/version checks,
+Android-resolvable AArch64 libraries, 16 KB alignment, required exports and ALL PASS.
+Packaged Turnip verification passed. Signing still uses `tools/ci/novaps5-ci-test.keystore`.
+
+Committed implementation files:
+
+- `tools/ci/patch-novaps5-readback-telemetry.py`
+- `tools/ci/novaReadbackTelemetry.h`
+- `tools/ci/build-android-kyty.sh`
+- `tests/test_novaps5_readback_safety_expanded.py`
+- `tests/test_novaps5_readback_ordering.py`
+- `tests/novaps5_readback_telemetry_sanitizer.cpp`
+- `tests/readback_wait_contract.txt`
+- `.github/workflows/android-native.yml`
+- `docs/READBACK-TELEMETRY-0.9.37.md`
+
+The reproducible overlay changes staged buffer-cache declarations/definitions, renderer
+fault/compute/texture callers, kernel backing reads, scheduler declarations/definitions,
+and the installed cost/telemetry headers. GPU commands, wait counts and completion
+conditions are unchanged. Full device concurrency, visual correctness and FPS still need
+owner logs. Sampling skew across independently sampled fields and unknown instruction
+access width remain interpretation limits, not evidence that a readback can be skipped.
+
+Next engineer: start from the APK source SHA and this branch. Obtain 15-second warm
+Ever Forward and explicitly opted-in Super Meat Boy exports; use the latter's actual
+logged title ID. Rank per-caller wait time over several windows, separate synchronous
+GPU waits from publication waits and deferred-worker waits, and compare actual `game_fps`.
+No next performance optimization is justified until these device measurements arrive.
