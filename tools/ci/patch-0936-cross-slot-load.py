@@ -71,7 +71,7 @@ DEF_OP(NovaLoad128) {
   add(ARMEmitter::Size::i64Bit, TMP1, TMP1, 15);
   (void)tbnz(TMP1, FEXCore::Nova::kGuestVASlotShift, &Split);
   (void)Bind(&Direct);
-  mov(TMP1, Guest);
+  mov(ARMEmitter::Size::i64Bit, TMP1, Guest);
   Translate();
   ldr(Dst.Q(), TMP1, 0);
   (void)b(&Done);
