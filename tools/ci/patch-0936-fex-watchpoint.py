@@ -16,6 +16,9 @@ hook = r'''
   // x0..x3 are reserved FEX temporaries on Android, never RA operands.
   if (Op->Class == IR::RegClass::GPR && IR::OpSizeToSize(OpSize) <= 8) {
     static_assert(TMP_ABIARGS, "Nova watchpoints require the native Android ABI");
+    // The pinned emitter lacks an FPSR enumerator. Architectural S3_3_C4_C4_1.
+    constexpr auto FPSR = static_cast<ARMEmitter::SystemRegister>(
+      ARMEmitter::GenSystemReg<0b11, 0b011, 0b0100, 0b0100, 0b001>);
     ARMEmitter::ForwardLabel NoWatchpoints;
     LoadConstant(ARMEmitter::Size::i64Bit, TMP1, reinterpret_cast<uintptr_t>(&NovaFexWatchpoint::enabled));
     ldar(TMP1.W(), TMP1);
@@ -26,7 +29,7 @@ hook = r'''
     sub(ARMEmitter::Size::i64Bit, ARMEmitter::Reg::rsp, ARMEmitter::Reg::rsp, 16);
     mrs(TMP1, ARMEmitter::SystemRegister::FPCR);
     str(TMP1, ARMEmitter::Reg::rsp, 0);
-    mrs(TMP1, ARMEmitter::SystemRegister::FPSR);
+    mrs(TMP1, FPSR);
     str(TMP1, ARMEmitter::Reg::rsp, 8);
     PushDynamicRegs(TMP1);
     SpillStaticRegs(TMP1);
@@ -79,7 +82,7 @@ hook = r'''
     ldr(TMP1, ARMEmitter::Reg::rsp, 0);
     msr(ARMEmitter::SystemRegister::FPCR, TMP1);
     ldr(TMP1, ARMEmitter::Reg::rsp, 8);
-    msr(ARMEmitter::SystemRegister::FPSR, TMP1);
+    msr(FPSR, TMP1);
     add(ARMEmitter::Size::i64Bit, ARMEmitter::Reg::rsp, ARMEmitter::Reg::rsp, 16);
     (void)Bind(&NoWatchpoints);
   }
