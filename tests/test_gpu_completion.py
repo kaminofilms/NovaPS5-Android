@@ -33,17 +33,20 @@ namespace GuestMemory { unsigned writes=0; void Copy(void* p,const void* v,size_
 extern bool gpu_finished;
 namespace GuestMemory { void Copy(void* p,const void* v,size_t n){assert(gpu_finished);++writes;std::memcpy(p,v,n);} template<class T>T* Ptr(T* p,uint64_t){return p;} }
 namespace Sync {uint64_t clock=10;uint64_t ReadReferenceClock(){return ++clock;} template<class... T>void ReadGds(T...){}}
-struct Cache {int* GetGdsBuffer(){static int x;return &x;}};
+struct Cache {
+ std::function<bool(uint64_t,const void*,uint64_t)> write;
+ bool WriteEopLabel(uint64_t a,const void* p,uint64_t n){return write && write(a,p,n);}
+ int* GetGdsBuffer(){static int x;return &x;}};
 struct Renderer { unsigned irqs=0;uint32_t context=0;uint64_t* label=nullptr;uint64_t expected=0;Cache cache;Cache& GetBufferCache(){return cache;} void TriggerInterrupt(unsigned,uint32_t c){if(label)assert(*label==expected);++irqs;context=c;} };
 struct Buffer {int Handle(){return 1;}};
 bool gpu_finished=false;
 struct Scheduler {
  struct Op{unsigned tick;std::function<void()> fn;};
- unsigned tick=1,submitted=0,completed=0;std::vector<Op> pending;
+ unsigned tick=1,submitted=0,completed=0;std::vector<Op> pending;std::vector<std::function<void()>> gpu_writes;
  void DeferPriorityOperation(std::function<void()> f){pending.push_back({tick,std::move(f)});}
  void Flush(){submitted=tick++;}
  void Run(){while(!pending.empty() && pending.front().tick<=completed){auto f=std::move(pending.front().fn);pending.erase(pending.begin());f();}}
- void Complete(){completed=submitted;gpu_finished=true;Run();}
+ void Complete(){completed=submitted;gpu_finished=true;for(auto& f:gpu_writes) f();gpu_writes.clear();Run();}
  void Finish(){Flush();Complete();}
  unsigned CurrentTick(){return tick;}
  void WaitPriorityOperations(unsigned t){assert(completed>=t);Run();}
@@ -69,6 +72,22 @@ int main(){
  {gpu_finished=false;CommandProcessor cp;uint32_t label=0;cp.WriteAtEndOfPipe<uint32_t>(0,0,0x2f,0,6,2,&label,0x98765432u,2,9);assert(gpu_finished);assert(label==0x98765432u && cp.m_renderer.irqs==1);}
  {gpu_finished=false;CommandProcessor cp;uint64_t stamp=0;cp.WriteAtEndOfPipe<uint64_t>(0,0,0x28,0,0,4,&stamp,0,0,0);assert(gpu_finished && stamp==11);}
  {CommandProcessor cp;uint64_t label=0;bool rejected=false;try{cp.WriteAtEndOfPipe<uint64_t>(0,0,0x3f,0,0,2,&label,1,0,0);}catch(...){rejected=true;}assert(rejected && label==0 && cp.scheduler.pending.empty());}
+ if(NovaRender::EverProfile()) {
+  for(unsigned width:{4u,8u}) for(unsigned irq:{0u,2u}) {
+   gpu_finished=false;CommandProcessor cp;alignas(8) uint64_t label=0;
+   const uint64_t expected=width==4?0x89abcdefull:0x0123456789abcdefull;
+   cp.m_renderer.label=&label;cp.m_renderer.expected=expected;
+   cp.m_renderer.cache.write=[&](uint64_t a,const void* p,uint64_t n){
+    uint64_t immutable=0;std::memcpy(&immutable,p,n);
+    cp.scheduler.gpu_writes.push_back([=]{std::memcpy(reinterpret_cast<void*>(a),&immutable,n);});return true;
+   };
+   if(width==4)cp.WriteAtEndOfPipe<uint32_t>(0,0,0x2f,0,6,2,&label,uint32_t(expected),irq,0x55);
+   else cp.WriteAtEndOfPipe<uint64_t>(0,0,0x2b,0,0,2,&label,expected,irq,0x55);
+   assert(label==0 && !gpu_finished && cp.scheduler.submitted==0 && cp.m_renderer.irqs==0);
+   cp.scheduler.Flush();assert(label==0 && cp.m_renderer.irqs==0);
+   cp.scheduler.Complete();assert(label==expected && cp.m_renderer.irqs==(irq==2));
+  }
+ }
  puts("GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)");
 }
 '''
