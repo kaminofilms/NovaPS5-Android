@@ -1,3 +1,17 @@
+# Latest focus — Ever waits and Dead Cells regression, versionCode 88
+
+Read [EVER-DEAD-CELLS-SYNC-20261016.md](EVER-DEAD-CELLS-SYNC-20261016.md).
+VersionCode 87 phone evidence: Ever remains roughly 2.3–3.4 FPS with its renderer
+thread spending about 67–81% of five-second windows in host waits. Dead Cells
+recovered from an early no-window pause and later froze waiting for a real
+64-bit label to become 1. Neither report establishes a verified root cause.
+VersionCode 88 scopes async cache/MRU changes to Ever Forward, elides only
+already-completed empty fences for Ever, identifies wait sources, and restores
+bounded Dead Cells GPU packet-write history. No forced waits/labels or proven
+FPS/freeze fix. Source 34431465ef6caa7f3af1ed65bb64d734b46a3d94; run 38908600203 passed all gates.
+[Download versionCode 88](https://github.com/kaminofilms/NovaPS5-Android/releases/download/v0.9.36-android-3443146/NovaPS5-0.9.36-android-arm64.apk).
+The downloaded APK was checked for the new native timing/history markers.
+
 # Latest focus — Ever Forward performance, versionCode 87
 
 The owner paused Luna loading work and selected Ever Forward first, then Meat Boy.
