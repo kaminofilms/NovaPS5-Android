@@ -74,7 +74,7 @@ int main() {
  assert(entry.resources.payload==7);
  ResourceSpecialization::comparisons=0;
  assert(entry.FindPermutation<false>({127,99},0)==&entry.permutations[127]);
- assert(ResourceSpecialization::comparisons==1 && entry.resources.payload==99);
+ assert(ResourceSpecialization::comparisons==(NovaRender::EverProfile()?1:128) && entry.resources.payload==99);
  for(int i=0;i<128;++i) {
   auto* p=entry.FindPermutation<false>({i,100+i},0);
   assert(p==&entry.permutations[i] && entry.last_permutation==size_t(i));
@@ -117,14 +117,83 @@ int main() {
  std::puts("NOVA_EVER_TEST: exact lookup/reallocation/resources/callees, bounded latest writer/drain, timing PASS");
 }
 '''
+schedule_source = (renderer/'commandScheduler.cpp').read_text()
+finish = schedule_source[schedule_source.index('void CommandScheduler::Finish() {'):schedule_source.index('\nvoid CommandScheduler::Wait(uint64_t tick)')]
+finish_prefix = r'''
+#include "novaRenderCosts.h"
+#include <cassert>
+#include <mutex>
+#include <queue>
+struct CommandScheduler {
+ struct Command { bool invalid=false,m_has_commands=false;bool IsInvalid()const{return invalid;} } m_command;
+ struct Master {
+  uint64_t current=6,done=5,waited=0;
+  bool IsFree(uint64_t tick)const{return tick<=done;}
+  void Wait(uint64_t tick){waited=tick;done=tick;}
+ }m_master;
+ std::mutex m_operation_mutex;
+ std::queue<int>m_pending_operations,m_priority_operations;
+ bool m_priority_active=false;
+ int submits=0,begins=0,pops=0;
+ uint64_t CurrentTick()const{return m_master.current;}
+ void CheckActive()const{}
+ void Submit(){++submits;++m_master.current;m_command.invalid=true;}
+ void BeginNext(){++begins;m_command.invalid=false;m_command.m_has_commands=false;}
+ void PopPendingOperations(){++pops;}
+ void Finish();
+};
+'''
+finish_suffix = r'''
+int main(){
+ for(unsigned flags=0;flags<32;++flags){
+  CommandScheduler s;
+  s.m_command.m_has_commands=flags&1;
+  if(flags&2)s.m_pending_operations.push(1);
+  if(flags&4)s.m_priority_operations.push(1);
+  s.m_priority_active=flags&8;
+  if(flags&16)s.m_master.done=4;
+  const bool elide=NovaRender::EverProfile()&&flags==0;
+  s.Finish();
+  assert(s.submits==(elide?0:1));
+  assert(s.begins==(elide?0:1) && s.pops==(elide?0:1));
+  assert(s.CurrentTick()==(elide?6:7));
+  assert(s.m_master.done==(elide?5:6));
+ }
+ std::puts("NOVA_FINISH_TEST: completed-empty-only elision, real work/callbacks/incomplete ticks retain submit+wait PASS");
+}
+'''
+graphics_source = (root/'src/graphics/guest_gpu/graphicsRun.cpp').read_text()
+assert 'if (!NovaRender::EverProfile()) (void)command.Handle();' in graphics_source
+assert 'if (with_interrupt) m_renderer.TriggerInterrupt' in graphics_source
+ring_declarations = graphics_source[graphics_source.index('struct NovaGpuWrite {'):graphics_source.index('std::atomic<uint64_t> g_nova_watch_addr')]
+ring_start = graphics_source.index('\tconst auto a = reinterpret_cast<uint64_t>(addr);', graphics_source.index('void NovaNoteGpuWrite'))
+ring_body = graphics_source[ring_start:graphics_source.index('\tconst auto watch =', ring_start)]
+ring_test = '#include "novaRenderCosts.h"\n#include <cassert>\n' + ring_declarations + '\nvoid Note(const void* addr,uint64_t value,uint32_t queue,char kind){\n' + ring_body + r'''
+}
+int main(){
+ const char* title=std::getenv("NOVA_CACHE_TITLE_ID");
+ const bool enabled=title&&std::string_view(title)=="PPSA15552";
+ for(uint64_t i=0;i<4096+17;++i)Note(reinterpret_cast<void*>(0x1000+i*8),i,3,'E');
+ assert(g_nova_write_pos==(enabled?4096+17:0));
+ if(enabled){const auto& last=g_nova_writes[(g_nova_write_pos-1)%NOVA_WRITES];assert(last.value==4096+16&&last.kind=='E'&&last.queue==3);}
+ std::puts("NOVA_LABEL_HISTORY_TEST: title-scoped bounded producer history/wrap PASS");
+}
+'''
 with tempfile.TemporaryDirectory() as directory:
     p = Path(directory)
     (p/'test.cpp').write_text(prefix + method + suffix)
     flags = ['-fsanitize=address,undefined', '-fno-omit-frame-pointer'] if os.getenv('SANITIZE') == '1' else []
     subprocess.run(['c++', '-std=c++20', '-O1', '-g', '-pthread', *flags, '-I'+str(renderer),
                     str(p/'test.cpp'), '-o', str(p/'test')], check=True)
-    result = subprocess.run([str(p/'test')], text=True, capture_output=True)
-    print(result.stdout, end='')
-    print(result.stderr, end='', file=sys.stderr)
-    result.check_returncode()
-    assert 'scope=shader calls=1' in result.stderr and 'scope=draw calls=2' in result.stderr
+    for title in ('PPSA04703', 'PPSA15552', ''):
+        env = dict(os.environ, NOVA_CACHE_TITLE_ID=title)
+        result = subprocess.run([str(p/'test')], text=True, capture_output=True, env=env)
+        print(title or 'no-title', result.stdout, end='')
+        print(result.stderr, end='', file=sys.stderr)
+        result.check_returncode()
+        assert 'scope=shader calls=1' in result.stderr and 'scope=draw calls=2' in result.stderr
+    for name, text in [('finish',finish_prefix+finish+finish_suffix),('ring',ring_test)]:
+        (p/(name+'.cpp')).write_text(text)
+        subprocess.run(['c++','-std=c++20','-O1','-pthread',*flags,'-I'+str(renderer),str(p/(name+'.cpp')),'-o',str(p/name)],check=True)
+        for title in ('PPSA04703','PPSA15552',''):
+            subprocess.run([str(p/name)],env=dict(os.environ,NOVA_CACHE_TITLE_ID=title),check=True)

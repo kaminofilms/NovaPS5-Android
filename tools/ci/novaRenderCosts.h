@@ -4,6 +4,8 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
+#include <string_view>
 #if defined(__linux__)
 #include <unistd.h>
 #else
@@ -12,7 +14,15 @@
 #endif
 
 namespace NovaRender {
-enum class Cost : unsigned { Draw, Dispatch, Shader, Pipeline, Submit, Wait, Present, Snapshot, Count };
+inline bool EverProfile() {
+    static const bool enabled = [] {
+        const char* title = std::getenv("NOVA_CACHE_TITLE_ID");
+        return title && std::string_view(title) == "PPSA04703";
+    }();
+    return enabled;
+}
+enum class Cost : unsigned { Draw, Dispatch, Shader, Pipeline, Submit, Wait, Present, Snapshot,
+    EopDrain, Readback, RingReuse, FaultReuse, Count };
 struct Costs {
     using Clock = std::chrono::steady_clock;
     struct Entry { uint64_t calls = 0, ns = 0, max_ns = 0; };
@@ -32,7 +42,9 @@ struct Costs {
 #else
         const auto tid = uint64_t(std::hash<std::thread::id>{}(std::this_thread::get_id()));
 #endif
-        constexpr const char* names[] = {"draw", "dispatch", "shader", "pipeline", "submit", "wait", "present", "snapshot"};
+        constexpr const char* names[] = {"draw", "dispatch", "shader", "pipeline", "submit", "wait", "present", "snapshot",
+            "eop_drain", "readback", "ring_reuse", "fault_reuse"};
+        static_assert(std::size(names) == unsigned(Cost::Count));
         // Inclusive scopes overlap. Host wait duration is not GPU execution time.
         const auto wall = std::chrono::duration<double, std::milli>(end - begin).count();
         for (unsigned i = 0; i < entries.size(); ++i) {

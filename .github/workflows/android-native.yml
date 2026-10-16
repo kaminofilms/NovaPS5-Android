@@ -1,5 +1,5 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# Owner-authorized 0.9.36 / 87: bounded render cache work and inclusive CPU cost measurements, CI gated.
+# Owner-authorized 0.9.36 / 88: Ever-only performance profile, completed-empty fence elision, label producer evidence.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
@@ -193,9 +193,9 @@ jobs:
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
             --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.36-android-arm64.apk" \
-            --version-name 0.9.36-android --version-code 87 2>&1 | tee dist/apk-build.txt
+            --version-name 0.9.36-android --version-code 88 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.36-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.36-android --version-code 87 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.36-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.36-android --version-code 88 | tee dist/apk/verify.txt
       - name: Verify packaged mesh driver
         run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.36-android-arm64.apk
       - uses: actions/upload-artifact@v4
@@ -217,8 +217,8 @@ jobs:
           tag="v0.9.36-android-${GITHUB_SHA::7}"
           cd dist/apk && sha256sum NovaPS5-0.9.36-android-arm64.apk > SHA256SUMS.txt
           gh release create "$tag" NovaPS5-0.9.36-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.36 render cache performance (CI ${GITHUB_SHA::7})" \
-            --notes "Native Android Kyty + NovaFEX, versionCode 87. Moves immutable pipeline-cache file writes and flushes off the render thread with bounded latest-snapshot scheduling and shutdown draining. Tests the most recently used shader permutation first while retaining current-resource materialization, layout and callee checks. Adds bounded inclusive host timings for draw, dispatch, shader, pipeline, submit, wait, present and snapshot costs. Vulkan snapshots remain on the owner thread. Shaders, GPU waits, save data, cache compatibility and native backend retained. No demonstrated FPS improvement or completed Luna loading is claimed; phone comparison required."
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.36 scoped render synchronization (CI ${GITHUB_SHA::7})" \
+            --notes "Native Android Kyty + NovaFEX, versionCode 88. Restricts recent asynchronous cache writes and MRU shader lookup to Ever Forward PPSA04703; other titles use earlier synchronous cache I/O and first-match lookup. Ever Forward can reuse a real already-completed GPU timeline point only when the current command buffer is empty and no callbacks are queued or active. Recorded work, incomplete ticks and callback ordering keep the original submit-and-wait path. Adds EOP/readback/ring/fault wait attribution and bounded Dead Cells PPSA15552 label-write history. No forced labels, discarded waits, proved Dead Cells freeze fix or measured FPS improvement is claimed. Phone validation required."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()

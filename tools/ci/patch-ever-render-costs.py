@@ -35,15 +35,16 @@ edit(pc, old,
      '\t// copied path reach the writer; it never touches this or a Vulkan handle.\n'
      '\tauto write = [path = m_driver_cache_path, prefix = std::move(prefix),\n'
      '\t              payload = std::move(payload)] {\n' + body + '\n\t};\n'
-     '\tif (preserve_cache) {\n\t\tm_snapshot_writer.Post(std::move(write));\n'
+     '\tif (preserve_cache && NovaRender::EverProfile()) {\n\t\tm_snapshot_writer.Post(std::move(write));\n'
      '\t} else {\n\t\twrite();\n\t}')
 
 # Always materialize the current resources. The MRU is an index, never a pointer
 # into the vector (which can move when a new permutation is compiled).
 edit(pc, '\t\t\tfor (auto& candidate: permutations) {',
+     '\t\t\tconst size_t preferred = NovaRender::EverProfile() ? last_permutation : 0;\n'
      '\t\t\tfor (size_t probe = 0; probe < permutations.size(); ++probe) {\n'
-     '\t\t\t\tconst size_t index = probe == 0 ? last_permutation :\n'
-     '\t\t\t\t    (probe <= last_permutation ? probe - 1 : probe);\n'
+     '\t\t\t\tconst size_t index = probe == 0 ? preferred :\n'
+     '\t\t\t\t    (probe <= preferred ? probe - 1 : probe);\n'
      '\t\t\t\tauto& candidate = permutations[index];')
 edit(pc, '\t\t\t\treturn &candidate;', '\t\t\t\tlast_permutation = index;\n\t\t\t\treturn &candidate;')
 edit(pc, '\t\tstd::vector<Permutation>                    permutations;',
@@ -65,6 +66,38 @@ scope(base+'renderDraw.cpp', 'void RenderExecutor::DrawAuto(uint64_t submit_id, 
 scope(base+'renderCompute.cpp', '                                    uint32_t thread_group_z, uint32_t mode, bool async_compute) {', 'Dispatch')
 scope(base+'renderCompute.cpp', '                                      uint64_t args_addr, uint32_t mode, bool async_compute) {', 'Dispatch')
 scope('src/graphics/presentation/window/swapchain.cpp', 'void Presenter::Present(std::span<const Layer> layers) {', 'Present')
+
+gr = 'src/graphics/guest_gpu/graphicsRun.cpp'
+edit(gr, '\tauto complete_write = [&](auto data, bool timestamp) {',
+     '\tauto complete_write = [&](auto data, bool timestamp) {\n'
+     '\t\tNovaRender::Scope nova_eop_cost(NovaRender::Cost::EopDrain);')
+edit(gr, '\t\t(void)command.Handle();\n\t\tGetScheduler().Finish();',
+     '\t\t// Handle() marks work even when no Vulkan command was recorded.\n'
+     '\t\tif (!NovaRender::EverProfile()) (void)command.Handle();\n\t\tGetScheduler().Finish();')
+edit(base+'commandScheduler.cpp', 'void CommandScheduler::Finish() {\n\tCheckActive();',
+     'void CommandScheduler::Finish() {\n\tCheckActive();\n'
+     '\t// Reuse only a real, already-completed timeline point. No recorded work,\n'
+     '\t// callback, semaphore value or guest completion may be discarded.\n'
+     '\tif (NovaRender::EverProfile() && !m_command.IsInvalid() && !m_command.m_has_commands &&\n'
+     '\t    m_master.IsFree(CurrentTick() - 1)) {\n'
+     '\t\tstd::lock_guard lock(m_operation_mutex);\n'
+     '\t\tif (m_pending_operations.empty() && m_priority_operations.empty() && !m_priority_active) return;\n'
+     '\t}')
+scope(base+'cache/bufferCache.cpp', '\tm_scheduler.Context().GetGpu().SendCommandSync([this, vaddr, size, is_write] {', 'Readback')
+scope(base+'cache/streamBuffer.cpp', '                                         size_t& wait_cursor, uint64_t& wait_bound) {', 'RingReuse')
+scope(base+'cache/faultManager.cpp', 'void FaultManager::ProcessFaultBuffer() {', 'FaultReuse')
+
+# Release builds previously removed this ring at staging time. Enable bounded
+# producer evidence only for the reported Dead Cells regression; never change
+# its wait predicate or publish any synthetic label value.
+edit(gr, '\t/* NOVA_PERF: omit hot-path GPU diagnostic ring writes in release builds */',
+     '\tstatic const bool nova_history = [] {\n'
+     '\t\tconst char* title = std::getenv("NOVA_CACHE_TITLE_ID");\n'
+     '\t\treturn title && std::string_view(title) == "PPSA15552";\n'
+     '\t}();\n'
+     '\tif (nova_history) g_nova_writes[g_nova_write_pos++ % NOVA_WRITES] = {a, value, queue, kind};')
+edit(gr, 'GPU write history is disabled in this build (NOVA_GPU_TRACE_WRITES=1 enables it); later writes to this label are reported as NOVA_GPU_WATCH',
+     'No GPU writes recorded in bounded history (enabled for Dead Cells); later writes to this label are reported as NOVA_GPU_WATCH')
 
 for path in list(changes):
     if path.endswith('.cpp'):
