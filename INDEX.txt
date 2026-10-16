@@ -210,3 +210,4 @@ runs/android-38900422917-52d1eac5 android novafex=success test=success ffmpeg=su
 runs/android-38904660114-e16c3251 android novafex=success test=success ffmpeg=success kyty=success apk=success
 runs/android-38907384520-8a4ecb75 android novafex=success test=success ffmpeg=success kyty=failure apk=skipped
 runs/android-38907968935-5d5d1b60 android novafex=success test=success ffmpeg=success kyty=cancelled apk=cancelled
+runs/android-38908600203-34431465 android novafex=success test=success ffmpeg=success kyty=success apk=success
