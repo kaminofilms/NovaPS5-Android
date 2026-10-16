@@ -31,6 +31,7 @@ for p in "$repo"/patches/fex-android/*.patch; do
 done
 cp "$repo/native/novafex/watchpoint/NovaFexWatchpoint.safe.hpp" fex/FEXCore/include/FEXCore/Core/
 python3 "$repo/tools/ci/patch-0936-fex-watchpoint.py" "$work/fex"
+python3 "$repo/tools/ci/patch-0936-cross-slot-load.py" "$work/fex"
 echo 'add_subdirectory(NovaFex/)' >> fex/Source/Tools/CMakeLists.txt
 rm -rf fex/Source/Tools/NovaFex && cp -r "$repo/native/novafex" fex/Source/Tools/NovaFex
 

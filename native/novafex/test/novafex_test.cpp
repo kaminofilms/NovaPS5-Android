@@ -33,6 +33,9 @@ int g_failures = 0;
 volatile sig_atomic_t g_host_faults = 0;
 volatile sig_atomic_t g_watchpoint_fault = 0;
 uint64_t g_watchpoint_fault_address = 0, g_watchpoint_fault_rip = 0;
+volatile sig_atomic_t g_cross_slot_fault = 0;
+uint64_t g_cross_slot_fault_address = 0;
+uint8_t* g_cross_slot_output = nullptr;
 
 void Check(const char* name, bool ok, const char* detail = "") {
 	std::printf("NOVAFEX_TEST: %-28s %s %s\n", name, ok ? "PASS" : "FAIL", detail);
@@ -41,6 +44,16 @@ void Check(const char* name, bool ok, const char* detail = "") {
 }
 
 void FaultHandler(int signal, siginfo_t* info, void* ucontext) {
+	if (g_cross_slot_fault) {
+		bool ok = signal == SIGSEGV && reinterpret_cast<uint64_t>(info->si_addr) == g_cross_slot_fault_address;
+		for (unsigned i = 0; i < 16; ++i) ok &= g_cross_slot_output[i] == 0xa5;
+		NovaFex::ReportGuestFault(ucontext);
+		const char pass[] = "NOVA_CROSS_SLOT_FAULT: PASS (original fault; output unchanged)\n";
+		const char fail[] = "NOVA_CROSS_SLOT_FAULT: FAIL\n";
+		if (ok) (void)!write(1, pass, sizeof(pass) - 1);
+		else (void)!write(1, fail, sizeof(fail) - 1);
+		_exit(ok ? 0 : 1);
+	}
 	if (g_watchpoint_fault) {
 		NovaFexWatchpoint::TraceRecord record;
 		unsigned found = 0;
@@ -544,6 +557,7 @@ int main() {
 		std::snprintf(d, sizeof(d), "(dd=%d masked=%d qd=%d out0=%08x)", dd_ok, masked_ok, qd_ok, out[0]);
 		Check("AVX2 gather on guest VA", dd_ok && masked_ok && qd_ok, d);
 	}
+#include "cross_slot_load.inc"
 	// Host (emulator) code dereferencing a translated guest address: the fault handler
 	// emulates the access on the backing host memory.
 	{
