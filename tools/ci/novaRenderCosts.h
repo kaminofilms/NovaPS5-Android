@@ -22,7 +22,7 @@ inline bool EverProfile() {
     return enabled;
 }
 enum class Cost : unsigned { Draw, Dispatch, Shader, Pipeline, Submit, Wait, Present, Snapshot,
-    EopDrain, Readback, RingReuse, FaultReuse, EopGpu, Count };
+    EopDrain, Readback, RingReuse, FaultReuse, EopGpu, Pm4Fetch, ReadbackWrite, ReadbackRead, Count };
 struct Costs {
     using Clock = std::chrono::steady_clock;
     struct Entry { uint64_t calls = 0, ns = 0, max_ns = 0; };
@@ -43,7 +43,7 @@ struct Costs {
         const auto tid = uint64_t(std::hash<std::thread::id>{}(std::this_thread::get_id()));
 #endif
         constexpr const char* names[] = {"draw", "dispatch", "shader", "pipeline", "submit", "wait", "present", "snapshot",
-            "eop_drain", "readback", "ring_reuse", "fault_reuse", "eop_gpu"};
+            "eop_drain", "readback", "ring_reuse", "fault_reuse", "eop_gpu", "pm4_fetch", "readback_write", "readback_read"};
         static_assert(std::size(names) == unsigned(Cost::Count));
         // Inclusive scopes overlap. Host wait duration is not GPU execution time.
         const auto wall = std::chrono::duration<double, std::milli>(end - begin).count();
