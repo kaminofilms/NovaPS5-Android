@@ -29,6 +29,8 @@ for p in "$repo"/patches/fex-android/*.patch; do
     [[ -e $p ]] || continue
     git -C fex apply "$p" || { echo "FEX patch failed: $p"; exit 1; }
 done
+cp "$repo/native/novafex/watchpoint/NovaFexWatchpoint.safe.hpp" fex/FEXCore/include/FEXCore/Core/
+python3 "$repo/tools/ci/patch-0936-fex-watchpoint.py" "$work/fex"
 echo 'add_subdirectory(NovaFex/)' >> fex/Source/Tools/CMakeLists.txt
 rm -rf fex/Source/Tools/NovaFex && cp -r "$repo/native/novafex" fex/Source/Tools/NovaFex
 
@@ -49,3 +51,4 @@ cp "$(find build-fex-android -type f -name novafex_test_static | head -n 1)" "$o
 cp "$repo/native/novafex/novafex.h" "$out/include/"
 "$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -d "$out/lib/libnovafex.so" | tee "$out/logs/novafex-dynamic.txt"
 ls -la "$out/lib" "$out"
+

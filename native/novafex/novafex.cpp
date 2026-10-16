@@ -2,6 +2,7 @@
 // Nova PS5 - FEXCore embedding for guest-only translation. See novafex.h.
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "novafex.h"
+#include "watchpoint/NovaFexTraceRing.hpp"
 
 #include <FEXCore/Config/Config.h>
 #include <FEXCore/Core/Context.h>
@@ -46,6 +47,16 @@ extern "C" __attribute__((visibility("hidden"))) void nova_call_native(void* blo
 extern "C" __attribute__((visibility("hidden"))) void nova_guest_bridge_entry();
 
 namespace NovaFex {
+
+bool RegisterVerifiedCheckpointObject(uint64_t guest_base) {
+  if (guest_base < 0x10000 || guest_base > UINT64_MAX - 0x48) return false;
+  return NovaFexWatchpoint::RegisterVerifiedObject(guest_base, TranslateGuestVA(guest_base + 0x38),
+                                                 TranslateGuestVA(guest_base + 0x40));
+}
+
+bool ReadWatchpointTrace(size_t index, NovaFexWatchpoint::TraceRecord* out) {
+  return out && NovaFexWatchpoint::TryReadTrace(index, *out);
+}
 namespace {
 std::atomic<void (*)()> g_freeze_hook {nullptr};
 
@@ -1491,5 +1502,6 @@ extern "C" __attribute__((visibility("hidden"))) void nova_bridge_call(uint64_t 
 	q[0] = args.ret_vec[0];
 	q[1] = args.ret_vec[1];
 }
+
 
 

@@ -1,6 +1,7 @@
 // Nova PS5 - bridge tests for the embedded FEXCore (run on an AArch64 Linux host).
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "novafex.h"
+#include "../watchpoint/NovaFexTraceRing.hpp"
 
 #include <asm/sigcontext.h>
 #include <atomic>
@@ -581,8 +582,10 @@ int main() {
 		Check("fault bridge overhead", acc == kF * (kF - 1) / 2 + kF, d);
 	}
 
+#include "watchpoint.inc"
 	std::printf("NOVAFEX_TEST: %s (%d failures)\n", g_failures ? "FAILED" : "ALL PASS", g_failures);
 	return g_failures ? 1 : 0;
 }
+
 
 

@@ -1,0 +1,62 @@
+name: NovaFEX 0.9.36 watchpoint validation
+on:
+  push:
+    branches: [fix/novaps5-0936-luna-watchpoint]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Registry and ring sanitizer tests
+        run: |
+          g++ -std=c++17 -pthread -Wall -Wextra -Werror -fsanitize=address,undefined tests/test_0936_watchpoint.cpp native/novafex/watchpoint/NovaFexWatchpointBridge.cpp -o /tmp/watchpoint-test
+          /tmp/watchpoint-test
+          python3 -m py_compile tools/ci/patch-0936-fex-watchpoint.py
+      - name: Build dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ninja-build ccache python3
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: android-fex-0936-${{ github.sha }}
+          restore-keys: android-fex-ccache-14c92681f4d62cf84d901460e0358de09c8847a7-
+      - name: Compile pinned FEX and Android ARM64 bridge
+        run: |
+          export ANDROID_NDK=$ANDROID_NDK_LATEST_HOME
+          bash tools/ci/build-android-novafex.sh "$PWD" "$PWD/work" "$PWD/dist/novafex"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: watchpoint-compiled-bridge
+          path: dist/novafex
+  arm64:
+    needs: compile
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: watchpoint-compiled-bridge
+          path: dist/novafex
+      - name: Unmodified runtime regression configuration
+        run: |
+          set -o pipefail
+          chmod +x dist/novafex/novafex_test_static
+          timeout 300s dist/novafex/novafex_test_static 2>&1 | tee original-runtime.txt
+          grep -q 'NOVAFEX_TEST: ALL PASS' original-runtime.txt
+      - name: Scalar StoreMem runtime integration
+        env:
+          FEX_TSOENABLED: '0'
+          NOVA_WATCHPOINT_SCALAR_TEST: '1'
+        run: |
+          set -o pipefail
+          timeout 300s dist/novafex/novafex_test_static 2>&1 | tee scalar-runtime.txt
+          grep -q 'NOVAFEX_TEST: ALL PASS' scalar-runtime.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: watchpoint-arm64-validation
+          path: '*-runtime.txt'

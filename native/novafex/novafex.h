@@ -31,7 +31,13 @@
 
 #define NOVAFEX_API __attribute__((visibility("default")))
 
+namespace NovaFexWatchpoint { struct TraceRecord; }
 namespace NovaFex {
+
+// Caller must prove the object type and pin both field mappings for this process
+// lifetime. No speculative memory read or automatic candidate registration.
+NOVAFEX_API bool RegisterVerifiedCheckpointObject(uint64_t guest_base);
+NOVAFEX_API bool ReadWatchpointTrace(size_t index, NovaFexWatchpoint::TraceRecord* out);
 
 struct Vec128 {
 	uint64_t lo, hi;
@@ -134,3 +140,4 @@ NOVAFEX_API void NoteFrame();
 NOVAFEX_API void NoteGameFrame();
 
 } // namespace NovaFex
+
