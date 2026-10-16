@@ -95,3 +95,64 @@ Compare `Other` download counts/waits, `eop_label_read`, total frame times and r
 `game_fps`. Test Super Meat Boy gameplay separately; discard loading/menu FPS when
 judging improvement. Check both for visual/progression regressions. No further change
 or claimed improvement is justified by menu FPS alone.
+
+## Signed build and continuation evidence
+
+APK source commit: **`f2934bcbfee736c2bfc97c9a3d5a05e6e183627a`**.
+Branch: `fix/novaps5-0936-luna-watchpoint`. A documentation-only follow-up records this
+evidence without changing the APK's compiled source.
+
+CI run **38944677621**:
+https://github.com/kaminofilms/NovaPS5-Android/actions/runs/38944677621
+
+Release:
+https://github.com/kaminofilms/NovaPS5-Android/releases/tag/v0.9.38-android-f2934bc
+
+APK only:
+https://github.com/kaminofilms/NovaPS5-Android/releases/download/v0.9.38-android-f2934bc/NovaPS5-0.9.38-android-arm64.apk
+
+VersionName **0.9.38-android**, versionCode **92**, ARM64, **20,621,932 bytes**.
+APK SHA-256: `1f1262ff616e12dc547a923fc0b3309244f639bd578c56d61cc99af98267103b`.
+Certificate SHA-256: `21882443635874231d80b57100a172d2f090b25047e6fa068edc29734cda2ae0`.
+The APK verifier reported signed with the Nova test key, correct package/version,
+required native exports, Android-resolvable AArch64 libraries and ALL PASS. The packaged
+Turnip check passed. The signing identity remains the existing update-compatible key.
+
+| CI job | ID | Result |
+| --- | --- | --- |
+| FFmpeg | 117120689903 | Passed/cache restored |
+| NovaFEX NDK | 117120690343 | Passed |
+| Native ARM64 runtime | 117121234671 | Passed |
+| Kyty renderer | 117121326878 | Passed |
+| Signed APK | 117124001455 | Passed |
+
+| Artifact | ID |
+| --- | --- |
+| android-apk | 12065566668 |
+| android-kyty | 12066061013 |
+| android-novafex | 12065570253 |
+| android-novafex-test | 12065915056 |
+| android-ffmpeg | 12064169205 |
+
+CI confirms both normal and ASan/UBSan production lookup/kernel-routing tests passed
+for Ever Forward, Super Meat Boy and three unrelated/missing-title profiles. Both GPU
+label Vulkan runs passed; the optimized harness additionally compares retained bytes
+with real GPU-upload/download bytes. Its 512 staged 32/64-bit writes reported zero
+synchronization validation errors. PM4 refetch, EOP ordering/predicates, renderer costs,
+SPIR-V validation and full Android compilation passed. No safety gate was bypassed.
+The CI sanitizer checks ran without the local LeakSanitizer workaround. These are
+component harness sanitizer checks, not a fully ASan-instrumented emulator device run.
+
+Actual phone gameplay FPS, visual correctness and heat for this APK remain unverified.
+The optimization eliminates a copy only for known constant uploads after real completion;
+unknown shader results and CPU page faults still require coherent download. Any remaining
+host/GPU wait time is not automatically avoidable. Compare the same cooled/warm gameplay
+area, retain shader caches, and exclude menus from FPS conclusions. Keep the 0.9.37
+baseline available for a controlled comparison.
+
+Next engineer: read this handoff and the owner's next export. PPSA31162 is Super Meat Boy,
+not Luna. Prioritize Ever Forward's ratio of `eop_label_read` hits to remaining `Other`
+downloads and compare actual gameplay heartbeats. If readbacks remain, inspect misses,
+unknown writers and page-fault costs without weakening publication or ownership. Confirm
+Super Meat Boy progression and EOP timing separately. Do not claim that reduced copies
+necessarily mean lower device temperature or higher gameplay FPS.
