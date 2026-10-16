@@ -2,7 +2,7 @@
 """Compile actual EOP and shader-fence bodies; verify ordering with a recording GPU timeline.
 No claim of device/Vulkan game execution: this is a deterministic host regression.
 """
-import pathlib, subprocess, sys, tempfile, shutil, struct
+import os, pathlib, subprocess, sys, tempfile, shutil, struct
 root = pathlib.Path(sys.argv[1])
 s = (root/'src/graphics/guest_gpu/graphicsRun.cpp').read_text()
 a = s.index('template <typename T>\nvoid CommandProcessor::WriteAtEndOfPipe(')
@@ -56,6 +56,7 @@ struct CommandProcessor {
  template<class T>void WriteAtEndOfPipe(uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,void*,T,uint32_t,uint32_t);
 };
 '''
+pre = '#include "novaRenderCosts.h"\n' + pre
 post=r'''
 int main(){
  for(unsigned cache : {0u,0x38u}) for(unsigned irq:{0u,2u}) for(unsigned event:{0x2bu,0x2du}){
@@ -88,8 +89,10 @@ int main(){EmitterState s;EmitStoreCompletion(s);assert((s.builder.words==std::v
 with tempfile.TemporaryDirectory() as d:
  for name,source in [('completion',pre+body+post),('shader',shaderpre+shader+shaderpost)]:
   p=pathlib.Path(d)/(name+'.cpp');p.write_text(source);binary=pathlib.Path(d)/name
-  subprocess.run(['g++','-std=c++20','-O2','-Wall','-Wextra','-Wno-unused-variable',str(p),'-o',str(binary)],check=True)
-  subprocess.run([str(binary)],check=True)
+  subprocess.run(['g++','-std=c++20','-O2','-Wall','-Wextra','-Wno-unused-variable',
+                  '-I'+str(root/'src/graphics/host_gpu/renderer'),str(p),'-o',str(binary)],check=True)
+  for title in ('PPSA04703','PPSA15552',''):
+   subprocess.run([str(binary)],check=True,env=dict(os.environ,NOVA_CACHE_TITLE_ID=title))
  # Validate a minimal Vulkan compute module using the exact emitted memory-fence operands.
  # Full generated game shaders remain a device/integration validation requirement.
  val=shutil.which('spirv-val')
@@ -117,3 +120,4 @@ OpFunctionEnd
   subprocess.run([val,'--target-env','vulkan1.1',str(out)],check=True)
   print('SPIR-V Vulkan 1.1 fence module validation: PASS')
  else: print('SPIR-V binary validation: SKIP (spirv-tools absent locally; required in Android CI)')
+
