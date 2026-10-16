@@ -1,10 +1,10 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# Owner-approved 0.9.35 / 83 build: explicit BatchMap guest write-back.
+# Owner-authorized 0.9.36 / 84: typed Luna constructor watchpoints, CI gated.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
   push:
-    branches: [android-native, feature/guest-va, feature/anyps5-android-gpu, fix/0923-arm64-ld1-boot, fix/0924-native-guest-hotpaths, fix/0925-agc-commandbuffer-hostviews, fix/0926-shader-cache-persistence, fix/0927-gpu-host-memory, fix/0929-renderer-performance, fix/0931-luna-super-meat-boy]
+    branches: [android-native, feature/guest-va, feature/anyps5-android-gpu, fix/0923-arm64-ld1-boot, fix/0924-native-guest-hotpaths, fix/0925-agc-commandbuffer-hostviews, fix/0926-shader-cache-persistence, fix/0927-gpu-host-memory, fix/0929-renderer-performance, fix/0931-luna-super-meat-boy, fix/novaps5-0936-luna-watchpoint]
   workflow_dispatch:
 permissions:
   contents: write
@@ -21,6 +21,12 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+      - name: Watchpoint registry and signature sanitizer tests
+        run: |
+          python3 tests/test_luna_elf_inspect.py
+          g++ -std=c++17 -pthread -Wall -Wextra -Werror -fsanitize=address,undefined tests/test_0936_watchpoint.cpp native/novafex/watchpoint/NovaFexWatchpointBridge.cpp -o /tmp/watchpoint-test
+          /tmp/watchpoint-test
+          python3 -m py_compile tools/ci/patch-0936-fex-watchpoint.py tools/ci/patch-0936-luna-constructor.py
       - name: Structured SIMD decoder regression tests
         run: |
           python3 tests/test_structured_simd.py
@@ -63,11 +69,20 @@ jobs:
           chmod +x dist/novafex/novafex_test_static
           timeout 300s dist/novafex/novafex_test_static 2>&1 | tee dist/novafex/novafex-test-android.txt
           grep -q 'NOVAFEX_TEST: ALL PASS' dist/novafex/novafex-test-android.txt
+      - name: Watchpoint scalar stores, faults and typed constructor lifetime
+        run: |
+          set -o pipefail
+          FEX_TSOENABLED=0 NOVA_WATCHPOINT_SCALAR_TEST=1 timeout 300s dist/novafex/novafex_test_static 2>&1 | tee dist/novafex/novafex-test-scalar-android.txt
+          grep -q 'NOVAFEX_TEST: ALL PASS' dist/novafex/novafex-test-scalar-android.txt
+          NOVA_WATCHPOINT_FAULT_TEST=success timeout 60s dist/novafex/novafex_test_static 2>&1 | tee dist/novafex/novafex-test-success-android.txt
+          NOVA_WATCHPOINT_FAULT_TEST=fault timeout 60s dist/novafex/novafex_test_static 2>&1 | tee dist/novafex/novafex-test-fault-android.txt
+          NOVA_WATCHPOINT_LUNA_TEST=1 timeout 60s dist/novafex/novafex_test_static 2>&1 | tee dist/novafex/novafex-test-luna-tso-android.txt
+          NOVA_WATCHPOINT_LUNA_TEST=1 FEX_TSOENABLED=0 timeout 60s dist/novafex/novafex_test_static 2>&1 | tee dist/novafex/novafex-test-luna-scalar-android.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: android-novafex-test
-          path: dist/novafex/novafex-test-android.txt
+          path: 'dist/novafex/novafex-test*-android.txt'
   ffmpeg:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -89,7 +104,7 @@ jobs:
           path: dist/ffmpeg
           retention-days: 7
   kyty:
-    needs: [novafex, ffmpeg]
+    needs: [novafex, novafex-test, ffmpeg]
     runs-on: ubuntu-24.04
     timeout-minutes: 150
     steps:
@@ -164,12 +179,12 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.35-android-arm64.apk" \
-            --version-name 0.9.35-android --version-code 83 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.36-android-arm64.apk" \
+            --version-name 0.9.36-android --version-code 84 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.35-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.35-android --version-code 83 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.36-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.36-android --version-code 84 | tee dist/apk/verify.txt
       - name: Verify packaged mesh driver
-        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.35-android-arm64.apk
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.36-android-arm64.apk
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -186,11 +201,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.9.35-android-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.9.35-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.9.35-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.35 explicit BatchMap guest write-back (CI ${GITHUB_SHA::7})" \
-            --notes "Native Android Kyty + NovaFEX. BatchMap reads each 32-byte guest entry into a native local, performs the existing mapping operation, and explicitly publishes only successful direct/flexible map guest start addresses through GuestMemory::Write. Processed counts use guest writes on success and partial failure. Other entry fields are preserved. Luna-only read-back tracing records expected and observed guest values. Regressions execute the production BatchMap body with inaccessible guest entry/count addresses, exact Luna values, relocation, failed and partial batches, nonmapping operations and native pointers. Includes prior cache and Luna tracing fixes. The supplied trace already contains the requested fixed-map address; this change hardens publication and does not prove the memcpy crash is solved."
+          tag="v0.9.36-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.36-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.36-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.36 typed Luna CheckpointName watchpoints (CI ${GITHUB_SHA::7})" \
+            --notes "Native Android Kyty + NovaFEX. Signature-checked SaveGameInstanceData constructor/destructor boundaries register and retire verified CheckpointName objects before derived initialization. Scalar StoreMem traces preserve registers and report attempted writes with exact guest RIP, address, payload and field identity. TSO/SIMD/SVE store paths remain unchanged. Unknown game builds reject the profile. Includes original 0.9.35 compatibility behavior; this is watchpoint instrumentation, not a demonstrated Luna corruption fix. No target-device boot or FPS claim."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()
@@ -212,6 +227,7 @@ jobs:
           git add -A
           git -c user.name=nova-lab -c user.email=nova-lab@users.noreply.github.com commit -qm "android logs $dest"
           for i in 1 2 3; do git push -q origin HEAD:lab-logs && break; git pull -q --rebase origin lab-logs; done
+
 
 
 

@@ -10,7 +10,7 @@ constexpr size_t MAX_TRACKED_OBJECTS = 16;
 // Caller verifies object identity and both backing field addresses. Slots are
 // immutable for the process lifetime: no unsafe reclamation or speculative reads.
 struct TrackedObject {
-  std::atomic<uint32_t> state {0}; // 0 empty, 1 publishing, 2 immutable
+  std::atomic<uint32_t> state {0}; // 0 empty, 1 publishing, 2 active, 3 retired
   uint64_t guest_base {}, host_pointer {}, host_length {};
 };
 struct StoreIntent {
@@ -21,6 +21,9 @@ struct StoreIntent {
 struct Match { uint64_t base {}, address {}; uint8_t fields {}; };
 extern std::array<TrackedObject, MAX_TRACKED_OBJECTS> objects;
 extern std::atomic<uint32_t> enabled;
+extern std::atomic<uint64_t> luna_constructor_rip, luna_destructor_rip, luna_vtable;
+void LunaBoundary(uint64_t object, uint64_t vtable, uint64_t event) noexcept;
+bool RetireVerifiedObject(uint64_t object) noexcept;
 inline bool Overlap(uint64_t a, uint64_t n, uint64_t b, uint64_t m) noexcept {
   return n && m && a <= UINT64_MAX - n && b <= UINT64_MAX - m && a < b + m && b < a + n;
 }

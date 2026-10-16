@@ -1,7 +1,5 @@
 name: NovaFEX 0.9.36 watchpoint validation
 on:
-  push:
-    branches: [fix/novaps5-0936-luna-watchpoint]
   workflow_dispatch:
 permissions:
   contents: read
@@ -62,6 +60,11 @@ jobs:
           set -o pipefail
           NOVA_WATCHPOINT_FAULT_TEST=success timeout 60s dist/novafex/novafex_test_static 2>&1 | tee success-runtime.txt
           NOVA_WATCHPOINT_FAULT_TEST=fault timeout 60s dist/novafex/novafex_test_static 2>&1 | tee fault-runtime.txt
+      - name: Signature checked Luna constructor and lifetime
+        run: |
+          set -o pipefail
+          NOVA_WATCHPOINT_LUNA_TEST=1 timeout 60s dist/novafex/novafex_test_static 2>&1 | tee luna-tso-runtime.txt
+          NOVA_WATCHPOINT_LUNA_TEST=1 FEX_TSOENABLED=0 timeout 60s dist/novafex/novafex_test_static 2>&1 | tee luna-scalar-runtime.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "novafex.h"
 #include "../watchpoint/NovaFexTraceRing.hpp"
+#include "../watchpoint/NovaFexLunaProfile.hpp"
 
 #include <asm/sigcontext.h>
 #include <atomic>
@@ -208,6 +209,7 @@ int main() {
 	GuestCode code;
 	code.base = static_cast<uint8_t*>(mmap(nullptr, 1 << 16, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
 	NovaFex::RegisterGuestCodeRange(reinterpret_cast<uint64_t>(code.base), 1 << 16);
+#include "luna_constructor.inc"
 	if (watchpoint_store_test) {
 		const size_t page = static_cast<size_t>(sysconf(_SC_PAGESIZE));
 		auto* object = static_cast<uint8_t*>(mmap(nullptr, page, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));

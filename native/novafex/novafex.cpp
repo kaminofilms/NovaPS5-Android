@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "novafex.h"
 #include "watchpoint/NovaFexTraceRing.hpp"
+#include "watchpoint/NovaFexLunaProfile.hpp"
 
 #include <FEXCore/Config/Config.h>
 #include <FEXCore/Core/Context.h>
@@ -48,6 +49,30 @@ extern "C" __attribute__((visibility("hidden"))) void nova_guest_bridge_entry();
 
 namespace NovaFex {
 
+bool ConfigureLunaWatchpointProfile(uint64_t base, uint64_t size) {
+  const auto read = [](uint64_t guest, void* out, size_t bytes) {
+    // Only profile spans bounded inside the loader's mapped module are read.
+    // Kernel copy returns EFAULT rather than dereferencing an unchecked pointer.
+    iovec local {out, bytes};
+    iovec remote {reinterpret_cast<void*>(TranslateGuestVA(guest)), bytes};
+    return process_vm_readv(getpid(), &local, 1, &remote, 1, 0) == static_cast<ssize_t>(bytes);
+  };
+  if (!NovaFexWatchpoint::VerifyLunaProfile(base, size, read)) {
+    std::fprintf(stderr, "NOVA_LUNA_PROFILE: rejected code/class/layout signature at base=0x%llx\n", static_cast<unsigned long long>(base));
+    return false;
+  }
+  auto& ctor = NovaFexWatchpoint::luna_constructor_rip;
+  const uint64_t prior = ctor.load(std::memory_order_acquire);
+  if (prior && prior != base + NovaFexWatchpoint::kLunaConstructorRVA) return false;
+  NovaFexWatchpoint::luna_vtable.store(base + NovaFexWatchpoint::kLunaVTableRVA, std::memory_order_release);
+  NovaFexWatchpoint::luna_destructor_rip.store(base + NovaFexWatchpoint::kLunaDestructorRVA, std::memory_order_release);
+  ctor.store(base + NovaFexWatchpoint::kLunaConstructorRVA, std::memory_order_release);
+  std::fprintf(stderr, "NOVA_LUNA_PROFILE: armed SaveGameInstanceData ctor=0x%llx dtor=0x%llx base=0x%llx\n",
+    static_cast<unsigned long long>(ctor.load()), static_cast<unsigned long long>(NovaFexWatchpoint::luna_destructor_rip.load()),
+    static_cast<unsigned long long>(base));
+  return true;
+}
+
 bool RegisterVerifiedCheckpointObject(uint64_t guest_base) {
   if (guest_base < 0x10000 || guest_base > UINT64_MAX - 0x48) return false;
   return NovaFexWatchpoint::RegisterVerifiedObject(guest_base, TranslateGuestVA(guest_base + 0x38),
@@ -56,6 +81,11 @@ bool RegisterVerifiedCheckpointObject(uint64_t guest_base) {
 
 bool ReadWatchpointTrace(size_t index, NovaFexWatchpoint::TraceRecord* out) {
   return out && NovaFexWatchpoint::TryReadTrace(index, *out);
+}
+
+bool IsVerifiedCheckpointObject(uint64_t base) {
+  if (base < 0x10000 || base > UINT64_MAX - 0x48) return false;
+  return NovaFexWatchpoint::MatchStore(TranslateGuestVA(base + 0x38), 1).base == base;
 }
 
 static void DumpWatchpointTrace() {
@@ -1514,6 +1544,21 @@ extern "C" __attribute__((visibility("hidden"))) void nova_bridge_call(uint64_t 
 	regs[1] = args.ret_gpr[1];
 	q[0] = args.ret_vec[0];
 	q[1] = args.ret_vec[1];
+}
+
+namespace NovaFexWatchpoint {
+void LunaBoundary(uint64_t object, uint64_t vtable, uint64_t event) noexcept {
+  if (vtable != luna_vtable.load(std::memory_order_acquire) || !object || (object & 7)) return;
+  if (event == 1) {
+    const bool ok = NovaFex::RegisterVerifiedCheckpointObject(object);
+    std::fprintf(stderr, "NOVA_LUNA_OBJECT: %s type=SaveGameInstanceData object=0x%llx vtable=0x%llx fields=+0x38/+0x40\n",
+      ok ? "registered" : "registry_full_or_invalid", static_cast<unsigned long long>(object),
+      static_cast<unsigned long long>(vtable));
+  } else if (event == 2 && RetireVerifiedObject(object)) {
+    std::fprintf(stderr, "NOVA_LUNA_OBJECT: retired object=0x%llx\n", static_cast<unsigned long long>(object));
+    NovaFex::DumpWatchpointTrace();
+  }
+}
 }
 
 

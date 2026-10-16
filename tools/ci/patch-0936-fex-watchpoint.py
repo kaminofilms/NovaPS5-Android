@@ -92,4 +92,53 @@ body = body.replace(anchor, hook + '\n' + anchor)
 s = s[:start] + body + s[end:]
 s = s.replace('#include "FEXCore/Core/X86Enums.h"', '#include "FEXCore/Core/X86Enums.h"\n#include "Interface/Core/JIT/DebugData.h"\n#include <FEXCore/Core/NovaFexWatchpoint.safe.hpp>', 1)
 p.write_text(s)
+misc = root / 'FEXCore/Source/Interface/Core/JIT/MiscOps.cpp'
+m = misc.read_text()
+old = '''  // metadata
+  DebugData->GuestOpcodes.push_back({Op->GuestEntryOffset, GetCursorAddress<uint8_t*>() - CodeData.BlockBegin});'''
+assert m.count(old) == 1 and 'Nova Luna typed constructor boundary' not in m
+boundary = r'''
+  // Nova Luna typed constructor boundary. The loader publishes these addresses
+  // before guest execution only after independent code/class/layout checks.
+  const uint64_t GuestPC = Entry + Op->GuestEntryOffset;
+  const auto ConstructorRIP = NovaFexWatchpoint::luna_constructor_rip.load(std::memory_order_acquire);
+  const auto DestructorRIP = NovaFexWatchpoint::luna_destructor_rip.load(std::memory_order_acquire);
+  const bool IsConstructor = ConstructorRIP && GuestPC == ConstructorRIP;
+  const bool IsDestructor = DestructorRIP && GuestPC == DestructorRIP;
+  if (IsConstructor || IsDestructor) {
+    static_assert(TMP_ABIARGS);
+    constexpr auto FPSR = static_cast<ARMEmitter::SystemRegister>(
+      ARMEmitter::GenSystemReg<0b11, 0b011, 0b0100, 0b0100, 0b001>);
+    sub(ARMEmitter::Size::i64Bit, ARMEmitter::Reg::rsp, ARMEmitter::Reg::rsp, 16);
+    mrs(TMP1, ARMEmitter::SystemRegister::FPCR);
+    str(TMP1, ARMEmitter::Reg::rsp, 0);
+    mrs(TMP1, FPSR);
+    str(TMP1, ARMEmitter::Reg::rsp, 8);
+    PushDynamicRegs(TMP1);
+    SpillStaticRegs(TMP1);
+    // Constructor RBX is the object, loaded by the guest from FObjectInitializer
+    // and preserved over its base constructor. Destructor RDI is the object.
+    // RAX must be the exact verified class vtable at both first vtable stores.
+    const auto ObjectIndex = IsConstructor ? FEXCore::X86State::REG_RBX : FEXCore::X86State::REG_RDI;
+    ldr(ARMEmitter::XReg::x0, STATE, offsetof(FEXCore::Core::CpuStateFrame, State.gregs) + ObjectIndex * 8);
+    ldr(ARMEmitter::XReg::x1, STATE, offsetof(FEXCore::Core::CpuStateFrame, State.gregs[FEXCore::X86State::REG_RAX]));
+    LoadConstant(ARMEmitter::Size::i64Bit, ARMEmitter::Reg::r2, IsConstructor ? 1 : 2);
+    LoadConstant(ARMEmitter::Size::i64Bit, ARMEmitter::Reg::r3, reinterpret_cast<uintptr_t>(&NovaFexWatchpoint::LunaBoundary));
+    if (!CTX->Config.DisableVixlIndirectCalls) {
+      GenerateIndirectRuntimeCall<void, uint64_t, uint64_t, uint64_t>(ARMEmitter::Reg::r3);
+    } else {
+      blr(ARMEmitter::Reg::r3);
+    }
+    FillStaticRegs();
+    PopDynamicRegs();
+    ldr(TMP1, ARMEmitter::Reg::rsp, 0);
+    msr(ARMEmitter::SystemRegister::FPCR, TMP1);
+    ldr(TMP1, ARMEmitter::Reg::rsp, 8);
+    msr(FPSR, TMP1);
+    add(ARMEmitter::Size::i64Bit, ARMEmitter::Reg::rsp, ARMEmitter::Reg::rsp, 16);
+  }
+'''
+m = m.replace(old, old + boundary)
+m = m.replace('#include "Interface/Context/Context.h"', '#include "Interface/Context/Context.h"\n#include <FEXCore/Core/NovaFexWatchpoint.safe.hpp>\n#include <FEXCore/Core/X86Enums.h>', 1)
+misc.write_text(m)
 print('NOVA_WATCHPOINT: scalar StoreMem intent instrumentation applied')

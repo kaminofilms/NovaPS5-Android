@@ -5,6 +5,7 @@
 namespace NovaFexWatchpoint {
 std::array<TrackedObject, MAX_TRACKED_OBJECTS> objects {};
 std::atomic<uint32_t> enabled {0};
+std::atomic<uint64_t> luna_constructor_rip {0}, luna_destructor_rip {0}, luna_vtable {0};
 std::array<TraceSlot, TRACE_CAPACITY> slots {};
 std::atomic<uint64_t> sequence {0}, dropped {0};
 static_assert(std::atomic<uint32_t>::is_always_lock_free);
@@ -61,6 +62,16 @@ bool Capture(const StoreIntent& intent, const Match& match) noexcept {
   slot.record = {n, match.base, intent, match.fields, true, false};
   slot.state.store(2, std::memory_order_release);
   return true;
+}
+
+bool RetireVerifiedObject(uint64_t object) noexcept {
+  bool retired = false;
+  for (auto& slot : objects) {
+    if (slot.state.load(std::memory_order_acquire) != 2 || slot.guest_base != object) continue;
+    uint32_t published = 2;
+    retired |= slot.state.compare_exchange_strong(published, 3, std::memory_order_acq_rel);
+  }
+  return retired;
 }
 
 bool TryReadTrace(size_t index, TraceRecord& out) noexcept {

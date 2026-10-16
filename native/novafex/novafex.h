@@ -38,6 +38,10 @@ namespace NovaFex {
 // lifetime. No speculative memory read or automatic candidate registration.
 NOVAFEX_API bool RegisterVerifiedCheckpointObject(uint64_t guest_base);
 NOVAFEX_API bool ReadWatchpointTrace(size_t index, NovaFexWatchpoint::TraceRecord* out);
+// Call before any main-module execution. Validates known Luna code/metadata
+// spans in already mapped guest memory; rejects unknown versions without arming.
+NOVAFEX_API bool ConfigureLunaWatchpointProfile(uint64_t module_base, uint64_t module_size);
+NOVAFEX_API bool IsVerifiedCheckpointObject(uint64_t guest_base);
 
 struct Vec128 {
 	uint64_t lo, hi;

@@ -166,6 +166,7 @@ python3 "$repo/tests/test_0934_luna_correlation.py" "$work/kyty"
 # 0.9.35: explicit successful-map guest pointer and processed-count publication.
 python3 "$repo/tools/ci/patch-0935-batch-map-writeback.py" "$work/kyty"
 python3 "$repo/tests/test_0935_batch_map_writeback.py" "$work/kyty"
+python3 "$repo/tools/ci/patch-0936-luna-constructor.py" "$work/kyty"
 cp "$repo/native/novafex/guest_memory.cpp" "$work/kyty/src/novaGuestMemory.cpp"
 cat >> "$work/kyty/CMakeLists.txt" <<'CMAKE'
 if(KYTY_ANDROID)
@@ -228,6 +229,7 @@ ls -la "$out/lib"
 # Publish the exact patched renderer and its source dependencies alongside the APK.
 mkdir -p "$out/source"
 tar --exclude='.git' -czf "$out/source/Kyty-Android-corresponding-source.tar.gz" -C "$work" kyty adrenotools
+
 
 
 
