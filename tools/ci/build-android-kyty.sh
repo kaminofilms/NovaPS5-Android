@@ -174,6 +174,11 @@ python3 "$repo/tools/ci/patch-ever-pm4-fetch.py" "$work/kyty"
 python3 "$repo/tests/test_ever_pm4_fetch.py" "$work/kyty"
 SANITIZE=1 python3 "$repo/tests/test_ever_pm4_fetch.py" "$work/kyty"
 python3 "$repo/tests/test_ever_gpu_labels.py" "$work/kyty"
+python3 "$repo/tools/ci/patch-novaps5-readback-telemetry.py" "$work/kyty"
+python3 "$repo/tests/test_novaps5_readback_safety_expanded.py" "$work/kyty"
+SANITIZE=1 python3 "$repo/tests/test_novaps5_readback_safety_expanded.py" "$work/kyty"
+python3 "$repo/tests/test_novaps5_readback_ordering.py" "$work/kyty"
+SANITIZE=1 python3 "$repo/tests/test_novaps5_readback_ordering.py" "$work/kyty"
 python3 "$repo/tests/test_ever_render_costs.py" "$work/kyty"
 SANITIZE=1 python3 "$repo/tests/test_ever_render_costs.py" "$work/kyty"
 python3 "$repo/tests/test_controller_output.py" "$work/kyty"
@@ -240,8 +245,3 @@ ls -la "$out/lib"
 # Publish the exact patched renderer and its source dependencies alongside the APK.
 mkdir -p "$out/source"
 tar --exclude='.git' -czf "$out/source/Kyty-Android-corresponding-source.tar.gz" -C "$work" kyty adrenotools
-
-
-
-
-
