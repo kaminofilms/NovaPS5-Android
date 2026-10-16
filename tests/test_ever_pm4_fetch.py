@@ -60,9 +60,11 @@ int main(){
  munmap(inaccessible,backing.size());puts("NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS");
 }
 '''
+if 'inline bool GpuLabelProfile()' in (root/'src/graphics/host_gpu/renderer/novaRenderCosts.h').read_text():
+ post=post.replace('NovaRender::EverProfile()', 'NovaRender::GpuLabelProfile()')
 with tempfile.TemporaryDirectory() as d:
  p=pathlib.Path(d)/'fetch.cpp';p.write_text(pre+host+fetch+post);out=pathlib.Path(d)/'fetch'
  flags=['-fsanitize=address,undefined','-fno-omit-frame-pointer'] if os.environ.get('SANITIZE')=='1' else []
  subprocess.run(['g++','-std=c++20','-O2','-Wall','-Wextra',*flags,'-I'+str(root/'src/graphics/host_gpu/renderer'),str(p),'-o',str(out)],check=True)
- for title in ('PPSA04703','PPSA15552',''):
+ for title in ('PPSA04703','PPSA31162','PPSA15552',''):
   subprocess.run([str(out)],env=dict(os.environ,NOVA_CACHE_TITLE_ID=title),check=True)

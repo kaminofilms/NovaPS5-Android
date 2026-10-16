@@ -163,7 +163,8 @@ int main(){
 }
 '''
 graphics_source = (root/'src/graphics/guest_gpu/graphicsRun.cpp').read_text()
-assert 'if (!NovaRender::EverProfile()) (void)command.Handle();' in graphics_source
+label_profile = 'GpuLabelProfile' if 'inline bool GpuLabelProfile()' in (renderer/'novaRenderCosts.h').read_text() else 'EverProfile'
+assert f'if (!NovaRender::{label_profile}()) (void)command.Handle();' in graphics_source
 assert 'if (with_interrupt) m_renderer.TriggerInterrupt' in graphics_source
 ring_declarations = graphics_source[graphics_source.index('struct NovaGpuWrite {'):graphics_source.index('std::atomic<uint64_t> g_nova_watch_addr')]
 ring_start = graphics_source.index('\tconst auto a = reinterpret_cast<uint64_t>(addr);', graphics_source.index('void NovaNoteGpuWrite'))

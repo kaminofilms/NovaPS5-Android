@@ -196,6 +196,19 @@ python3 "$repo/tests/test_gpu_completion.py" "$work/kyty"
 # Execute the host regressions against the sources that are about to be compiled.
 python3 "$repo/tests/test_native_startup.py" "$work/kyty"
 python3 "$repo/tests/test_release_mem.py" "$work/kyty"
+# 0.9.38: owner-measured tiny label reads and Super Meat Boy EOP drains.
+# The earlier telemetry-only wait contract runs BEFORE this separate optimization.
+python3 "$repo/tools/ci/patch-eop-label-reads.py" "$work/kyty"
+python3 "$repo/tests/test_eop_label_reads.py" "$work/kyty"
+SANITIZE=1 python3 "$repo/tests/test_eop_label_reads.py" "$work/kyty"
+python3 "$repo/tests/test_ever_gpu_labels.py" "$work/kyty"
+python3 "$repo/tests/test_gpu_completion.py" "$work/kyty"
+python3 "$repo/tests/test_ever_pm4_fetch.py" "$work/kyty"
+SANITIZE=1 python3 "$repo/tests/test_ever_pm4_fetch.py" "$work/kyty"
+python3 "$repo/tests/test_ever_render_costs.py" "$work/kyty"
+SANITIZE=1 python3 "$repo/tests/test_ever_render_costs.py" "$work/kyty"
+python3 "$repo/tests/test_release_mem.py" "$work/kyty"
+
 # SDL's AAudio backend: report stream errors, disconnects and underflows (debug LOGI is off
 # upstream) so the session log shows why audio stops.
 aaudio=kyty/3rdparty/SDL3/src/audio/aaudio/SDL_aaudio.c

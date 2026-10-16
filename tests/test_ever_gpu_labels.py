@@ -9,6 +9,8 @@ source=(root/'src/graphics/host_gpu/renderer/cache/bufferCache.cpp').read_text()
 def method(text,start,end): return text[text.index(start):text.index(end,text.index(start))]
 write=method(source,'void BufferCache::WriteDataBuffer(', '\nbool BufferCache::WriteEopLabel(')
 label=method(source,'bool BufferCache::WriteEopLabel(', '\nvoid BufferCache::Register(')
+if '\nbool BufferCache::TryReadEopLabel(' in label:
+ label=label.split('\nbool BufferCache::TryReadEopLabel(',1)[0]
 gr=(root/'src/graphics/guest_gpu/graphicsRun.cpp').read_text()
 wait=method(gr,'template <typename T>\nvoid CommandProcessor::WaitRegMem(', '\ntemplate void CommandProcessor::WaitRegMem<uint32_t>')
 predicate=method(gr,'bool TestWaitRegMemValue(', '\ntemplate <typename T>\nvoid CommandProcessor::WaitRegMem(')
@@ -103,13 +105,23 @@ int main(){
  puts("NOVA_GPU_LABEL_VULKAN: 512 production staged 32/64-bit label writes, overwrite ordering, readback, invalid/texture fallback; zero synchronization validation errors PASS");
 }
 '''
+optimized = 'inline bool GpuLabelProfile()' in (root/'src/graphics/host_gpu/renderer/novaRenderCosts.h').read_text()
+if optimized:
+ post=post.replace('NovaRender::EverProfile()', 'NovaRender::GpuLabelProfile()')
+ vpre=vpre.replace('#include "novaRenderCosts.h"', '#include "novaRenderCosts.h"\n#include "novaEopLabels.h"')
+ vpre=vpre.replace('struct Scheduler {Command command;', 'struct Scheduler {uint64_t CurrentTick(){return 1;}Command command;')
+ vpre=vpre.replace('struct BufferCache {Scheduler', 'struct BufferCache {NovaRender::EopLabels m_eop_labels;Scheduler')
+ vpre=vpre.replace('uint64_t,bool written){assert(written);', 'uint64_t n,bool written){m_eop_labels.Invalidate(a,n);assert(written);')
+ vpost=vpost.replace('device.destroyFence(fence);', '''
+ for(unsigned i=0;i<128;++i){uint64_t address=0x20000+i*8;auto known=cache.m_eop_labels.Find(address,(i&1)?8:4);assert(known && known->tick==1);assert(!std::memcmp(known->bytes.data(),download.data+address-0x20000,known->size));}
+ device.destroyFence(fence);''')
 with tempfile.TemporaryDirectory() as d:
  d=pathlib.Path(d);include=root/'src/graphics/host_gpu/renderer'
  p=d/'wait.cpp';p.write_text(pre+'\n#include <cstring>\n'+predicate+wait+post)
  # cstring must precede its use in the mock backing implementation.
  p.write_text('#include <cstring>\n'+p.read_text())
  subprocess.run(['g++','-std=c++20','-O2','-I'+str(include),str(p),'-o',str(d/'wait')],check=True)
- for title in ('PPSA04703','PPSA15552',''):
+ for title in ('PPSA04703','PPSA31162','PPSA15552',''):
   subprocess.run([str(d/'wait')],env=dict(os.environ,NOVA_CACHE_TITLE_ID=title),check=True)
  p=d/'label.cpp';p.write_text(vpre+write+label+vpost)
  subprocess.run(['g++','-std=c++20','-O2','-I'+str(include),'-I'+str(root/'3rdparty/Vulkan-Headers/include'),str(p),'-Wno-missing-field-initializers','-l:libvulkan.so.1','-o',str(d/'label')],check=True)

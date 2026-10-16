@@ -105,12 +105,15 @@ uint32_t ConstantU32(EmitterState&,uint32_t value){return value;}
 shaderpost=r'''
 int main(){EmitterState s;EmitStoreCompletion(s);assert((s.builder.words==std::vector<uint32_t>{225,1,2120}));puts("SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)");}
 '''
+# Support the earlier baseline gate and the two-title optimized gate.
+if 'inline bool GpuLabelProfile()' in (root/'src/graphics/host_gpu/renderer/novaRenderCosts.h').read_text():
+ post=post.replace('NovaRender::EverProfile()', 'NovaRender::GpuLabelProfile()')
 with tempfile.TemporaryDirectory() as d:
  for name,source in [('completion',pre+body+post),('shader',shaderpre+shader+shaderpost)]:
   p=pathlib.Path(d)/(name+'.cpp');p.write_text(source);binary=pathlib.Path(d)/name
   subprocess.run(['g++','-std=c++20','-O2','-Wall','-Wextra','-Wno-unused-variable',
                   '-I'+str(root/'src/graphics/host_gpu/renderer'),str(p),'-o',str(binary)],check=True)
-  for title in ('PPSA04703','PPSA15552',''):
+  for title in ('PPSA04703','PPSA31162','PPSA15552',''):
    subprocess.run([str(binary)],check=True,env=dict(os.environ,NOVA_CACHE_TITLE_ID=title))
  # Validate a minimal Vulkan compute module using the exact emitted memory-fence operands.
  # Full generated game shaders remain a device/integration validation requirement.
@@ -139,4 +142,3 @@ OpFunctionEnd
   subprocess.run([val,'--target-env','vulkan1.1',str(out)],check=True)
   print('SPIR-V Vulkan 1.1 fence module validation: PASS')
  else: print('SPIR-V binary validation: SKIP (spirv-tools absent locally; required in Android CI)')
-
