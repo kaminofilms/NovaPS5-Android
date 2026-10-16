@@ -50,6 +50,18 @@ plus controller tests before Kyty compilation. A commit tagged [source-only]
 deliberately skips APK packaging; it is not a released or device-tested fix.
 The last published APK remains versionCode 85, source 56282b0.
 
+Review of that release's boundary-load emitter also found avoidable JIT code
+growth: sixteen translation sequences were emitted at each 128-bit load site,
+including sites that only take the normal fast path. The source update emits
+one byte-read loop using reserved TMP4 as the current guest address and EXT to
+append each byte to the temporary vector. A non-flag-setting subtraction and
+TBZ end the loop after sixteen reads. The allocated destination is still
+committed only after success; per-byte translation, TSO barriers and fault RIP
+semantics are retained. This reduces the number of emitted translation copies,
+not the number of byte reads for an actual crossing. No device FPS improvement
+is established by source-code size alone. Existing ARM64 differential and fault
+tests gate this change along with the controller patch.
+
 Next evidence required: export the complete boot-log text file, including the
 entire latest foreground freeze report, beginning with MainThread and the GPU
 worker stacks, its preceding heartbeats, shader/pipeline timing and guest thread

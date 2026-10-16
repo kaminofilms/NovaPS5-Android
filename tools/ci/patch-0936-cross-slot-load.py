@@ -78,12 +78,20 @@ DEF_OP(NovaLoad128) {
 
   (void)Bind(&Split);
   movi(ARMEmitter::SubRegSize::i64Bit, VTMP1.Q(), 0);
-  for (unsigned i = 0; i != 16; ++i) {
-    add(ARMEmitter::Size::i64Bit, TMP1, Guest, i);
-    Translate();
-    ldrb(VTMP2, TMP1, 0);
-    ins(ARMEmitter::SubRegSize::i8Bit, VTMP1.Q(), i, VTMP2.Q(), 0);
-  }
+  mov(ARMEmitter::Size::i64Bit, TMP4, Guest);
+  // Emit one runtime loop, rather than sixteen translation sequences at every
+  // vector load site. EXT shifts the accumulator by one byte and appends the
+  // just-read byte; after sixteen iterations its lanes are in original order.
+  ARMEmitter::BackwardLabel NextByte;
+  (void)Bind(&NextByte);
+  mov(ARMEmitter::Size::i64Bit, TMP1, TMP4);
+  Translate();
+  ldrb(VTMP2, TMP1, 0);
+  ext(VTMP1.Q(), VTMP1.Q(), VTMP2.Q(), 1);
+  add(ARMEmitter::Size::i64Bit, TMP4, TMP4, 1);
+  sub(ARMEmitter::Size::i64Bit, TMP1, TMP4, Guest);
+  // Offsets 1..15 have bit 4 clear; offset 16 has it set. No NZCV mutation.
+  (void)tbz(TMP1, 4, &NextByte);
   // A failing byte load faults normally, at the original guest instruction RIP.
   // The allocated destination vector is committed only after all reads succeed.
   mov(Dst.Q(), VTMP1.Q());
