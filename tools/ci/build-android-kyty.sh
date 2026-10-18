@@ -221,6 +221,12 @@ python3 "$repo/tools/ci/patch-ever-label-publication.py" "$work/kyty"
 python3 "$repo/tests/test_ever_label_publication.py" "$work/kyty"
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_ever_label_publication.py" "$work/kyty"
 
+# 0.9.45: suspend only the PM4 queue waiting for a recorded label, not the GPU thread.
+python3 "$repo/tools/ci/patch-ever-cooperative-label-waits.py" "$work/kyty"
+python3 "$repo/tests/test_ever_cooperative_label_waits.py" "$work/kyty"
+ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_ever_cooperative_label_waits.py" "$work/kyty"
+python3 "$repo/tests/test_ever_label_poll_vulkan.py" "$work/kyty"
+
 # SDL's AAudio backend: report stream errors, disconnects and underflows (debug LOGI is off
 # upstream) so the session log shows why audio stops.
 aaudio=kyty/3rdparty/SDL3/src/audio/aaudio/SDL_aaudio.c
@@ -322,3 +328,4 @@ ls -la "$out/lib"
 # Publish the exact patched renderer and its source dependencies alongside the APK.
 mkdir -p "$out/source"
 tar --exclude='.git' -czf "$out/source/Kyty-Android-corresponding-source.tar.gz" -C "$work" kyty adrenotools
+

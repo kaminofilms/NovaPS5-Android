@@ -1,5 +1,5 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# NovaPS5 0.9.44 / 93: completed constant-label reads; Ever Forward and Super Meat Boy profiles.
+# NovaPS5 0.9.45 / 99: cooperative Ever Forward PM4 label waits; real GPU completion.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
@@ -193,12 +193,12 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.44-android-arm64.apk" \
-            --version-name 0.9.44-android --version-code 98 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.45-android-arm64.apk" \
+            --version-name 0.9.45-android --version-code 99 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.44-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.44-android --version-code 98 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.45-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.45-android --version-code 99 | tee dist/apk/verify.txt
       - name: Verify packaged mesh driver
-        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.44-android-arm64.apk
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.45-android-arm64.apk
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -215,11 +215,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.9.44-android-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.9.44-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.9.44-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.44 Ever Forward label readback optimization (CI ${GITHUB_SHA::7})" \
-            --notes "Native Android Kyty default renderer + NovaFEX, versionCode 98. Ever Forward only: publishes recorded constant EOP-label bytes after actual GPU completion and prior host publications when every dirty byte in the tracked fault pages is known. Revalidates ownership and immutable values after waiting; mixed data, textures, changed labels and oversized plans retain normal GPU readback. Preserves other title profiles, saves, caches and signing key. Host/sanitizer tests and APK checks do not establish an FPS improvement; 30 FPS remains an unverified target."
+          tag="v0.9.45-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.45-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.45-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.45 Ever Forward cooperative GPU label waits (CI ${GITHUB_SHA::7})" \
+            --notes "Native Android Kyty default renderer + NovaFEX, versionCode 99. Ever Forward only: a WAIT_REG_MEM packet waiting on a recorded constant GPU label now submits its producer and suspends that PM4 queue instead of blocking the GPU command thread. Other guest queues can progress. Retries retain the packet cursor, re-read current metadata and require actual timeline completion plus earlier guest-memory publications. Unknown data and textures keep coherent readback; no fabricated completion or skipped predicates. Host and sanitizer ordering tests plus a real Vulkan timeline/buffer test are required. Preserves saves, caches and signing key. Device FPS remains unverified; 30 FPS is a target, not a measured result."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()
@@ -241,3 +241,4 @@ jobs:
           git add -A
           git -c user.name=nova-lab -c user.email=nova-lab@users.noreply.github.com commit -qm "android logs $dest"
           for i in 1 2 3; do git push -q origin HEAD:lab-logs && break; git pull -q --rebase origin lab-logs; done
+
