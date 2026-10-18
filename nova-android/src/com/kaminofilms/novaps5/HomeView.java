@@ -28,16 +28,16 @@ final class HomeView extends View {
         for(int i=first;i<end;i++){float x=60+(i-first)*105;RectF r=new RectF(x,rowY,x+84,rowY+84);if(i==selected){box(c,new RectF(x-6,rowY-6,x+90,rowY+90),0x90eff5ff,22);box(c,new RectF(x-3,rowY-3,x+87,rowY+87),0xff111c34,19);}box(c,r,i==0?0xff173d73:0xff182640,16);
             if(i==0){text(c,"N",x+24,rowY+55,44,Color.WHITE,true);}else{GameStore.Entry e=games.get(i-1);if(e.cover!=null){c.save();Path clip=new Path();clip.addRoundRect(r,16,16,Path.Direction.CW);c.clipPath(clip);image(c,e.cover,r);c.restore();}else text(c,"PS5",x+15,rowY+49,21,0xffa9caff,true);}
             final int index=i;hit(new RectF(x-3,rowY-3,x+87,rowY+87),()->{selected=index;invalidate();});}
-        RectF add=new RectF(946,103,1030,187);box(c,add,0x22d0e4ff,16);text(c,"+",970,159,42,Color.WHITE,false);hit(add,()->app.folder());
+        RectF add=new RectF(946,103,1030,187);box(c,add,0x22d0e4ff,16);text(c,"+",970,159,42,Color.WHITE,false);hit(add,()->app.addGame());
         text(c,chosen==null?"Core diagnostics":chosen.name,60,229,20,0xffc3cfe1,false);
         if(!library){
             text(c,chosen==null?"YOUR LIBRARY. YOUR DEVICE.":"LOCAL GAME FOLDER",60,297,14,0xff89b6f0,true);
-            if(chosen==null){text(c,"A new orbit",60,365,57,Color.WHITE,true);text(c,"for your library.",60,425,57,Color.WHITE,true);text(c,"PS5-inspired navigation. Native Android controls.",62,466,21,0xffc0cee3,false);button(c,"Add game folder",60,497,208,true,()->app.folder());button(c,"Settings",284,497,184,false,()->app.settings());}
+            if(chosen==null){text(c,"A new orbit",60,365,57,Color.WHITE,true);text(c,"for your library.",60,425,57,Color.WHITE,true);text(c,"PS5-inspired navigation. Native Android controls.",62,466,21,0xffc0cee3,false);button(c,"Add game",60,497,208,true,()->app.addGame());button(c,"Settings",284,497,184,false,()->app.settings());}
             else{fit(c,chosen.name,60,366,680,51,Color.WHITE,true);fit(c,chosen.id+(chosen.version.isEmpty()?"":" · "+chosen.version),62,411,680,19,0xffafc3df,false);text(c,"Ready • runs natively on Android",62,452,21,0xffc0cee3,false);button(c,"Play game",60,482,183,true,()->app.launchGame(chosen));button(c,"Session log",259,482,200,false,()->app.diagnostics());}
         }else{
-            text(c,"Game library",60,306,40,Color.WHITE,true);text(c,games.isEmpty()?"Add a folder containing your extracted eboot.bin game dumps.":games.size()+" imported game folder(s)",62,344,19,0xffb8c9e0,false);
+            text(c,"Game library",60,306,40,Color.WHITE,true);text(c,games.isEmpty()?"Add an extracted game folder or install a supported decrypted PKG.":games.size()+" imported game folder(s)",62,344,19,0xffb8c9e0,false);
             int start=Math.max(0,selected-1);for(int i=start;i<Math.min(games.size(),start+4);i++){final GameStore.Entry e=games.get(i);float x=60+(i-start)*235;RectF r=new RectF(x,370,x+216,538);box(c,r,0x60244166,18);if(e.cover!=null){c.save();Path p=new Path();p.addRoundRect(r,18,18,Path.Direction.CW);c.clipPath(p);image(c,e.cover,r);c.restore();}else text(c,"PS5",x+72,466,34,0xffb9d7ff,true);hit(r,()->app.entry(e));fit(c,e.name,x,569,210,17,Color.WHITE,true);}
-            if(games.isEmpty())button(c,"Add game folder",60,385,208,true,()->app.folder());
+            if(games.isEmpty())button(c,"Add game",60,385,208,true,()->app.addGame());
         }
         text(c,"NOVA PS5 "+MainActivity.VERSION+" · NATIVE ANDROID",60,618,13,0xff8fafdc,true);fit(c,app.gpu,60,649,760,17,0xffb1c5e2,false);
         text(c,"Kyty + embedded FEXCore • Vulkan • no Linux runtime",60,680,16,0xffb9c7dc,false);

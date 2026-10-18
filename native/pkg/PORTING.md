@@ -1,34 +1,38 @@
-# KytyPlus package parser: isolated port, not yet enabled in the Android app
+# Android PKG importer: experimental supported subset
 
-Source: Coder787-source/KytyPlus at dc5f5d98285e3a29302dd232e18a433fb7cfdf83 (main inspected 2026-10-18).
-License: GPL-2.0; full upstream license retained in LICENSE.
+Source: Coder787-source/KytyPlus dc5f5d98285e3a29302dd232e18a433fb7cfdf83.
+GPL-2.0; full license retained in LICENSE. Nova-specific adaptations are in the
+accompanying build-source archive.
 
-This directory ports the PKG/PFS parser into a standalone C++20 module. It does
-not replace Nova's core, change FEX, register Android imports, or install games.
-It is intentionally not linked into the production APK yet.
+The Java importer, JNI library and build wiring are present. Add game offers
+folder import or PKG installation. Imported game data is held under the app's
+external-files games directory. Existing folders and ELF launching remain.
 
-Changes from upstream:
-- Emulator-independent stderr logging adapter.
-- Fix dangling local-array pointer in executable-recovery header inspection.
-- Refuse raw-body-only results and heuristic carved-file recovery as successful
-  installations. Recovering eboot.bin alone does not reconstruct a game filesystem.
-- Fix a printf argument type and a synthetic fixture string-copy length.
-- Add a negative regression for an invalid PFS body being reported as installed.
+Supported subset: decrypted, ordinary PKG containers containing a supported
+plaintext PFS tree and a decrypted x86-64 ELF eboot.bin. Finalized-image layouts,
+whole-image PFSC and encryption are rejected. Compressed inodes/streams larger
+than 64 MiB are rejected explicitly. This is not universal PS5 PKG compatibility.
+PKG patch/DLC merging is not implemented; this importer must not be described as
+an update manager. A package reaching the library does not prove the game boots.
 
-Local validation: direct g++ C++20 build with ASan + UBSan and return-local-address
-and printf-format diagnostics treated as errors. LeakSanitizer is disabled because
-this runner does not permit its process/thread inspection. No leak result claimed.
-CMake configuration is provided but CMake was unavailable locally.
+Safety and resource behavior:
+- Plain files are streamed by filesystem block rather than buffered in full.
+- Bounded compressed streams, directory walks, names and block maps.
+- Truncated payloads and incomplete block chains fail installation.
+- Temporary filesystem image removed after successful validation.
+- No raw-body or heuristic file-carving success path.
+- Validate extracted file counts, paths, exact sizes and ELF class/machine.
+- Fresh staging directory, source FD held open, same-directory rename publication.
+- Failed staging removed; no overwrite of existing installations, saves or caches.
+- Only stock zlib backend registered. No desktop plugin DLL loading.
 
-Remaining gates before Android UI activation:
-- Bound memory use and implement streaming extraction for large files. The source
-  reserves whole file/PFSC buffers; it is not ready for phone-sized memory budgets.
-- Refuse truncated/partial extraction; upstream counts some incomplete writes.
-- Audit finalized-image/PFS scanner offsets, nested block traversal and symlinks.
-- Register supported decompression backends explicitly; do not load desktop DLLs.
-- Private staging, storage-space checks, cancellation, atomic install publication,
-  and title-aware update handling without overwriting saves or shader caches.
-- Android NDK build, SAF importer/library integration and device validation.
+Local checks: native parser/installer ASan+UBSan regressions; full native JNI
+library compiled for the host using OpenJDK headers; edited Java sources compiled
+against Android API 36 with the unchanged game-activity declaration stubbed.
+LeakSanitizer disabled locally because runner process inspection is unavailable.
+CMake/Android NDK compilation is delegated to the dedicated no-APK CI workflow.
+No Android runtime, real PKG or game FPS result is implied by host checks.
 
-Encrypted retail data is not decrypted by this module. Synthetic parser tests do
-not establish real-package compatibility, game boot success or improved FPS.
+Remaining: Android NDK/CI result, phone import test, full-game runtime validation,
+streaming large PFSC inodes and audited finalized-image support, explicit update
+package identification/merge, cancellation and interrupted-install recovery.

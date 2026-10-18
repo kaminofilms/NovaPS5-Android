@@ -1,0 +1,32 @@
+name: Nova KytyPlus port checks (no APK)
+on:
+  push:
+    branches: [work/kytyplus-port-20261018]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pkg:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package parser and installer sanitizer regressions
+        run: SANITIZE=1 bash tools/ci/test-kytyplus-package.sh
+      - name: Android ARM64 package installer
+        run: |
+          cmake -S native/pkg -B /tmp/novapkg-android -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-33 -DANDROID_STL=c++_static -DBUILD_TESTING=OFF
+          cmake --build /tmp/novapkg-android --target novapkg --parallel 2
+          "$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -h /tmp/novapkg-android/libnovapkg.so
+      - name: Java installer API compilation
+        run: javac -cp "$(find "$ANDROID_HOME/platforms" -name android.jar | sort -V | tail -n 1)" -d /tmp/pkg-java nova-android/src/com/kaminofilms/novaps5/PkgInstaller.java
+      - name: Upstream FP16 regression on exact Nova pin
+        run: |
+          git init /tmp/kyty
+          git -C /tmp/kyty remote add origin https://github.com/KytyPS5/KytyPS5.git
+          git -C /tmp/kyty fetch --depth=1 origin df5b9b92be7dfd463b47756b707d6d356a9f0550
+          git -C /tmp/kyty checkout --detach FETCH_HEAD
+          python3 tools/ci/patch-kyty-latest-fp16.py /tmp/kyty
+          python3 tests/test_kyty_fp16.py /tmp/kyty

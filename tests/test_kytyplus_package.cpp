@@ -13,6 +13,8 @@
 //   - extraction path-traversal guard (../ names cannot escape the output dir)
 
 #include "package/pkgParser.h"
+#include "install.h"
+#include <stdexcept>
 #include "package/pfsParser.h"
 
 #include <cstdio>
@@ -370,6 +372,52 @@ int main() {
         Check(result.ok && !result.is_encrypted, "Nova: invalid-PFS fixture reaches extractor");
         Check(Libs::Firmware::PkgParser::ExtractAll(result, path, output) == 0,
               "Nova: raw body fallback is not a successful installation");
+        std::filesystem::remove_all(output);
+        std::filesystem::remove(path);
+    }
+
+    // Nova: a complete supported package must install the exact ELF bytes.
+    {
+        constexpr uint32_t block = 0x10000;
+        auto image = MakePfsImage("eboot.bin", false);
+        PutU64(image, 3 * block + 0x18, 64);
+        std::fill(image.begin() + 4 * block, image.end(), 0);
+        image[4 * block] = 0x7f; image[4 * block + 1] = 'E';
+        image[4 * block + 2] = 'L'; image[4 * block + 3] = 'F';
+        image[4 * block + 4] = 2; image[4 * block + 5] = 1;
+        image[4 * block + 18] = 62;
+        auto package = MakePkgHeader(static_cast<uint32_t>(image.size()));
+        PutU32(package, 0x208, 0);
+        PutBe32(package, 0x24, block);
+        package.resize(block);
+        package.insert(package.end(), image.begin(), image.end());
+        const auto path = TempPath("nova_complete.pkg");
+        const auto output = TempPath("nova_complete_out");
+        WriteFile(path, package);
+        std::filesystem::create_directory(output);
+        const auto game = NovaPkg::Install(path, output);
+        Check(std::filesystem::file_size(game + "/eboot.bin") == 64,
+              "Nova: complete ELF package installs with exact byte count");
+        Check(!std::filesystem::exists(output + "/body.pfs"),
+              "Nova: temporary filesystem image removed after validation");
+        bool rejected = false;
+        try { NovaPkg::Install(path, output); } catch (const std::exception&) { rejected = true; }
+        Check(rejected, "Nova: nonempty staging directory cannot overwrite an installation");
+        std::filesystem::remove_all(output);
+        std::filesystem::remove(path);
+    }
+    // Nova: a truncated payload cannot be counted as extracted.
+    {
+        auto image = MakePfsImage("hello.txt", false);
+        image.resize(4 * 0x10000 + 5);
+        const auto path = TempPath("nova_truncated.pfs");
+        const auto output = TempPath("nova_truncated_out");
+        WriteFile(path, image);
+        auto parsed = Libs::Firmware::PfsParser::Parse(path);
+        bool rejected = !parsed.ok;
+        try { Libs::Firmware::PfsParser::ExtractAll(parsed, path, output); }
+        catch (const std::exception&) { rejected = true; }
+        Check(rejected, "Nova: truncated PFS file fails extraction");
         std::filesystem::remove_all(output);
         std::filesystem::remove(path);
     }

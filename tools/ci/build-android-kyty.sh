@@ -209,6 +209,11 @@ python3 "$repo/tests/test_ever_render_costs.py" "$work/kyty"
 SANITIZE=1 python3 "$repo/tests/test_ever_render_costs.py" "$work/kyty"
 python3 "$repo/tests/test_release_mem.py" "$work/kyty"
 
+# Forward-port the independently tested upstream FP16 correctness fix.
+python3 "$repo/tools/ci/patch-kyty-latest-fp16.py" "$work/kyty"
+python3 "$repo/tests/test_kyty_fp16.py" "$work/kyty"
+ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 bash "$repo/tools/ci/test-kytyplus-package.sh"
+
 # SDL's AAudio backend: report stream errors, disconnects and underflows (debug LOGI is off
 # upstream) so the session log shows why audio stops.
 aaudio=kyty/3rdparty/SDL3/src/audio/aaudio/SDL_aaudio.c
@@ -251,6 +256,15 @@ cp -r kyty/3rdparty/SDL3/android-project/app/src/main/java/org "$out/sdl-java/"
 for lib in "$out"/lib/*.so; do
     echo "== ${lib##*/}"; "$TC/llvm-readelf" -d "$lib" | grep -E "NEEDED|SONAME"
 done | tee "$out/logs/android-libs.txt"
+# Build the installer independently of the game CPU/GPU runtime.
+cmake -S "$repo/native/pkg" -B "$work/build-novapkg-android" -G Ninja \
+    -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
+    -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-$API \
+    -DANDROID_STL=c++_static -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+cmake --build "$work/build-novapkg-android" --target novapkg --parallel "$(nproc)"
+cp "$work/build-novapkg-android/libnovapkg.so" "$out/lib/"
+mkdir -p "$out/source"
+tar -czf "$out/source/KytyPlus-PKG-corresponding-source.tar.gz" -C "$repo" native/pkg nova-android/src/com/kaminofilms/novaps5/PkgInstaller.java LICENSES/KytyPlus-NOTICE.txt
 ls -la "$out/lib"
 
 

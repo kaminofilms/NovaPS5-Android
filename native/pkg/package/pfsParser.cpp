@@ -9,6 +9,8 @@
 #include <filesystem>
 #include <span>
 #include <sstream>
+#include <stdexcept>
+#include <unordered_set>
 
 #ifdef KYTY_HAS_ZLIB
 #include <zlib.h>
@@ -95,6 +97,7 @@ std::vector<uint8_t> PfsParser::ReadBlock(
     }
 
     const uint64_t offset = static_cast<uint64_t>(block_num) * block_size;
+    f.clear();
     f.seekg(static_cast<std::streamoff>(offset), std::ios::beg);
 
     std::vector<uint8_t> raw(block_size);
@@ -216,6 +219,7 @@ std::vector<uint8_t> PfsParser::DecompressPfscStream(const std::vector<uint8_t>&
 
     std::vector<uint8_t> out;
     const uint64_t safe_logical = std::min<uint64_t>(logical_size, 1ull << 34); // 16 GiB cap
+    if (logical_size > (64ull << 20)) throw std::runtime_error("PFSC file exceeds the current 64 MiB decoder limit");
     out.reserve(static_cast<size_t>(safe_logical));
 
     for (uint32_t i = 0; i < block_count; ++i) {
@@ -275,6 +279,7 @@ bool PfsParser::ReadInode(std::ifstream& f, uint32_t block_number,
     if (block_number == 0) return false;
 
     const uint64_t offset = static_cast<uint64_t>(block_number) * block_size;
+    f.clear();
     f.seekg(static_cast<std::streamoff>(offset), std::ios::beg);
 
     const bool is_64bit = (mode & PFS_MODE_64BIT_INODES) != 0;
@@ -343,6 +348,7 @@ std::vector<int64_t> PfsParser::GetIndirectBlocks(
     uint32_t block_size, uint32_t num_blocks, uint32_t mode) {
 
     std::vector<int64_t> all_blocks;
+    if (num_blocks > (1u << 28)) throw std::runtime_error("PFS block count exceeds supported range");
 
     // Direct blocks (0-11).
     // Slot 0 is never a valid data block (it holds the superblock), and a
@@ -388,6 +394,7 @@ std::vector<int64_t> PfsParser::GetIndirectBlocks(
             // and bounds-check the rest.
             if (ptr <= 0) break;
             if (static_cast<uint64_t>(ptr) >= num_blocks) break;
+            if (all_blocks.size() >= 262144) throw std::runtime_error("PFS block map exceeds supported range");
             all_blocks.push_back(ptr);
         }
     }
@@ -423,6 +430,7 @@ std::vector<std::pair<std::string, uint32_t>> PfsParser::ReadDirectory(
             pos += sizeof(PfsDirent);
             if (pos + dirent.name_size > block_data.size()) break;
 
+            if (dirent.name_size > 256) throw std::runtime_error("PFS filename exceeds supported range");
             std::string name;
             for (uint32_t j = 0; j < dirent.name_size && pos < block_data.size(); ++j) {
                 if (block_data[pos] == '\0') { pos++; break; }
@@ -437,6 +445,7 @@ std::vector<std::pair<std::string, uint32_t>> PfsParser::ReadDirectory(
             }
 
             if (dirent.type != DIRENT_TYPE_DOT && dirent.type != DIRENT_TYPE_DOTDOT) {
+                if (entries.size() >= 100000) throw std::runtime_error("PFS directory entry limit exceeded");
                 entries.emplace_back(name, dirent.inode);
             }
         }
@@ -462,6 +471,7 @@ std::vector<uint8_t> PfsParser::ReadFileData(
         for (int64_t blk : all_blocks) {
             auto block_data = ReadBlock(f, blk, block_size, num_blocks);
             if (block_data.empty()) break;
+            if (stream.size() + block_data.size() > (64ull << 20)) throw std::runtime_error("Compressed stream exceeds current 64 MiB decoder limit");
             stream.insert(stream.end(), block_data.begin(), block_data.end());
         }
         if (stream.empty()) {
@@ -552,6 +562,9 @@ PfsParseResult PfsParser::Parse(const std::string& pfs_path) {
     result.version = static_cast<uint32_t>(sb.version);
     result.mode = sb.mode;
     result.block_size = sb.block_size;
+    if (sb.num_blocks > UINT32_MAX || sb.num_inodes > 100000) {
+        result.error = "PFS inode/block counts exceed supported range"; return result;
+    }
     result.num_blocks = static_cast<uint32_t>(sb.num_blocks);
     result.num_inodes = static_cast<uint32_t>(sb.num_inodes);
     result.is_encrypted = (sb.mode & PFS_MODE_ENCRYPTED) != 0;
@@ -564,7 +577,8 @@ PfsParseResult PfsParser::Parse(const std::string& pfs_path) {
         LOGF("PFS: image is encrypted — file data cannot be read (decryption not supported)");
     }
 
-    if (result.block_size == 0 || result.block_size > 0x100000) {
+    if (result.block_size < INODE_S64_SIZE || result.block_size > 0x100000 ||
+        (result.block_size & (result.block_size - 1)) != 0) {
         result.error = "Invalid block size: " + std::to_string(result.block_size);
         return result;
     }
@@ -600,9 +614,13 @@ PfsParseResult PfsParser::Parse(const std::string& pfs_path) {
     // fixed depth (PFS trees are shallow in practice) so a cyclic or hostile
     // self-referencing inode graph cannot overflow the host stack.
     constexpr size_t kMaxWalkDepth = 32;
+    std::unordered_set<uint32_t> visited_directories;
+    size_t walk_entries = 0;
     std::function<void(const InodeInfo&, const std::string&, size_t)> walkDir =
         [&](const InodeInfo& dir_info, const std::string& path_prefix, size_t depth) {
+        if (!visited_directories.insert(dir_info.number).second) throw std::runtime_error("Cyclic or repeated PFS directory");
         if (depth >= kMaxWalkDepth) {
+            throw std::runtime_error("PFS directory depth exceeds supported range");
             LOGF("PFS: directory tree exceeds max depth %zu, truncating walk", kMaxWalkDepth);
             return;
         }
@@ -613,6 +631,7 @@ PfsParseResult PfsParser::Parse(const std::string& pfs_path) {
         }
 
         for (const auto& [name, inode_num] : dir_entries) {
+            if (++walk_entries > 100000) throw std::runtime_error("PFS directory-entry limit exceeded");
             if (inode_num == 0 || inode_num > result.num_inodes) continue;
             if (name == "." || name == "..") continue;
 
@@ -627,6 +646,7 @@ PfsParseResult PfsParser::Parse(const std::string& pfs_path) {
 
                 PfsFile file;
                 file.name = path_prefix.empty() ? name : (path_prefix + "/" + name);
+                if (file.name.size() > 4096) throw std::runtime_error("PFS path exceeds supported range");
                 file.inode = info.number;
                 file.size = info.size;
                 file.is_compressed = (info.flags & INODE_FLAG_COMPRESSED) != 0;
@@ -708,7 +728,11 @@ uint32_t PfsParser::ExtractAll(const PfsParseResult& result,
             LOGF("PFS: skipping unsafe path in package: %s", file.name.c_str());
             continue;
         }
-        if (file.is_directory) continue; // skip directories, only extract files
+        if (file.is_directory) {
+            std::filesystem::create_directories(std::filesystem::path(output_dir) / file.name, ec);
+            if (ec) throw std::runtime_error("Cannot create installed game directory");
+            continue;
+        }
 
         const std::filesystem::path out_path = std::filesystem::path(output_dir) / file.name;
         // Create parent directories for nested files (e.g. sce_sys/param.json)
@@ -729,13 +753,30 @@ uint32_t PfsParser::ExtractAll(const PfsParseResult& result,
                       d32, s32, s64, variant)) {
             auto info = ExtractInodeInfo(d32, s32, s64, variant);
 
-            auto data = ReadFileData(f, info, result.block_size,
-                                     result.num_blocks, result.mode);
-
-            out.write(reinterpret_cast<const char*>(data.data()),
-                      static_cast<std::streamsize>(data.size()));
+            if ((info.flags & INODE_FLAG_COMPRESSED) != 0) {
+                if (info.size > (64ull << 20)) throw std::runtime_error("Compressed file exceeds current 64 MiB decoder limit");
+                auto data = ReadFileData(f, info, result.block_size, result.num_blocks, result.mode);
+                if (data.size() != info.size) throw std::runtime_error("Incomplete compressed PFS file");
+                out.write(reinterpret_cast<const char*>(data.data()), static_cast<std::streamsize>(data.size()));
+            } else {
+                auto blocks = GetIndirectBlocks(f, info, result.block_size, result.num_blocks, result.mode);
+                uint64_t remaining = info.size;
+                for (auto block : blocks) {
+                    if (remaining == 0) break;
+                    auto bytes = ReadBlock(f, block, result.block_size, result.num_blocks);
+                    const auto take = static_cast<size_t>(std::min<uint64_t>(remaining, result.block_size));
+                    if (bytes.size() < take) throw std::runtime_error("Truncated PFS file block");
+                    out.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(take));
+                    if (!out) throw std::runtime_error("Could not write installed game; check free space");
+                    remaining -= take;
+                }
+                if (remaining != 0) throw std::runtime_error("Incomplete PFS block chain");
+            }
+            out.flush();
+            if (!out) throw std::runtime_error("Could not flush installed file");
             extracted++;
-            LOGF("PFS: extracted %s (%zu bytes)", file.name.c_str(), data.size());
+        } else {
+            throw std::runtime_error("Cannot read installed file inode");
         }
 
         out.close();

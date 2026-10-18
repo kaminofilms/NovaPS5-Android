@@ -1,0 +1,5 @@
+Nova's PKG/PFS module derives from Coder787-source/KytyPlus,
+commit dc5f5d98285e3a29302dd232e18a433fb7cfdf83.
+https://github.com/Coder787-source/KytyPlus
+GPL-2.0; license reproduced at native/pkg/LICENSE.
+Nova adaptations and tests are supplied in the accompanying NovaPS5 build source.

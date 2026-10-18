@@ -17,7 +17,7 @@ import java.util.concurrent.*;
 /** Nova PS5 front end: game library, launching, settings and logs. Games run in GameActivity. */
 public final class MainActivity extends Activity {
     static final String VERSION = "@NOVA_VERSION_NAME@";
-    static final int FOLDER = 10, EXPORT = 12, DRIVER = 13;
+    static final int FOLDER = 10, EXPORT = 12, DRIVER = 13, PACKAGE = 14;
     final ExecutorService io = Executors.newSingleThreadExecutor();
     GameStore store;
     HomeView home;
@@ -121,6 +121,20 @@ public final class MainActivity extends Activity {
         });
     }
 
+    void addGame() {
+        new AlertDialog.Builder(this).setTitle("Add game")
+                .setItems(new String[] {"Add extracted game folder", "Install package (.pkg)"}, (dialog, which) -> {
+                    if (which == 0) folder();
+                    else {
+                        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                        intent.addCategory(Intent.CATEGORY_OPENABLE);
+                        intent.setType("*/*");
+                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        startActivityForResult(intent, PACKAGE);
+                    }
+                }).setNegativeButton("Cancel", null).show();
+    }
+
     void folder() {
         Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
         i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
@@ -131,7 +145,19 @@ public final class MainActivity extends Activity {
         super.onActivityResult(request, result, data);
         if (result != RESULT_OK || data == null || data.getData() == null) return;
         Uri uri = data.getData();
-        if (request == FOLDER) {
+        if (request == PACKAGE) {
+            busy("Installing package", () -> {
+                File game = PkgInstaller.install(this, uri);
+                List<GameStore.Entry> found = new ArrayList<>();
+                store.fileScan(game, 0, found, new int[] {0});
+                if (found.size() != 1) throw new IOException("Package installed but its game could not be added; re-add " + game);
+                store.addAll(found);
+                store.addRoot(game);
+                store.loadImages();
+                BootLog.write(this, "PKG installed: " + found.get(0).name + " at " + game);
+                return "Installed " + found.get(0).name;
+            }, value -> { home.invalidate(); info("Package installed", value); });
+        } else if (request == FOLDER) {
             try {
                 getContentResolver().takePersistableUriPermission(uri, data.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION);
             } catch (SecurityException e) {
