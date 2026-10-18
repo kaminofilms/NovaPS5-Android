@@ -66,3 +66,22 @@ render-thread wait scopes take about 3.4–3.7 seconds; EOP label reads take abo
 be summed. Warm shader lookup/compilation is much smaller, though cold compute
 shader compilation causes substantial spikes. Compare the same scene with warm
 and cold caches separately. Windows FPS is a reference, not Android validation.
+
+## Verification completed during this port
+
+- NDK r30 / Android API 29 / arm64-v8a: full upstream compiler and optimizer
+  linked successfully with `--no-undefined`.
+- Android window adapter compiled against the upstream PresentationWindow API.
+  It owns an acquired ANativeWindow reference and uses the caller-provided
+  Vulkan instance function from the selected driver. Its owner must outlive the
+  AnyPS5 Vulkan surface/device; runtime attach/detach is not wired yet.
+- Four Android regression executables compiled and linked: bridge compute
+  compilation, upstream Float16Conversion, Spirv13Image and PositionInvariance.
+  These executables have not been run on an Android device.
+- The shared module has 16 KiB ELF load alignment. Only NovaAnyPS5 bridge and
+  adapter symbols are exported; bundled glslang/SPIRV-Tools symbols are hidden.
+- The upstream checkout and all three compiler dependency submodules are
+  unmodified and remain at their pinned revisions.
+- Host GCC 13.3: all four tests passed. The bridge produced a 117-word compute
+  SPIR-V module, which also passed standalone spirv-val for Vulkan 1.3.
+  These are compiler tests, not an Android GPU or game-compatibility test.
