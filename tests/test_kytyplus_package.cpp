@@ -406,6 +406,58 @@ int main() {
         std::filesystem::remove_all(output);
         std::filesystem::remove(path);
     }
+    // Finalized-image containers retain segment-relative PFS block addresses.
+    {
+        constexpr uint32_t block = 0x10000;
+        auto image = MakePfsImage("eboot.bin", false);
+        PutU64(image, 3 * block + 0x18, 64);
+        std::fill(image.begin() + 4 * block, image.end(), 0);
+        const unsigned char elf[] = {0x7f, 'E', 'L', 'F', 2, 1};
+        std::copy(std::begin(elf), std::end(elf), image.begin() + 4 * block);
+        image[4 * block + 18] = 62;
+        std::vector<uint8_t> package(block, 0);
+        package[0] = 0x7f; package[1] = 'F'; package[2] = 'I'; package[3] = 'H';
+        PutU64(package, 0x10, block);
+        PutU64(package, 0x18, image.size());
+        PutU64(package, 0x20, block);
+        const auto metadata_offset = block + image.size();
+        PutU64(package, 0x58, metadata_offset);
+        package.insert(package.end(), image.begin(), image.end());
+        auto metadata = MakePkgHeader(0x400);
+        PutBe32(metadata, 0x24, 0x400);
+        package.insert(package.end(), metadata.begin(), metadata.end());
+        const auto path = TempPath("nova_finalized.pkg");
+        const auto output = TempPath("nova_finalized_out");
+        WriteFile(path, package);
+        std::filesystem::create_directory(output);
+        auto parsed = Libs::Firmware::PkgParser::Parse(path);
+        Check(parsed.ok && parsed.is_finalized_image, "Nova: finalized container parses");
+        const auto game = NovaPkg::Install(path, output);
+        Check(std::filesystem::file_size(game + "/eboot.bin") == 64,
+              "Nova: plaintext superblock-first finalized PKG installs");
+        std::filesystem::remove_all(output);
+        std::filesystem::create_directory(output);
+        // An internal superblock is a different filesystem layout, not a new base.
+        std::copy(image.begin(), image.begin() + 0x380, package.begin() + block + 0x1000);
+        PutU64(package, 0x20, block + 0x1000);
+        WriteFile(path, package);
+        bool refused = false;
+        try { NovaPkg::Install(path, output); } catch (const std::exception&) { refused = true; }
+        Check(refused && std::filesystem::is_empty(output),
+              "Nova: data-first image refused without scanner writes");
+        std::filesystem::remove_all(output);
+        // An out-of-segment superblock must fail before extraction.
+        PutU64(package, 0x20, metadata_offset);
+        WriteFile(path, package);
+        Check(!Libs::Firmware::PkgParser::Parse(path).ok,
+              "Nova: finalized superblock cannot escape its segment");
+        // Truncated declared segment must fail before extraction.
+        PutU64(package, 0x18, package.size());
+        WriteFile(path, package);
+        Check(!Libs::Firmware::PkgParser::Parse(path).ok,
+              "Nova: truncated finalized segment rejected");
+        std::filesystem::remove(path);
+    }
     // Nova: a truncated payload cannot be counted as extracted.
     {
         auto image = MakePfsImage("hello.txt", false);
@@ -429,3 +481,4 @@ int main() {
 	std::fprintf(stderr, "PackageParserTests: all checks passed\n");
 	return 0;
 }
+

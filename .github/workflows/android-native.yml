@@ -1,5 +1,5 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# NovaPS5 0.9.46 / 100: native AvPlayer worker routing + cooperative Ever Forward waits.
+# NovaPS5 0.9.46 / 100: native AvPlayer routing, cooperative waits, plaintext superblock-first FIH installs.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
@@ -219,7 +219,7 @@ jobs:
           cd dist/apk && sha256sum NovaPS5-0.9.46-android-arm64.apk > SHA256SUMS.txt
           gh release create "$tag" NovaPS5-0.9.46-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.46 native AvPlayer workers and cooperative label waits (CI ${GITHUB_SHA::7})" \
-            --notes "Native Android Kyty + NovaFEX, versionCode 100. Fixes a native AvPlayer worker routing defect matching the Hollow Knight video/audio/demux crash: explicit native worker entries execute ARM64 directly; public guest pthreads still enter NovaFEX. Retains thread identity, guest callback stack/FS setup, cleanup and joins. Includes the Ever Forward cooperative PM4 label-wait change from 0.9.45, preserving actual GPU completion and original predicates. Host/sanitizer routing and ordering tests plus real Vulkan timeline checks are required. Same signing key; saves and caches retained. No Dead Cells performance fix is claimed. Game boot and FPS still require device testing; 30 FPS in Ever Forward remains unverified."
+            --notes "Native Android Kyty + NovaFEX, versionCode 100. Fixes a native AvPlayer worker routing defect matching the Hollow Knight video/audio/demux crash: explicit native worker entries execute ARM64 directly; public guest pthreads still enter NovaFEX. Retains thread identity, guest callback stack/FS setup, cleanup and joins. Includes the Ever Forward cooperative PM4 label-wait change from 0.9.45, preserving actual GPU completion and original predicates. Enables plaintext superblock-first finalized PKG installs with manifest/ELF verification; encrypted and data-first finalized layouts remain unsupported. Host/sanitizer package, routing and ordering tests plus real Vulkan timeline checks are required. Same signing key; saves and caches retained. No Dead Cells performance fix is claimed. Game boot and FPS still require device testing; 30 FPS in Ever Forward remains unverified."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()

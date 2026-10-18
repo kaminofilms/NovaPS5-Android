@@ -38,3 +38,9 @@ No Android runtime, real PKG or game FPS result is implied by host checks.
 Remaining: full APK validation, phone import test, full-game runtime validation,
 streaming large PFSC inodes and audited finalized-image support, explicit update
 package identification/merge, cancellation and interrupted-install recovery.
+
+
+0.9.46: the Android installer accepts plaintext finalized-image containers whose
+PFS superblock is at the segment base. Segment/CNT bounds and the extracted
+manifest/ELF validation remain mandatory. Data-first/NAPS containers remain
+unsupported by the installer; the recovery scanner is not used for installs.

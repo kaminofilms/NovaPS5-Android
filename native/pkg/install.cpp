@@ -22,8 +22,8 @@ std::string Install(const std::string& input, const std::string& output) {
     if (!package.ok) throw std::runtime_error(package.error);
     if (package.is_encrypted) throw std::runtime_error("Encrypted PKG data is unsupported; use a decrypted package or extracted game folder");
     if (!package.extraction_error.empty()) throw std::runtime_error(package.extraction_error);
-    if (package.is_finalized_image)
-        throw std::runtime_error("Finalized-image PKG layout is not supported by the Android installer yet; use the extracted game folder");
+    if (package.is_finalized_image && package.pfs_image_offset != package.pfs_segment_offset)
+        throw std::runtime_error("Data-first finalized PKG requires a verified filesystem table; use the extracted game folder");
     const auto extracted = Libs::Firmware::PkgParser::ExtractAll(package, input, output);
     if (!extracted) throw std::runtime_error("Package filesystem extraction failed; no game was installed");
     const auto image = fs::path(output) / "body.pfs";
@@ -58,3 +58,4 @@ std::string Install(const std::string& input, const std::string& output) {
     return root.string();
 }
 }
+

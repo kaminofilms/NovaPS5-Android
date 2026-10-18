@@ -32,3 +32,10 @@ performance change in this patch: the supplied crash report is Hollow Knight's
 log and cannot establish the cause of Dead Cells' separately reported slowdown.
 Hollow Knight's next loading stage and Ever Forward's FPS still require a
 device trace; a successful build does not establish that either game is fixed.
+
+PKG installation also enables plaintext superblock-first FIH containers. The
+installer retains exact file-size/path/ELF checks and refuses data-first images
+before invoking the recovery scanner. PFS image copying now detects incomplete
+reads and failed writes. Package fixtures cover ordinary and finalized installs,
+out-of-segment superblocks, truncation, and refusal without staging writes.
+Encrypted and data-first finalized packages are not supported by this change.

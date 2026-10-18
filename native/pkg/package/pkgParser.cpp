@@ -1185,8 +1185,14 @@ uint32_t PkgParser::ExtractAll(const PkgParseResult& result,
         out.write(reinterpret_cast<const char*>(buf.data()), static_cast<std::streamsize>(got));
         remaining -= got;
     }
+    out.flush();
+    const bool copied = remaining == 0 && out.good();
     out.close();
     f.close();
+    if (!copied || out.fail()) {
+        LOGF("PKG: incomplete PFS image copy");
+        return 0;
+    }
 
     LOGF("PKG: extracted body PFS image to %s (%llu bytes @0x%llX)",
          out_pfs.string().c_str(), static_cast<unsigned long long>(pfs_end - pfs_start),
