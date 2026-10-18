@@ -231,6 +231,9 @@ python3 "$repo/tests/test_ever_label_poll_vulkan.py" "$work/kyty"
 python3 "$repo/tools/ci/patch-avplayer-native-workers.py" "$work/kyty"
 python3 "$repo/tests/test_avplayer_native_workers.py" "$work/kyty"
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_avplayer_native_workers.py" "$work/kyty"
+python3 "$repo/tools/ci/patch-graphics-settings.py" "$work/kyty"
+python3 "$repo/tests/test_graphics_settings.py" "$work/kyty"
+ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_graphics_settings.py" "$work/kyty"
 
 # SDL's AAudio backend: report stream errors, disconnects and underflows (debug LOGI is off
 # upstream) so the session log shows why audio stops.

@@ -33,7 +33,7 @@ final class HomeView extends View {
         if(!library){
             text(c,chosen==null?"YOUR LIBRARY. YOUR DEVICE.":"LOCAL GAME FOLDER",60,297,14,0xff89b6f0,true);
             if(chosen==null){text(c,"A new orbit",60,365,57,Color.WHITE,true);text(c,"for your library.",60,425,57,Color.WHITE,true);text(c,"PS5-inspired navigation. Native Android controls.",62,466,21,0xffc0cee3,false);button(c,"Add game",60,497,208,true,()->app.addGame());button(c,"Settings",284,497,184,false,()->app.settings());}
-            else{fit(c,chosen.name,60,366,680,51,Color.WHITE,true);fit(c,chosen.id+(chosen.version.isEmpty()?"":" · "+chosen.version),62,411,680,19,0xffafc3df,false);text(c,"Ready • runs natively on Android",62,452,21,0xffc0cee3,false);button(c,"Play game",60,482,183,true,()->app.launchGame(chosen));button(c,"Session log",259,482,200,false,()->app.diagnostics());}
+            else{fit(c,chosen.name,60,366,680,51,Color.WHITE,true);fit(c,chosen.id+(chosen.version.isEmpty()?"":" · "+chosen.version),62,411,680,19,0xffafc3df,false);text(c,"Ready • runs natively on Android",62,452,21,0xffc0cee3,false);button(c,"Play game",60,482,183,true,()->app.launchGame(chosen));button(c,"Session log",259,482,200,false,()->app.diagnostics());button(c,"Graphics",475,482,170,false,()->app.graphics(chosen));}
         }else{
             text(c,"Game library",60,306,40,Color.WHITE,true);text(c,games.isEmpty()?"Add an extracted game folder or install a supported decrypted PKG.":games.size()+" imported game folder(s)",62,344,19,0xffb8c9e0,false);
             int start=Math.max(0,selected-1);for(int i=start;i<Math.min(games.size(),start+4);i++){final GameStore.Entry e=games.get(i);float x=60+(i-start)*235;RectF r=new RectF(x,370,x+216,538);box(c,r,0x60244166,18);if(e.cover!=null){c.save();Path p=new Path();p.addRoundRect(r,18,18,Path.Direction.CW);c.clipPath(p);image(c,e.cover,r);c.restore();}else text(c,"PS5",x+72,466,34,0xffb9d7ff,true);hit(r,()->app.entry(e));fit(c,e.name,x,569,210,17,Color.WHITE,true);}
@@ -49,3 +49,4 @@ final class HomeView extends View {
     @Override public boolean onTouchEvent(MotionEvent e){float x=(e.getX()-ox)/scale,y=(e.getY()-oy)/scale;if(e.getAction()==MotionEvent.ACTION_DOWN){downX=x;downY=y;return true;}if(e.getAction()==MotionEvent.ACTION_UP){if(Math.abs(x-downX)>50&&downY<250){move(x<downX?1:-1);return true;}if(Math.abs(x-downX)<24&&Math.abs(y-downY)<24){for(int i=hits.size()-1;i>=0;i--)if(hits.get(i).rect.contains(x,y)){performClick();hits.get(i).action.run();return true;}}return true;}return true;}
     @Override public boolean performClick(){super.performClick();return true;}
 }
+

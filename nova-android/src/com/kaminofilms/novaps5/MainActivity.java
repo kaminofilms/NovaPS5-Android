@@ -248,6 +248,8 @@ public final class MainActivity extends Activity {
         }, 400);
     }
 
+    void graphics(GameStore.Entry e) { GraphicsSettings.show(this, e.id); }
+
     void entry(GameStore.Entry e) {
         new AlertDialog.Builder(this).setTitle(e.name)
                 .setMessage(e.id + (e.version.isEmpty() ? "" : " · " + e.version))
@@ -365,40 +367,10 @@ public final class MainActivity extends Activity {
         driver.setText("GPU driver: " + Drivers.label(this));
         driver.setOnClickListener(v -> gpuDriver());
         box.addView(driver);
-        TextView graphicsHeading = new TextView(this);
-        graphicsHeading.setText("Exclusive Graphics (experimental)");
-        graphicsHeading.setTextSize(19);
-        graphicsHeading.setPadding(0, 22, 0, 8);
-        box.addView(graphicsHeading);
-        TextView graphicsNote = new TextView(this);
-        graphicsNote.setText("FPS cap controls Vulkan presentation after restarting the game. Bilinear presentation is active. Internal resolution, FSR and sharpening are unavailable in this build.");
-        box.addView(graphicsNote);
-        String[] resolutionOptions = {"0.5x", "0.75x", "1x", "1.5x", "2x"};
-        Spinner resolution = new Spinner(this);
-        resolution.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, resolutionOptions));
-        resolution.setSelection(Math.max(0, Math.min(4, prefs.getInt("graphics_resolution_index", 2))));
-        resolution.setEnabled(false);
-        box.addView(resolution);
-        String[] fpsOptions = {"30 FPS", "40 FPS", "60 FPS", "90 FPS", "120 FPS", "Unlimited"};
-        Spinner fpsLimit = new Spinner(this);
-        fpsLimit.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, fpsOptions));
-        fpsLimit.setSelection(Math.max(0, Math.min(5, prefs.getInt("graphics_fps_index", 5))));
-        box.addView(fpsLimit);
-        String[] upscaleOptions = {"Bilinear", "FSR 1.0 (not yet implemented)"};
-        Spinner upscale = new Spinner(this);
-        upscale.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, upscaleOptions));
-        upscale.setSelection(Math.max(0, Math.min(1, prefs.getInt("graphics_upscale_index", 0))));
-        upscale.setSelection(0);
-        upscale.setEnabled(false);
-        box.addView(upscale);
-        TextView sharpeningLabel = new TextView(this);
-        sharpeningLabel.setText("Sharpening preference (inactive)");
-        box.addView(sharpeningLabel);
-        SeekBar sharpening = new SeekBar(this);
-        sharpening.setMax(100);
-        sharpening.setProgress(prefs.getInt("graphics_sharpen", 0));
-        sharpening.setEnabled(false);
-        box.addView(sharpening);
+        Button graphics = new Button(this);
+        graphics.setText("Graphics defaults");
+        graphics.setOnClickListener(v -> GraphicsSettings.show(this, ""));
+        box.addView(graphics);
         TextView opacityLabel = new TextView(this);
         opacityLabel.setText("Touch controller opacity");
         box.addView(opacityLabel);
@@ -461,7 +433,7 @@ public final class MainActivity extends Activity {
             box.addView(clean);
         }
         TextView about = new TextView(this);
-        about.setText("NovaPs5 " + VERSION + "\nAnyPS5 graphics and VideoOut run natively with NovaFEX for x86-64 execution. In a game, swipe in from the left edge or press PS for the game menu.");
+        about.setText("NovaPs5 " + VERSION + "\nKyty graphics run natively with NovaFEX for x86-64 execution. In a game, swipe in from the left edge or press PS for the game menu.");
         about.setPadding(0, 18, 0, 0);
         box.addView(about);
         ScrollView settingsScroll = new ScrollView(this);
@@ -472,7 +444,7 @@ public final class MainActivity extends Activity {
                 .setPositiveButton("Save", (d, w) -> {
                     String newKey = artKey.getText().toString().trim();
                     boolean keyChanged = !newKey.equals(prefs.getString("sgdb_key", ""));
-                    prefs.edit().putInt("graphics_resolution_index", resolution.getSelectedItemPosition()).putInt("graphics_fps_index", fpsLimit.getSelectedItemPosition()).putInt("graphics_upscale_index", upscale.getSelectedItemPosition()).putInt("graphics_sharpen", sharpening.getProgress()).putInt("opacity", opacity.getProgress() + 15).putBoolean("touch_controls", touch.isChecked()).putBoolean("show_fps", showFps.isChecked()).putBoolean("unreal_heap_hle", false).putString("sgdb_key", newKey).apply();
+                    prefs.edit().putInt("opacity", opacity.getProgress() + 15).putBoolean("touch_controls", touch.isChecked()).putBoolean("show_fps", showFps.isChecked()).putBoolean("unreal_heap_hle", false).putString("sgdb_key", newKey).apply();
                     if (keyChanged && !newKey.isEmpty()) io.execute(() -> fetchArt(true));
                 })
                 .setNegativeButton("Close", null).show();
@@ -529,4 +501,5 @@ public final class MainActivity extends Activity {
         return super.dispatchKeyEvent(e);
     }
 }
+
 
