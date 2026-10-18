@@ -4,7 +4,7 @@ name: Nova PS5 Android-native (no DroidDeck)
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
   push:
-    branches: [android-native, feature/guest-va, feature/anyps5-android-gpu, fix/0923-arm64-ld1-boot, fix/0924-native-guest-hotpaths, fix/0925-agc-commandbuffer-hostviews, fix/0926-shader-cache-persistence, fix/0927-gpu-host-memory, fix/0929-renderer-performance, fix/0931-luna-super-meat-boy, fix/novaps5-0936-luna-watchpoint]
+    branches: [android-native, feature/guest-va, feature/anyps5-android-gpu, fix/0923-arm64-ld1-boot, fix/0924-native-guest-hotpaths, fix/0925-agc-commandbuffer-hostviews, fix/0926-shader-cache-persistence, fix/0927-gpu-host-memory, fix/0929-renderer-performance, fix/0931-luna-super-meat-boy, fix/novaps5-0936-luna-watchpoint, fix/novaps5-0941-vulkan-composite-alpha]
   workflow_dispatch:
 permissions:
   contents: write
