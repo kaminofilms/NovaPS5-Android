@@ -23,6 +23,8 @@ if [[ ! -d adrenotools/.git ]]; then
     git -C adrenotools submodule update --init --recursive -q
 fi
 git -C kyty checkout -q -- . && git -C kyty clean -qfd -e build
+# Existing staged repositories can have missing or interrupted submodule checkouts.
+git -C kyty submodule update --init --recursive --depth 1 --jobs "${NOVA_BUILD_JOBS:-1}"
 # Recover Kyty from the most recent successfully compiled Android base, preserving
 # its entire working runtime. The current monolithic 0.9.9 Kyty patch conflicts
 # with memory.cpp and MUST NOT be applied partially. 0.9.9 FEX/ARM64 fixes come
@@ -231,6 +233,48 @@ s = s.replace('LOGI("Audio playback underflow, missed %zu frames", (callback_byt
 s = s.replace('LOGI("SDL AAudioStream_requestStart OK");', '', 1)
 open(p, 'w').write(s)
 PY
+
+# FetchContent may repeat PATCH_COMMAND after a reconfigure. Accept only a
+# clean forward application or a fully reverse-applicable existing patch.
+cat > "$work/kyty/3rdparty/nova-apply-zarchive.cmake" <<'CMAKE'
+if(NOT DEFINED NOVA_GIT OR NOT DEFINED NOVA_PATCH)
+    message(FATAL_ERROR "zarchive: missing Git executable or patch")
+endif()
+execute_process(COMMAND "${NOVA_GIT}" apply --reverse --check --ignore-whitespace "${NOVA_PATCH}"
+    RESULT_VARIABLE reverse_result OUTPUT_VARIABLE reverse_output ERROR_VARIABLE reverse_error)
+if(reverse_result EQUAL 0)
+    message(STATUS "NOVA_ZARCHIVE: complete reader patch already applied")
+else()
+    execute_process(COMMAND "${NOVA_GIT}" apply --check --ignore-whitespace "${NOVA_PATCH}"
+        RESULT_VARIABLE check_result OUTPUT_VARIABLE check_output ERROR_VARIABLE check_error)
+    if(NOT check_result EQUAL 0)
+        message(FATAL_ERROR "zarchive reader patch is incompatible or partially applied:\n${check_output}\n${check_error}\nReverse check:\n${reverse_error}")
+    endif()
+    execute_process(COMMAND "${NOVA_GIT}" apply --ignore-whitespace "${NOVA_PATCH}"
+        RESULT_VARIABLE apply_result OUTPUT_VARIABLE apply_output ERROR_VARIABLE apply_error)
+    if(NOT apply_result EQUAL 0)
+        message(FATAL_ERROR "zarchive reader patch failed:\n${apply_output}\n${apply_error}")
+    endif()
+    execute_process(COMMAND "${NOVA_GIT}" apply --reverse --check --ignore-whitespace "${NOVA_PATCH}"
+        RESULT_VARIABLE verify_result OUTPUT_VARIABLE verify_output ERROR_VARIABLE verify_error)
+    if(NOT verify_result EQUAL 0)
+        message(FATAL_ERROR "zarchive reader patch verification failed:\n${verify_output}\n${verify_error}")
+    endif()
+    message(STATUS "NOVA_ZARCHIVE: reader patch applied and verified")
+endif()
+CMAKE
+python3 - "$work/kyty/3rdparty/CMakeLists.txt" <<'PY'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+old = '\tPATCH_COMMAND "${GIT_EXECUTABLE}" apply --ignore-whitespace\n\t\t"${CMAKE_CURRENT_SOURCE_DIR}/patches/zarchive-reader.patch"'
+new = '\tPATCH_COMMAND "${CMAKE_COMMAND}"\n\t\t"-DNOVA_GIT=${GIT_EXECUTABLE}"\n\t\t"-DNOVA_PATCH=${CMAKE_CURRENT_SOURCE_DIR}/patches/zarchive-reader.patch"\n\t\t-P "${CMAKE_CURRENT_SOURCE_DIR}/nova-apply-zarchive.cmake"'
+if s.count(old) != 1:
+    raise SystemExit('NOVA_ZARCHIVE: expected one pinned patch command; refusing edit')
+p.write_text(s.replace(old, new, 1))
+PY
+
 bash "$repo/tools/ci/build-android-anyps5.sh" "$repo" "$work" "$out"
 cmake -S kyty -B build-kyty-android -G Ninja -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" -DANDROID_ABI=arm64-v8a \
@@ -241,7 +285,7 @@ cmake -S kyty -B build-kyty-android -G Ninja -DCMAKE_BUILD_TYPE=Release \
     -DNOVAFEX_DIR="$novafex" -DFFMPEG_PREBUILT_DIR="$ffmpeg" -DNOVA_ADRENOTOOLS_SRC="$work/adrenotools" \
     > "$out/logs/kyty-android-cmake.txt" 2>&1 || { tail -80 "$out/logs/kyty-android-cmake.txt"; exit 1; }
 status=0
-cmake --build build-kyty-android --target kyty_emulator --parallel "$(nproc)" -- -k 0 > "$out/logs/kyty-android-build.txt" 2>&1 || status=$?
+cmake --build build-kyty-android --target kyty_emulator --parallel "${NOVA_BUILD_JOBS:-1}" -- -k 0 > "$out/logs/kyty-android-build.txt" 2>&1 || status=$?
 grep -E "error:|undefined (reference|symbol)|FAILED:" "$out/logs/kyty-android-build.txt" | head -400 > "$out/logs/kyty-android-errors.txt" || true
 if [[ $status -ne 0 ]]; then head -150 "$out/logs/kyty-android-errors.txt"; exit "$status"; fi
 cp "$(find build-kyty-android -name libmain.so | head -n 1)" "$out/lib/"
@@ -262,7 +306,7 @@ cmake -S "$repo/native/pkg" -B "$work/build-novapkg-android" -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
     -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-$API \
     -DANDROID_STL=c++_static -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
-cmake --build "$work/build-novapkg-android" --target novapkg --parallel "$(nproc)"
+cmake --build "$work/build-novapkg-android" --target novapkg --parallel "${NOVA_BUILD_JOBS:-1}"
 cp "$work/build-novapkg-android/libnovapkg.so" "$out/lib/"
 mkdir -p "$out/source"
 tar -czf "$out/source/KytyPlus-PKG-corresponding-source.tar.gz" -C "$repo" native/pkg nova-android/src/com/kaminofilms/novaps5/PkgInstaller.java LICENSES/KytyPlus-NOTICE.txt
