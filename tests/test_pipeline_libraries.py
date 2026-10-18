@@ -65,7 +65,24 @@ int main(int argc,char**argv){
  vk::ApplicationInfo app{};app.apiVersion=VK_API_VERSION_1_3;
  const char* layer="VK_LAYER_KHRONOS_validation";const char* ext=VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
  vk::InstanceCreateInfo ci{};ci.pApplicationInfo=&app;ci.enabledLayerCount=1;ci.ppEnabledLayerNames=&layer;ci.enabledExtensionCount=1;ci.ppEnabledExtensionNames=&ext;
- vk::Instance instance;assert(vk::createInstance(&ci,nullptr,&instance)==vk::Result::eSuccess);
+ vk::Instance instance;
+ auto instanceResult=vk::createInstance(&ci,nullptr,&instance);
+ if(instanceResult!=vk::Result::eSuccess){
+   std::fprintf(stderr,"GPL_TEST: vkCreateInstance failed: %s (%d); requested Vulkan 1.3, layer=%s, extension=%s\\n",vk::to_string(instanceResult).c_str(),static_cast<int>(instanceResult),layer,ext);
+   uint32_t count=0;
+   if(vk::enumerateInstanceLayerProperties(&count,nullptr)==vk::Result::eSuccess){
+     std::vector<vk::LayerProperties> available(count);
+     if(vk::enumerateInstanceLayerProperties(&count,available.data())==vk::Result::eSuccess)
+       for(const auto& entry:available)std::fprintf(stderr,"GPL_TEST: available layer: %s\\n",entry.layerName.data());
+   }
+   count=0;
+   if(vk::enumerateInstanceExtensionProperties(nullptr,&count,nullptr)==vk::Result::eSuccess){
+     std::vector<vk::ExtensionProperties> available(count);
+     if(vk::enumerateInstanceExtensionProperties(nullptr,&count,available.data())==vk::Result::eSuccess)
+       for(const auto& entry:available)std::fprintf(stderr,"GPL_TEST: available instance extension: %s\\n",entry.extensionName.data());
+   }
+   return 1;
+ }
  VkDebugUtilsMessengerCreateInfoEXT debug{VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};debug.messageSeverity=VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;debug.messageType=7;debug.pfnUserCallback=report;
  VkDebugUtilsMessengerEXT messenger{};
  auto createDebug=(PFN_vkCreateDebugUtilsMessengerEXT)instance.getProcAddr("vkCreateDebugUtilsMessengerEXT");assert(createDebug((VkInstance)instance,&debug,nullptr,&messenger)==VK_SUCCESS);
@@ -108,5 +125,9 @@ with tempfile.TemporaryDirectory() as d:
  subprocess.run(['c++','-std=c++20','-O1',str(p/'test.cpp'),'-lvulkan','-o',str(p/'test')],check=True)
  env=os.environ.copy()
  icds=list(Path('/usr/share/vulkan/icd.d').glob('*lvp*.json'))
- if icds:env['VK_ICD_FILENAMES']=str(icds[0])
+ if icds:
+  env['VK_ICD_FILENAMES']=str(icds[0])
+  env['VK_DRIVER_FILES']=str(icds[0])
+ for name in ['VK_ICD_FILENAMES','VK_DRIVER_FILES','VK_LAYER_PATH','VK_ADD_LAYER_PATH','VK_INSTANCE_LAYERS','VK_LOADER_DRIVERS_SELECT','VK_LOADER_DRIVERS_DISABLE']:
+  print(f'GPL_TEST: {name}={env.get(name, "<unset>")}',file=sys.stderr,flush=True)
  subprocess.run([str(p/'test'),str(p/'vert.spv'),str(p/'frag.spv'),str(p/'mesh.spv')],env=env,check=True)
