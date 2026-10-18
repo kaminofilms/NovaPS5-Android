@@ -239,7 +239,9 @@ void AddExports(Loader::SymbolDatabase* symbols, const char* prefix) {
 }
 bool Enabled() {
     const char* backend = std::getenv("NOVA_GPU_BACKEND");
-    return !backend || std::strcmp(backend, "kyty") != 0;
+    // Keep the established Kyty runtime until AnyPS5 guest-memory integration is device-verified.
+    // Experimental AnyPS5 is selected only by an explicit request.
+    return backend && std::strcmp(backend, "anyps5") == 0;
 }
 std::vector<Mapping> MappingSnapshotNow() {
     std::vector<Mapping> result;
