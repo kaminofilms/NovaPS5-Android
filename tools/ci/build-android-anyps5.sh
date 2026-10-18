@@ -7,6 +7,7 @@ if [[ ! -d "$source_dir/.git" ]]; then
     git clone --no-checkout https://github.com/boykopovar/AnyPS5.git "$source_dir"
 fi
 git -C "$source_dir" checkout --detach 9caecfd2d5a822be9daf84c69c7c33c7fafe52b9
+python3 "$repo/tools/ci/patch-0941-anyps5-presentation.py" "$source_dir"
 git -C "$source_dir" submodule update --init --depth 1 3rdparty/SPIRV-Headers 3rdparty/SPIRV-Tools 3rdparty/glslang 3rdparty/Vulkan-Headers
 host_glslang=${NOVA_ANYPS5_HOST_GLSLANG:-}
 if [[ -z "$host_glslang" ]]; then
