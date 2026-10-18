@@ -1,10 +1,10 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# NovaPS5 0.9.40 / 93: completed constant-label reads; Ever Forward and Super Meat Boy profiles.
+# NovaPS5 0.9.41 / 93: completed constant-label reads; Ever Forward and Super Meat Boy profiles.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
   push:
-    branches: [android-native, feature/guest-va, feature/anyps5-android-gpu, fix/0923-arm64-ld1-boot, fix/0924-native-guest-hotpaths, fix/0925-agc-commandbuffer-hostviews, fix/0926-shader-cache-persistence, fix/0927-gpu-host-memory, fix/0929-renderer-performance, fix/0931-luna-super-meat-boy, fix/novaps5-0936-luna-watchpoint]
+    branches: [fix/novaps5-0941-anyps5-presentation, android-native, feature/guest-va, feature/anyps5-android-gpu, fix/0923-arm64-ld1-boot, fix/0924-native-guest-hotpaths, fix/0925-agc-commandbuffer-hostviews, fix/0926-shader-cache-persistence, fix/0927-gpu-host-memory, fix/0929-renderer-performance, fix/0931-luna-super-meat-boy, fix/novaps5-0936-luna-watchpoint]
   workflow_dispatch:
 permissions:
   contents: write
@@ -192,12 +192,12 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.40-android-arm64.apk" \
-            --version-name 0.9.40-android --version-code 94 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.41-android-arm64.apk" \
+            --version-name 0.9.41-android --version-code 95 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.40-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.40-android --version-code 94 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.41-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.41-android --version-code 95 | tee dist/apk/verify.txt
       - name: Verify packaged mesh driver
-        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.40-android-arm64.apk
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.41-android-arm64.apk
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -214,11 +214,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.9.40-android-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.9.40-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.9.40-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.40 PKG installer preview (CI ${GITHUB_SHA::7})" \
-            --notes "Native Android Kyty + NovaFEX, versionCode 93. Experimental decrypted PKG/PFS installer, streamed ordinary files, validation before atomic installation, and upstream FP16 signaling-NaN shader correction. Finalized-image and encrypted packages remain unsupported; compressed file decoding is limited to 64 MiB. Existing Nova 0.9.38 GPU-label and PM4 optimizations are retained. This is not a full AnyPS5 backend port and does not establish improved gameplay FPS."
+          tag="v0.9.41-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.41-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.41-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.41 PKG installer preview (CI ${GITHUB_SHA::7})" \
+            --notes "Native Android Kyty + NovaFEX, versionCode 95. Experimental decrypted PKG/PFS installer, streamed ordinary files, validation before atomic installation, and upstream FP16 signaling-NaN shader correction. Finalized-image and encrypted packages remain unsupported; compressed file decoding is limited to 64 MiB. Existing Nova 0.9.38 GPU-label and PM4 optimizations are retained. This is not a full AnyPS5 backend port and does not establish improved gameplay FPS."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()
