@@ -40,7 +40,7 @@ final class HomeView extends View {
             if(games.isEmpty())button(c,"Add game",60,385,208,true,()->app.addGame());
         }
         text(c,"NOVA PS5 "+MainActivity.VERSION+" · NATIVE ANDROID",60,618,13,0xff8fafdc,true);fit(c,app.gpu,60,649,760,17,0xffb1c5e2,false);
-        text(c,"Kyty + embedded FEXCore • Vulkan • no Linux runtime",60,680,16,0xffb9c7dc,false);
+        text(c,"AnyPS5 graphics • NovaFEX • Vulkan",60,680,16,0xffb9c7dc,false);
         button(c,"Session log",854,599,166,false,()->app.diagnostics());button(c,"Settings",1037,599,148,false,()->app.settings());
         c.restore();
     }

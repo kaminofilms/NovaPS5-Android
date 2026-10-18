@@ -248,6 +248,12 @@ std::vector<Mapping> MappingSnapshotNow() {
     return result;
 }
 void Initialize() {
+    if (!std::getenv("ANYPS5_SHADER_CACHE_DIR")) {
+        if (const char* work = std::getenv("NOVA_WORKDIR")) {
+            const auto cache = (std::filesystem::path(work) / "cache" / "anyps5").string();
+            setenv("ANYPS5_SHADER_CACHE_DIR", cache.c_str(), 0);
+        }
+    }
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) throw std::runtime_error(SDL_GetError());
     appWindow = SDL_CreateWindow("NovaPS5 - AnyPS5", Config::GetScreenWidth(), Config::GetScreenHeight(), SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
     if (!appWindow) throw std::runtime_error(SDL_GetError());

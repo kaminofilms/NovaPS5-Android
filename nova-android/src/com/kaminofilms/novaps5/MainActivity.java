@@ -461,7 +461,7 @@ public final class MainActivity extends Activity {
             box.addView(clean);
         }
         TextView about = new TextView(this);
-        about.setText("NovaPs5 " + VERSION + "\nKyty and the x86-64 translator (FEXCore) run natively inside the app. In a game, swipe in from the left edge or press PS for the game menu.");
+        about.setText("NovaPs5 " + VERSION + "\nAnyPS5 graphics and VideoOut run natively with NovaFEX for x86-64 execution. In a game, swipe in from the left edge or press PS for the game menu.");
         about.setPadding(0, 18, 0, 0);
         box.addView(about);
         ScrollView settingsScroll = new ScrollView(this);

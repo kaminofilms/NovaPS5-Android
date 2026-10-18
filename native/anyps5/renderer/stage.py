@@ -62,6 +62,10 @@ replacement = r"""
 }"""
 s = s[:body] + replacement + s[end:]
 s = s.replace('std::memcpy(', 'NovaAnyPS5::CopyMemory(').replace('std::memcmp(', 'NovaAnyPS5::CompareMemory(')
+copy_start = s.index('[[gnu::no_sanitize("address")]] void CopyGuestBytes(')
+copy_end = s.index('\n#else', copy_start)
+s = s[:copy_start] + 'void CopyGuestBytes(void* destination, const void* source, std::size_t bytes) {\n    NovaAnyPS5::CopyMemory(destination, source, bytes);\n}' + s[copy_end:]
+
 
 changed_start = s.index('        std::size_t at = 0;', s.index('void WriteChanged('))
 changed_end = s.index('        return firstChanged < lastChanged ?', changed_start)
@@ -170,3 +174,40 @@ target_compile_definitions(nova_anyps5_video PRIVATE APS5_ENABLE_TIMING_LOG=0 AP
 set_target_properties(nova_anyps5_video PROPERTIES POSITION_INDEPENDENT_CODE ON)
 '''
 (video / 'CMakeLists.txt').write_text(video_cmake)
+import re
+for subtree in [root, api]:
+    for p in subtree.rglob('*'):
+        if not p.is_file() or p.suffix not in {'.cpp', '.hpp'} or 'tests' in p.parts:
+            continue
+        s = p.read_text()
+        updated = re.sub(r'std::atomic_ref(<[^<>]+>)?\(', lambda m: 'NovaAnyPS5::Atomic' + (m.group(1) or '') + '(', s)
+        if updated != s:
+            p.write_text('#include "guest_access.hpp"\n' + updated)
+p = root / 'Execution/src/Driver/Queues/Submission.cpp'
+s = p.read_text()
+start = s.index('bool Driver::copySegment(')
+end = s.index('\nvoid Driver::readRegisterLists(', start)
+segment = s[start:end]
+needle = '    budget -= words;'
+assert segment.count(needle) == 1
+segment = segment.replace(needle, needle + '\n    const NovaAnyPS5::TranslatedRead<std::uint32_t> translated(guest, words);\n    const auto* guestHost = translated.Data();')
+segment = segment.replace('guest[', 'guestHost[').replace('submission.commands.end(), guest + cursor, guest + words', 'submission.commands.end(), guestHost + cursor, guestHost + words').replace('submission.commands.end(), guest + cursor, guest + cursor + count', 'submission.commands.end(), guestHost + cursor, guestHost + cursor + count').replace('std::span(guest + cursor, count)', 'std::span(guestHost + cursor, count)')
+s = s[:start] + segment + s[end:]
+s = s.replace('    const auto descriptor = *packet;', '    Packet descriptor{};\n    GuestMemory::CopyGuestBytes(&descriptor, packet, sizeof(descriptor));')
+p.write_text(s)
+for p in root.rglob('*.cpp'):
+    s = p.read_text()
+    changed = False
+    for value_type in ['std::uint32_t', 'std::uint64_t']:
+        needle = '*reinterpret_cast<const volatile ' + value_type + '*>('
+        while needle in s:
+            start = s.index(needle)
+            first = start + len(needle)
+            end, level = first, 1
+            while level:
+                level += (s[end] == '(') - (s[end] == ')')
+                end += 1
+            s = s[:start] + 'NovaAnyPS5::ReadVolatile<' + value_type + '>(' + s[first:end-1] + ')' + s[end:]
+            changed = True
+    if changed:
+        p.write_text('#include "guest_access.hpp"\n' + s)

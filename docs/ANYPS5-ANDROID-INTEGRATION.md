@@ -23,9 +23,11 @@ build selects AnyPS5. This is a native backend port, not a Linux or Wine wrapper
 
 - Full compiler/optimizer, AGC driver/API and adapted VideoOut linked for Android
   arm64/API29 with NDK r30 and `--no-undefined`.
-- Nova's core with the runtime integration linked successfully. Integration
-  checks and the final signed APK are still being completed.
-- Four compiler host tests passed and generated compute SPIR-V passed spirv-val.
+- Nova's core linked successfully against the renderer and shared Android C++ runtime.
+- All 10 host tests passed, including real software-Vulkan compute, buffer formats,
+  buffer atomics and vertex draws, translated memory and mapping lease tests, and
+  real AGC queue ordering/cancellation across synthetic guest-memory slots.
+- Compiler-generated compute SPIR-V passed spirv-val.
 - Android compiler regression executables compiled; not run on a physical device.
 - Renderer uses the upstream descriptor/BDA ABI together with its resource
   implementation. AnyPS5 SPIR-V is not fed to Kyty's incompatible layouts.
@@ -77,3 +79,6 @@ and run ctest. Host software Vulkan tests do not establish Android driver result
 Upstream source and dependencies retain their licenses and pinned revisions.
 `renderer/stage.py` applies replayable platform changes to a build copy, leaving
 the upstream checkout unmodified.
+
+The integrated build script is `tools/ci/build-android-anyps5.sh`, called by the
+existing Android core build. APK version 0.9.40-android uses versionCode 94.

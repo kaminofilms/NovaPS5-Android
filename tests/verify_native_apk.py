@@ -57,7 +57,7 @@ with tempfile.TemporaryDirectory() as tmp, zipfile.ZipFile(a.apk) as z:
     libs = [n for n in z.namelist() if n.startswith('lib/')]
     check('no non-arm64 libraries', all(n.startswith('lib/arm64-v8a/') for n in libs), str(libs))
     names = {n.rsplit('/', 1)[1] for n in libs}
-    for need in ['libSDL3.so', 'libmain.so', 'libnovafex.so', 'libnovapkg.so']:
+    for need in ['libSDL3.so', 'libmain.so', 'libnovafex.so', 'libnovapkg.so', 'libnova_anyps5_renderer.so', 'libc++_shared.so']:
         check(f'{need} present', need in names)
     dex = b''.join(z.read(n) for n in z.namelist() if n.endswith('.dex'))
     for cls in [b'Lcom/kaminofilms/novaps5/GameActivity;', b'Lcom/kaminofilms/novaps5/MainActivity;',
@@ -73,6 +73,9 @@ with tempfile.TemporaryDirectory() as tmp, zipfile.ZipFile(a.apk) as z:
         needed = re.findall(r'\(NEEDED\)\s+Shared library: \[([^\]]+)\]', dynamic)
         missing = [x for x in needed if x not in names and x not in SYSTEM]
         check(f'{path.name} dependencies resolvable on Android', not missing, ', '.join(missing))
+        if path.name == 'libmain.so':
+            check('main links the AnyPS5 renderer', 'libnova_anyps5_renderer.so' in needed)
+            check('main shares the renderer C++ runtime', 'libc++_shared.so' in needed)
         symbols = out(readelf, '--dyn-syms', '-W', path)
         check(f'{path.name} has no glibc symbol versions', 'GLIBC_' not in symbols)
         exports[path.name] = {line.split()[-1].split('@')[0] for line in symbols.splitlines()
@@ -80,6 +83,9 @@ with tempfile.TemporaryDirectory() as tmp, zipfile.ZipFile(a.apk) as z:
         segments = out(readelf, '-lW', path)
         aligns = [int(m, 16) for m in re.findall(r'^\s+LOAD\s+.*\s(0x[0-9a-f]+)$', segments, re.M)]
         check(f'{path.name} 16 KB page aligned', bool(aligns) and min(aligns) >= 0x4000, str(aligns))
+    any_exports = exports.get('libnova_anyps5_renderer.so', set())
+    check('complete AnyPS5 graphics and VideoOut exports', len([s for s in any_exports if s.startswith(('sceAgc', 'sceVideoOut')) and '_nid_' not in s]) == 335)
+    check('AnyPS5 compiler internals hidden', not any(s.startswith(('_ZN7glslang', '_ZN8spvtools')) for s in any_exports))
     check('libmain exports the FPS counter entry',
           'Java_com_kaminofilms_novaps5_NovaPad_nativeFrames' in exports.get('libmain.so', set()))
     check('libmain exports SDL_main', 'SDL_main' in exports.get('libmain.so', set()))

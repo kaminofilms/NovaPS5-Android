@@ -231,9 +231,10 @@ s = s.replace('LOGI("Audio playback underflow, missed %zu frames", (callback_byt
 s = s.replace('LOGI("SDL AAudioStream_requestStart OK");', '', 1)
 open(p, 'w').write(s)
 PY
+bash "$repo/tools/ci/build-android-anyps5.sh" "$repo" "$work" "$out"
 cmake -S kyty -B build-kyty-android -G Ninja -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" -DANDROID_ABI=arm64-v8a \
-    -DANDROID_PLATFORM=android-$API -DANDROID_STL=c++_static \
+    -DANDROID_PLATFORM=android-$API -DANDROID_STL=c++_shared \
     -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
     -DCMAKE_C_FLAGS="-Wno-error=implicit-function-declaration" -DKYTY_BUILD_LAUNCHER=OFF -DBUILD_TESTING=OFF \
     -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384" \
