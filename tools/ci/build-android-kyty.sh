@@ -216,6 +216,11 @@ python3 "$repo/tools/ci/patch-kyty-latest-fp16.py" "$work/kyty"
 python3 "$repo/tests/test_kyty_fp16.py" "$work/kyty"
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 bash "$repo/tools/ci/test-kytyplus-package.sh"
 
+# Ever Forward: known constant-label fault reconciliation; retain ordinary downloads on misses.
+python3 "$repo/tools/ci/patch-ever-label-publication.py" "$work/kyty"
+python3 "$repo/tests/test_ever_label_publication.py" "$work/kyty"
+ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_ever_label_publication.py" "$work/kyty"
+
 # SDL's AAudio backend: report stream errors, disconnects and underflows (debug LOGI is off
 # upstream) so the session log shows why audio stops.
 aaudio=kyty/3rdparty/SDL3/src/audio/aaudio/SDL_aaudio.c
