@@ -1,0 +1,3 @@
+[submodule "external/anyps5"]
+	path = external/anyps5
+	url = https://github.com/boykopovar/AnyPS5.git
