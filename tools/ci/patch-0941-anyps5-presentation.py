@@ -23,9 +23,16 @@ new_check = '''        // Android surfaces are not required to advertise opaque 
         require(compositeAlphaSupported, "no supported Vulkan surface composite alpha mode");'''
 old_assignment = '        swapchain.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;'
 new_assignment = '        swapchain.compositeAlpha = selectedCompositeAlpha;'
-for old in (old_check, old_assignment):
-    if s.count(old) != 1:
-        raise SystemExit(f"AnyPS5 0.9.41: expected exactly one anchor: {old}")
+# Staged AnyPS5 sources may already be patched by a previous build attempt.
+# Re-running must not fail or partially rewrite a valid patched checkout.
+if new_check in s and new_assignment in s and old_check not in s and old_assignment not in s:
+    print("NOVA_ANYPS5: composite-alpha fix already applied")
+    sys.exit(0)
+if s.count(old_check) != 1 or s.count(old_assignment) != 1:
+    raise SystemExit(
+        "AnyPS5 0.9.41: source is neither the pinned original nor fully patched; "
+        "inspect VulkanDevice.cpp before continuing"
+    )
 s = s.replace(old_check, new_check, 1).replace(old_assignment, new_assignment, 1)
 p.write_text(s)
 print("NOVA_ANYPS5: negotiated surface-supported Vulkan composite alpha")
