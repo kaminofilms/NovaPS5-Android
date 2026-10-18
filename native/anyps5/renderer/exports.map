@@ -1,0 +1,10 @@
+{
+    global:
+        _ZN10NovaAnyPS5*;
+        sceAgc*;
+        sceVideoOut*;
+        GuestAllocations*;
+        _ZTI15ProcessShutdown;
+        _ZTS15ProcessShutdown;
+    local: *;
+};

@@ -1,0 +1,38 @@
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+set(NOVA_ANYPS5_HOST_GLSLANG "" CACHE FILEPATH "Host executable for AGC helper shaders")
+if(NOT EXISTS "${NOVA_ANYPS5_HOST_GLSLANG}")
+    message(FATAL_ERROR "NOVA_ANYPS5_HOST_GLSLANG must name a host glslang executable")
+endif()
+set(NOVA_ANYPS5_STAGED_ROOT "${CMAKE_CURRENT_BINARY_DIR}/source")
+set(NOVA_ANYPS5_RENDERER_ADAPTER_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/stage.py"
+    "${ANYPS5_SOURCE_DIR}" "${NOVA_ANYPS5_STAGED_ROOT}"
+    COMMAND_ERROR_IS_FATAL ANY)
+add_executable(glslang-standalone IMPORTED GLOBAL)
+set_target_properties(glslang-standalone PROPERTIES IMPORTED_LOCATION "${NOVA_ANYPS5_HOST_GLSLANG}")
+function(nova_add_agc)
+    set(CMAKE_SOURCE_DIR "${ANYPS5_SOURCE_DIR}")
+    add_subdirectory("${NOVA_ANYPS5_STAGED_ROOT}/core/libs/prx/libSceAgcDriver" agc)
+endfunction()
+nova_add_agc()
+add_subdirectory("${NOVA_ANYPS5_STAGED_ROOT}/core/libs/prx/libSceAgc" agc_api)
+add_subdirectory("${NOVA_ANYPS5_STAGED_ROOT}/core/libs/prx/libSceVideoOut" video)
+target_sources(nova_anyps5_agc PRIVATE selected_vulkan_loader.cpp)
+target_compile_definitions(nova_anyps5_agc PRIVATE APS5_ENABLE_TIMING_LOG=0 APS5_ENABLE_TRACY=0)
+target_sources(nova_anyps5_agc PRIVATE
+    "${ANYPS5_SOURCE_DIR}/core/libs/prx/libc/src/GuestAllocations.cpp"
+    "${ANYPS5_SOURCE_DIR}/core/libs/prx/libc/src/GuestWriteWatch.cpp"
+    "${ANYPS5_SOURCE_DIR}/core/libs/prx/libc/src/FailureReport.cpp")
+target_sources(nova_anyps5_agc PRIVATE host_services.cpp video_platform.cpp memory_registry.cpp)
+add_library(nova_anyps5_renderer SHARED renderer_entry.cpp)
+target_link_libraries(nova_anyps5_renderer PRIVATE
+    "-Wl,--whole-archive" nova_anyps5_video nova_anyps5_agc_api nova_anyps5_agc "-Wl,--no-whole-archive" z)
+target_link_options(nova_anyps5_renderer PRIVATE "-Wl,--no-undefined" "-Wl,-z,max-page-size=16384")
+if(ANDROID)
+    target_sources(nova_anyps5_renderer PRIVATE memory_wrappers.cpp ../android_window.cpp)
+    target_link_libraries(nova_anyps5_renderer PRIVATE android)
+    target_link_options(nova_anyps5_renderer PRIVATE "-Wl,--wrap=memcpy,--wrap=memmove,--wrap=memset,--wrap=memcmp")
+endif()
+target_link_options(nova_anyps5_renderer PRIVATE "-Wl,-Bsymbolic-functions" "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports.map")
+set_property(TARGET nova_anyps5_renderer APPEND PROPERTY LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/exports.map")
+target_include_directories(nova_anyps5_agc PUBLIC "${ANYPS5_SOURCE_DIR}/3rdparty/Vulkan-Headers/include")
