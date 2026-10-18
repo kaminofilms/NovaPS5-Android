@@ -1,0 +1,47 @@
+NOVA_FEX: seccomp denied syscall 275 -> ENOSYS
+NOVAFEX_TEST: seccomp SIGSYS -> ENOSYS     PASS 
+NOVA_FEX: host AVX=1 SVE256=0 AFP=0 RCPC=1
+NOVAFEX_TEST: init                         PASS 
+NOVAFEX_TEST: host->guest CallGuest        PASS 
+NOVAFEX_TEST: host->guest fn pointer       PASS 
+NOVAFEX_TEST: guest loop                   PASS 
+NOVAFEX_TEST: guest->host gate             PASS 
+NOVAFEX_TEST: nested guest->host->guest    PASS 
+NOVAFEX_TEST: 8 int + 2 double args        PASS 
+NOVAFEX_TEST: 10 int args (AAPCS stack)    PASS 
+NOVAFEX_TEST: gate stack args pointer      PASS 
+NOVAFEX_TEST: double args/return           PASS 
+NOVAFEX_TEST: fs base                      PASS 
+NOVAFEX_TEST: split-line lock xadd         PASS 
+NOVAFEX_TEST: 4 host threads               PASS 
+NOVAFEX_TEST: invalidate + recompile       PASS 
+NOVAFEX_TEST: guest call context           PASS (rbx=1111 r12=2222 rip=+1d)
+NOVAFEX_TEST: gate exit hook               PASS 
+NOVAFEX_TEST: guest VA above 2^39          PASS (load=1122334455667788 store=cafef00d idx=77 xadd=cafef00d/cafef012 low=99)
+NOVAFEX_TEST: rep movs/stos on guest VA    PASS (copy=1/8fc0123c90 copyq=1/8fc0123d90 fill=1/8fc0124090 low=1)
+NOVAFEX_TEST: AVX2 gather on guest VA      PASS (dd=1 masked=1 qd=1 out0=5afffdbd)
+NOVAFEX_TEST: 128-bit cross-slot load      PASS (all 15 splits; poisoned host neighbor; ZF)
+NOVA_CROSS_SLOT_EXPECT_RIP: 0xffd246ad3230
+NOVA_FAULT: host pc=0xffd023806020 (guest JIT code)
+NOVA_FAULT: guest block rip=0xffd246ad3240
+NOVA_FAULT: guest rip=0xffd246ad3230 (exact)
+NOVA_FAULT: guest code rip-64: c5 fe 6f 0e c5 fe 6f 11 c5 fe 6f 02 c4 e2 6d 90 04 8f c5 fe 7f 02 c5 f8 77 c3 00 00 00 00 00 00 
+NOVA_FAULT: guest code rip-32: c5 fe 6f 0e c5 e9 76 d2 c5 f9 ef c0 c4 e2 6d 91 04 8f c5 fa 7f 02 c5 f8 77 c3 00 00 00 00 00 00 
+NOVA_FAULT: guest code rip+0: c5 fa 6f 7e 70 c5 fa 7f 3f 0f 94 c0 0f b6 c0 c3 31 c0 48 b8 30 32 ad 46 d2 ff 00 00 ff e0 00 00 
+NOVA_FAULT: guest code rip+32: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+NOVA_FAULT: guest code rip+64: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+NOVA_FAULT: last host call ? (gates=9)
+NOVA_FAULT:   call -0: ? (0x2, 0x2) -> 0x4
+NOVA_FAULT:   call -1: ? (0x5, 0x6) -> 0x1e
+NOVA_FAULT:   call -2: ? (0x3, 0x4) -> 0xc
+NOVA_FAULT:   call -3: ? (0x0, 0x0) -> 0x7
+NOVA_FAULT:   call -4: ? (0x0, 0x0) -> 0x2a
+NOVA_FAULT:   call -5: ? (0x1, 0x2) -> 0x1a9ec
+NOVA_FAULT:   call -6: ? (0x1, 0x2) -> 0x1
+NOVA_FAULT:   call -7: ? (0x5, 0xb400ffd145a0b010) -> 0x69
+NOVA_FAULT:   call -8: ? (0x6, 0x7) -> 0x2a
+NOVA_FAULT: rax=0000ffd246ad3230 rcx=0000000000000000 rdx=0000000000000000 rbx=0000000000000000
+NOVA_FAULT: rsp=0000ffd0237ffda8 rbp=0000000000000000 rsi=000000983fffff83 rdi=0000ffffeeac7370
+NOVA_FAULT: r8 =0000000000000000 r9 =0000000000000000 r10=0000000000000000 r11=0000000000000000
+NOVA_FAULT: r12=0000000000000000 r13=0000000000000000 r14=0000000000000000 r15=0000000000000000
+NOVA_CROSS_SLOT_FAULT: PASS (original fault; output unchanged)
