@@ -30,9 +30,11 @@ Local checks: native parser/installer ASan+UBSan regressions; full native JNI
 library compiled for the host using OpenJDK headers; edited Java sources compiled
 against Android API 36 with the unchanged game-activity declaration stubbed.
 LeakSanitizer disabled locally because runner process inspection is unavailable.
-CMake/Android NDK compilation is delegated to the dedicated no-APK CI workflow.
+CMake + NDK r28c Android ARM64/API 33 build also passes locally. ELF checks
+confirm AArch64, the JNI export, Android-only shared dependencies and 16 KiB
+LOAD alignment. The dedicated CI job failed before any steps; no CI pass claimed.
 No Android runtime, real PKG or game FPS result is implied by host checks.
 
-Remaining: Android NDK/CI result, phone import test, full-game runtime validation,
+Remaining: full APK validation, phone import test, full-game runtime validation,
 streaming large PFSC inodes and audited finalized-image support, explicit update
 package identification/merge, cancellation and interrupted-install recovery.

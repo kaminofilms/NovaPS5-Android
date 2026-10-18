@@ -45,7 +45,23 @@ is represented only by its declaration. The complete APK is not built locally.
 FP16 negative control: the original pin misclassifies quiet NaNs and fails the
 exhaustive check; the port passes.
 
-Only the dedicated no-APK workflow is authorized by this checkpoint's push.
+Only the dedicated no-APK workflow matches this branch's push.
 No release workflow, APK build, version bump or device-speed claim is included.
 No phone result demonstrates full speed. Future performance claims need same
 scene, same-device gameplay FPS and readback/EOP timing comparisons.
+
+## Android library validation follow-up
+
+The no-APK GitHub Actions run 39116866443 failed before running any steps; it
+had no assigned runner and no retrievable job log. Its exact cause is unknown.
+Do not report this as either a code compilation failure or a CI pass.
+
+Installed build tools in scratch and used NDK r28c to validate locally:
+- Full CMake target novapkg built for Android ARM64, API 33, static libc++.
+- readelf confirms AArch64 DYN, libnovapkg.so SONAME, and exported JNI method.
+- Dependencies are libz.so, libdl.so, libm.so and libc.so; no glibc dependency.
+- All LOAD segments have 16 KiB alignment.
+- Edited Java sources compile against API 36 (unchanged launch activity stubbed).
+
+This does not compile the complete staged Kyty/FEX runtime or assemble an APK.
+No device execution or full-speed result has been established.
