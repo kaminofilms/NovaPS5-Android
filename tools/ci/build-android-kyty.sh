@@ -212,6 +212,8 @@ python3 "$repo/tests/test_release_mem.py" "$work/kyty"
 # Forward-port the independently tested upstream FP16 correctness fix.
 python3 "$repo/tools/ci/patch-kyty-latest-fp16.py" "$work/kyty"
 python3 "$repo/tests/test_kyty_fp16.py" "$work/kyty"
+# 0.9.41: use only Android-surface-supported composite alpha modes.
+python3 "$repo/tools/ci/patch-0941-composite-alpha.py" "$work/kyty"
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 bash "$repo/tools/ci/test-kytyplus-package.sh"
 
 # SDL's AAudio backend: report stream errors, disconnects and underflows (debug LOGI is off
