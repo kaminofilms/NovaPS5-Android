@@ -33,21 +33,35 @@ final class GraphicsSettings {
         Spinner cap = choice(a, box, "Presentation FPS cap", CAPS, value(p,title,"cap",0));
         Switch cache = toggle(a, box, "Disk shader cache (recommended)", value(p,title,"cache",1)!=0);
         Switch gpl = toggle(a, box, "Pipeline libraries when supported", value(p,title,"gpl",1)!=0);
+        final Spinner resolution = "PPSA04703".equals(title) ? choice(a, box,
+            "Game resolution request (experimental)",
+            new String[]{"Game default", "1920 × 1080", "1280 × 720", "960 × 540", "640 × 360"},
+            value(p,title,"unity_resolution",0)) : null;
         TextView unavailable = new TextView(a);
-        unavailable.setText("Internal resolution scaling and asynchronous shader compilation require additional renderer support and are not available yet."); box.addView(unavailable);
+        unavailable.setText("Ever Forward can be sent a Unity resolution request. Its PS5 engine may ignore it. Actual render dimensions are recorded in the session log. A universal internal scaler and async shader compilation are not available."); box.addView(unavailable);
         ScrollView scroll = new ScrollView(a); scroll.addView(box);
         new AlertDialog.Builder(a).setTitle(title.isEmpty()?"Graphics defaults":"Graphics · "+title).setView(scroll)
-            .setPositiveButton("Save",(d,w)->p.edit().putInt(key(title,"present"),mode.getSelectedItemPosition())
-                .putInt(key(title,"cap"),cap.getSelectedItemPosition()).putInt(key(title,"cache"),cache.isChecked()?1:0)
-                .putInt(key(title,"gpl"),gpl.isChecked()?1:0).apply())
+            .setPositiveButton("Save",(d,w)->{
+                SharedPreferences.Editor e=p.edit().putInt(key(title,"present"),mode.getSelectedItemPosition())
+                    .putInt(key(title,"cap"),cap.getSelectedItemPosition()).putInt(key(title,"cache"),cache.isChecked()?1:0)
+                    .putInt(key(title,"gpl"),gpl.isChecked()?1:0);
+                if(resolution!=null)e.putInt(key(title,"unity_resolution"),resolution.getSelectedItemPosition());
+                e.apply();
+            })
             .setNeutralButton(title.isEmpty()?"Reset defaults":"Use global defaults",(d,w)->{
-                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl"})e.remove(key(title,n)); e.apply();
+                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","unity_resolution"})e.remove(key(title,n)); e.apply();
             }).setNegativeButton("Close",null).show();
     }
     static void apply(Context c, String title) throws android.system.ErrnoException {
         SharedPreferences p=c.getSharedPreferences("graphics",0);
         int mode=value(p,title,"present",0); if(mode<0||mode>2)mode=0;
         int cap=value(p,title,"cap",0); int[] limits={-1,30,40,60,90,120,0};
+        int ri=value(p,title,"unity_resolution",0); int[] heights={0,1080,720,540,360};
+        if(ri<0||ri>=heights.length||!"PPSA04703".equals(title))ri=0;
+        Os.setenv("NOVA_UNITY_RESOLUTION",Integer.toString(heights[ri]),true);
+        // Capture the default mode too, so a second launch can prove whether a request changed real rendering.
+        Os.setenv("NOVA_TRACE_RESOLUTION","PPSA04703".equals(title)?"1":"0",true);
+        BootLog.write(c,"Game resolution request: "+(heights[ri]==0?"game default":heights[ri]+"p (engine acceptance unverified)"));
         Os.setenv("NOVA_PRESENT_MODE",new String[]{"mailbox","fifo","immediate"}[mode],true);
         boolean cache=value(p,title,"cache",1)!=0, gpl=value(p,title,"gpl",1)!=0;
         Os.setenv("NOVA_SHADER_CACHE",cache?"1":"0",true);
