@@ -1,5 +1,5 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# NovaPS5 0.9.38 / 92: completed constant-label reads; Ever Forward and Super Meat Boy profiles.
+# NovaPS5 0.9.39 / 93: completed constant-label reads; Ever Forward and Super Meat Boy profiles.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
@@ -192,12 +192,12 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.38-android-arm64.apk" \
-            --version-name 0.9.38-android --version-code 92 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.39-android-arm64.apk" \
+            --version-name 0.9.39-android --version-code 93 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.38-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.38-android --version-code 92 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.39-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.39-android --version-code 93 | tee dist/apk/verify.txt
       - name: Verify packaged mesh driver
-        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.38-android-arm64.apk
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.39-android-arm64.apk
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -214,11 +214,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.9.38-android-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.9.38-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.9.38-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.38 completed label reuse (CI ${GITHUB_SHA::7})" \
-            --notes "Native Android Kyty + NovaFEX, versionCode 92. Targets Ever Forward PPSA04703 tiny coherent label reads and Super Meat Boy PPSA31162 EOP stalls. Reuses immutable bytes of recorded constant GPU label writes only after their real GPU tick and earlier publications complete. Overlapping writes, downloads, texture copies and buffer retirement invalidate retained labels; unknown results retain real readback. Super Meat Boy opts into coherent GPU labels and exact PM4 fetches. Guest CPU protections, true wait predicates and timestamp fallback remain. Native, sanitizer, Vulkan and APK checks gate release. Device gameplay FPS and heat improvements require owner testing; menu FPS is not gameplay."
+          tag="v0.9.39-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.39-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.39-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.39 PKG installer preview (CI ${GITHUB_SHA::7})" \
+            --notes "Native Android Kyty + NovaFEX, versionCode 93. Experimental decrypted PKG/PFS installer, streamed ordinary files, validation before atomic installation, and upstream FP16 signaling-NaN shader correction. Finalized-image and encrypted packages remain unsupported; compressed file decoding is limited to 64 MiB. Existing Nova 0.9.38 GPU-label and PM4 optimizations are retained. This is not a full AnyPS5 backend port and does not establish improved gameplay FPS."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()

@@ -57,11 +57,11 @@ with tempfile.TemporaryDirectory() as tmp, zipfile.ZipFile(a.apk) as z:
     libs = [n for n in z.namelist() if n.startswith('lib/')]
     check('no non-arm64 libraries', all(n.startswith('lib/arm64-v8a/') for n in libs), str(libs))
     names = {n.rsplit('/', 1)[1] for n in libs}
-    for need in ['libSDL3.so', 'libmain.so', 'libnovafex.so']:
+    for need in ['libSDL3.so', 'libmain.so', 'libnovafex.so', 'libnovapkg.so']:
         check(f'{need} present', need in names)
     dex = b''.join(z.read(n) for n in z.namelist() if n.endswith('.dex'))
     for cls in [b'Lcom/kaminofilms/novaps5/GameActivity;', b'Lcom/kaminofilms/novaps5/MainActivity;',
-                b'Lcom/kaminofilms/novaps5/NovaPad;', b'Lorg/libsdl/app/SDLActivity;']:
+                b'Lcom/kaminofilms/novaps5/NovaPad;', b'Lcom/kaminofilms/novaps5/PkgInstaller;', b'Lorg/libsdl/app/SDLActivity;']:
         check(f'class {cls.decode()}', cls in dex)
     exports = {}
     for n in libs:
@@ -85,6 +85,10 @@ with tempfile.TemporaryDirectory() as tmp, zipfile.ZipFile(a.apk) as z:
     check('libmain exports SDL_main', 'SDL_main' in exports.get('libmain.so', set()))
     check('libmain exports the touch controller entry',
           'Java_com_kaminofilms_novaps5_NovaPad_nativeState' in exports.get('libmain.so', set()))
+    check('libnovapkg exports the installer entry',
+          'Java_com_kaminofilms_novaps5_PkgInstaller_extract' in exports.get('libnovapkg.so', set()))
+    check('libnovapkg hides its private C++ runtime',
+          (exports.get('libnovapkg.so', set()) - {'Name'}) <= {'Java_com_kaminofilms_novaps5_PkgInstaller_extract'})
     # SDL registers its natives from JNI_OnLoad (RegisterNatives).
     check('libSDL3 exports JNI_OnLoad', 'JNI_OnLoad' in exports.get('libSDL3.so', set()))
     check('libnovafex exports only its API', all(s.startswith('_ZN7NovaFex') or s in ('', 'Name')
