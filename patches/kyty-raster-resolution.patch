@@ -1,0 +1,452 @@
+--- a/src/graphics/host_gpu/renderer/renderTarget.h
++++ b/src/graphics/host_gpu/renderer/renderTarget.h
+@@ -10,7 +10,11 @@
+ 
+ static constexpr uint32_t RENDER_COLOR_ATTACHMENTS_MAX = 8;
+ 
++class Image;
++
+ struct RenderAttachment {
++	Image* raster_owner = nullptr;
++ vk::AccessFlags2 image_access{};
+ 	vk::ImageView           image_view    = nullptr;
+ 	vk::ImageLayout         image_layout  = vk::ImageLayout::eUndefined;
+ 	std::array<uint32_t, 4> clear_value   = {};
+@@ -24,6 +28,7 @@
+ };
+ 
+ struct RenderState {
++	uint32_t raster_width = 0, raster_height = 0;
+ 	std::array<RenderAttachment, RENDER_COLOR_ATTACHMENTS_MAX> color_attachments;
+ 	RenderAttachment                                           depth_stencil_attachment;
+ 	uint32_t                                                   width                 = 0;
+--- a/src/graphics/host_gpu/renderer/renderDraw.cpp
++++ b/src/graphics/host_gpu/renderer/renderDraw.cpp
+@@ -1,3 +1,5 @@
++#include "common/novaRasterScale.h"
++#include <cmath>
+ #include "graphics/host_gpu/renderer/novaRenderCosts.h"
+ #include "graphics/host_gpu/renderer/renderDraw.h"
+ 
+@@ -354,6 +356,15 @@
+ 		scissor.offset = {final_scissor.left, final_scissor.top};
+ 		scissor.extent = {static_cast<uint32_t>(final_scissor.right - final_scissor.left),
+ 		                  static_cast<uint32_t>(final_scissor.bottom - final_scissor.top)};
++        if(rendering.raster_width){
++          const float sx=float(rendering.raster_width)/rendering.width, sy=float(rendering.raster_height)/rendering.height;
++          viewport.x*=sx;viewport.y*=sy;viewport.width*=sx;viewport.height*=sy;
++          const auto left=int32_t(std::floor(scissor.offset.x*sx));
++          const auto top=int32_t(std::floor(scissor.offset.y*sy));
++          const auto right=int32_t(std::ceil((scissor.offset.x+scissor.extent.width)*sx));
++          const auto bottom=int32_t(std::ceil((scissor.offset.y+scissor.extent.height)*sy));
++          scissor.offset=vk::Offset2D{left,top};scissor.extent=vk::Extent2D{uint32_t(right-left),uint32_t(bottom-top)};
++        }
+ 		if (viewport.width == 0.0f) {
+ 			// Keep empty slots at their guest index; Vulkan requires a positive viewport width.
+ 			viewport.width = 1.0f;
+@@ -499,6 +510,8 @@
+ 		state.num_layers        = std::min(state.num_layers, view.layer_count);
+ 		state.num_color_attachments = std::max(state.num_color_attachments, target.target_slot + 1);
+ 		auto& attachment            = state.color_attachments[target.target_slot];
++		attachment.image_access = image.binding.attachment_access;
++		attachment.raster_owner = &image;
+ 		attachment.image_view   = image_view;
+ 		attachment.image_layout = layout;
+ 	}
+@@ -561,6 +574,8 @@
+ 		state.num_layers          = std::min(state.num_layers, view.layer_count);
+ 		const auto aspects        = ImageViewOps::DepthAspectMask(depth.desc.view_info.format);
+ 		auto&      attachment     = state.depth_stencil_attachment;
++		attachment.image_access = access;
++		attachment.raster_owner   = &image;
+ 		attachment.image_view     = image_view;
+ 		attachment.image_layout   = layout;
+ 		attachment.clear_value[0] = std::bit_cast<uint32_t>(depth.depth_clear_value);
+@@ -1165,9 +1180,29 @@
+ 	    state.ps_active ? &state.ps_input_info : nullptr, topology, primitive_restart_enable,
+ 	    state.programs);
+ 	vk::ImageAspectFlags feedback_aspects;
+-	const auto rendering =
++	auto rendering =
+ 	    AcquireRenderTargets(buffer, state.color_info, state.color_count, state.depth_info,
+ 	                         feedback_aspects, stages);
++
++    const auto requested=NovaRaster::Extent(rendering.width,rendering.height);
++    if(requested.first){
++    bool scale=rendering.num_layers==1 && !rendering.depth_stencil_attachment.has_stencil && !feedback_aspects;
++    for(const auto* stage:stages){
++      if(stage->runtime->program->has_address_writes || HasShaderBufferWrites(*stage->runtime))scale=false;
++      for(const auto& resource:stage->runtime->program->info.images)if(resource.written)scale=false;
++    }
++    for(const auto& a:rendering.color_attachments)if(a.image_view &&
++       (!a.raster_owner || !a.raster_owner->CanRasterScale(a.image_view,rendering.width,rendering.height)))scale=false;
++    const auto& da=rendering.depth_stencil_attachment;
++    if(da.image_view && (!da.raster_owner || !da.raster_owner->CanRasterScale(da.image_view,rendering.width,rendering.height)))scale=false;
++    if(scale){
++      for(const auto& a:rendering.color_attachments)if(scale && a.raster_owner && a.image_view)
++        scale=a.raster_owner->PrepareRasterScale(requested.first,requested.second);
++      if(scale && da.raster_owner && da.image_view)scale=da.raster_owner->PrepareRasterScale(requested.first,requested.second);
++    }
++    if(scale){rendering.raster_width=requested.first;rendering.raster_height=requested.second;}
++    NovaRaster::Note(rendering.width,rendering.height,rendering.raster_width,rendering.raster_height);
++    }
+ 
+ 	// Resource preparation above may synchronously finish and restart the scheduler. From this
+ 	// point onward, every operation targets the current command buffer and cannot touch guest
+@@ -1192,11 +1227,18 @@
+ 		vk_buffer.pushConstants(pipeline.pipeline_layout,
+ 		                        vk::ShaderStageFlagBits::eMeshEXT |
+ 		                            vk::ShaderStageFlagBits::eFragment,
+-		                        0, sizeof(draw_data), draw_data);
++		                        NovaRaster::Enabled()?8u:0u, sizeof(draw_data), draw_data);
+ 	} else {
+ 		CommitIndexBuffer(vk_buffer, index_binding);
+ 	}
+ 
++    if(NovaRaster::Enabled()){
++    const float raster_inverse[2]={rendering.raster_width?float(rendering.width)/rendering.raster_width:1.f,
++                                   rendering.raster_height?float(rendering.height)/rendering.raster_height:1.f};
++    vk::ShaderStageFlags raster_stages=vk::ShaderStageFlagBits::eFragment;
++    for(const auto& stage:vertex_stages)raster_stages|=NativeShaderStage(stage.logical_stage);
++    vk_buffer.pushConstants(pipeline.pipeline_layout,raster_stages,0,sizeof(raster_inverse),raster_inverse);
++    }
+ 	auto& dynamic_state = m_context.GetCommandScheduler().GetDynamicState();
+ 	UpdateGraphicsDynamicState(buffer, dynamic_state, vertex_stages.back(), state.depth_info,
+ 	                           rendering);
+--- a/src/graphics/host_gpu/renderer/context.cpp
++++ b/src/graphics/host_gpu/renderer/context.cpp
+@@ -1,3 +1,4 @@
++#include "graphics/host_gpu/renderer/image/image.h"
+ #include "common/assert.h"
+ #include "common/common.h"
+ #include "common/profiler.h"
+@@ -80,6 +81,8 @@
+ 	EXIT_IF(state.width == 0 || state.height == 0 || state.num_layers == 0 ||
+ 	        state.num_color_attachments > RENDER_COLOR_ATTACHMENTS_MAX);
+ 	EndRendering();
++ const auto raster_w=state.raster_width?state.raster_width:state.width;
++ const auto raster_h=state.raster_width?state.raster_height:state.height;
+ #if defined(__ANDROID__) && defined(__aarch64__)
+     static const bool trace_resolution = [] {
+         const char* trace = std::getenv("NOVA_TRACE_RESOLUTION");
+@@ -94,8 +97,8 @@
+         static thread_local uint64_t overflow=0;
+         bool found=false;
+         for(auto& e:sizes) {
+-            if(!e.calls || (e.w==state.width && e.h==state.height && e.colors==state.num_color_attachments && e.layers==state.num_layers)) {
+-                e.w=state.width; e.h=state.height; e.colors=state.num_color_attachments; e.layers=state.num_layers; ++e.calls; found=true; break;
++            if(!e.calls || (e.w==raster_w && e.h==raster_h && e.colors==state.num_color_attachments && e.layers==state.num_layers)) {
++                e.w=raster_w; e.h=raster_h; e.colors=state.num_color_attachments; e.layers=state.num_layers; ++e.calls; found=true; break;
+             }
+         }
+         if(!found) ++overflow;
+@@ -114,7 +117,9 @@
+ 	std::array<vk::RenderingAttachmentInfo, RENDER_COLOR_ATTACHMENTS_MAX> colors {};
+ 	for (uint32_t i = 0; i < state.num_color_attachments; i++) {
+ 		const auto& attachment = state.color_attachments[i];
+-		colors[i].imageView    = attachment.image_view;
++		colors[i].imageView    = state.raster_width && attachment.raster_owner
++            ? attachment.raster_owner->BeginRasterScale(attachment.image_view,state.raster_width,state.raster_height,attachment.image_layout,Handle())
++            : attachment.image_view;
+ 		colors[i].imageLayout  = attachment.image_layout;
+ 		colors[i].loadOp =
+ 		    attachment.is_clear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eLoad;
+@@ -124,7 +129,9 @@
+ 
+ 	const auto&                 depth_stencil = state.depth_stencil_attachment;
+ 	vk::RenderingAttachmentInfo depth {};
+-	depth.imageView   = depth_stencil.image_view;
++	depth.imageView   = state.raster_width && depth_stencil.raster_owner
++        ? depth_stencil.raster_owner->BeginRasterScale(depth_stencil.image_view,state.raster_width,state.raster_height,depth_stencil.image_layout,Handle())
++        : depth_stencil.image_view;
+ 	depth.imageLayout = depth_stencil.image_layout;
+ 	depth.loadOp =
+ 	    depth_stencil.depth_clear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eLoad;
+@@ -140,7 +147,7 @@
+ 	stencil.clearValue.depthStencil.stencil = depth_stencil.clear_value[1];
+ 
+ 	vk::RenderingInfo rendering {};
+-	rendering.renderArea.extent    = {state.width, state.height};
++	rendering.renderArea.extent    = state.raster_width ? vk::Extent2D{state.raster_width,state.raster_height} : vk::Extent2D{state.width,state.height};
+ 	rendering.layerCount           = state.num_layers;
+ 	rendering.colorAttachmentCount = state.num_color_attachments;
+ 	rendering.pColorAttachments    = colors.data();
+@@ -156,7 +163,14 @@
+ 		return;
+ 	}
+ 	Handle().endRendering();
+-	m_rendering    = false;
++    // Clear the rendering flag before transitions can re-enter EndRendering.
++    m_rendering=false;
++    if(m_render_state.raster_width){
++      for(const auto& a:m_render_state.color_attachments)if(a.raster_owner && a.image_view)
++        a.raster_owner->EndRasterScale(a.image_view,a.image_layout,Handle());
++      const auto& a=m_render_state.depth_stencil_attachment;
++      if(a.raster_owner && a.image_view)a.raster_owner->EndRasterScale(a.image_view,a.image_layout,Handle());
++    }
+ 	m_render_state = {};
+ }
+ 
+--- a/src/graphics/host_gpu/renderer/image/image.h
++++ b/src/graphics/host_gpu/renderer/image/image.h
+@@ -10,6 +10,7 @@
+ #include <compare>
+ #include <limits>
+ #include <optional>
++#include <memory>
+ #include <span>
+ #include <utility>
+ #include <vector>
+@@ -50,6 +51,14 @@
+ public:
+ 	Image(GraphicContext& graphics, CommandScheduler& scheduler, const ImageInfo& info);
+ 	~Image();
++ bool PrepareRasterScale(uint32_t width,uint32_t height);
++ bool CanRasterScale(vk::ImageView view, uint32_t width, uint32_t height) const;
++ vk::ImageView BeginRasterScale(vk::ImageView view, uint32_t width, uint32_t height,
++                               vk::ImageLayout restore, vk::CommandBuffer command);
++ void EndRasterScale(vk::ImageView view, vk::ImageLayout restore, vk::CommandBuffer command);
++ struct RasterProxy { VulkanImage backing; vk::ImageView view=nullptr;
++                     vk::ImageLayout layout=vk::ImageLayout::eUndefined; };
++ std::unique_ptr<RasterProxy> raster_proxy;
+ 	KYTY_CLASS_NO_COPY(Image);
+ 
+ 	[[nodiscard]] vk::ImageView FindView(const ImageViewInfo& view_info);
+--- a/src/graphics/host_gpu/renderer/image/image.cpp
++++ b/src/graphics/host_gpu/renderer/image/image.cpp
+@@ -215,6 +215,7 @@
+ 
+ void Image::Transit(vk::ImageLayout destination_layout, vk::AccessFlags2 destination_access,
+                     std::optional<ImageSubresourceRange> range, vk::CommandBuffer command_buffer) {
++	if(m_scheduler.Current().RasterScaleNeedsFlush(this,destination_layout,destination_access))m_scheduler.EndRendering();
+ 	const auto transfer_access =
+ 	    vk::AccessFlagBits2::eTransferRead | vk::AccessFlagBits2::eTransferWrite;
+ 	vk::PipelineStageFlags2 destination_stage {};
+@@ -753,7 +754,97 @@
+ 	return XXH3_64bits(bytes.data(), static_cast<size_t>(head_size + tail_size));
+ }
+ 
++
++// The guest image remains native-sized. Only raster attachment work uses the
++// proxy; copy/compute/CPU consumers see the restored native image.
++bool Image::CanRasterScale(vk::ImageView view, uint32_t width, uint32_t height) const {
++ if (info.HasStencil() || backing.samples != 1 || backing.extent.width != width || backing.extent.height != height ||
++     backing.extent.depth != 1 || backing.layers != 1 || binding.is_bound) return false;
++ const auto found=std::find_if(views.begin(),views.end(),[&](const auto& v){return v.view==view;});
++ if(found==views.end())return false;
++ const auto& v=found->info;
++ if(v.base_level || v.base_layer || v.layer_count!=1 || v.level_count!=1 ||
++    v.format!=backing.format || v.aspect==vk::ImageAspectFlagBits::eStencil ||
++    (v.aspect & vk::ImageAspectFlagBits::eStencil))return false;
++ const auto features=m_graphics.GetFormatProperties(backing.format).optimalTilingFeatures;
++ return (features & (vk::FormatFeatureFlagBits::eBlitSrc|vk::FormatFeatureFlagBits::eBlitDst)) ==
++                   (vk::FormatFeatureFlagBits::eBlitSrc|vk::FormatFeatureFlagBits::eBlitDst);
++}
++
++namespace {
++vk::ImageAspectFlags RasterAspect(const Image& image) {
++ return image.info.IsDepth()?vk::ImageAspectFlagBits::eDepth:vk::ImageAspectFlagBits::eColor;
++}
++void RasterTransition(vk::CommandBuffer command, Image::RasterProxy& proxy,
++                      vk::ImageLayout layout, vk::ImageAspectFlags aspect) {
++ vk::ImageMemoryBarrier2 barrier{};
++ barrier.srcStageMask=proxy.layout==vk::ImageLayout::eUndefined?vk::PipelineStageFlags2{}:vk::PipelineStageFlagBits2::eAllCommands;
++ barrier.srcAccessMask=proxy.layout==vk::ImageLayout::eUndefined?vk::AccessFlags2{}:
++     vk::AccessFlagBits2::eMemoryRead|vk::AccessFlagBits2::eMemoryWrite;
++ barrier.dstStageMask=vk::PipelineStageFlagBits2::eAllCommands;
++ barrier.dstAccessMask=vk::AccessFlagBits2::eMemoryRead|vk::AccessFlagBits2::eMemoryWrite;
++ barrier.oldLayout=proxy.layout;barrier.newLayout=layout;
++ barrier.srcQueueFamilyIndex=barrier.dstQueueFamilyIndex=VK_QUEUE_FAMILY_IGNORED;
++ barrier.image=proxy.backing.image;barrier.subresourceRange=vk::ImageSubresourceRange{aspect,0,1,0,1};
++ vk::DependencyInfo dependency{};dependency.imageMemoryBarrierCount=1;dependency.pImageMemoryBarriers=&barrier;
++ command.pipelineBarrier2(dependency);proxy.layout=layout;
++}
++void RasterBlit(vk::CommandBuffer command, const VulkanImage& source,const VulkanImage& target,
++                vk::ImageAspectFlags aspect) {
++ vk::ImageBlit blit{};
++ blit.srcSubresource=vk::ImageSubresourceLayers{aspect,0,0,1};blit.dstSubresource=vk::ImageSubresourceLayers{aspect,0,0,1};
++ blit.srcOffsets[1]=vk::Offset3D{int32_t(source.extent.width),int32_t(source.extent.height),1};
++ blit.dstOffsets[1]=vk::Offset3D{int32_t(target.extent.width),int32_t(target.extent.height),1};
++ command.blitImage(source.image,vk::ImageLayout::eTransferSrcOptimal,
++                   target.image,vk::ImageLayout::eTransferDstOptimal,1,&blit,vk::Filter::eNearest);
++}
++}
++
++bool Image::PrepareRasterScale(uint32_t width,uint32_t height) {
++ const auto aspect=RasterAspect(*this);
++ if(!raster_proxy){
++  raster_proxy=std::make_unique<RasterProxy>();
++  auto& proxy=*raster_proxy;
++  vk::ImageCreateInfo create{};create.imageType=vk::ImageType::e2D;
++  create.format=backing.format;create.extent=vk::Extent3D{width,height,1};
++  create.mipLevels=1;create.arrayLayers=1;create.samples=vk::SampleCountFlagBits::e1;
++  create.tiling=vk::ImageTiling::eOptimal;
++  create.usage=vk::ImageUsageFlagBits::eTransferSrc|vk::ImageUsageFlagBits::eTransferDst|
++      (info.IsDepth()?vk::ImageUsageFlagBits::eDepthStencilAttachment:vk::ImageUsageFlagBits::eColorAttachment);
++  if(!m_graphics.CreateImage(create,proxy.backing)){raster_proxy.reset();return false;}
++  vk::ImageViewCreateInfo vi{};vi.image=proxy.backing.image;vi.viewType=vk::ImageViewType::e2D;
++  vi.format=create.format;vi.subresourceRange=vk::ImageSubresourceRange{aspect,0,1,0,1};
++  if(m_graphics.device.createImageView(&vi,nullptr,&proxy.view)!=vk::Result::eSuccess){m_graphics.DeleteImage(proxy.backing);raster_proxy.reset();return false;}
++
++ }
++ return raster_proxy->backing.extent.width==width && raster_proxy->backing.extent.height==height;
++}
++
++vk::ImageView Image::BeginRasterScale(vk::ImageView, uint32_t width,uint32_t height,
++                                     vk::ImageLayout restore,vk::CommandBuffer command) {
++ EXIT_IF(!raster_proxy || raster_proxy->backing.extent.width!=width || raster_proxy->backing.extent.height!=height);
++ const auto aspect=RasterAspect(*this);
++ Transit(vk::ImageLayout::eTransferSrcOptimal,vk::AccessFlagBits2::eTransferRead,{},command);
++ RasterTransition(command,*raster_proxy,vk::ImageLayout::eTransferDstOptimal,aspect);
++ RasterBlit(command,backing,raster_proxy->backing,aspect);
++ Transit(restore,binding.attachment_access,{},command);
++ RasterTransition(command,*raster_proxy,restore,aspect);
++ return raster_proxy->view;
++}
++void Image::EndRasterScale(vk::ImageView, vk::ImageLayout restore,vk::CommandBuffer command) {
++ EXIT_IF(!raster_proxy);
++ const auto aspect=RasterAspect(*this);
++ RasterTransition(command,*raster_proxy,vk::ImageLayout::eTransferSrcOptimal,aspect);
++ Transit(vk::ImageLayout::eTransferDstOptimal,vk::AccessFlagBits2::eTransferWrite,{},command);
++ RasterBlit(command,raster_proxy->backing,backing,aspect);
++ Transit(restore,binding.attachment_access,{},command);
++}
++
+ Image::~Image() {
++ if (raster_proxy) {
++  m_graphics.device.destroyImageView(raster_proxy->view, nullptr);
++  m_graphics.DeleteImage(raster_proxy->backing);
++ }
+ 	KYTY_PROFILER_FUNCTION();
+ 	for (const auto& cached: views) {
+ 		if (cached.view != nullptr) {
+--- a/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp
++++ b/src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp
+@@ -1,3 +1,4 @@
++#include "common/novaRasterScale.h"
+ #include "graphics/host_gpu/renderer/novaRenderCosts.h"
+ #include "graphics/host_gpu/renderer/pipeline/pipelineCache.h"
+ #include "graphics/host_gpu/renderer/pipeline/meshWorkgroup.h"
+@@ -824,7 +825,7 @@
+ 		clip.enabled = true;
+ 	}
+ 	uint32_t          push_data_cursor =
+-	    mesh_active ? ShaderRecompiler::IR::PushData::MeshDrawDwordCount : 0;
++	    (mesh_active ? ShaderRecompiler::IR::PushData::MeshDrawDwordCount : 0) + (NovaRaster::Enabled()?2u:0u);
+ 	GraphicsPrograms  result;
+ 	if (pixel_active) {
+ 		result.pixel = m_program_cache->Get(pixel_params, pixel_info, push_data_cursor);
+--- a/src/graphics/shader/recompiler/backend/spirv/spirvEmitterModule.cpp
++++ b/src/graphics/shader/recompiler/backend/spirv/spirvEmitterModule.cpp
+@@ -1,3 +1,4 @@
++#include "common/novaRasterScale.h"
+ #include "graphics/shader/recompiler/backend/spirv/spirvEmitterInternal.h"
+ 
+ #include <algorithm>
+@@ -244,7 +245,7 @@
+ 	    IR::PushData::StartFor(bindings.push_data_start_dword, bindings.ShaderDataDwords());
+ 	counts[static_cast<size_t>(Kind::ShaderData)] =
+ 	    bindings.ShaderDataDwords() != 0 && !bindings.UsesPushData();
+-	if (state.program.bindings.UsesPushData() || state.program.stage == ShaderType::Mesh) {
++	if (state.program.bindings.UsesPushData() || state.program.stage == ShaderType::Mesh || (state.program.stage == ShaderType::Pixel && NovaRaster::Enabled())) {
+ 		const auto type              = PushConstantBlockType(state);
+ 		state.push_constant_variable = state.builder.DefineGlobalVariable(
+ 		    TypePointer(state, spv::StorageClassPushConstant, type), spv::StorageClassPushConstant);
+--- a/src/graphics/shader/recompiler/backend/spirv/spirvEmitterFlow.cpp
++++ b/src/graphics/shader/recompiler/backend/spirv/spirvEmitterFlow.cpp
+@@ -1,3 +1,4 @@
++#include "common/novaRasterScale.h"
+ #include "graphics/shader/recompiler/backend/spirv/spirvEmitterInstructions.h"
+ 
+ #include "common/logging/log.h"
+@@ -73,8 +74,20 @@
+ 		state.builder.AddFunction(spv::OpAccessChain,
+ 		                          TypePointer(state, spv::StorageClassInput, TypeF32(state)),
+ 		                          pointer, variable, ConstantU32(state, component));
+-		state.builder.AddFunction(spv::OpLoad, TypeF32(state), value, pointer);
+-		state.builder.AddFunction(spv::OpBitcast, TypeU32(state), bits, value);
++        state.builder.AddFunction(spv::OpLoad, TypeF32(state), value, pointer);
++        uint32_t coordinate=value;
++        if(NovaRaster::Enabled() && kind==IR::StageInputKind::FragCoord && component<2){
++          const auto scale_pointer=state.builder.AllocateId();
++          const auto scale_bits=state.builder.AllocateId();
++          const auto scale=state.builder.AllocateId();
++          coordinate=state.builder.AllocateId();
++          state.builder.AddFunction(spv::OpAccessChain,TypePushConstantElementPointer(state),scale_pointer,
++                                    state.push_constant_variable,ConstantU32(state,0),ConstantU32(state,component));
++          state.builder.AddFunction(spv::OpLoad,TypeU32(state),scale_bits,scale_pointer);
++          state.builder.AddFunction(spv::OpBitcast,TypeF32(state),scale,scale_bits);
++          state.builder.AddFunction(spv::OpFMul,TypeF32(state),coordinate,value,scale);
++        }
++        state.builder.AddFunction(spv::OpBitcast, TypeU32(state), bits, coordinate);
+ 		return bits;
+ 	}
+ 	if (centroid || sample || kind == IR::StageInputKind::BaryCoordSmooth ||
+@@ -666,7 +679,7 @@
+ 	const auto pointer = state.builder.AllocateId();
+ 	state.builder.AddFunction(spv::OpAccessChain, TypePushConstantElementPointer(state), pointer,
+ 	                          state.push_constant_variable, ConstantU32(state, 0),
+-	                          ConstantU32(state, index));
++	                          ConstantU32(state, index+(NovaRaster::Enabled()?2u:0u)));
+ 	state.builder.AddFunction(spv::OpLoad, TypeU32(state), result, pointer);
+ 	return result;
+ }
+--- a/src/graphics/host_gpu/renderer/render.h
++++ b/src/graphics/host_gpu/renderer/render.h
+@@ -107,6 +107,13 @@
+ 	void BindPipeline(vk::PipelineBindPoint point, vk::Pipeline pipeline);
+ 	void BeginRendering(const RenderState& state) const;
+ 	void EndRendering() const;
++ bool RasterScaleNeedsFlush(const Image* image,vk::ImageLayout layout,vk::AccessFlags2 access)const {
++  if(!m_rendering || !m_render_state.raster_width)return false;
++  for(const auto& a:m_render_state.color_attachments)if(a.raster_owner==image)
++    return a.image_layout!=layout || a.image_access!=access;
++  const auto& a=m_render_state.depth_stencil_attachment;
++  return a.raster_owner==image && (a.image_layout!=layout || a.image_access!=access);
++ }
+ 
+ 	[[nodiscard]] vk::CommandBuffer Handle() const;
+ 	[[nodiscard]] GraphicContext&   GetGraphics() const noexcept { return m_graphics; }
+--- /dev/null
++++ b/src/common/novaRasterScale.h
+@@ -0,0 +1,40 @@
++#pragma once
++#include <cstdlib>
++#include <cstring>
++#include <utility>
++#include <cstdint>
++#include <cstdio>
++#include <chrono>
++namespace NovaRaster {
++inline uint32_t Height(){
++ static const auto value=[]()->uint32_t{
++  const auto* title=std::getenv("NOVA_CACHE_TITLE_ID");
++  const auto* request=std::getenv("NOVA_INTERNAL_RESOLUTION");
++  if(!title || std::strcmp(title,"PPSA04703") || !request)return 1080;
++  if(!std::strcmp(request,"720"))return 720;
++  if(!std::strcmp(request,"540"))return 540;
++  if(!std::strcmp(request,"360"))return 360;
++  return 1080;
++ }();return value;
++}
++inline bool Enabled(){return Height()<1080;}
++inline std::pair<uint32_t,uint32_t> Extent(uint32_t w,uint32_t h){
++ const auto target=Height();
++ // The measured main scene. Texture/postprocess/compute and shadow sizes retain
++ // their guest layout, so storage operations and readbacks stay native.
++ if(w==1920 && h==1080 && target<1080)return {target*16/9,target};
++ return {};
++}
++inline void Note(uint32_t w,uint32_t h,uint32_t rw,uint32_t rh){
++ if(!Extent(w,h).first)return;
++ static thread_local uint64_t scaled=0,native=0;
++ static thread_local auto begin=std::chrono::steady_clock::now();
++ rw?++scaled:++native;
++ const auto now=std::chrono::steady_clock::now();
++ if(now-begin>=std::chrono::seconds(5)){
++  std::fprintf(stderr,"NOVA_RESOLUTION_RASTER: native=%ux%u raster=%ux%u scaled_draws=%llu native_fallback_draws=%llu; native-sized compute/readback preserved\n",
++    w,h,Height()*16/9,Height(),(unsigned long long)scaled,(unsigned long long)native);
++  scaled=native=0;begin=now;
++ }
++}
++}

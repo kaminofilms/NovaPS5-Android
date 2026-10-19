@@ -34,11 +34,11 @@ final class GraphicsSettings {
         Switch cache = toggle(a, box, "Disk shader cache (recommended)", value(p,title,"cache",1)!=0);
         Switch gpl = toggle(a, box, "Pipeline libraries when supported", value(p,title,"gpl",1)!=0);
         final Spinner resolution = "PPSA04703".equals(title) ? choice(a, box,
-            "Unity resolution probe (no effect observed)",
+            "Internal raster resolution (experimental)",
             new String[]{"Game default", "1920 × 1080", "1280 × 720", "960 × 540", "640 × 360"},
             value(p,title,"unity_resolution",0)) : null;
         TextView unavailable = new TextView(a);
-        unavailable.setText("Device testing found Ever Forward still renders at 1920×1080 with the 360p probe. This control sends launch arguments; it does not scale internal rendering. Actual dimensions are recorded in the log."); box.addView(unavailable);
+        unavailable.setText("Nova scales eligible 1080p raster passes, including their depth targets, then restores native-size images for compute, sampling and readback. Unsupported passes retain native resolution. Lower settings may reduce detail and may not improve CPU-bound scenes."); box.addView(unavailable);
         ScrollView scroll = new ScrollView(a); scroll.addView(box);
         new AlertDialog.Builder(a).setTitle(title.isEmpty()?"Graphics defaults":"Graphics · "+title).setView(scroll)
             .setPositiveButton("Save",(d,w)->{
@@ -58,10 +58,11 @@ final class GraphicsSettings {
         int cap=value(p,title,"cap",0); int[] limits={-1,30,40,60,90,120,0};
         int ri=value(p,title,"unity_resolution",0); int[] heights={0,1080,720,540,360};
         if(ri<0||ri>=heights.length||!"PPSA04703".equals(title))ri=0;
-        Os.setenv("NOVA_UNITY_RESOLUTION",Integer.toString(heights[ri]),true);
+        Os.setenv("NOVA_UNITY_RESOLUTION","0",true);
+        Os.setenv("NOVA_INTERNAL_RESOLUTION",Integer.toString(heights[ri]),true);
         // Capture the default mode too, so a second launch can prove whether a request changed real rendering.
         Os.setenv("NOVA_TRACE_RESOLUTION","PPSA04703".equals(title)?"1":"0",true);
-        BootLog.write(c,"Game resolution request: "+(heights[ri]==0?"game default":heights[ri]+"p (engine acceptance unverified)"));
+        BootLog.write(c,"Internal raster resolution: "+(heights[ri]==0?"native":heights[ri]+"p; eligible raster passes"));
         Os.setenv("NOVA_PRESENT_MODE",new String[]{"mailbox","fifo","immediate"}[mode],true);
         boolean cache=value(p,title,"cache",1)!=0, gpl=value(p,title,"gpl",1)!=0;
         Os.setenv("NOVA_SHADER_CACHE",cache?"1":"0",true);

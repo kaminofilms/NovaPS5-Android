@@ -1,5 +1,5 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# NovaPS5 0.9.48 / 102: restore Android resolution paths; Ever Forward changed-range BDA sync.
+# NovaPS5 0.9.49 / 103: Nova lower-resolution raster bridge and exact-word PM4 publication.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
@@ -193,14 +193,14 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.48-android-arm64.apk" \
-            --version-name 0.9.48-android --version-code 102 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.49-android-arm64.apk" \
+            --version-name 0.9.49-android --version-code 103 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.48-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.48-android --version-code 102 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.49-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.49-android --version-code 103 | tee dist/apk/verify.txt
       - name: Verify compiled performance features
-        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.48-android-arm64.apk
+        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.49-android-arm64.apk
       - name: Verify packaged mesh driver
-        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.48-android-arm64.apk
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.49-android-arm64.apk
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -217,11 +217,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.9.48-android-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.9.48-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.9.48-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.48 Ever Forward synchronization optimization (CI ${GITHUB_SHA::7})" \
-            --notes "Native Android Kyty + NovaFEX, versionCode 102. Fixes Android resolution requests, render-dimension tracing and presentation overrides being compiled out in previous builds. Ports changed-range BDA synchronization and BDA buffer suballocation from upstream KytyPS5 d58aefd, enabled only for Ever Forward PPSA04703. Adds elapsed PM4 queue-poll wait telemetry without changing completion rules. Full production-config and memory-tracker regression tests, including sanitizers, plus APK native feature-marker verification. Experimental Unity 1080p/720p/540p/360p launch requests may still be ignored by the PS5 engine; this is not a universal internal-resolution scaler. Same signing key, saves and caches retained. No measured FPS improvement or 30 FPS guarantee; owner-device validation required. Retains AvPlayer routing and limited plaintext superblock-first PKG installation."
+          tag="v0.9.49-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.49-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.49-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.49 experimental lower-resolution raster renderer (CI ${GITHUB_SHA::7})" \
+            --notes "Native Android Kyty + NovaFEX, versionCode 103. Adds Nova-owned 720p/540p/360p raster rendering for eligible Ever Forward PPSA04703 1080p passes: smaller color/depth attachments, scaled viewport/scissor and native-space fragment coordinates. Restores native-sized images at pass boundaries for compute, sampling and readback; unsupported passes and shadows remain native. Select a resolution in per-game Graphics and restart. Scaled draw counters verify activation. Ports exact-word PM4 WRITE_DATA publication from upstream 099de8d with Nova guest translation. Production-source Vulkan tests cover four color targets, depth, clears, LOAD, reuse, fragment coordinates and readback with synchronization validation; policy and PM4 tests also run under sanitizers. Same signing key/package, saves and caches retained. Experimental feature; no owner-device FPS measurement or 30 FPS guarantee. Other titles retain native rendering. Retains AvPlayer routing and limited plaintext superblock-first PKG installation."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()

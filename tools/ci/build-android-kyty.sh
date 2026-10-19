@@ -248,6 +248,12 @@ python3 "$repo/tools/ci/patch-pm4-word-publication.py" "$work/kyty"
 python3 "$repo/tests/test_pm4_word_publication.py" "$work/kyty"
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_pm4_word_publication.py" "$work/kyty"
 
+# Nova-owned lower-resolution raster bridge; native compute/readback stays intact.
+python3 "$repo/tools/ci/patch-raster-resolution.py" "$work/kyty"
+python3 "$repo/tests/test_raster_policy.py" "$work/kyty"
+ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_raster_policy.py" "$work/kyty"
+python3 "$repo/tests/test_raster_resolution.py" "$work/kyty"
+
 
 # SDL's AAudio backend: report stream errors, disconnects and underflows (debug LOGI is off
 # upstream) so the session log shows why audio stops.
