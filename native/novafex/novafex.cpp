@@ -2,6 +2,7 @@
 // Nova PS5 - FEXCore embedding for guest-only translation. See novafex.h.
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "novafex.h"
+#include "runtime_timing.hpp"
 #include "watchpoint/NovaFexTraceRing.hpp"
 #include "watchpoint/NovaFexLunaProfile.hpp"
 
@@ -281,6 +282,7 @@ const char* HostName(uint64_t address) {
 }
 
 void GateDispatch(void* block_pointer) {
+	Timing::Scope timing(Timing::Domain::HostCall);
 	auto* block = static_cast<GateBlock*>(block_pointer);
 	auto& t = t_thread;
 	t.gates.fetch_add(1, std::memory_order_relaxed);
@@ -594,6 +596,12 @@ void Watchdog() {
 	uint64_t report_game_frames = 0, report_emulated = 0;
 	int frozen_for = 0, quiet_for = 0, freeze_episodes = 0;
 	bool stall_dumped = false;
+	const auto report_start = Timing::Now();
+	uint64_t last_report_ns = report_start.wall;
+	Timing::Snapshot last_timing{};
+	timespec process_stamp{};
+	bool process_valid = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &process_stamp) == 0;
+	uint64_t process_ns = uint64_t(process_stamp.tv_sec) * 1000000000u + uint64_t(process_stamp.tv_nsec);
 	for (int tick = 1;; tick++) {
 		sleep(1);
 		if (getppid() == 1 || (launcher > 0 && kill(launcher, 0) != 0 && errno == ESRCH)) {
@@ -655,14 +663,43 @@ void Watchdog() {
 			DumpAllThreads();
 		}
 		if (report_every > 0 && (tick == 5 || tick % report_every == 0)) {
-			const int span = tick == 5 ? 5 : report_every;
+			const auto report_now = Timing::Now();
+			if (!report_now.valid || report_now.wall <= last_report_ns) continue;
+			const double span = static_cast<double>(report_now.wall - last_report_ns) / 1e9;
+			last_report_ns = report_now.wall;
+			size_t thread_count;
+			{ std::lock_guard lock(g_threads_mutex); thread_count = g_threads.size(); }
 			std::fprintf(stderr, "NOVA_FEX: heartbeat fps=%.1f game_fps=%.1f frames=%llu game_frames=%llu gates=%llu (+%llu) guest_calls=%llu hostemu=%llu (+%llu) threads=%zu rss=%ldMB avail=%ldMB\n",
 			             static_cast<double>(presented - report_frames) / span,
 			             static_cast<double>(game_frames - report_game_frames) / span, (unsigned long long)presented,
 			             (unsigned long long)game_frames, (unsigned long long)gates, (unsigned long long)(gates - report_gates),
 			             (unsigned long long)calls, (unsigned long long)emulated, (unsigned long long)(emulated - report_emulated),
-			             g_threads.size(), ReadKb("/proc/self/status", "VmRSS:") / 1024,
+			             thread_count, ReadKb("/proc/self/status", "VmRSS:") / 1024,
 			             ReadKb("/proc/meminfo", "MemAvailable:") / 1024);
+			timespec process_now{};
+			if (clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &process_now) == 0) {
+				const auto next_ns = uint64_t(process_now.tv_sec) * 1000000000u + uint64_t(process_now.tv_nsec);
+				if (process_valid && next_ns >= process_ns) {
+					std::fprintf(stderr, "NOVA_PROCESS_CPU: elapsed_s=%.6f cpu_ms=%.3f average_busy_cores=%.3f scope=all_process_threads\n",
+					    span, (next_ns - process_ns) / 1e6, (next_ns - process_ns) / (span * 1e9));
+				}
+				process_ns = next_ns;
+				process_valid = true;
+			} else {
+				process_valid = false;
+			}
+			if (Timing::Enabled()) {
+				const auto current = Timing::Read();
+				const auto gw = current.guest_wall - last_timing.guest_wall;
+				const auto gc = current.guest_cpu - last_timing.guest_cpu;
+				const auto hw = current.host_wall - last_timing.host_wall;
+				const auto hc = current.host_cpu - last_timing.host_cpu;
+				std::fprintf(stderr, "NOVA_FEX_TIME: elapsed_s=%.6f guest_runtime_cpu_ms=%.3f guest_runtime_offcpu_ms=%.3f host_call_cpu_ms=%.3f host_call_offcpu_ms=%.3f invalid=%llu accounting=exclusive_completed_slices offcpu=blocked_or_descheduled guest_runtime=execution_plus_jit_and_faults\n",
+				    span, gc / 1e6, Timing::OffCpu(gw, gc) / 1e6,
+				    hc / 1e6, Timing::OffCpu(hw, hc) / 1e6,
+				    static_cast<unsigned long long>(current.invalid - last_timing.invalid));
+				last_timing = current;
+			}
 			if (emulated - report_emulated > 1000) ReportHostEmulationSites(6);
 			report_frames = presented;
 			report_game_frames = game_frames;
@@ -888,7 +925,10 @@ void CallGuest(uint64_t target, CallArgs* args) {
 
 	t.depth++;
 	g_total_calls.fetch_add(1, std::memory_order_relaxed);
-	g_ctx->HandleCallback(t.fex, target);
+	{
+		Timing::Scope timing(Timing::Domain::GuestRuntime);
+		g_ctx->HandleCallback(t.fex, target);
+	}
 	t.depth--;
 
 	args->ret_gpr[0] = s.gregs[REG_RAX];
@@ -1574,6 +1614,7 @@ void LunaBoundary(uint64_t object, uint64_t vtable, uint64_t event) noexcept {
   }
 }
 }
+
 
 
 
