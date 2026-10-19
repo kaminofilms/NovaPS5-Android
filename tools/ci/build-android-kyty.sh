@@ -253,6 +253,17 @@ python3 "$repo/tools/ci/patch-raster-resolution.py" "$work/kyty"
 python3 "$repo/tests/test_raster_policy.py" "$work/kyty"
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_raster_policy.py" "$work/kyty"
 python3 "$repo/tests/test_raster_resolution.py" "$work/kyty"
+{
+python3 "$repo/tests/test_raster_startup.py" "$work/kyty"
+ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_raster_startup.py" "$work/kyty"
+# Preserve GPU-before-publication ordering while removing eager Dead Cells label drains.
+python3 "$repo/tools/ci/patch-deadcells-labels.py" "$work/kyty"
+python3 "$repo/tests/test_deadcells_regression.py" "$work/kyty"
+ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_deadcells_regression.py" "$work/kyty"
+NOVA_TEST_GPU_ONLY=1 NOVA_TEST_LABEL_TITLE=PPSA15552 python3 "$repo/tests/test_ever_gpu_labels.py" "$work/kyty"
+NOVA_CACHE_TITLE_ID=PPSA15552 python3 "$repo/tests/test_ever_label_poll_vulkan.py" "$work/kyty"
+} 2>&1 | tee "$out/logs/regression-050.txt"
+
 
 
 # SDL's AAudio backend: report stream errors, disconnects and underflows (debug LOGI is off

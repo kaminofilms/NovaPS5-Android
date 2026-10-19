@@ -9,6 +9,7 @@ source=(root/'src/graphics/host_gpu/renderer/cache/bufferCache.cpp').read_text()
 def method(text,start,end): return text[text.index(start):text.index(end,text.index(start))]
 write=method(source,'void BufferCache::WriteDataBuffer(', '\nbool BufferCache::WriteEopLabel(')
 label=method(source,'bool BufferCache::WriteEopLabel(', '\nvoid BufferCache::Register(')
+label=label.split('\nbool BufferCache::IsEopLabelPending(',1)[0]
 if '\nbool BufferCache::TryReadEopLabel(' in label:
  label=label.split('\nbool BufferCache::TryReadEopLabel(',1)[0]
 gr=(root/'src/graphics/guest_gpu/graphicsRun.cpp').read_text()
@@ -117,17 +118,19 @@ if optimized:
  device.destroyFence(fence);''')
 with tempfile.TemporaryDirectory() as d:
  d=pathlib.Path(d);include=root/'src/graphics/host_gpu/renderer'
- p=d/'wait.cpp';p.write_text(pre+'\n#include <cstring>\n'+predicate+wait+post)
- # cstring must precede its use in the mock backing implementation.
- p.write_text('#include <cstring>\n'+p.read_text())
- subprocess.run(['g++','-std=c++20','-O2','-I'+str(include),str(p),'-o',str(d/'wait')],check=True)
- for title in ('PPSA04703','PPSA31162','PPSA15552',''):
-  subprocess.run([str(d/'wait')],env=dict(os.environ,NOVA_CACHE_TITLE_ID=title),check=True)
+ if os.environ.get('NOVA_TEST_GPU_ONLY')!='1':
+  p=d/'wait.cpp';p.write_text(pre+'\n#include <cstring>\n'+predicate+wait+post)
+  # cstring must precede its use in the mock backing implementation.
+  p.write_text('#include <cstring>\n'+p.read_text())
+  subprocess.run(['g++','-std=c++20','-O2','-I'+str(include),str(p),'-o',str(d/'wait')],check=True)
+  for title in ('PPSA04703','PPSA31162','PPSA15552',''):
+   subprocess.run([str(d/'wait')],env=dict(os.environ,NOVA_CACHE_TITLE_ID=title),check=True)
  p=d/'label.cpp';p.write_text(vpre+write+label+vpost)
  subprocess.run(['g++','-std=c++20','-O2','-I'+str(include),'-I'+str(root/'3rdparty/Vulkan-Headers/include'),str(p),'-Wno-missing-field-initializers','-l:libvulkan.so.1','-o',str(d/'label')],check=True)
  # CI installs lavapipe and validation layers. Local source-only check is explicit.
- if pathlib.Path('/usr/share/vulkan/icd.d').exists():
-  subprocess.run([str(d/'label')],env=dict(os.environ,NOVA_CACHE_TITLE_ID='PPSA04703'),check=True)
+ if pathlib.Path('/usr/share/vulkan/icd.d').exists() or any(pathlib.Path(p).is_file() for p in os.environ.get('VK_DRIVER_FILES', os.environ.get('VK_ICD_FILENAMES','')).split(':') if p):
+  subprocess.run([str(d/'label')],env=dict(os.environ,NOVA_CACHE_TITLE_ID=os.environ.get('NOVA_TEST_LABEL_TITLE','PPSA04703')),check=True)
  elif os.environ.get('GITHUB_ACTIONS'):
   raise SystemExit('Vulkan ICD missing in required CI GPU label gate')
  else: print('NOVA_GPU_LABEL_VULKAN: compiled; execution SKIP locally (ICD/layers absent), required in CI')
+

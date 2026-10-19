@@ -268,7 +268,7 @@ public final class MainActivity extends Activity {
             while ((line = in.readLine()) != null && count < 600) {
                 boolean keep = errorLines > 0;
                 if (keep) errorLines--;
-                if (line.startsWith("Title ID") || line.startsWith("NOVA_RESOLUTION") || line.startsWith("NOVA_BDA") || line.startsWith("NOVA_WAIT") || line.startsWith("NOVA_GPU") || line.startsWith("NOVA_AUDIO")
+                if (line.startsWith("Title ID") || line.startsWith("NOVA_RESOLUTION") || line.startsWith("NOVA_BDA") || line.startsWith("NOVA_DEADCELLS") || line.startsWith("NOVA_WAIT") || line.startsWith("NOVA_GPU") || line.startsWith("NOVA_AUDIO")
                         || line.startsWith("NOVA_AAUDIO") || line.startsWith("NOVA_FAULT") || line.startsWith("NOVA_ABORT") || line.startsWith("NOVA_MEMTRACE") || line.startsWith("NOVA_FREEZE: no frame")
                         || line.startsWith("Unresolved import") || line.contains("AAudio") || line.contains("AAUDIO")
                         || (line.startsWith("NOVA_MEMORY") && (line.contains("fail") || line.contains("BEYOND") || line.contains("fit")))

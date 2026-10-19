@@ -214,15 +214,21 @@
  	[[nodiscard]] vk::ImageView FindView(const ImageViewInfo& view_info);
 --- a/src/graphics/host_gpu/renderer/image/image.cpp
 +++ b/src/graphics/host_gpu/renderer/image/image.cpp
-@@ -215,6 +215,7 @@
+@@ -1,3 +1,4 @@
++#include "common/novaRasterScale.h"
+ #include "graphics/host_gpu/renderer/image/image.h"
+ 
+ #include "common/assert.h"
+@@ -215,6 +216,8 @@
  
  void Image::Transit(vk::ImageLayout destination_layout, vk::AccessFlags2 destination_access,
                      std::optional<ImageSubresourceRange> range, vk::CommandBuffer command_buffer) {
-+	if(m_scheduler.Current().RasterScaleNeedsFlush(this,destination_layout,destination_access))m_scheduler.EndRendering();
++	if(NovaRaster::Enabled() && m_scheduler.Active() &&
++	   m_scheduler.Current().RasterScaleNeedsFlush(this,destination_layout,destination_access))m_scheduler.EndRendering();
  	const auto transfer_access =
  	    vk::AccessFlagBits2::eTransferRead | vk::AccessFlagBits2::eTransferWrite;
  	vk::PipelineStageFlags2 destination_stage {};
-@@ -753,7 +754,97 @@
+@@ -753,7 +756,97 @@
  	return XXH3_64bits(bytes.data(), static_cast<size_t>(head_size + tail_size));
  }
  
