@@ -243,6 +243,11 @@ python3 "$repo/tools/ci/patch-ever-bda-sync.py" "$work/kyty"
 python3 "$repo/tests/test_ever_bda_sync.py" "$work/kyty"
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_ever_bda_sync.py" "$work/kyty"
 
+# Upstream exact-word PM4 publication, preserving Nova guest translation.
+python3 "$repo/tools/ci/patch-pm4-word-publication.py" "$work/kyty"
+python3 "$repo/tests/test_pm4_word_publication.py" "$work/kyty"
+ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_pm4_word_publication.py" "$work/kyty"
+
 
 # SDL's AAudio backend: report stream errors, disconnects and underflows (debug LOGI is off
 # upstream) so the session log shows why audio stops.

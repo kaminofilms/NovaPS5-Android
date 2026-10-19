@@ -34,11 +34,11 @@ final class GraphicsSettings {
         Switch cache = toggle(a, box, "Disk shader cache (recommended)", value(p,title,"cache",1)!=0);
         Switch gpl = toggle(a, box, "Pipeline libraries when supported", value(p,title,"gpl",1)!=0);
         final Spinner resolution = "PPSA04703".equals(title) ? choice(a, box,
-            "Game resolution request (experimental)",
+            "Unity resolution probe (no effect observed)",
             new String[]{"Game default", "1920 × 1080", "1280 × 720", "960 × 540", "640 × 360"},
             value(p,title,"unity_resolution",0)) : null;
         TextView unavailable = new TextView(a);
-        unavailable.setText("Ever Forward can be sent a Unity resolution request. Its PS5 engine may ignore it. Actual render dimensions are recorded in the session log. A universal internal scaler and async shader compilation are not available."); box.addView(unavailable);
+        unavailable.setText("Device testing found Ever Forward still renders at 1920×1080 with the 360p probe. This control sends launch arguments; it does not scale internal rendering. Actual dimensions are recorded in the log."); box.addView(unavailable);
         ScrollView scroll = new ScrollView(a); scroll.addView(box);
         new AlertDialog.Builder(a).setTitle(title.isEmpty()?"Graphics defaults":"Graphics · "+title).setView(scroll)
             .setPositiveButton("Save",(d,w)->{
