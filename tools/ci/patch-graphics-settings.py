@@ -10,7 +10,7 @@ def edit(p,old,new):
 p='src/common/emulatorConfig.cpp'
 edit(p,'#include <memory>','#include <memory>\n#include <cstdlib>\n#include <cstring>')
 edit(p,'PresentMode GetPresentMode() {\n\treturn g_config->present_mode;','''PresentMode GetPresentMode() {
-#if defined(KYTY_NOVA_FEX)
+#if defined(__ANDROID__) && defined(__aarch64__)
     if (const char* mode = std::getenv("NOVA_PRESENT_MODE")) {
         if (std::strcmp(mode, "fifo") == 0) return PresentMode::Fifo;
         if (std::strcmp(mode, "mailbox") == 0) return PresentMode::Mailbox;

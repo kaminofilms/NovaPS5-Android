@@ -32,6 +32,6 @@ assert(Directory("driver","PPSA04703")!=Directory("driver","PPSA15552"));
 with tempfile.TemporaryDirectory() as t:
  p=Path(t);(p/'test.cpp').write_text(code)
  flags=['-fsanitize=address,undefined','-fno-omit-frame-pointer'] if os.getenv('SANITIZE')=='1' else []
- subprocess.run(['g++','-std=c++20','-DKYTY_NOVA_FEX=1',*flags,str(p/'test.cpp'),'-o',str(p/'test')],check=True)
+ subprocess.run(['g++','-std=c++20','-D__ANDROID__=1','-D__aarch64__=1',*flags,str(p/'test.cpp'),'-o',str(p/'test')],check=True)
  subprocess.run([str(p/'test')],check=True)
 print('Graphics settings production selection tests passed')

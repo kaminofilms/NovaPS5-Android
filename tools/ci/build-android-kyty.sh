@@ -237,6 +237,12 @@ ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_graphics_settin
 python3 "$repo/tools/ci/patch-resolution-request.py" "$work/kyty"
 python3 "$repo/tests/test_resolution_request.py" "$work/kyty"
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_resolution_request.py" "$work/kyty"
+python3 "$repo/tests/test_android_graphics_config.py" "$work/kyty"
+ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_android_graphics_config.py" "$work/kyty"
+python3 "$repo/tools/ci/patch-ever-bda-sync.py" "$work/kyty"
+python3 "$repo/tests/test_ever_bda_sync.py" "$work/kyty"
+ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_ever_bda_sync.py" "$work/kyty"
+
 
 # SDL's AAudio backend: report stream errors, disconnects and underflows (debug LOGI is off
 # upstream) so the session log shows why audio stops.

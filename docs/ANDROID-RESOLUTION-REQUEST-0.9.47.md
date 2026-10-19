@@ -40,3 +40,7 @@ Remaining: device confirmation that the PS5 Player consumes the request. If it
 does not, a verified title patch or renderer scaling implementation is required.
 Neither 30 FPS in Ever Forward nor the Dead Cells missing-label hang is fixed
 by this experimental request mechanism.
+
+## Correction in 0.9.48
+
+The 0.9.47 Android configuration and dimension trace were compiled out because KYTY_NOVA_FEX was not defined in their translation units. 0.9.48 uses explicit Android/ARM64 guards and adds complete production-config and linked APK checks. The earlier helper tests did not establish that the feature was included in the APK. Engine acceptance remains unverified.
