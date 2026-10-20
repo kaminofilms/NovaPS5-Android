@@ -262,6 +262,12 @@ python3 "$repo/tests/test_deadcells_regression.py" "$work/kyty"
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_deadcells_regression.py" "$work/kyty"
 NOVA_TEST_GPU_ONLY=1 NOVA_TEST_LABEL_TITLE=PPSA15552 python3 "$repo/tests/test_ever_gpu_labels.py" "$work/kyty"
 NOVA_CACHE_TITLE_ID=PPSA15552 python3 "$repo/tests/test_ever_label_poll_vulkan.py" "$work/kyty"
+# 0.9.52: GPU completion labels for every title (opt-out NOVA_GPU_LABELS=0).
+python3 "$repo/tools/ci/patch-generic-gpu-labels.py" "$work/kyty"
+NOVA_TEST_WITH_VULKAN=1 python3 "$repo/tests/test_generic_gpu_labels.py" "$work/kyty"
+ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_generic_gpu_labels.py" "$work/kyty"
+NOVA_TEST_GPU_ONLY=1 NOVA_TEST_LABEL_TITLE=PPSA27841 python3 "$repo/tests/test_ever_gpu_labels.py" "$work/kyty"
+NOVA_CACHE_TITLE_ID=PPSA27841 python3 "$repo/tests/test_ever_label_poll_vulkan.py" "$work/kyty"
 } 2>&1 | tee "$out/logs/regression-050.txt"
 
 

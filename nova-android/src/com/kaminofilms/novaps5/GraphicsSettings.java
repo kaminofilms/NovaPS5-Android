@@ -40,6 +40,7 @@ final class GraphicsSettings {
         Spinner cap = choice(a, box, "Presentation FPS cap", CAPS, value(p,title,"cap",0));
         Switch cache = toggle(a, box, "Disk shader cache (recommended)", value(p,title,"cache",1)!=0);
         Switch gpl = toggle(a, box, "Pipeline libraries when supported", value(p,title,"gpl",1)!=0);
+        Switch labels = toggle(a, box, "Fast GPU completion (recommended; turn off if a game hangs or flickers)", value(p,title,"gpu_labels",1)!=0);
         final Spinner resolution = "PPSA04703".equals(title) ? choice(a, box,
             "Internal raster resolution (experimental)",
             new String[]{"Game default", "1920 × 1080", "1280 × 720", "960 × 540", "640 × 360"},
@@ -51,12 +52,13 @@ final class GraphicsSettings {
             .setPositiveButton("Save",(d,w)->{
                 SharedPreferences.Editor e=p.edit().putInt(key(title,"present"),mode.getSelectedItemPosition())
                     .putInt(key(title,"cap"),cap.getSelectedItemPosition()).putInt(key(title,"cache"),cache.isChecked()?1:0)
-                    .putInt(key(title,"gpl"),gpl.isChecked()?1:0);
+                    .putInt(key(title,"gpl"),gpl.isChecked()?1:0)
+                    .putInt(key(title,"gpu_labels"),labels.isChecked()?1:0);
                 if(resolution!=null)e.putInt(key(title,"raster_resolution_v2"),resolution.getSelectedItemPosition());
                 e.apply();
             })
             .setNeutralButton(title.isEmpty()?"Reset defaults":"Use global defaults",(d,w)->{
-                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","raster_resolution_v2"})e.remove(key(title,n)); e.apply();
+                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","gpu_labels","raster_resolution_v2"})e.remove(key(title,n)); e.apply();
             }).setNegativeButton("Close",null).show();
     }
     static void apply(Context c, String title) throws android.system.ErrnoException {
@@ -76,7 +78,9 @@ final class GraphicsSettings {
         Os.setenv("NOVA_SHADER_CACHE",cache?"1":"0",true);
         Os.setenv("MESA_SHADER_CACHE_DISABLE",cache?"false":"true",true);
         Os.setenv("NOVA_PIPELINE_LIBRARIES",gpl?"1":"0",true);
+        boolean labels=value(p,title,"gpu_labels",1)!=0;
+        Os.setenv("NOVA_GPU_LABELS",labels?"1":"0",true);
         if(cap>0&&cap<limits.length)Os.setenv("NOVA_FPS_CAP",Integer.toString(limits[cap]),true);
-        BootLog.write(c,"Graphics profile "+title+": present="+mode+" cap="+cap+" shader_cache="+cache+" pipeline_libraries="+gpl);
+        BootLog.write(c,"Graphics profile "+title+": present="+mode+" cap="+cap+" shader_cache="+cache+" pipeline_libraries="+gpl+" gpu_labels="+labels);
     }
 }

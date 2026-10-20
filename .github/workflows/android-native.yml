@@ -1,5 +1,5 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# NovaPS5 0.9.51 / 105: guard startup image transitions; GPU-recorded Dead Cells labels.
+# NovaPS5 0.9.52 / 106: GPU-recorded completion labels for every title (opt-out per game).
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
@@ -200,14 +200,14 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.51-android-arm64.apk" \
-            --version-name 0.9.51-android --version-code 105 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.52-android-arm64.apk" \
+            --version-name 0.9.52-android --version-code 106 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.51-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.51-android --version-code 105 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.52-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.52-android --version-code 106 | tee dist/apk/verify.txt
       - name: Verify compiled performance features
-        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.51-android-arm64.apk
+        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.52-android-arm64.apk
       - name: Verify packaged mesh driver
-        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.51-android-arm64.apk
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.52-android-arm64.apk
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -224,11 +224,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.9.51-android-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.9.51-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.9.51-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.51 runtime timing diagnostics (CI ${GITHUB_SHA::7})" \
-            --notes "Adds real elapsed heartbeat FPS, all-process CPU utilization and opt-in NOVA_FEX_PROFILE=1 exclusive guest-runtime/host-call CPU versus off-CPU diagnostics. Off-CPU includes blocked and descheduled time; guest-runtime CPU includes JIT and fault handling. No mesh fallback, global scaler expansion or measured speedup in this build. Native Android Kyty + NovaFEX, versionCode 105. Guard image transitions against inactive command schedulers before entering the experimental raster path. Reset the old experimental Ever Forward resolution preference to native on upgrade; lower resolutions remain manually selectable. Extend GPU-recorded constant completion labels, coherent CPU fault publication and cooperative PM4 waits to Dead Cells PPSA15552, removing eager per-label CPU drains while preserving real GPU timeline ordering, interrupts and native fallback for timestamps/unsupported labels. Historical baseline: 0.8.1 commit 6d7ae3c used Kyty native + AnyPS5 NGS2 audio; owner reported 60 FPS, while 0.9.10 device logs reached 57.7. Unsafe historical wait bypasses and pre-completion CPU stores are not restored. Production-source regression tests, ASan/UBSan and real Vulkan label/raster/timeline tests run before Android compilation. Same signing key/package and existing saves/caches. One-time Dead Cells per-game cap migration to 60; later user edits stay respected. No phone boot or restored 60 FPS claim without owner logs."
+          tag="v0.9.52-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.52-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.52-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.52 GPU completion labels for all titles (CI ${GITHUB_SHA::7})" \
+            --notes "Replaces the per-label CPU/GPU drain (eop_drain) with GPU-recorded completion labels, coherent readback and cooperative PM4 waits for every title, as already used by Dead Cells and Ever Forward. Timestamps, GDS, texture-backed and unaligned labels keep the real drain. Per-game opt-out: Graphics > Fast GPU completion (NOVA_GPU_LABELS=0). Same package and signing key; installs as an update."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()
