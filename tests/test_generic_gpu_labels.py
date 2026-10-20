@@ -45,8 +45,8 @@ with tempfile.TemporaryDirectory() as t:
 
 wrapped = ['test_eop_label_reads.py','test_ever_label_publication.py','test_ever_cooperative_label_waits.py',
            'test_gpu_completion.py','test_ever_pm4_fetch.py']
-if os.getenv('NOVA_TEST_WITH_VULKAN') == '1':
-    wrapped.append('test_ever_gpu_labels.py')
+# test_ever_gpu_labels.py's full mode predates cooperative waits; its Vulkan
+# part runs separately (NOVA_TEST_GPU_ONLY=1, PPSA27841) in build-android-kyty.sh.
 lists = ["['PPSA04703','PPSA31162','']", "('PPSA04703','PPSA31162','PPSA15552','PPSA36257','')",
          "('PPSA04703','PPSA31162','PPSA15552','')"]
 for name in wrapped:
