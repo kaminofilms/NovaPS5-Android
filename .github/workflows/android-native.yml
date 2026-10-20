@@ -228,7 +228,7 @@ jobs:
           cd dist/apk && sha256sum NovaPS5-0.9.52-android-arm64.apk > SHA256SUMS.txt
           gh release create "$tag" NovaPS5-0.9.52-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.52 GPU completion labels for all titles (CI ${GITHUB_SHA::7})" \
-            --notes "Replaces the per-label CPU/GPU drain (eop_drain) with GPU-recorded completion labels, coherent readback and cooperative PM4 waits for every title, as already used by Dead Cells and Ever Forward. Timestamps, GDS, texture-backed and unaligned labels keep the real drain. Per-game opt-out: Graphics > Fast GPU completion (NOVA_GPU_LABELS=0). Same package and signing key; installs as an update."
+            --notes "Replaces the per-label CPU/GPU drain (eop_drain) with GPU-recorded completion labels, coherent readback and cooperative PM4 waits for every title, as already used by Dead Cells and Ever Forward. Timestamps, GDS, texture-backed and unaligned labels keep the real drain. PM4 waits on a known queued label that already satisfies the predicate continue in GPU submission order instead of suspending the queue (targets Ever Forward queue_poll_wait); CPU readers still wait for real completion. Opt-out: Graphics > Ordered GPU waits (NOVA_GPU_ORDERED_WAITS=0). Per-game opt-out: Graphics > Fast GPU completion (NOVA_GPU_LABELS=0). Same package and signing key; installs as an update."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()

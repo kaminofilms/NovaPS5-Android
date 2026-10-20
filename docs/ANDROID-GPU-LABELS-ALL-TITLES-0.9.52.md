@@ -30,3 +30,13 @@ Opt-out: Graphics dialog → **Fast GPU completion** (per game or global) sets `
 ## What to check on device
 
 Look for `NOVA_GPU_LABELS:` once in the log, then compare `eop_gpu` vs `eop_drain`, `readback`, and heartbeat `game_fps` in the same scene. If `eop_drain` stays high, the remaining labels are timestamps/texture-backed and need a separate fix. If FPS rises but `readback` grows, investigate who reads the labels. No FPS figure is claimed until measured on the phone.
+
+## Ordered PM4 waits (Ever Forward)
+
+Owner log, Ever Forward PPSA04703 on 0.9.51 (4.1-6.2 FPS): per 5 s the GPU thread spends 2.1-2.3 s in `queue_poll_wait` (12.5-13.8k calls), ~0.9 s in `readback` (~1,200 CPU faults on GPU-dirty pages), ~0.75 s in `draw`; `eop_drain` is only ~60 calls. Every PM4 queue is suspended on pending labels, and each poll forces a tiny submit (7.4k submits per window).
+
+`tools/ci/patch-ordered-label-waits.py`: when WAIT_REG_MEM targets a still-tracked known label whose recorded value satisfies the original predicate, the queue continues recording. All PM4 queues share one recorded stream on one Vulkan queue and the label copy is followed by an all-commands barrier, so later GPU work runs after the label. No submit, host wait or CPU publication happens. Guest CPU readers and IRQs keep real completion. Unsatisfied values, unknown, texture-backed, clean or invalidated labels keep the cooperative suspend. shadPS4 relies on the same ordering: its `ReleaseMem`/`EventWriteEop` write labels while processing the command and `WaitRegMem` yields until memory matches (`src/video_core/amdgpu/liverpool.cpp`, shadPS4 main c1b2655).
+
+`tests/test_ordered_label_waits.py` executes the production bodies for 32/64-bit labels, all seven predicates, satisfied/unsatisfied values, texture/clean/invalidated/unknown labels, invalid ranges, and every combination of `NOVA_GPU_LABELS` and `NOVA_GPU_ORDERED_WAITS`, normal and ASan/UBSan.
+
+On device, compare `eop_label_ordered` (new), `queue_poll_wait`, `submit` and `game_fps`. Readback (~0.9 s) is not addressed yet.
