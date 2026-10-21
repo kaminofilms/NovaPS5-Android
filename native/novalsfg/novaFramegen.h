@@ -46,6 +46,11 @@ inline bool& AhbEnabled() {
 	static bool enabled = false;
 	return enabled;
 }
+// Set during device creation when VK_GOOGLE_display_timing is enabled (0.9.60 pacing).
+inline bool& DisplayTiming() {
+	static bool enabled = false;
+	return enabled;
+}
 inline float FlowScale() {
 	static const float value = [] {
 		const char* text = std::getenv("NOVA_FRAMEGEN_FLOW");
@@ -346,17 +351,22 @@ public:
 		m_last_real = now;
 		m_slot      = now;
 	}
-	// Before every present after the first of a real frame: wait for the next 1/multiplier slot
-	// so generated and real frames are evenly spaced (FIFO alone would show them back to back).
-	void WaitSlot() {
-		if (m_interval_ns == 0) return;
+	// 0.9.60: desired display time (CLOCK_MONOTONIC ns) of the next present of this real frame,
+	// 1/multiplier of the real-frame interval after the previous one. The compositor holds the
+	// image until then (VK_GOOGLE_display_timing), so the flip thread - and the game waiting on
+	// its flips - never sleeps; 0.9.58/59 slept here, which slowed the game itself (~12 -> ~8 FPS).
+	// Returns 0 (show as soon as possible) without display timing or before the interval is known.
+	[[nodiscard]] uint64_t NextSlotNs() {
+		if (m_interval_ns == 0 || !DisplayTiming()) return 0;
 		m_slot += std::chrono::nanoseconds(m_interval_ns / Multiplier());
 		const auto now = std::chrono::steady_clock::now();
-		if (m_slot > now) {
-			std::this_thread::sleep_until(m_slot);
-		} else {
+		if (m_slot <= now) {
 			m_slot = now;
+			return 0;
 		}
+		// Never ask for more than one capped real-frame interval ahead.
+		if (m_slot > now + std::chrono::milliseconds(100)) m_slot = now + std::chrono::milliseconds(100);
+		return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(m_slot.time_since_epoch()).count());
 	}
 };
 #else
@@ -368,7 +378,7 @@ public:
 	std::vector<vk::Image> Generate() { return {}; }
 	static void RecordOutput(vk::CommandBuffer, vk::Image, vk::Extent2D, vk::Image, vk::Extent2D) {}
 	void CountReal() {}
-	void WaitSlot() {}
+	[[nodiscard]] uint64_t NextSlotNs() { return 0; }
 };
 #endif
 

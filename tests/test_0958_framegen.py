@@ -25,7 +25,7 @@ for needle in ['std::getenv("NOVA_FRAMEGEN")', 'std::getenv("NOVA_LSFG_DLL")', '
 assert hdr.count('Disable(') >= 6
 # Non-Android stub keeps the presenter compiling with frame generation inert.
 stub = hdr[hdr.rindex('#else'):]
-assert '[[nodiscard]] bool Active() const { return false; }' in stub and 'void WaitSlot() {}' in stub
+assert '[[nodiscard]] bool Active() const { return false; }' in stub and '[[nodiscard]] uint64_t NextSlotNs() { return 0; }' in stub
 # Pacing: bounded interval, slots of interval/multiplier (total wait < one real frame).
 assert 'std::clamp<int64_t>(ns, 4\'000\'000, 100\'000\'000)' in hdr and 'm_interval_ns / Multiplier()' in hdr
 assert 'VK_IMAGE_USAGE_STORAGE_BIT' not in hdr
@@ -49,8 +49,13 @@ assert 'NovaFramegen::State   framegen;' in sc
 pres = between(sc, 'bool     nova_fg_input = false;', 'status = swapchain.Present();')
 assert 'framegen.Active()' in pres and '!source->blank' in pres
 order = ['source->Transit(', 'framegen.RecordInput(', 'swapchain.RecordPresentCommands(', 'swapchain.Submit(present_scheduler)',
-         'present_scheduler.Wait(nova_fg_tick)', 'framegen.CountReal()', 'framegen.Generate()', 'if (i != 0) framegen.WaitSlot();',
-         'swapchain.NovaPresentGenerated(', 'if (!generated.empty()) framegen.WaitSlot();']
+         'present_scheduler.Wait(nova_fg_tick)', 'framegen.CountReal()', 'framegen.Generate()',
+         'if (i != 0) swapchain.NovaSetPresentTime(framegen.NextSlotNs());', 'swapchain.NovaPresentGenerated(',
+         'if (!generated.empty()) swapchain.NovaSetPresentTime(framegen.NextSlotNs());']
+assert 'sleep_until' not in hdr   # 0.9.60: the flip thread never sleeps for pacing
+pr = between(sc, 'Swapchain::Status Swapchain::Present() {', 'presentKHR(&present)')
+assert 'VK_STRUCTURE_TYPE_PRESENT_TIMES_INFO_GOOGLE' in pr and 'm_nova_present_time_ns = 0;' in pr
+assert 'NovaFramegen::DisplayTiming() = true;' in vw
 pos = [pres.index(n) for n in order]
 assert pos == sorted(pos), list(zip(order, pos))
 assert 'if (nova_fg_input) {' in pres

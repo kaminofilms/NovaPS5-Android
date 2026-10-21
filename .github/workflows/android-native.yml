@@ -1,5 +1,5 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# NovaPS5 0.9.60 / 114: GPU-time, per-thread CPU and pass-break diagnostics (log only) on top of 0.9.59.
+# NovaPS5 0.9.60 / 114: frame generation paced by the compositor (no flip-thread sleeps); GPU-time, per-thread CPU and pass-break diagnostics.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
@@ -229,7 +229,7 @@ jobs:
           cd dist/apk && sha256sum NovaPS5-0.9.60-android-arm64.apk > SHA256SUMS.txt
           gh release create "$tag" NovaPS5-0.9.60-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.60 performance diagnostics (CI ${GITHUB_SHA::7})" \
-            --notes "Same as 0.9.59 (Lossless Scaling frame generation with your own Lossless.dll) plus three log measurements for frame-rate work: NOVA_GPU_TIME (real GPU busy time from GPU timestamps), NOVA_THREAD_CPU (CPU use of every emulator thread) and NOVA_PASS_BREAK (what ends each GPU render pass). No rendering change. Same package and signing key; installs as an update."
+            --notes "Frame generation no longer slows the game: 0.9.58/0.9.59 paced generated frames by sleeping on the flip thread the game waits on, which cut Ever Forward from ~12-15 to ~8 real FPS. Frames are now handed to the Android compositor with a display time (VK_GOOGLE_display_timing), so the game is never held back. New log measurements for native frame-rate work: NOVA_GPU_TIME (real GPU busy time from GPU timestamps), NOVA_THREAD_CPU (CPU use of every emulator thread), NOVA_PASS_BREAK (what ends each GPU render pass). Same package and signing key; installs as an update."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()

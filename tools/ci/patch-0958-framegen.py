@@ -54,6 +54,13 @@ edit(vw, '''		if (HasExtension(available_extensions, VK_EXT_ATTACHMENT_FEEDBACK_
 					device_extensions.push_back("VK_EXT_queue_family_foreign");
 				}
 				NovaFramegen::AhbEnabled() = true;
+				// 0.9.60: compositor-timed presents pace generated frames without sleeping.
+				if (HasExtension(available_extensions, "VK_GOOGLE_display_timing")) {
+					device_extensions.push_back("VK_GOOGLE_display_timing");
+					NovaFramegen::DisplayTiming() = true;
+				} else {
+					std::fprintf(stderr, "NOVA_FRAMEGEN: no VK_GOOGLE_display_timing; generated frames are shown unpaced\\n");
+				}
 			} else {
 				std::fprintf(stderr, "NOVA_FRAMEGEN: off (driver lacks VK_ANDROID_external_memory_android_hardware_buffer)\\n");
 			}
@@ -82,9 +89,30 @@ edit(sc, '''	uint64_t Submit(CommandScheduler& scheduler);
 ''', '''	uint64_t Submit(CommandScheduler& scheduler);
 	[[nodiscard]] Status Present();
 	[[nodiscard]] uint32_t ImageIndex() const noexcept { return m_image_index; }
+	// Nova 0.9.60: desired display time for the next Present() only (VK_GOOGLE_display_timing).
+	void NovaSetPresentTime(uint64_t monotonic_ns) noexcept { m_nova_present_time_ns = monotonic_ns; }
+	uint64_t m_nova_present_time_ns = 0;
+	uint32_t m_nova_present_id      = 0;
 	// Nova 0.9.58: show one generated frame before the real frame `real_index`.
 	[[nodiscard]] Status NovaPresentGenerated(CommandScheduler& scheduler, Common::Mutex& render_mutex,
 	                                          vk::Image generated, vk::Extent2D extent, uint32_t real_index);
+''')
+edit(sc, '''	present.pWaitSemaphores    = &ready;
+	present.waitSemaphoreCount = 1;
+''', '''	present.pWaitSemaphores    = &ready;
+	present.waitSemaphoreCount = 1;
+	// Nova 0.9.60: compositor-timed frame-generation presents.
+	VkPresentTimeGOOGLE     nova_time {};
+	VkPresentTimesInfoGOOGLE nova_times {};
+	if (m_nova_present_time_ns != 0 && NovaFramegen::DisplayTiming()) {
+		nova_time.presentID          = ++m_nova_present_id;
+		nova_time.desiredPresentTime = m_nova_present_time_ns;
+		nova_times.sType             = VK_STRUCTURE_TYPE_PRESENT_TIMES_INFO_GOOGLE;
+		nova_times.swapchainCount    = 1;
+		nova_times.pTimes            = &nova_time;
+		present.pNext                = &nova_times;
+	}
+	m_nova_present_time_ns = 0;
 ''')
 edit(sc, '''Presenter::Presenter(WindowContext& window): m_impl(std::make_unique<Impl>(window)) {}''',
      '''Swapchain::Status Swapchain::NovaPresentGenerated(CommandScheduler& scheduler, Common::Mutex& render_mutex,
@@ -159,13 +187,13 @@ edit(sc, '''		{
 			const uint32_t real_index = swapchain.ImageIndex();
 			const auto     generated  = framegen.Generate();
 			for (size_t i = 0; i < generated.size(); i++) {
-				if (i != 0) framegen.WaitSlot();
+				if (i != 0) swapchain.NovaSetPresentTime(framegen.NextSlotNs());
 				if (swapchain.NovaPresentGenerated(present_scheduler, renderer.GetMutex(), generated[i],
 				                                   framegen.Extent(), real_index) != Swapchain::Status::Success) {
 					break;
 				}
 			}
-			if (!generated.empty()) framegen.WaitSlot();
+			if (!generated.empty()) swapchain.NovaSetPresentTime(framegen.NextSlotNs());
 		}
 		status = swapchain.Present();''')
 

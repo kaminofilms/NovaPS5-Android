@@ -65,3 +65,20 @@ message that Luna Abyss and Super Meat Boy 3D print just before
   * Host and Android-mode (stub headers) builds of libnovalsfg.
   * Error-path test.
   * A Java test of the settings/env mapping.
+
+## 0.9.60 (versionCode 114)
+
+* **Frame-generation pacing:** 0.9.58 and 0.9.59 slept on the flip thread between presents.
+  The game waits on that thread's flips, so the sleeps were added to every real frame. In the
+  owner's log, Ever Forward fell from about 12–15 to about 8 real FPS with 2x. Now each present
+  after the first carries a desired display time via `VK_GOOGLE_display_timing`, enabled only
+  when frame generation is requested and the device offers it. The compositor holds the image,
+  so the flip thread never sleeps. Without the extension, frames are presented immediately
+  (unpaced) and the log says so.
+* **Diagnostics (log only):**
+  * `NOVA_GPU_TIME` (`patch-0960-gpu-diagnostics.py`): GPU busy time per 5 s, from top/bottom
+    timestamps on every command buffer. Overlapping intervals are counted once. Written through
+    the raw handle, so empty-flush skipping is unchanged.
+  * `NOVA_PASS_BREAK`: the call sites (file:line) that end open render passes.
+  * `NOVA_THREAD_CPU` (NovaFEX heartbeat): the 12 busiest threads in percent of one core, with
+    `(guest)` marking threads that run x86 code.
