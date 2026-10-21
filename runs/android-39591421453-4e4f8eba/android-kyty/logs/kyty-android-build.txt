@@ -1,0 +1,1480 @@
+[0/2] Re-checking globbed directories...
+[1/969] Generate grammar tables
+[2/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/common/debug.c.o
+[3/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/common/entropy_common.c.o
+[4/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/common/error_private.c.o
+[5/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/common/fse_decompress.c.o
+[6/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/common/pool.c.o
+[7/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/common/threading.c.o
+[8/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/common/xxhash.c.o
+[9/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/common/zstd_common.c.o
+[10/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/fse_compress.c.o
+[11/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/hist.c.o
+[12/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/huf_compress.c.o
+[13/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/zstd_compress.c.o
+[14/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/zstd_compress_literals.c.o
+[15/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/zstd_compress_sequences.c.o
+[16/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/zstd_compress_superblock.c.o
+[17/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/zstd_double_fast.c.o
+[18/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/zstd_fast.c.o
+[19/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/zstd_lazy.c.o
+[20/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/zstd_ldm.c.o
+[21/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/zstd_opt.c.o
+[22/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/zstd_preSplit.c.o
+[23/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/compress/zstdmt_compress.c.o
+[24/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/decompress/huf_decompress.c.o
+[25/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/decompress/zstd_ddict.c.o
+[26/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/decompress/zstd_decompress.c.o
+[27/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/decompress/zstd_decompress_block.c.o
+[28/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/dictBuilder/cover.c.o
+[29/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/dictBuilder/divsufsort.c.o
+[30/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/dictBuilder/fastcover.c.o
+[31/969] Building C object _deps/zstd-build/lib/CMakeFiles/libzstd_static.dir/__/__/zstd-src/lib/dictBuilder/zdict.c.o
+[32/969] Generate language specific header for DebugInfo.
+[33/969] Generate language specific header for OpenCLDebugInfo100.
+[34/969] Generate language specific header for NonSemanticShaderDebugInfo100.
+[35/969] Generate tables based on the SPIR-V XML registry.
+[36/969] Update build-version.inc in the SPIRV-Tools build directory (if necessary).
+[37/969] Building CXX object 3rdparty/fmt/CMakeFiles/fmt.dir/src/format.cc.o
+[38/969] Building CXX object 3rdparty/fmt/CMakeFiles/fmt.dir/src/os.cc.o
+[39/969] Generate kytyGitVersion.h
+[40/969] Building CXX object 3rdparty/CMakeFiles/zarchive.dir/__/_deps/zarchive_source-src/src/zarchivereader.cpp.o
+[41/969] Building CXX object 3rdparty/CMakeFiles/zarchive.dir/__/_deps/zarchive_source-src/src/zarchivewriter.cpp.o
+[42/969] Building C object 3rdparty/CMakeFiles/zarchive.dir/__/_deps/zarchive_source-src/src/sha_256.c.o
+[43/969] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/init.c.o
+[44/969] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/api.c.o
+[45/969] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/cache.c.o
+[46/969] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/deps/clog/src/clog.c.o
+[47/969] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/arm/uarch.c.o
+[48/969] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/arm/cache.c.o
+[49/969] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/arm/linux/init.c.o
+[50/969] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/arm/linux/cpuinfo.c.o
+[51/969] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/arm/linux/clusters.c.o
+[52/969] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/arm/linux/chipset.c.o
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/cpuinfo/src/arm/linux/chipset.c:330:11: warning: call to undeclared library function 'tolower' with type 'int (int)'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+  330 |                 int d = tolower((unsigned char)*a) - tolower((unsigned char)*b);
+      |                         ^
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/cpuinfo/src/arm/linux/chipset.c:330:11: note: include the header <ctype.h> or explicitly provide a declaration for 'tolower'
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/cpuinfo/src/arm/linux/chipset.c:563:13: warning: unused function 'match_and_parse_smdk' [-Wunused-function]
+  563 | static bool match_and_parse_smdk(
+      |             ^~~~~~~~~~~~~~~~~~~~
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/cpuinfo/src/arm/linux/chipset.c:966:13: warning: unused function 'match_lc' [-Wunused-function]
+  966 | static bool match_lc(
+      |             ^~~~~~~~
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/cpuinfo/src/arm/linux/chipset.c:1034:13: warning: unused function 'match_pxa' [-Wunused-function]
+ 1034 | static bool match_pxa(
+      |             ^~~~~~~~~
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/cpuinfo/src/arm/linux/chipset.c:1147:13: warning: unused function 'match_omap' [-Wunused-function]
+ 1147 | static bool match_omap(
+      |             ^~~~~~~~~~
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/cpuinfo/src/arm/linux/chipset.c:1195:13: warning: unused function 'match_and_parse_broadcom' [-Wunused-function]
+ 1195 | static bool match_and_parse_broadcom(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/cpuinfo/src/arm/linux/chipset.c:1469:13: warning: unused function 'match_and_parse_wmt' [-Wunused-function]
+ 1469 | static bool match_and_parse_wmt(
+      |             ^~~~~~~~~~~~~~~~~~~
+7 warnings generated.
+[53/969] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/arm/linux/midr.c.o
+[54/969] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/arm/linux/hwcap.c.o
+[55/969] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/arm/linux/aarch64-isa.c.o
+[56/969] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/arm/android/properties.c.o
+[57/969] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/linux/smallfile.c.o
+[58/969] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/linux/multiline.c.o
+[59/969] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/linux/cpulist.c.o
+[60/969] Building C object 3rdparty/cpuinfo/CMakeFiles/cpuinfo.dir/src/linux/processors.c.o
+[61/969] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/API/Memory.c.o
+[62/969] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/API/Process.c.o
+[63/969] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/API/Synchronization.c.o
+[64/969] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/API/Terminal.c.o
+[65/969] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/API/Thread.c.o
+[66/969] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/Allocator.c.o
+[67/969] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/ArgParse.c.o
+[68/969] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/Bitset.c.o
+[69/969] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/Format.c.o
+[70/969] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/List.c.o
+[71/969] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/String.c.o
+[72/969] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/Vector.c.o
+[73/969] Building C object _deps/zydis-build/zycore/CMakeFiles/Zycore.dir/src/Zycore.c.o
+[74/969] Linking C static library _deps/zstd-build/lib/libzstd.a
+[75/969] Building CXX object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/cmake_pch.hxx.pch
+[76/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/cmake_pch.h.pch
+[77/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/e_atan2.c.o
+[78/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/e_exp.c.o
+[79/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/e_fmod.c.o
+[80/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/e_log.c.o
+[81/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/e_log10.c.o
+[82/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/e_pow.c.o
+[83/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/e_rem_pio2.c.o
+[84/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/e_sqrt.c.o
+[85/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/k_cos.c.o
+[86/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/k_rem_pio2.c.o
+[87/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/k_sin.c.o
+[88/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/k_tan.c.o
+[89/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/s_atan.c.o
+[90/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/s_copysign.c.o
+[91/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/s_cos.c.o
+[92/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/s_fabs.c.o
+[93/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/s_floor.c.o
+[94/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/s_isinf.c.o
+[95/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/s_isinff.c.o
+[96/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/s_isnan.c.o
+[97/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/s_isnanf.c.o
+[98/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/s_modf.c.o
+[99/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/s_scalbn.c.o
+[100/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/s_sin.c.o
+[101/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL_uclibc.dir/src/libm/s_tan.c.o
+[102/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/util/bit_vector.cpp.o
+[103/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/util/parse_number.cpp.o
+[104/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/util/string_utils.cpp.o
+[105/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/assembly_grammar.cpp.o
+[106/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/binary.cpp.o
+[107/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/diagnostic.cpp.o
+[108/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/disassemble.cpp.o
+[109/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/ext_inst.cpp.o
+[110/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/extensions.cpp.o
+[111/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/libspirv.cpp.o
+[112/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/name_mapper.cpp.o
+[113/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/opcode.cpp.o
+[114/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/operand.cpp.o
+[115/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/parsed_operand.cpp.o
+[116/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/print.cpp.o
+[117/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/software_version.cpp.o
+[118/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/spirv_endian.cpp.o
+[119/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/spirv_fuzzer_options.cpp.o
+[120/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/spirv_optimizer_options.cpp.o
+[121/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/spirv_reducer_options.cpp.o
+[122/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/spirv_target_env.cpp.o
+[123/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/spirv_validator_options.cpp.o
+[124/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/table.cpp.o
+[125/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/table2.cpp.o
+[126/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/text.cpp.o
+[127/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/text_handler.cpp.o
+[128/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/to_string.cpp.o
+[129/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate.cpp.o
+[130/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_adjacency.cpp.o
+[131/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_annotation.cpp.o
+[132/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_arithmetics.cpp.o
+[133/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_atomics.cpp.o
+[134/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_barriers.cpp.o
+[135/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_bitwise.cpp.o
+[136/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_builtins.cpp.o
+[137/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_capability.cpp.o
+[138/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_cfg.cpp.o
+[139/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_composites.cpp.o
+[140/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_constants.cpp.o
+[141/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_conversion.cpp.o
+[142/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_debug.cpp.o
+[143/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_decorations.cpp.o
+[144/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_derivatives.cpp.o
+[145/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_extensions.cpp.o
+[146/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_execution_limitations.cpp.o
+[147/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_function.cpp.o
+[148/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_graph.cpp.o
+[149/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_id.cpp.o
+[150/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_image.cpp.o
+[151/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_interfaces.cpp.o
+[152/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_instruction.cpp.o
+[153/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_layout.cpp.o
+[154/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_literals.cpp.o
+[155/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_logicals.cpp.o
+[156/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_memory.cpp.o
+[157/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_memory_semantics.cpp.o
+[158/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_mesh_shading.cpp.o
+[159/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_misc.cpp.o
+[160/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_mode_setting.cpp.o
+[161/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_non_uniform.cpp.o
+[162/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_primitives.cpp.o
+[163/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_ray_query.cpp.o
+[164/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_ray_tracing.cpp.o
+[165/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_ray_tracing_reorder.cpp.o
+[166/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_scopes.cpp.o
+[167/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_small_type_uses.cpp.o
+[168/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_tensor_layout.cpp.o
+[169/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_tensor.cpp.o
+[170/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_type.cpp.o
+[171/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validate_invalid_type.cpp.o
+[172/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/basic_block.cpp.o
+[173/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/construct.cpp.o
+[174/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/function.cpp.o
+[175/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/instruction.cpp.o
+[176/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/val/validation_state.cpp.o
+[177/969] Building CXX object 3rdparty/SPIRV-Tools/source/CMakeFiles/SPIRV-Tools-static.dir/util/timer.cpp.o
+[178/969] Linking CXX static library 3rdparty/fmt/libfmt.a
+[179/969] Building CXX object 3rdparty/spdlog/CMakeFiles/spdlog.dir/src/spdlog.cpp.o
+[180/969] Building CXX object 3rdparty/spdlog/CMakeFiles/spdlog.dir/src/stdout_sinks.cpp.o
+[181/969] Building CXX object 3rdparty/spdlog/CMakeFiles/spdlog.dir/src/color_sinks.cpp.o
+[182/969] Building CXX object 3rdparty/spdlog/CMakeFiles/spdlog.dir/src/file_sinks.cpp.o
+[183/969] Building CXX object 3rdparty/spdlog/CMakeFiles/spdlog.dir/src/async.cpp.o
+[184/969] Building CXX object 3rdparty/spdlog/CMakeFiles/spdlog.dir/src/cfg.cpp.o
+[185/969] Building CXX object 3rdparty/tracy/CMakeFiles/TracyClient.dir/public/TracyClient.cpp.o
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/tracy/public/TracyClient.cpp:23:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/tracy/public/client/TracyProfiler.cpp:79:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/tracy/public/client/TracyScoped.hpp:14:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/tracy/public/client/TracyProfiler.hpp:1250:7: warning: private field 'm_prevSignal' is not used [-Wunused-private-field]
+ 1250 |     } m_prevSignal;
+      |       ^
+1 warning generated.
+[186/969] Linking CXX static library 3rdparty/libzarchive.a
+[187/969] Building CXX object 3rdparty/CMakeFiles/imgui.dir/imgui/imgui.cpp.o
+[188/969] Building CXX object 3rdparty/CMakeFiles/imgui.dir/imgui/imgui_draw.cpp.o
+[189/969] Building CXX object 3rdparty/CMakeFiles/imgui.dir/imgui/imgui_tables.cpp.o
+[190/969] Building CXX object 3rdparty/CMakeFiles/imgui.dir/imgui/imgui_widgets.cpp.o
+[191/969] Building CXX object 3rdparty/CMakeFiles/imgui.dir/imgui/backends/imgui_impl_vulkan.cpp.o
+[192/969] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/band_extension.c.o
+[193/969] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/bit_allocation.c.o
+[194/969] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/bit_reader.c.o
+[195/969] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/decinit.c.o
+[196/969] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/decoder.c.o
+[197/969] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/huffCodes.c.o
+[198/969] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/imdct.c.o
+[199/969] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/libatrac9.c.o
+[200/969] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/quantization.c.o
+[201/969] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/scale_factors.c.o
+[202/969] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/tables.c.o
+[203/969] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/unpack.c.o
+[204/969] Building C object 3rdparty/CMakeFiles/LibAtrac9.dir/LibAtrac9/C/src/utility.c.o
+[205/969] Linking C static library 3rdparty/cpuinfo/libcpuinfo.a
+[206/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/opus.c.o
+[207/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/opus_decoder.c.o
+[208/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/opus_encoder.c.o
+[209/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/extensions.c.o
+[210/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/opus_multistream.c.o
+[211/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/opus_multistream_encoder.c.o
+[212/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/opus_multistream_decoder.c.o
+[213/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/repacketizer.c.o
+[214/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/opus_projection_encoder.c.o
+[215/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/opus_projection_decoder.c.o
+[216/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/mapping_matrix.c.o
+[217/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/analysis.c.o
+[218/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/mlp.c.o
+[219/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/src/mlp_data.c.o
+[220/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/CNG.c.o
+[221/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/code_signs.c.o
+[222/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/init_decoder.c.o
+[223/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/decode_core.c.o
+[224/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/decode_frame.c.o
+[225/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/decode_parameters.c.o
+[226/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/decode_indices.c.o
+[227/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/decode_pulses.c.o
+[228/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/decoder_set_fs.c.o
+[229/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/dec_API.c.o
+[230/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/enc_API.c.o
+[231/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/encode_indices.c.o
+[232/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/encode_pulses.c.o
+[233/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/gain_quant.c.o
+[234/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/interpolate.c.o
+[235/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/LP_variable_cutoff.c.o
+[236/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/NLSF_decode.c.o
+[237/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/NSQ.c.o
+[238/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/NSQ_del_dec.c.o
+[239/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/PLC.c.o
+[240/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/shell_coder.c.o
+[241/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/tables_gain.c.o
+[242/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/tables_LTP.c.o
+[243/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/tables_NLSF_CB_NB_MB.c.o
+[244/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/tables_NLSF_CB_WB.c.o
+[245/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/tables_other.c.o
+[246/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/tables_pitch_lag.c.o
+[247/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/tables_pulses_per_block.c.o
+[248/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/VAD.c.o
+[249/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/control_audio_bandwidth.c.o
+[250/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/quant_LTP_gains.c.o
+[251/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/VQ_WMat_EC.c.o
+[252/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/HP_variable_cutoff.c.o
+[253/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/NLSF_encode.c.o
+[254/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/NLSF_VQ.c.o
+[255/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/NLSF_unpack.c.o
+[256/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/NLSF_del_dec_quant.c.o
+[257/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/process_NLSFs.c.o
+[258/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/stereo_LR_to_MS.c.o
+[259/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/stereo_MS_to_LR.c.o
+[260/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/check_control_input.c.o
+[261/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/control_SNR.c.o
+[262/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/init_encoder.c.o
+[263/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/control_codec.c.o
+[264/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/A2NLSF.c.o
+[265/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/ana_filt_bank_1.c.o
+[266/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/biquad_alt.c.o
+[267/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/bwexpander_32.c.o
+[268/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/bwexpander.c.o
+[269/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/debug.c.o
+[270/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/decode_pitch.c.o
+[271/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/inner_prod_aligned.c.o
+[272/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/lin2log.c.o
+[273/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/log2lin.c.o
+[274/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/LPC_analysis_filter.c.o
+[275/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/LPC_inv_pred_gain.c.o
+[276/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/table_LSF_cos.c.o
+[277/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/NLSF2A.c.o
+[278/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/NLSF_stabilize.c.o
+[279/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/NLSF_VQ_weights_laroia.c.o
+[280/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/pitch_est_tables.c.o
+[281/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/resampler.c.o
+[282/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/resampler_down2_3.c.o
+[283/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/resampler_down2.c.o
+[284/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/resampler_private_AR2.c.o
+[285/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/resampler_private_down_FIR.c.o
+[286/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/resampler_private_IIR_FIR.c.o
+[287/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/resampler_private_up2_HQ.c.o
+[288/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/resampler_rom.c.o
+[289/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/sigm_Q15.c.o
+[290/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/sort.c.o
+[291/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/sum_sqr_shift.c.o
+[292/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/stereo_decode_pred.c.o
+[293/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/stereo_encode_pred.c.o
+[294/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/stereo_find_predictor.c.o
+[295/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/stereo_quant_pred.c.o
+[296/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/LPC_fit.c.o
+[297/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/bands.c.o
+[298/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/celt.c.o
+[299/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/celt_encoder.c.o
+[300/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/celt_decoder.c.o
+[301/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/cwrs.c.o
+[302/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/entcode.c.o
+[303/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/entdec.c.o
+[304/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/entenc.c.o
+[305/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/kiss_fft.c.o
+[306/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/laplace.c.o
+[307/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/mathops.c.o
+[308/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/mdct.c.o
+[309/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/modes.c.o
+[310/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/pitch.c.o
+[311/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/celt_lpc.c.o
+[312/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/quant_bands.c.o
+[313/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/rate.c.o
+[314/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/vq.c.o
+[315/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/apply_sine_window_FLP.c.o
+[316/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/corrMatrix_FLP.c.o
+[317/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/encode_frame_FLP.c.o
+[318/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/find_LPC_FLP.c.o
+[319/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/find_LTP_FLP.c.o
+[320/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/find_pitch_lags_FLP.c.o
+[321/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/find_pred_coefs_FLP.c.o
+[322/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/LPC_analysis_filter_FLP.c.o
+[323/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/LTP_analysis_filter_FLP.c.o
+[324/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/LTP_scale_ctrl_FLP.c.o
+[325/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/noise_shape_analysis_FLP.c.o
+[326/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/process_gains_FLP.c.o
+[327/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/regularize_correlations_FLP.c.o
+[328/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/residual_energy_FLP.c.o
+[329/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/warped_autocorrelation_FLP.c.o
+[330/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/wrappers_FLP.c.o
+[331/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/autocorrelation_FLP.c.o
+[332/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/burg_modified_FLP.c.o
+[333/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/bwexpander_FLP.c.o
+[334/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/energy_FLP.c.o
+[335/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/inner_product_FLP.c.o
+[336/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/k2a_FLP.c.o
+[337/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/LPC_inv_pred_gain_FLP.c.o
+[338/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/pitch_analysis_core_FLP.c.o
+[339/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/scale_copy_vector_FLP.c.o
+[340/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/scale_vector_FLP.c.o
+[341/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/schur_FLP.c.o
+[342/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/float/sort_FLP.c.o
+[343/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/arm/armcpu.c.o
+[344/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/arm/arm_celt_map.c.o
+[345/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/arm/arm_silk_map.c.o
+[346/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/arm/celt_neon_intr.c.o
+[347/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/celt/arm/pitch_neon_intr.c.o
+[348/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/arm/biquad_alt_neon_intr.c.o
+[349/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/arm/LPC_inv_pred_gain_neon_intr.c.o
+[350/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/arm/NSQ_del_dec_neon_intr.c.o
+[351/969] Building C object _deps/opus-build/CMakeFiles/opus.dir/silk/arm/NSQ_neon.c.o
+[352/969] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/MetaInfo.c.o
+[353/969] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/Mnemonic.c.o
+[354/969] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/Register.c.o
+[355/969] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/SharedData.c.o
+[356/969] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/String.c.o
+[357/969] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/Utils.c.o
+[358/969] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/Zydis.c.o
+[359/969] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/Decoder.c.o
+[360/969] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/DecoderData.c.o
+[361/969] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/Encoder.c.o
+[362/969] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/EncoderData.c.o
+[363/969] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/Disassembler.c.o
+[364/969] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/Formatter.c.o
+[365/969] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/FormatterBuffer.c.o
+[366/969] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/FormatterATT.c.o
+[367/969] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/FormatterBase.c.o
+[368/969] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/FormatterIntel.c.o
+[369/969] Building C object _deps/zydis-build/CMakeFiles/Zydis.dir/src/Segment.c.o
+[370/969] Linking C static library _deps/zydis-build/zycore/libZycore.a
+[371/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/SDL.c.o
+[372/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/SDL_assert.c.o
+[373/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/SDL_error.c.o
+[374/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/SDL_guid.c.o
+[375/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/SDL_hashtable.c.o
+[376/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/SDL_hints.c.o
+[377/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/SDL_list.c.o
+[378/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/SDL_log.c.o
+[379/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/SDL_properties.c.o
+[380/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/SDL_utils.c.o
+[381/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/atomic/SDL_atomic.c.o
+[382/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/atomic/SDL_spinlock.c.o
+[383/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/audio/SDL_audio.c.o
+[384/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/audio/SDL_audiocvt.c.o
+[385/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/audio/SDL_audiodev.c.o
+[386/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/audio/SDL_audioqueue.c.o
+[387/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/audio/SDL_audioresample.c.o
+[388/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/audio/SDL_audiotypecvt.c.o
+[389/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/audio/SDL_mixer.c.o
+[390/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/audio/SDL_wave.c.o
+[391/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/camera/SDL_camera.c.o
+[392/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/core/SDL_core_unsupported.c.o
+[393/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/cpuinfo/SDL_cpuinfo.c.o
+[394/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/dynapi/SDL_dynapi.c.o
+[395/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/events/SDL_categories.c.o
+[396/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/events/SDL_clipboardevents.c.o
+[397/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/events/SDL_displayevents.c.o
+[398/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/events/SDL_dropevents.c.o
+[399/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/events/SDL_events.c.o
+[400/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/events/SDL_eventwatch.c.o
+[401/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/events/SDL_keyboard.c.o
+[402/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/events/SDL_keymap.c.o
+[403/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/events/SDL_keysym_to_keycode.c.o
+[404/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/events/SDL_keysym_to_scancode.c.o
+[405/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/events/SDL_mouse.c.o
+[406/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/events/SDL_pen.c.o
+[407/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/events/SDL_quit.c.o
+[408/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/events/SDL_scancode_tables.c.o
+[409/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/events/SDL_touch.c.o
+[410/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/events/SDL_windowevents.c.o
+[411/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/events/imKStoUCS.c.o
+[412/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/filesystem/SDL_filesystem.c.o
+[413/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/gpu/SDL_gpu.c.o
+[414/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/haptic/SDL_haptic.c.o
+[415/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/hidapi/SDL_hidapi.c.o
+[416/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/io/SDL_asyncio.c.o
+[417/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/io/SDL_iostream.c.o
+[418/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/io/generic/SDL_asyncio_generic.c.o
+[419/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/SDL_gamepad.c.o
+[420/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/SDL_joystick.c.o
+[421/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/SDL_steam_virtual_gamepad.c.o
+[422/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/controller_type.c.o
+[423/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/locale/SDL_locale.c.o
+[424/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/main/SDL_main_callbacks.c.o
+[425/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/main/SDL_runapp.c.o
+[426/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/misc/SDL_libusb.c.o
+[427/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/misc/SDL_url.c.o
+[428/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/power/SDL_power.c.o
+[429/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/SDL_render.c.o
+[430/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/SDL_render_unsupported.c.o
+[431/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/SDL_yuv_sw.c.o
+[432/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/direct3d/SDL_render_d3d.c.o
+[433/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/direct3d/SDL_shaders_d3d.c.o
+[434/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/direct3d11/SDL_render_d3d11.c.o
+[435/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/direct3d11/SDL_shaders_d3d11.c.o
+[436/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/direct3d12/SDL_render_d3d12.c.o
+[437/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/direct3d12/SDL_shaders_d3d12.c.o
+[438/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/gpu/SDL_pipeline_gpu.c.o
+[439/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/gpu/SDL_render_gpu.c.o
+[440/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/gpu/SDL_shaders_gpu.c.o
+[441/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/ngage/SDL_render_ngage.c.o
+[442/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/opengl/SDL_render_gl.c.o
+[443/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/opengl/SDL_shaders_gl.c.o
+[444/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/opengles2/SDL_render_gles2.c.o
+[445/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/opengles2/SDL_shaders_gles2.c.o
+[446/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/ps2/SDL_render_ps2.c.o
+[447/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/psp/SDL_render_psp.c.o
+[448/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/software/SDL_blendfillrect.c.o
+[449/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/software/SDL_blendline.c.o
+[450/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/software/SDL_blendpoint.c.o
+[451/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/software/SDL_drawline.c.o
+[452/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/software/SDL_drawpoint.c.o
+[453/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/software/SDL_render_sw.c.o
+[454/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/software/SDL_triangle.c.o
+[455/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/vitagxm/SDL_render_vita_gxm.c.o
+[456/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/vitagxm/SDL_render_vita_gxm_memory.c.o
+[457/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/vitagxm/SDL_render_vita_gxm_tools.c.o
+[458/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/vulkan/SDL_render_vulkan.c.o
+[459/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/render/vulkan/SDL_shaders_vulkan.c.o
+[460/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/sensor/SDL_sensor.c.o
+[461/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/stdlib/SDL_crc16.c.o
+[462/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/stdlib/SDL_crc32.c.o
+[463/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/stdlib/SDL_getenv.c.o
+[464/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/stdlib/SDL_iconv.c.o
+[465/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/stdlib/SDL_malloc.c.o
+[466/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/stdlib/SDL_memcpy.c.o
+[467/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/stdlib/SDL_memmove.c.o
+[468/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/stdlib/SDL_memset.c.o
+[469/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/stdlib/SDL_mslibc.c.o
+[470/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/stdlib/SDL_murmur3.c.o
+[471/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/stdlib/SDL_qsort.c.o
+[472/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/stdlib/SDL_random.c.o
+[473/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/stdlib/SDL_stdlib.c.o
+[474/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/stdlib/SDL_string.c.o
+[475/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/stdlib/SDL_strtokr.c.o
+[476/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/storage/SDL_storage.c.o
+[477/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/thread/SDL_thread.c.o
+[478/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/time/SDL_time.c.o
+[479/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/timer/SDL_timer.c.o
+[480/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_RLEaccel.c.o
+[481/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_blit.c.o
+[482/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_blit_0.c.o
+[483/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_blit_1.c.o
+[484/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_blit_A.c.o
+[485/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_blit_N.c.o
+[486/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_blit_auto.c.o
+[487/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_blit_copy.c.o
+[488/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_blit_slow.c.o
+[489/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_bmp.c.o
+[490/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_clipboard.c.o
+[491/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_egl.c.o
+[492/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_fillrect.c.o
+[493/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_pixels.c.o
+[494/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_rect.c.o
+[495/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_rotate.c.o
+[496/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_stb.c.o
+[497/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_stretch.c.o
+[498/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_surface.c.o
+[499/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_video.c.o
+[500/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_video_unsupported.c.o
+[501/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_vulkan_utils.c.o
+[502/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/SDL_yuv.c.o
+[503/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/yuv2rgb/yuv_rgb_lsx.c.o
+[504/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/yuv2rgb/yuv_rgb_sse.c.o
+[505/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/yuv2rgb/yuv_rgb_std.c.o
+[506/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/audio/dummy/SDL_dummyaudio.c.o
+[507/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/audio/disk/SDL_diskaudio.c.o
+[508/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/camera/dummy/SDL_camera_dummy.c.o
+[509/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/loadso/dlopen/SDL_sysloadso.c.o
+[510/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/virtual/SDL_virtualjoystick.c.o
+[511/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/dummy/SDL_nullevents.c.o
+[512/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/dummy/SDL_nullframebuffer.c.o
+[513/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/dummy/SDL_nullvideo.c.o
+[514/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/core/android/SDL_android.c.o
+[515/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/misc/android/SDL_sysurl.c.o
+[516/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/audio/openslES/SDL_openslES.c.o
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/src/audio/openslES/SDL_openslES.c:147:14: warning: 'slCreateEngine' is deprecated: first deprecated in Android 30 [-Wdeprecated-declarations]
+  147 |     result = slCreateEngine(&engineObject, 0, NULL, 0, NULL, NULL);
+      |              ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/SLES/OpenSLES.h:2752:28: note: 'slCreateEngine' has been explicitly marked deprecated here
+ 2752 | SL_API SLresult SLAPIENTRY slCreateEngine(
+      |                            ^
+1 warning generated.
+[517/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/audio/aaudio/SDL_aaudio.c.o
+[518/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/filesystem/android/SDL_sysfilesystem.c.o
+[519/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/filesystem/posix/SDL_sysfsops.c.o
+[520/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/haptic/android/SDL_syshaptic.c.o
+[521/969] Building CXX object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/hidapi/android/hid.cpp.o
+[522/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_8bitdo.c.o
+[523/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_combined.c.o
+[524/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_flydigi.c.o
+[525/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_gamecube.c.o
+[526/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_gip.c.o
+[527/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_lg4ff.c.o
+[528/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_luna.c.o
+[529/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_ps3.c.o
+[530/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_ps4.c.o
+[531/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_ps5.c.o
+[532/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_rumble.c.o
+[533/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_shield.c.o
+[534/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_sinput.c.o
+[535/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_stadia.c.o
+[536/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_steam.c.o
+[537/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_steam_hori.c.o
+[538/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_steam_triton.c.o
+[539/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_steamdeck.c.o
+[540/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_switch.c.o
+[541/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_switch2.c.o
+[542/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_wii.c.o
+[543/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_xbox360.c.o
+[544/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_xbox360w.c.o
+[545/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_xboxone.c.o
+[546/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapi_zuiki.c.o
+[547/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_hidapijoystick.c.o
+[548/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/hidapi/SDL_report_descriptor.c.o
+[549/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/haptic/hidapi/SDL_hidapihaptic.c.o
+[550/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/haptic/hidapi/SDL_hidapihaptic_lg4ff.c.o
+[551/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/joystick/android/SDL_sysjoystick.c.o
+[552/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/power/android/SDL_syspower.c.o
+[553/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/locale/android/SDL_syslocale.c.o
+[554/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/time/unix/SDL_systime.c.o
+[555/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/timer/unix/SDL_systimer.c.o
+[556/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/sensor/android/SDL_androidsensor.c.o
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/3rdparty/SDL3/src/sensor/android/SDL_androidsensor.c:140:26: warning: 'ASensorManager_getInstance' is deprecated: first deprecated in Android 26 - Use ASensorManager_getInstanceForPackage instead [-Wdeprecated-declarations]
+  140 |     SDL_sensor_manager = ASensorManager_getInstance();
+      |                          ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/android/sensor.h:758:17: note: 'ASensorManager_getInstance' has been explicitly marked deprecated here
+  758 | ASensorManager* ASensorManager_getInstance()
+      |                 ^
+1 warning generated.
+[557/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/camera/android/SDL_camera_android.c.o
+[558/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/android/SDL_androidclipboard.c.o
+[559/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/android/SDL_androidevents.c.o
+[560/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/android/SDL_androidgl.c.o
+[561/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/android/SDL_androidkeyboard.c.o
+[562/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/android/SDL_androidmessagebox.c.o
+[563/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/android/SDL_androidmouse.c.o
+[564/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/android/SDL_androidpen.c.o
+[565/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/android/SDL_androidtouch.c.o
+[566/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/android/SDL_androidvideo.c.o
+[567/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/android/SDL_androidvulkan.c.o
+[568/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/android/SDL_androidwindow.c.o
+[569/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/thread/pthread/SDL_systhread.c.o
+[570/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/thread/pthread/SDL_sysmutex.c.o
+[571/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/thread/pthread/SDL_syscond.c.o
+[572/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/thread/pthread/SDL_sysrwlock.c.o
+[573/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/thread/pthread/SDL_systls.c.o
+[574/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/thread/pthread/SDL_syssem.c.o
+[575/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/dialog/SDL_dialog.c.o
+[576/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/dialog/SDL_dialog_utils.c.o
+[577/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/dialog/android/SDL_androiddialog.c.o
+[578/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/dialog/unix/SDL_zenitymessagebox.c.o
+[579/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/process/SDL_process.c.o
+[580/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/offscreen/SDL_offscreenevents.c.o
+[581/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/offscreen/SDL_offscreenframebuffer.c.o
+[582/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/offscreen/SDL_offscreenopengles.c.o
+[583/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/offscreen/SDL_offscreenvideo.c.o
+[584/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/offscreen/SDL_offscreenvulkan.c.o
+[585/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/video/offscreen/SDL_offscreenwindow.c.o
+[586/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/tray/SDL_tray_utils.c.o
+[587/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/gpu/vulkan/SDL_gpu_vulkan.c.o
+[588/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/storage/generic/SDL_genericstorage.c.o
+[589/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/process/dummy/SDL_dummyprocess.c.o
+[590/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/tray/dummy/SDL_tray.c.o
+[591/969] Building C object 3rdparty/SDL3/CMakeFiles/SDL3-shared.dir/src/main/generic/SDL_sysmain_callbacks.c.o
+[592/969] Linking C static library 3rdparty/SDL3/libSDL_uclibc.a
+[593/969] Linking CXX static library 3rdparty/SPIRV-Tools/source/libSPIRV-Tools.a
+[594/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/fix_func_call_arguments.cpp.o
+[595/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/aggressive_dead_code_elim_pass.cpp.o
+[596/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/amd_ext_to_khr.cpp.o
+[597/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/analyze_live_input_pass.cpp.o
+[598/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/basic_block.cpp.o
+[599/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/block_merge_pass.cpp.o
+[600/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/block_merge_util.cpp.o
+[601/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/build_module.cpp.o
+[602/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/ccp_pass.cpp.o
+[603/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/cfg_cleanup_pass.cpp.o
+[604/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/cfg.cpp.o
+[605/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/code_sink.cpp.o
+[606/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/combine_access_chains.cpp.o
+[607/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/compact_ids_pass.cpp.o
+[608/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/composite.cpp.o
+[609/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/const_folding_rules.cpp.o
+[610/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/constants.cpp.o
+[611/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/control_dependence.cpp.o
+[612/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/convert_to_sampled_image_pass.cpp.o
+[613/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/convert_to_half_pass.cpp.o
+[614/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/copy_prop_arrays.cpp.o
+[615/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/dataflow.cpp.o
+[616/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/dead_branch_elim_pass.cpp.o
+[617/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/dead_insert_elim_pass.cpp.o
+[618/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/dead_variable_elimination.cpp.o
+[619/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/decoration_manager.cpp.o
+[620/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/debug_info_manager.cpp.o
+[621/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/def_use_manager.cpp.o
+[622/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/desc_sroa.cpp.o
+[623/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/desc_sroa_util.cpp.o
+[624/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/dominator_analysis.cpp.o
+[625/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/dominator_tree.cpp.o
+[626/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/eliminate_dead_constant_pass.cpp.o
+[627/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/eliminate_dead_functions_pass.cpp.o
+[628/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/eliminate_dead_functions_util.cpp.o
+[629/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/eliminate_dead_io_components_pass.cpp.o
+[630/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/eliminate_dead_members_pass.cpp.o
+[631/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/eliminate_dead_output_stores_pass.cpp.o
+[632/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/feature_manager.cpp.o
+[633/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/fix_storage_class.cpp.o
+[634/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/flatten_decoration_pass.cpp.o
+[635/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/fold.cpp.o
+[636/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/folding_rules.cpp.o
+[637/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/fold_spec_constant_op_and_composite_pass.cpp.o
+[638/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/freeze_spec_constant_value_pass.cpp.o
+[639/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/function.cpp.o
+[640/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/graphics_robust_access_pass.cpp.o
+[641/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/if_conversion.cpp.o
+[642/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/inline_exhaustive_pass.cpp.o
+[643/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/inline_opaque_pass.cpp.o
+[644/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/inline_pass.cpp.o
+[645/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/instruction.cpp.o
+[646/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/instruction_list.cpp.o
+[647/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/interface_var_sroa.cpp.o
+[648/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/invocation_interlock_placement_pass.cpp.o
+[649/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/interp_fixup_pass.cpp.o
+[650/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/opextinst_forward_ref_fixup_pass.cpp.o
+[651/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/ir_context.cpp.o
+[652/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/ir_loader.cpp.o
+[653/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/licm_pass.cpp.o
+[654/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/liveness.cpp.o
+[655/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/local_access_chain_convert_pass.cpp.o
+[656/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/local_redundancy_elimination.cpp.o
+[657/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/local_single_block_elim_pass.cpp.o
+[658/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/local_single_store_elim_pass.cpp.o
+[659/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/loop_dependence.cpp.o
+[660/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/loop_dependence_helpers.cpp.o
+[661/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/loop_descriptor.cpp.o
+[662/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/loop_fission.cpp.o
+[663/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/loop_fusion.cpp.o
+[664/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/loop_fusion_pass.cpp.o
+[665/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/loop_peeling.cpp.o
+[666/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/loop_utils.cpp.o
+[667/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/loop_unroller.cpp.o
+[668/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/loop_unswitch_pass.cpp.o
+[669/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/mem_pass.cpp.o
+[670/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/merge_return_pass.cpp.o
+[671/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/modify_maximal_reconvergence.cpp.o
+[672/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/module.cpp.o
+[673/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/optimizer.cpp.o
+[674/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/pass.cpp.o
+[675/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/pass_manager.cpp.o
+[676/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/private_to_local_pass.cpp.o
+[677/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/propagator.cpp.o
+[678/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/reduce_load_size.cpp.o
+[679/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/redundancy_elimination.cpp.o
+[680/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/register_pressure.cpp.o
+[681/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/relax_float_ops_pass.cpp.o
+[682/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/canonicalize_ids_pass.cpp.o
+[683/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/remove_dontinline_pass.cpp.o
+[684/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/remove_duplicates_pass.cpp.o
+[685/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/remove_unused_interface_variables_pass.cpp.o
+[686/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/replace_desc_array_access_using_var_index.cpp.o
+[687/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/replace_invalid_opc.cpp.o
+[688/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/resolve_binding_conflicts_pass.cpp.o
+[689/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/scalar_analysis.cpp.o
+[690/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/scalar_analysis_simplification.cpp.o
+[691/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/scalar_replacement_pass.cpp.o
+[692/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/set_spec_constant_default_value_pass.cpp.o
+[693/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/simplification_pass.cpp.o
+[694/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/split_combined_image_sampler_pass.cpp.o
+[695/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/spread_volatile_semantics.cpp.o
+[696/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/ssa_rewrite_pass.cpp.o
+[697/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/strength_reduction_pass.cpp.o
+[698/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/strip_debug_info_pass.cpp.o
+[699/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/strip_nonsemantic_info_pass.cpp.o
+[700/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/struct_cfg_analysis.cpp.o
+[701/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/struct_packing_pass.cpp.o
+[702/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/switch_descriptorset_pass.cpp.o
+[703/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/trim_capabilities_pass.cpp.o
+[704/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/type_manager.cpp.o
+[705/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/types.cpp.o
+[706/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/unify_const_pass.cpp.o
+[707/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/upgrade_memory_model.cpp.o
+[708/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/value_number_table.cpp.o
+[709/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/vector_dce.cpp.o
+[710/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/workaround1209.cpp.o
+[711/969] Building CXX object 3rdparty/SPIRV-Tools/source/opt/CMakeFiles/SPIRV-Tools-opt.dir/wrap_opkill.cpp.o
+[712/969] Building C object 3rdparty/xxHash/build/cmake/CMakeFiles/xxhash.dir/__/__/xxhash.c.o
+[713/969] Linking CXX static library 3rdparty/spdlog/libspdlog.a
+[714/969] Linking CXX static library 3rdparty/tracy/libTracyClient.a
+[715/969] Building CXX object common/CMakeFiles/common.dir/archive.cpp.o
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/archive.cpp:3:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:28: warning: 'codecvt_utf8_utf16<char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |                                   ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/codecvt:573:7: note: 'codecvt_utf8_utf16<char16_t>' has been explicitly marked deprecated here
+  573 | class _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8_utf16 : public __codecvt_utf8_utf16<_Elem> {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/archive.cpp:3:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:7: warning: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |              ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/locale:3078:7: note: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' has been explicitly marked deprecated here
+ 3078 | class _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from <built-in>:1:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/novaBionic.h:9:
+In file included from /usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/unordered_set:1842:
+In file included from /usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/functional:600:
+In file included from /usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/vector:363:
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/locale:3221:1: warning: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' is deprecated [-Wdeprecated-declarations]
+ 3221 | wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::to_bytes(const _Elem* __frm, const _Elem* __frm_end) {
+      | ^
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:171:17: note: in instantiation of member function 'std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>::to_bytes' requested here
+  171 |         return convert.to_bytes(utf16.data(), utf16.data() + utf16.size());
+      |                        ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/locale:3078:7: note: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' has been explicitly marked deprecated here
+ 3078 | class _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+3 warnings generated.
+[716/969] Building CXX object common/CMakeFiles/common.dir/assert.cpp.o
+[717/969] Building CXX object common/CMakeFiles/common.dir/dateTime.cpp.o
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/dateTime.cpp:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:28: warning: 'codecvt_utf8_utf16<char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |                                   ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/codecvt:573:7: note: 'codecvt_utf8_utf16<char16_t>' has been explicitly marked deprecated here
+  573 | class _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8_utf16 : public __codecvt_utf8_utf16<_Elem> {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/dateTime.cpp:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:7: warning: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |              ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/locale:3078:7: note: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' has been explicitly marked deprecated here
+ 3078 | class _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+2 warnings generated.
+[718/969] Building CXX object common/CMakeFiles/common.dir/debug.cpp.o
+[719/969] Building CXX object common/CMakeFiles/common.dir/emulatorConfig.cpp.o
+[720/969] Building CXX object common/CMakeFiles/common.dir/file.cpp.o
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/file.cpp:9:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:28: warning: 'codecvt_utf8_utf16<char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |                                   ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/codecvt:573:7: note: 'codecvt_utf8_utf16<char16_t>' has been explicitly marked deprecated here
+  573 | class _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8_utf16 : public __codecvt_utf8_utf16<_Elem> {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/file.cpp:9:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:7: warning: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |              ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/locale:3078:7: note: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' has been explicitly marked deprecated here
+ 3078 | class _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+2 warnings generated.
+[721/969] Building CXX object common/CMakeFiles/common.dir/hostException.cpp.o
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/hostException.cpp:220:20: warning: unused variable 'PAGE_FAULT_ERROR_WRITE' [-Wunused-const-variable]
+  220 | constexpr uint64_t PAGE_FAULT_ERROR_WRITE       = 0x02;
+      |                    ^~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/hostException.cpp:221:20: warning: unused variable 'PAGE_FAULT_ERROR_INSTRUCTION' [-Wunused-const-variable]
+  221 | constexpr uint64_t PAGE_FAULT_ERROR_INSTRUCTION = 0x10;
+      |                    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2 warnings generated.
+[722/969] Building CXX object common/CMakeFiles/common.dir/logging/log.cpp.o
+[723/969] Building CXX object common/CMakeFiles/common.dir/platform/sysLinuxDbg.cpp.o
+[724/969] Building CXX object common/CMakeFiles/common.dir/platform/sysLinuxFileIO.cpp.o
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/platform/sysLinuxFileIO.cpp:10:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:28: warning: 'codecvt_utf8_utf16<char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |                                   ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/codecvt:573:7: note: 'codecvt_utf8_utf16<char16_t>' has been explicitly marked deprecated here
+  573 | class _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8_utf16 : public __codecvt_utf8_utf16<_Elem> {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/platform/sysLinuxFileIO.cpp:10:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:7: warning: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |              ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/locale:3078:7: note: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' has been explicitly marked deprecated here
+ 3078 | class _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+2 warnings generated.
+[725/969] Building CXX object common/CMakeFiles/common.dir/platform/sysLinuxVirtual.cpp.o
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/platform/sysLinuxVirtual.cpp:264:13: warning: unused function 'is_mapped' [-Wunused-function]
+  264 | static bool is_mapped(void* ptr, size_t length) {
+      |             ^~~~~~~~~
+1 warning generated.
+[726/969] Building CXX object common/CMakeFiles/common.dir/platform/sysWindowsDbg.cpp.o
+[727/969] Building CXX object common/CMakeFiles/common.dir/platform/sysWindowsFileIO.cpp.o
+[728/969] Building CXX object common/CMakeFiles/common.dir/platform/sysWindowsVirtual.cpp.o
+[729/969] Building CXX object common/CMakeFiles/common.dir/profiler.cpp.o
+[730/969] Building CXX object common/CMakeFiles/common.dir/subsystems.cpp.o
+[731/969] Building CXX object common/CMakeFiles/common.dir/systemInfo.cpp.o
+[732/969] Building CXX object common/CMakeFiles/common.dir/threads.cpp.o
+[733/969] Building CXX object common/CMakeFiles/common.dir/timer.cpp.o
+[734/969] Building CXX object common/CMakeFiles/common.dir/trophies.cpp.o
+[735/969] Building CXX object adrenotools/lib/linkernsbypass/CMakeFiles/linkernsbypass.dir/android_linker_ns.cpp.o
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/adrenotools/lib/linkernsbypass/android_linker_ns.cpp:68:5: warning: missing field 'reserved_addr' initializer [-Wmissing-designated-field-initializers]
+   68 |     };
+      |     ^
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/adrenotools/lib/linkernsbypass/android_linker_ns.cpp:116:5: warning: missing field 'reserved_addr' initializer [-Wmissing-designated-field-initializers]
+  116 |     };
+      |     ^
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/adrenotools/lib/linkernsbypass/android_linker_ns.cpp:106:5: warning: 'snprintf' will always be truncated; specified size is 3, but format string expands to at least 4 [-Wformat-truncation]
+  106 |     snprintf(sonameOverwrite.data(), sonameOverwrite.size(), "%03u", TargetId++);
+      |     ^
+3 warnings generated.
+[736/969] Building CXX object adrenotools/lib/linkernsbypass/CMakeFiles/linkernsbypass.dir/elf_soname_patcher.cpp.o
+[737/969] Linking CXX static library 3rdparty/libimgui.a
+[738/969] Linking C static library 3rdparty/libLibAtrac9.a
+[739/969] Linking C static library _deps/opus-build/libopus.a
+[740/969] Linking C static library _deps/zydis-build/libZydis.a
+[741/969] Linking CXX shared library 3rdparty/SDL3/libSDL3.so
+[742/969] Linking CXX static library 3rdparty/SPIRV-Tools/source/opt/libSPIRV-Tools-opt.a
+[743/969] Linking C static library 3rdparty/xxHash/build/cmake/libxxhash.a
+[744/969] Linking CXX static library common/libcommon.a
+[745/969] Linking CXX static library adrenotools/lib/linkernsbypass/liblinkernsbypass.a
+[746/969] Building CXX object adrenotools/src/hook/CMakeFiles/hook_impl.dir/hook_impl.cpp.o
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/adrenotools/src/hook/hook_impl.cpp:151:13: warning: missing field 'reserved_addr' initializer [-Wmissing-designated-field-initializers]
+  151 |             };
+      |             ^
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/adrenotools/src/hook/hook_impl.cpp:211:9: warning: missing field 'id' initializer [-Wmissing-designated-field-initializers]
+  211 |         };
+      |         ^
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/adrenotools/src/hook/hook_impl.cpp:220:9: warning: missing field 'flags' initializer [-Wmissing-designated-field-initializers]
+  220 |         };
+      |         ^
+3 warnings generated.
+[747/969] Generating gpu_tiler_shaders/fault_buffer_process_spv.h
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/shaders/fault_buffer_process.comp
+[748/969] Generating gpu_tiler_shaders/gpu_tiler_standard256_spv.h
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/shaders/gpu_tiler_standard256.comp
+[749/969] Generating gpu_tiler_shaders/gpu_tiler_standard4_spv.h
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/shaders/gpu_tiler_standard4.comp
+[750/969] Generating gpu_tiler_shaders/gpu_tiler_standard4_3d_spv.h
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/shaders/gpu_tiler_standard4_3d.comp
+[751/969] Generating gpu_tiler_shaders/gpu_tiler_standard64_spv.h
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/shaders/gpu_tiler_standard64.comp
+[752/969] Generating gpu_tiler_shaders/gpu_tiler_standard64_3d_spv.h
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/shaders/gpu_tiler_standard64_3d.comp
+[753/969] Generating gpu_tiler_shaders/gpu_tiler_prt_spv.h
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/shaders/gpu_tiler_prt.comp
+[754/969] Generating gpu_tiler_shaders/gpu_tiler_prt_3d_spv.h
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/shaders/gpu_tiler_prt_3d.comp
+[755/969] Generating gpu_tiler_shaders/gpu_tiler_render_target_spv.h
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/shaders/gpu_tiler_render_target.comp
+[756/969] Generating gpu_tiler_shaders/gpu_tiler_depth_spv.h
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/shaders/gpu_tiler_depth.comp
+[757/969] Generating gpu_tiler_shaders/gpu_tiler_promote_d16_spv.h
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/shaders/gpu_tiler_promote_d16.comp
+[758/969] Generating gpu_tiler_shaders/gpu_tiler_demote_d16_spv.h
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/shaders/gpu_tiler_demote_d16.comp
+[759/969] Generating gpu_tiler_shaders/gpu_tiler_color_transform_spv.h
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/shaders/gpu_tiler_color_transform.comp
+[760/969] Generating gpu_blit_shaders/gpu_blit_fs_triangle_spv.h
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/shaders/gpu_blit_fs_triangle.vert
+[761/969] Generating gpu_blit_shaders/gpu_blit_color_to_ms_depth_spv.h
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/shaders/gpu_blit_color_to_ms_depth.frag
+[762/969] Generating gpu_blit_shaders/gpu_video_out_overlay_spv.h
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/shaders/gpu_video_out_overlay.frag
+[763/969] Generating gpu_blit_shaders/gpu_imgui_hdr_spv.h
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/shaders/gpu_video_out_overlay.frag
+[764/969] cd /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/build-kyty-android && /usr/local/bin/cmake -E make_directory /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/build-kyty-android/assets/sounds && /usr/local/bin/cmake -E copy_if_different /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/assets/sounds/trophy-unlock.wav /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/build-kyty-android/assets/sounds/trophy-unlock.wav
+[765/969] Building CXX object adrenotools/CMakeFiles/adrenotools.dir/src/bcenabler.cpp.o
+[766/969] Building CXX object adrenotools/CMakeFiles/adrenotools.dir/src/driver.cpp.o
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/adrenotools/src/driver.cpp:109:5: warning: missing field 'id' initializer [-Wmissing-designated-field-initializers]
+  109 |     };
+      |     ^
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/adrenotools/src/driver.cpp:145:5: warning: missing field 'va_len' initializer [-Wmissing-designated-field-initializers]
+  145 |     };
+      |     ^
+2 warnings generated.
+[767/969] Linking CXX shared library adrenotools/src/hook/libhook_impl.so
+[768/969] Building C object adrenotools/src/hook/CMakeFiles/main_hook.dir/main_hook.c.o
+[769/969] Building C object adrenotools/src/hook/CMakeFiles/file_redirect_hook.dir/file_redirect_hook.c.o
+[770/969] Building C object adrenotools/src/hook/CMakeFiles/gsl_alloc_hook.dir/gsl_alloc_hook.c.o
+[771/969] Building CXX object CMakeFiles/kyty_emulator.dir/src/main.cpp.o
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/main.cpp:6:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:28: warning: 'codecvt_utf8_utf16<char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |                                   ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/codecvt:573:7: note: 'codecvt_utf8_utf16<char16_t>' has been explicitly marked deprecated here
+  573 | class _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8_utf16 : public __codecvt_utf8_utf16<_Elem> {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/main.cpp:6:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:7: warning: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |              ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/locale:3078:7: note: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' has been explicitly marked deprecated here
+ 3078 | class _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+2 warnings generated.
+[772/969] Building CXX object CMakeFiles/kyty_emulator.dir/src/novaAndroid.cpp.o
+[773/969] Building CXX object CMakeFiles/kyty_emulator.dir/src/graphics/guest_gpu/command_processor/pm4Dispatch.cpp.o
+[774/969] Building CXX object CMakeFiles/kyty_emulator.dir/src/graphics/guest_gpu/command_processor/pm4Handlers.cpp.o
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/guest_gpu/command_processor/pm4Handlers.cpp:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:28: warning: 'codecvt_utf8_utf16<char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |                                   ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/codecvt:573:7: note: 'codecvt_utf8_utf16<char16_t>' has been explicitly marked deprecated here
+  573 | class _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8_utf16 : public __codecvt_utf8_utf16<_Elem> {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/guest_gpu/command_processor/pm4Handlers.cpp:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:7: warning: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |              ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/locale:3078:7: note: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' has been explicitly marked deprecated here
+ 3078 | class _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/guest_gpu/command_processor/pm4Handlers.cpp:1508:1: warning: non-void function does not return a value in all control paths [-Wreturn-type]
+ 1508 | }
+      | ^
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/guest_gpu/command_processor/pm4Handlers.cpp:1524:1: warning: non-void function does not return a value in all control paths [-Wreturn-type]
+ 1524 | }
+      | ^
+4 warnings generated.
+[775/969] Building CXX object CMakeFiles/kyty_emulator.dir/src/graphics/guest_gpu/gpu_format.cpp.o
+[776/969] Building CXX object CMakeFiles/kyty_emulator.dir/src/graphics/guest_gpu/graphicsRun.cpp.o
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/guest_gpu/graphicsRun.cpp:7:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/guest_gpu/graphicsRun.h:8:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/guest_gpu/command_processor/commandProcessor.h:6:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/render.h:7:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/pipeline/descriptors.h:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/shader/recompiler/ir/ShaderIR.h:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:28: warning: 'codecvt_utf8_utf16<char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |                                   ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/codecvt:573:7: note: 'codecvt_utf8_utf16<char16_t>' has been explicitly marked deprecated here
+  573 | class _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8_utf16 : public __codecvt_utf8_utf16<_Elem> {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/guest_gpu/graphicsRun.cpp:7:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/guest_gpu/graphicsRun.h:8:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/guest_gpu/command_processor/commandProcessor.h:6:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/render.h:7:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/pipeline/descriptors.h:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/shader/recompiler/ir/ShaderIR.h:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:7: warning: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |              ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/locale:3078:7: note: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' has been explicitly marked deprecated here
+ 3078 | class _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+2 warnings generated.
+[777/969] Building CXX object CMakeFiles/kyty_emulator.dir/src/graphics/guest_gpu/pm4.cpp.o
+[778/969] Building CXX object CMakeFiles/kyty_emulator.dir/src/graphics/guest_gpu/tile.cpp.o
+[779/969] Building CXX object CMakeFiles/kyty_emulator.dir/src/graphics/host_gpu/hostMemory.cpp.o
+[780/969] Building CXX object CMakeFiles/kyty_emulator.dir/src/graphics/host_gpu/memoryTracker.cpp.o
+[781/969] Building CXX object CMakeFiles/kyty_emulator.dir/src/graphics/host_gpu/pageManager.cpp.o
+[782/969] Building CXX object CMakeFiles/kyty_emulator.dir/src/graphics/host_gpu/renderer/cache/bufferCache.cpp.o
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/cache/bufferCache.cpp:10:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/guest_gpu/graphicsRun.h:8:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/guest_gpu/command_processor/commandProcessor.h:6:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/render.h:7:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/pipeline/descriptors.h:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/shader/recompiler/ir/ShaderIR.h:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:28: warning: 'codecvt_utf8_utf16<char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |                                   ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/codecvt:573:7: note: 'codecvt_utf8_utf16<char16_t>' has been explicitly marked deprecated here
+  573 | class _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8_utf16 : public __codecvt_utf8_utf16<_Elem> {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/cache/bufferCache.cpp:10:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/guest_gpu/graphicsRun.h:8:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/guest_gpu/command_processor/commandProcessor.h:6:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/render.h:7:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/pipeline/descriptors.h:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/shader/recompiler/ir/ShaderIR.h:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:7: warning: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |              ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/locale:3078:7: note: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' has been explicitly marked deprecated here
+ 3078 | class _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+2 warnings generated.
+[783/969] Building CXX object CMakeFiles/kyty_emulator.dir/src/graphics/host_gpu/renderer/cache/faultManager.cpp.o
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/cache/faultManager.cpp:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/commandScheduler.h:8:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/render.h:7:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/pipeline/descriptors.h:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/shader/recompiler/ir/ShaderIR.h:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:28: warning: 'codecvt_utf8_utf16<char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |                                   ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/codecvt:573:7: note: 'codecvt_utf8_utf16<char16_t>' has been explicitly marked deprecated here
+  573 | class _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8_utf16 : public __codecvt_utf8_utf16<_Elem> {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/cache/faultManager.cpp:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/commandScheduler.h:8:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/render.h:7:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/pipeline/descriptors.h:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/shader/recompiler/ir/ShaderIR.h:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:7: warning: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |              ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/locale:3078:7: note: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' has been explicitly marked deprecated here
+ 3078 | class _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+2 warnings generated.
+[784/969] Building CXX object CMakeFiles/kyty_emulator.dir/src/graphics/host_gpu/renderer/cache/samplerCache.cpp.o
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/cache/samplerCache.cpp:6:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/renderContext.h:13:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/commandScheduler.h:8:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/render.h:7:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/pipeline/descriptors.h:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/shader/recompiler/ir/ShaderIR.h:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:28: warning: 'codecvt_utf8_utf16<char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |                                   ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/codecvt:573:7: note: 'codecvt_utf8_utf16<char16_t>' has been explicitly marked deprecated here
+  573 | class _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8_utf16 : public __codecvt_utf8_utf16<_Elem> {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/cache/samplerCache.cpp:6:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/renderContext.h:13:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/commandScheduler.h:8:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/render.h:7:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/pipeline/descriptors.h:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/shader/recompiler/ir/ShaderIR.h:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:7: warning: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |              ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/locale:3078:7: note: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' has been explicitly marked deprecated here
+ 3078 | class _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+2 warnings generated.
+[785/969] Building CXX object CMakeFiles/kyty_emulator.dir/src/graphics/host_gpu/renderer/cache/streamBuffer.cpp.o
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/cache/streamBuffer.cpp:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/commandScheduler.h:8:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/render.h:7:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/pipeline/descriptors.h:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/shader/recompiler/ir/ShaderIR.h:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:28: warning: 'codecvt_utf8_utf16<char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |                                   ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/codecvt:573:7: note: 'codecvt_utf8_utf16<char16_t>' has been explicitly marked deprecated here
+  573 | class _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8_utf16 : public __codecvt_utf8_utf16<_Elem> {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/cache/streamBuffer.cpp:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/commandScheduler.h:8:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/render.h:7:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/pipeline/descriptors.h:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/shader/recompiler/ir/ShaderIR.h:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:7: warning: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |              ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/locale:3078:7: note: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' has been explicitly marked deprecated here
+ 3078 | class _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+2 warnings generated.
+[786/969] Building CXX object CMakeFiles/kyty_emulator.dir/src/graphics/host_gpu/renderer/cache/textureCache.cpp.o
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/cache/textureCache.cpp:12:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/commandScheduler.h:8:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/render.h:7:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/pipeline/descriptors.h:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/shader/recompiler/ir/ShaderIR.h:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:28: warning: 'codecvt_utf8_utf16<char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |                                   ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/codecvt:573:7: note: 'codecvt_utf8_utf16<char16_t>' has been explicitly marked deprecated here
+  573 | class _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8_utf16 : public __codecvt_utf8_utf16<_Elem> {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/cache/textureCache.cpp:12:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/commandScheduler.h:8:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/render.h:7:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/pipeline/descriptors.h:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/shader/recompiler/ir/ShaderIR.h:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:7: warning: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |              ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/locale:3078:7: note: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' has been explicitly marked deprecated here
+ 3078 | class _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/cache/textureCache.cpp:13:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/image/imageView.h:50:1: warning: function declared 'noreturn' should not return [-Winvalid-noreturn]
+   50 | }
+      | ^
+3 warnings generated.
+[787/969] Building CXX object CMakeFiles/kyty_emulator.dir/src/graphics/host_gpu/renderer/colorRenderTarget.cpp.o
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/colorRenderTarget.cpp:13:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/render.h:7:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/pipeline/descriptors.h:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/shader/recompiler/ir/ShaderIR.h:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:28: warning: 'codecvt_utf8_utf16<char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |                                   ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/codecvt:573:7: note: 'codecvt_utf8_utf16<char16_t>' has been explicitly marked deprecated here
+  573 | class _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8_utf16 : public __codecvt_utf8_utf16<_Elem> {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/colorRenderTarget.cpp:13:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/render.h:7:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/pipeline/descriptors.h:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/shader/recompiler/ir/ShaderIR.h:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:7: warning: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |              ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/locale:3078:7: note: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' has been explicitly marked deprecated here
+ 3078 | class _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+2 warnings generated.
+[788/969] Building CXX object CMakeFiles/kyty_emulator.dir/src/graphics/host_gpu/renderer/commandScheduler.cpp.o
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/commandScheduler.cpp:2:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/commandScheduler.h:8:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/render.h:7:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/pipeline/descriptors.h:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/shader/recompiler/ir/ShaderIR.h:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:28: warning: 'codecvt_utf8_utf16<char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |                                   ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/codecvt:573:7: note: 'codecvt_utf8_utf16<char16_t>' has been explicitly marked deprecated here
+  573 | class _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8_utf16 : public __codecvt_utf8_utf16<_Elem> {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/commandScheduler.cpp:2:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/commandScheduler.h:8:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/render.h:7:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/pipeline/descriptors.h:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/shader/recompiler/ir/ShaderIR.h:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:7: warning: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |              ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/locale:3078:7: note: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' has been explicitly marked deprecated here
+ 3078 | class _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+2 warnings generated.
+[789/969] Building CXX object CMakeFiles/kyty_emulator.dir/src/graphics/host_gpu/renderer/context.cpp.o
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/context.cpp:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/depthRenderTarget.h:6:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/image/imageView.h:6:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/shader/recompiler/ir/ShaderIR.h:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:28: warning: 'codecvt_utf8_utf16<char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |                                   ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/codecvt:573:7: note: 'codecvt_utf8_utf16<char16_t>' has been explicitly marked deprecated here
+  573 | class _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8_utf16 : public __codecvt_utf8_utf16<_Elem> {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/context.cpp:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/depthRenderTarget.h:6:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/image/imageView.h:6:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/shader/recompiler/ir/ShaderIR.h:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:7: warning: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |              ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/locale:3078:7: note: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' has been explicitly marked deprecated here
+ 3078 | class _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/context.cpp:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/depthRenderTarget.h:6:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/image/imageView.h:50:1: warning: function declared 'noreturn' should not return [-Winvalid-noreturn]
+   50 | }
+      | ^
+3 warnings generated.
+[790/969] Building CXX object CMakeFiles/kyty_emulator.dir/src/graphics/host_gpu/renderer/debug.cpp.o
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/debug.cpp:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/render.h:7:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/pipeline/descriptors.h:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/shader/recompiler/ir/ShaderIR.h:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:28: warning: 'codecvt_utf8_utf16<char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |                                   ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/codecvt:573:7: note: 'codecvt_utf8_utf16<char16_t>' has been explicitly marked deprecated here
+  573 | class _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8_utf16 : public __codecvt_utf8_utf16<_Elem> {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/debug.cpp:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/render.h:7:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/pipeline/descriptors.h:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/shader/recompiler/ir/ShaderIR.h:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:7: warning: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |              ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/locale:3078:7: note: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' has been explicitly marked deprecated here
+ 3078 | class _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+2 warnings generated.
+[791/969] Building CXX object CMakeFiles/kyty_emulator.dir/src/graphics/host_gpu/renderer/depthRenderTarget.cpp.o
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/depthRenderTarget.cpp:1:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/depthRenderTarget.h:6:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/image/imageView.h:6:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/shader/recompiler/ir/ShaderIR.h:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:28: warning: 'codecvt_utf8_utf16<char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |                                   ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/codecvt:573:7: note: 'codecvt_utf8_utf16<char16_t>' has been explicitly marked deprecated here
+  573 | class _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8_utf16 : public __codecvt_utf8_utf16<_Elem> {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/depthRenderTarget.cpp:1:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/depthRenderTarget.h:6:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/image/imageView.h:6:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/shader/recompiler/ir/ShaderIR.h:5:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/common/stringUtils.h:170:7: warning: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' is deprecated [-Wdeprecated-declarations]
+  170 |         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+      |              ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/locale:3078:7: note: 'wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>' has been explicitly marked deprecated here
+ 3078 | class _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+      |       ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:721:41: note: expanded from macro '_LIBCPP_DEPRECATED_IN_CXX17'
+  721 | #    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
+      |                                         ^
+/usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__config:694:49: note: expanded from macro '_LIBCPP_DEPRECATED'
+  694 | #      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+      |                                                 ^
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/depthRenderTarget.cpp:1:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/depthRenderTarget.h:6:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/image/imageView.h:50:1: warning: function declared 'noreturn' should not return [-Winvalid-noreturn]
+   50 | }
+      | ^
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/kyty/src/graphics/host_gpu/renderer/depthRenderTarget.cpp:40:1: warning: function declared 'noreturn' should not return [-Winvalid-noreturn]
+   40 | }
+      | ^
+4 warnings generated.
+[792/969] Building CXX object CMakeFiles/kyty_emulator.dir/src/graphics/host_gpu/renderer/dynamicState.cpp.o
