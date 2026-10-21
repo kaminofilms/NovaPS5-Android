@@ -299,6 +299,8 @@ python3 "$repo/tests/test_0957_deferred_write_faults.py" "$work/kyty"
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_0957_deferred_write_faults.py" "$work/kyty"
 python3 "$repo/tests/test_0957_deadcells_wait.py" "$work/kyty"
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_0957_deadcells_wait.py" "$work/kyty"
+# 0.9.58: guest puts() text in the log (Unreal exit message).
+python3 "$repo/tools/ci/patch-0958-guest-puts.py" "$work/kyty"
 } 2>&1 | tee "$out/logs/regression-050.txt"
 
 
