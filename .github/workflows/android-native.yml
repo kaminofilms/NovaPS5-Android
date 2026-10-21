@@ -1,5 +1,5 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# NovaPS5 0.9.53 / 107: native-speed sync for every title (fast labels, relaxed readbacks, 64 KiB fault window).
+# NovaPS5 0.9.54 / 108: Dead Cells freeze fix, periodic submits, readback off, audio queue, resolution for all games.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
@@ -200,14 +200,14 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.53-android-arm64.apk" \
-            --version-name 0.9.53-android --version-code 107 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.54-android-arm64.apk" \
+            --version-name 0.9.54-android --version-code 108 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.53-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.53-android --version-code 107 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.54-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.54-android --version-code 108 | tee dist/apk/verify.txt
       - name: Verify compiled performance features
-        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.53-android-arm64.apk
+        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.54-android-arm64.apk
       - name: Verify packaged mesh driver
-        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.53-android-arm64.apk
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.54-android-arm64.apk
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -224,11 +224,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.9.53-android-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.9.53-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.9.53-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.53 native-speed sync (CI ${GITHUB_SHA::7})" \
-            --notes "Every title now uses KytyPS5/shadPS4-style completion labels (stored when the packet is processed; GPU interrupts still wait for real completion), relaxed GPU readbacks (CPU reads never wait for GPU downloads; CPU writes still preserve GPU data) and a 64 KiB write-fault window (Bloodborne-Android technique). Per-game Graphics options: GPU sync Fast/Accurate, GPU memory readback Relaxed/Precise, Write-fault window. Same package and signing key; installs as an update."
+          tag="v0.9.54-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.54-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.54-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.54 freeze fix, faster readbacks, resolution for all games (CI ${GITHUB_SHA::7})" \
+            --notes "Fixes the Dead Cells freeze (pending GPU interrupts are now submitted when every GPU queue waits), submits GPU work every 1024 draws (stability and CPU/GPU overlap), adds shadPS4-style readback Off as the default (CPU writes no longer wait for GPU downloads), uses an 80 ms normal-mode audio stream (Hollow Knight crackle/muffle), and adds an Internal resolution setting (100/75/67/50/33/25%) for every game. Same package and signing key; installs as an update."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()

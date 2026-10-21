@@ -11,7 +11,10 @@ import android.widget.*;
 final class GraphicsSettings {
     static final String[] MODES = {"Automatic (Mailbox)", "VSync (FIFO)", "Immediate (may tear)"};
     static final String[] SYNC = {"Fast (recommended)", "Accurate (slower; try if a game hangs)"};
-    static final String[] READBACK = {"Relaxed (faster)", "Precise (try if visuals or physics break)"};
+    static final String[] READBACK = {"Off (fastest; shadPS4 default)", "Relaxed (CPU writes keep GPU data)", "Precise (most compatible)"};
+    static final String[] READBACK_MODES = {"off", "relaxed", "precise"};
+    static final String[] SCALES = {"Native (100%)", "75%", "67%", "50%", "33%", "25% (fastest)"};
+    static final int[] SCALE_PCT = {100, 75, 67, 50, 33, 25};
     static final String[] CAPS = {"Inherit existing FPS cap", "30", "40", "60", "90", "120", "Unlimited"};
     static String key(String title, String setting) { return title + ":" + setting; }
     static int value(SharedPreferences p, String title, String name, int fallback) {
@@ -43,14 +46,11 @@ final class GraphicsSettings {
         Switch cache = toggle(a, box, "Disk shader cache (recommended)", value(p,title,"cache",1)!=0);
         Switch gpl = toggle(a, box, "Pipeline libraries when supported", value(p,title,"gpl",1)!=0);
         Spinner sync = choice(a, box, "GPU sync", SYNC, value(p,title,"sync_v53",0));
-        Spinner readback = choice(a, box, "GPU memory readback", READBACK, value(p,title,"readback_v53",0));
+        Spinner readback = choice(a, box, "GPU memory readback", READBACK, value(p,title,"readback_v54",0));
         Switch window = toggle(a, box, "Write-fault window (faster uploads)", value(p,title,"fault_window",1)!=0);
-        final Spinner resolution = "PPSA04703".equals(title) ? choice(a, box,
-            "Internal raster resolution (experimental)",
-            new String[]{"Game default", "1920 × 1080", "1280 × 720", "960 × 540", "640 × 360"},
-            value(p,title,"raster_resolution_v2",0)) : null;
-        TextView unavailable = new TextView(a);
-        unavailable.setText("Ever Forward starts at native resolution after this update. Lower raster resolutions remain experimental. Eligible color/depth passes scale; compute, shadows and unsupported passes stay native."); box.addView(unavailable);
+        final Spinner resolution = choice(a, box, "Internal resolution", SCALES, value(p,title,"raster_scale_v54",0));
+        TextView scaleNote = new TextView(a);
+        scaleNote.setText("Lower values render eligible 16:9 colour/depth passes at a smaller size and are faster. Compute, shadow and unsupported passes stay native. Try Native if the picture breaks."); box.addView(scaleNote);
         ScrollView scroll = new ScrollView(a); scroll.addView(box);
         new AlertDialog.Builder(a).setTitle(title.isEmpty()?"Graphics defaults":"Graphics · "+title).setView(scroll)
             .setPositiveButton("Save",(d,w)->{
@@ -58,13 +58,13 @@ final class GraphicsSettings {
                     .putInt(key(title,"cap"),cap.getSelectedItemPosition()).putInt(key(title,"cache"),cache.isChecked()?1:0)
                     .putInt(key(title,"gpl"),gpl.isChecked()?1:0)
                     .putInt(key(title,"sync_v53"),sync.getSelectedItemPosition())
-                    .putInt(key(title,"readback_v53"),readback.getSelectedItemPosition())
+                    .putInt(key(title,"readback_v54"),readback.getSelectedItemPosition())
                     .putInt(key(title,"fault_window"),window.isChecked()?1:0);
-                if(resolution!=null)e.putInt(key(title,"raster_resolution_v2"),resolution.getSelectedItemPosition());
+                e.putInt(key(title,"raster_scale_v54"),resolution.getSelectedItemPosition());
                 e.apply();
             })
             .setNeutralButton(title.isEmpty()?"Reset defaults":"Use global defaults",(d,w)->{
-                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","sync_v53","readback_v53","fault_window","raster_resolution_v2"})e.remove(key(title,n)); e.apply();
+                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","sync_v53","readback_v54","fault_window","raster_scale_v54"})e.remove(key(title,n)); e.apply();
             }).setNegativeButton("Close",null).show();
     }
     static void apply(Context c, String title) throws android.system.ErrnoException {
@@ -72,13 +72,13 @@ final class GraphicsSettings {
         migrateDeadCellsCap(p,title);
         int mode=value(p,title,"present",0); if(mode<0||mode>2)mode=0;
         int cap=value(p,title,"cap",0); int[] limits={-1,30,40,60,90,120,0};
-        int ri=value(p,title,"raster_resolution_v2",0); int[] heights={0,1080,720,540,360};
-        if(ri<0||ri>=heights.length||!"PPSA04703".equals(title))ri=0;
+        int ri=value(p,title,"raster_scale_v54",0); if(ri<0||ri>=SCALE_PCT.length)ri=0;
         Os.setenv("NOVA_UNITY_RESOLUTION","0",true);
-        Os.setenv("NOVA_INTERNAL_RESOLUTION",Integer.toString(heights[ri]),true);
+        Os.setenv("NOVA_INTERNAL_RESOLUTION","0",true);
+        Os.setenv("NOVA_RASTER_SCALE_PCT",Integer.toString(SCALE_PCT[ri]),true);
         // Capture the default mode too, so a second launch can prove whether a request changed real rendering.
         Os.setenv("NOVA_TRACE_RESOLUTION","PPSA04703".equals(title)?"1":"0",true);
-        BootLog.write(c,"Internal raster resolution: "+(heights[ri]==0?"native":heights[ri]+"p; eligible raster passes"));
+        BootLog.write(c,"Internal resolution: "+SCALE_PCT[ri]+"% of native for eligible 16:9 passes");
         Os.setenv("NOVA_PRESENT_MODE",new String[]{"mailbox","fifo","immediate"}[mode],true);
         boolean cache=value(p,title,"cache",1)!=0, gpl=value(p,title,"gpl",1)!=0;
         Os.setenv("NOVA_SHADER_CACHE",cache?"1":"0",true);
@@ -86,15 +86,20 @@ final class GraphicsSettings {
         Os.setenv("NOVA_PIPELINE_LIBRARIES",gpl?"1":"0",true);
         // 0.9.53: native-speed defaults (KytyPS5/shadPS4-style labels, relaxed readbacks).
         int sync=value(p,title,"sync_v53",0); if(sync<0||sync>1)sync=0;
-        int readback=value(p,title,"readback_v53",0); if(readback<0||readback>1)readback=0;
+        int readback=value(p,title,"readback_v54",0); if(readback<0||readback>2)readback=0;
         boolean window=value(p,title,"fault_window",1)!=0;
         Os.setenv("NOVA_LABEL_MODE",sync==0?"fast":"accurate",true);
-        Os.setenv("NOVA_READBACK_MODE",readback==0?"relaxed":"precise",true);
+        Os.setenv("NOVA_READBACK_MODE",READBACK_MODES[readback],true);
+        // 0.9.54: periodic submits, 80 ms audio queue, normal (not low-latency) AAudio stream.
+        Os.setenv("NOVA_SUBMIT_DRAWS","1024",true);
+        Os.setenv("NOVA_AUDIO_LATENCY_MS","80",true);
+        Os.setenv("NOVA_AUDIO_LOW_LATENCY","0",true);
+        Os.setenv("SDL_ANDROID_LOW_LATENCY_AUDIO","0",true);
         Os.setenv("NOVA_FAULT_WINDOW_KB",window?"64":"0",true);
         // Accurate mode keeps the 0.9.52 GPU-label and ordered-wait paths.
         Os.setenv("NOVA_GPU_LABELS","1",true);
         Os.setenv("NOVA_GPU_ORDERED_WAITS","1",true);
         if(cap>0&&cap<limits.length)Os.setenv("NOVA_FPS_CAP",Integer.toString(limits[cap]),true);
-        BootLog.write(c,"Graphics profile "+title+": present="+mode+" cap="+cap+" shader_cache="+cache+" pipeline_libraries="+gpl+" sync="+(sync==0?"fast":"accurate")+" readback="+(readback==0?"relaxed":"precise")+" fault_window="+window);
+        BootLog.write(c,"Graphics profile "+title+": present="+mode+" cap="+cap+" shader_cache="+cache+" pipeline_libraries="+gpl+" sync="+(sync==0?"fast":"accurate")+" readback="+READBACK_MODES[readback]+" fault_window="+window+" scale="+SCALE_PCT[ri]+"%");
     }
 }

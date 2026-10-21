@@ -276,6 +276,10 @@ ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_ordered_label_w
 python3 "$repo/tools/ci/patch-0953-native-sync.py" "$work/kyty"
 python3 "$repo/tests/test_native_sync.py" "$work/kyty"
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_native_sync.py" "$work/kyty"
+# 0.9.54: idle/periodic submits, readback off, audio queue, per-title internal resolution.
+python3 "$repo/tools/ci/patch-0954-stability-speed.py" "$work/kyty"
+python3 "$repo/tests/test_0954_stability_speed.py" "$work/kyty"
+ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_0954_stability_speed.py" "$work/kyty"
 } 2>&1 | tee "$out/logs/regression-050.txt"
 
 
