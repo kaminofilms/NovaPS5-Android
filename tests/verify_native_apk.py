@@ -100,6 +100,12 @@ with tempfile.TemporaryDirectory() as tmp, zipfile.ZipFile(a.apk) as z:
     check('libnovafex exports only its API', all(s.startswith('_ZN7NovaFex') or s in ('', 'Name')
                                                   for s in exports.get('libnovafex.so', set()) if not s.startswith('Java_')),
           ', '.join(sorted(s for s in exports.get('libnovafex.so', set()) if not s.startswith('_ZN7NovaFex'))[:10]))
+    # 0.9.58: optional frame-generation library (shaders come from the user's Lossless.dll, never bundled).
+    if 'libnovalsfg.so' in names:
+        lsfg = exports.get('libnovalsfg.so', set()) - {'', 'Name'}
+        check('libnovalsfg exports only its C API', lsfg == {'nova_lsfg_init', 'nova_lsfg_create', 'nova_lsfg_present', 'nova_lsfg_destroy'},
+              ', '.join(sorted(lsfg))[:200])
+    check('no Lossless.dll bundled', not any(n.lower().endswith('lossless.dll') for n in z.namelist()))
 print('NOVA_NATIVE_APK:', 'ALL PASS' if not failures else f'{len(failures)} FAILED: ' + ', '.join(failures))
 sys.exit(1 if failures else 0)
 

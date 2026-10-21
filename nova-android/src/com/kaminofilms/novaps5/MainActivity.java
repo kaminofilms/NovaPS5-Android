@@ -17,7 +17,7 @@ import java.util.concurrent.*;
 /** Nova PS5 front end: game library, launching, settings and logs. Games run in GameActivity. */
 public final class MainActivity extends Activity {
     static final String VERSION = "@NOVA_VERSION_NAME@";
-    static final int FOLDER = 10, EXPORT = 12, DRIVER = 13, PACKAGE = 14;
+    static final int FOLDER = 10, EXPORT = 12, DRIVER = 13, PACKAGE = 14, LSFG = 15;
     final ExecutorService io = Executors.newSingleThreadExecutor();
     GameStore store;
     HomeView home;
@@ -178,6 +178,29 @@ public final class MainActivity extends Activity {
             } catch (Exception ignored) {}
             final String file = name;
             busy("Importing GPU driver", () -> "Installed and selected: " + Drivers.importZip(this, uri, file), value -> info("GPU driver", value));
+        } else if (request == LSFG) {
+            busy("Importing Lossless.dll", () -> {
+                File dll = GraphicsSettings.lsfgDll(this);
+                File dir = dll.getParentFile();
+                if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("Cannot create " + dir);
+                File tmp = new File(dir, "Lossless.dll.part");
+                long size = 0;
+                try (java.io.InputStream in = getContentResolver().openInputStream(uri); OutputStream o = new java.io.FileOutputStream(tmp)) {
+                    if (in == null) throw new IOException("The file could not be opened");
+                    byte[] buf = new byte[1 << 16];
+                    for (int n; (n = in.read(buf)) > 0; ) {
+                        size += n;
+                        if (size > 256L << 20) throw new IOException("This file is too large to be Lossless.dll");
+                        o.write(buf, 0, n);
+                    }
+                }
+                byte[] head = new byte[2];
+                try (java.io.FileInputStream in = new java.io.FileInputStream(tmp)) { if (in.read(head) != 2) head[0] = 0; }
+                if (head[0] != 'M' || head[1] != 'Z') { tmp.delete(); throw new IOException("This is not a Windows DLL. Choose Lossless.dll from the Lossless Scaling folder."); }
+                if (!tmp.renameTo(dll)) { tmp.delete(); throw new IOException("Could not save Lossless.dll"); }
+                BootLog.write(this, "Lossless.dll imported (" + size + " bytes)");
+                return "Imported (" + (size / 1024) + " KB). Pick 2x, 3x or 4x under a game's Graphics settings.";
+            }, value -> info("Lossless Scaling", value));
         } else if (request == EXPORT) {
             final String content = exportText;
             busy("Exporting log", () -> {
@@ -371,6 +394,11 @@ public final class MainActivity extends Activity {
         graphics.setText("Graphics defaults");
         graphics.setOnClickListener(v -> GraphicsSettings.show(this, ""));
         box.addView(graphics);
+        Button lsfg = new Button(this);
+        lsfg.setAllCaps(false);
+        lsfg.setText("Lossless Scaling DLL: " + (GraphicsSettings.lsfgDll(this).isFile() ? "imported (tap to replace or remove)" : "not imported"));
+        lsfg.setOnClickListener(v -> lsfgDll());
+        box.addView(lsfg);
         TextView opacityLabel = new TextView(this);
         opacityLabel.setText("Touch controller opacity");
         box.addView(opacityLabel);
@@ -477,6 +505,22 @@ public final class MainActivity extends Activity {
                     startActivityForResult(i, DRIVER);
                 })
                 .setNegativeButton("Close", null).show();
+    }
+
+    /** 0.9.58: the user's own Lossless.dll from Lossless Scaling (Steam). It stays on this device. */
+    void lsfgDll() {
+        File dll = GraphicsSettings.lsfgDll(this);
+        AlertDialog.Builder b = new AlertDialog.Builder(this).setTitle("Lossless Scaling frame generation")
+                .setMessage("Frame generation uses Lossless.dll from your own copy of Lossless Scaling (Steam). Nova does not include it.\n\nOn a PC it is in: Steam\\steamapps\\common\\Lossless Scaling\\Lossless.dll. Copy it to this phone, then choose it here. Then pick 2x, 3x or 4x in a game's Graphics settings.\n\nStatus: " + (dll.isFile() ? "imported (" + (dll.length() / 1024) + " KB)" : "not imported"))
+                .setPositiveButton(dll.isFile() ? "Replace" : "Choose Lossless.dll", (d, w) -> {
+                    Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                    i.addCategory(Intent.CATEGORY_OPENABLE);
+                    i.setType("*/*");
+                    startActivityForResult(i, LSFG);
+                })
+                .setNegativeButton("Close", null);
+        if (dll.isFile()) b.setNeutralButton("Remove", (d, w) -> { dll.delete(); Toast.makeText(this, "Lossless.dll removed", Toast.LENGTH_SHORT).show(); });
+        b.show();
     }
 
     static void deleteTree(File file) {

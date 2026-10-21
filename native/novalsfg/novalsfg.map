@@ -1,0 +1,9 @@
+{
+  global:
+    nova_lsfg_init;
+    nova_lsfg_create;
+    nova_lsfg_present;
+    nova_lsfg_destroy;
+  local:
+    *;
+};

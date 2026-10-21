@@ -301,6 +301,8 @@ python3 "$repo/tests/test_0957_deadcells_wait.py" "$work/kyty"
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_0957_deadcells_wait.py" "$work/kyty"
 # 0.9.58: guest puts() text in the log (Unreal exit message).
 python3 "$repo/tools/ci/patch-0958-guest-puts.py" "$work/kyty"
+python3 "$repo/tools/ci/patch-0958-framegen.py" "$work/kyty"
+python3 "$repo/tests/test_0958_framegen.py" "$work/kyty"
 } 2>&1 | tee "$out/logs/regression-050.txt"
 
 
@@ -397,6 +399,17 @@ cmake -S "$repo/native/pkg" -B "$work/build-novapkg-android" -G Ninja \
     -DANDROID_STL=c++_static -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
 cmake --build "$work/build-novapkg-android" --target novapkg --parallel "${NOVA_BUILD_JOBS:-1}"
 cp "$work/build-novapkg-android/libnovapkg.so" "$out/lib/"
+# 0.9.58: Lossless Scaling frame generation (libnovalsfg.so; shaders come from the user's DLL).
+# Optional: if it does not build, the APK ships without it and frame generation reports "off".
+mkdir -p "$out/source"
+if ANDROID_NDK="$NDK" ANDROID_API="${API:-33}" bash "$repo/tools/ci/build-android-lsfg.sh" "$repo" "$work" "$out" > "$out/logs/lsfg-build.txt" 2>&1; then
+    tail -8 "$out/logs/lsfg-build.txt"
+    "$TC/llvm-strip" --strip-unneeded "$out/lib/libnovalsfg.so"
+    tar --exclude='.git' -czf "$out/source/lsfg-vk-android-corresponding-source.tar.gz" -C "$work" lsfg-vk-android -C "$repo" native/novalsfg
+else
+    echo "NOVA_LSFG: BUILD FAILED, continuing without frame generation"; grep -E "error|Error" "$out/logs/lsfg-build.txt" | head -40
+    rm -f "$out/lib/libnovalsfg.so"
+fi
 mkdir -p "$out/source"
 tar -czf "$out/source/KytyPlus-PKG-corresponding-source.tar.gz" -C "$repo" native/pkg nova-android/src/com/kaminofilms/novaps5/PkgInstaller.java LICENSES/KytyPlus-NOTICE.txt
 ls -la "$out/lib"
