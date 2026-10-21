@@ -66,6 +66,7 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
         addContentView(fps, at);
         showFps(getSharedPreferences("nova", 0).getBoolean("show_fps", true));
         BootLog.write(this, "Game started: " + game);
+        Telemetry.start(this);
     }
 
     private void prepareEnvironment() {

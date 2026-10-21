@@ -284,6 +284,12 @@ ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_0954_stability_
 python3 "$repo/tools/ci/patch-0955-video-1080p.py" "$work/kyty"
 python3 "$repo/tests/test_0955_video_1080p.py" "$work/kyty"
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_0955_video_1080p.py" "$work/kyty"
+# 0.9.56: relaxed readback default, background pipeline compilation, cheaper scaled clears.
+python3 "$repo/tools/ci/patch-0956-readback-relaxed.py" "$work/kyty"
+python3 "$repo/tools/ci/patch-0956-async-pipelines.py" "$work/kyty"
+python3 "$repo/tools/ci/patch-0956-raster-clear.py" "$work/kyty"
+python3 "$repo/tests/test_0956.py" "$work/kyty"
+ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_0956.py" "$work/kyty"
 } 2>&1 | tee "$out/logs/regression-050.txt"
 
 

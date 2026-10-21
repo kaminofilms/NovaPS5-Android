@@ -1,5 +1,5 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# NovaPS5 0.9.55 / 109: report a 1080p display (games stop rendering 4K), direct wait reads, readback telemetry.
+# NovaPS5 0.9.56 / 110: background shader compilation, relaxed readback default, Luna/Meat Boy safe profile, heat/clock telemetry.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
@@ -200,14 +200,14 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.55-android-arm64.apk" \
-            --version-name 0.9.55-android --version-code 109 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.56-android-arm64.apk" \
+            --version-name 0.9.56-android --version-code 110 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.55-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.55-android --version-code 109 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.56-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.56-android --version-code 110 | tee dist/apk/verify.txt
       - name: Verify compiled performance features
-        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.55-android-arm64.apk
+        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.56-android-arm64.apk
       - name: Verify packaged mesh driver
-        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.55-android-arm64.apk
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.56-android-arm64.apk
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -224,11 +224,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.9.55-android-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.9.55-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.9.55-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.55 1080p display report (CI ${GITHUB_SHA::7})" \
-            --notes "Games are now told the display is 1080p (like a PS5 on a 1080p TV) instead of 4K, so titles such as Wonder Boy stop rendering 3840x2160. Graphics > Console video output restores 4K. With readback Off, GPU queue waits read memory directly (shadPS4 behaviour). Readback telemetry is logged for every game. Same package and signing key; installs as an update."
+          tag="v0.9.56-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.56-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.56-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.56 background shaders + safe profile (CI ${GITHUB_SHA::7})" \
+            --notes "New shaders compile on a background thread: draws whose shader is not ready are skipped for a frame instead of freezing the game (Graphics > Background shader compilation). GPU memory readback defaults to Relaxed again; Off could erase GPU-written data when the CPU wrote the same page. Luna Abyss and Super Meat Boy 3D start with their 0.9.52 settings (safe profile). Cleared scaled passes skip a copy. The engine log records FPS, thermal status, battery temperature and GPU/CPU clocks every 5 s. Same package and signing key; installs as an update."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()
