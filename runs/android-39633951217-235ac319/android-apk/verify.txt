@@ -1,0 +1,70 @@
+PASS signed with the Nova test key
+PASS package
+PASS version
+PASS arm64-v8a only
+PASS game activity in its own process
+PASS no non-arm64 libraries
+PASS libSDL3.so present
+PASS libmain.so present
+PASS libnovafex.so present
+PASS libnovapkg.so present
+PASS libnova_anyps5_renderer.so present
+PASS libc++_shared.so present
+PASS class Lcom/kaminofilms/novaps5/GameActivity;
+PASS class Lcom/kaminofilms/novaps5/MainActivity;
+PASS class Lcom/kaminofilms/novaps5/NovaPad;
+PASS class Lcom/kaminofilms/novaps5/PkgInstaller;
+PASS class Lorg/libsdl/app/SDLActivity;
+PASS libSDL3.so is AArch64 ELF
+PASS libSDL3.so dependencies resolvable on Android
+PASS libSDL3.so has no glibc symbol versions
+PASS libSDL3.so 16 KB page aligned
+PASS libc++_shared.so is AArch64 ELF
+PASS libc++_shared.so dependencies resolvable on Android
+PASS libc++_shared.so has no glibc symbol versions
+PASS libc++_shared.so 16 KB page aligned
+PASS libfile_redirect_hook.so is AArch64 ELF
+PASS libfile_redirect_hook.so dependencies resolvable on Android
+PASS libfile_redirect_hook.so has no glibc symbol versions
+PASS libfile_redirect_hook.so 16 KB page aligned
+PASS libgsl_alloc_hook.so is AArch64 ELF
+PASS libgsl_alloc_hook.so dependencies resolvable on Android
+PASS libgsl_alloc_hook.so has no glibc symbol versions
+PASS libgsl_alloc_hook.so 16 KB page aligned
+PASS libhook_impl.so is AArch64 ELF
+PASS libhook_impl.so dependencies resolvable on Android
+PASS libhook_impl.so has no glibc symbol versions
+PASS libhook_impl.so 16 KB page aligned
+PASS libmain.so is AArch64 ELF
+PASS libmain.so dependencies resolvable on Android
+PASS main links the AnyPS5 renderer
+PASS main shares the renderer C++ runtime
+PASS libmain.so has no glibc symbol versions
+PASS libmain.so 16 KB page aligned
+PASS libmain_hook.so is AArch64 ELF
+PASS libmain_hook.so dependencies resolvable on Android
+PASS libmain_hook.so has no glibc symbol versions
+PASS libmain_hook.so 16 KB page aligned
+PASS libnova_anyps5_renderer.so is AArch64 ELF
+PASS libnova_anyps5_renderer.so dependencies resolvable on Android
+PASS libnova_anyps5_renderer.so has no glibc symbol versions
+PASS libnova_anyps5_renderer.so 16 KB page aligned
+PASS libnovafex.so is AArch64 ELF
+PASS libnovafex.so dependencies resolvable on Android
+PASS libnovafex.so has no glibc symbol versions
+PASS libnovafex.so 16 KB page aligned
+PASS libnovapkg.so is AArch64 ELF
+PASS libnovapkg.so dependencies resolvable on Android
+PASS libnovapkg.so has no glibc symbol versions
+PASS libnovapkg.so 16 KB page aligned
+PASS complete AnyPS5 graphics and VideoOut exports
+PASS AnyPS5 compiler internals hidden
+PASS libmain exports the FPS counter entry
+PASS libmain exports SDL_main
+PASS libmain exports the touch controller entry
+PASS libnovapkg exports the installer entry
+PASS libnovapkg hides its private C++ runtime
+PASS libSDL3 exports JNI_OnLoad
+PASS libnovafex exports only its API
+PASS no Lossless.dll bundled
+NOVA_NATIVE_APK: ALL PASS
