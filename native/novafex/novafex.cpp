@@ -624,6 +624,22 @@ void ReportThreadCpu(double span) {
 		                    guest.count(rows[i].tid) ? "(guest)" : "", pct);
 	}
 	std::fprintf(stderr, "%s\n", line);
+	// 0.9.61: a host (non-guest) thread at >= 90% of a core is unexplained work; print its call
+	// stack once (up to 3 different threads per session) so the next log names it.
+	static std::unordered_set<int> dumped;
+	for (size_t i = 0; i < rows.size() && i < 3 && dumped.size() < 3; i++) {
+		const double pct = 100.0 * static_cast<double>(rows[i].ticks) / static_cast<double>(hz) / span;
+		if (pct < 90.0 || guest.count(rows[i].tid) || dumped.count(rows[i].tid)) continue;
+		dumped.insert(rows[i].tid);
+		std::fprintf(stderr, "NOVA_THREAD_CPU: busy host thread %d/%s=%.0f%%, stack follows\n", rows[i].tid, rows[i].name, pct);
+		struct sigaction sa {};
+		sa.sa_sigaction = DumpSelf;
+		sa.sa_flags     = SA_SIGINFO | SA_RESTART;
+		sigemptyset(&sa.sa_mask);
+		sigaction(SIGRTMIN + 6, &sa, nullptr);
+		syscall(SYS_tgkill, getpid(), rows[i].tid, SIGRTMIN + 6);
+		usleep(100000);
+	}
 }
 
 long ReadKb(const char* path, const char* key) {
