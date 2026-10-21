@@ -43,7 +43,7 @@ else
         -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" -DANDROID_ABI=arm64-v8a \
         -DANDROID_PLATFORM=android-$API -DANDROID_STL=c++_static
 fi
-cmake --build "$build" -j"$(nproc)" --target novalsfg
+cmake --build "$build" -j"$(nproc)" --target novalsfg -- -k 0
 cp "$build/libnovalsfg.so" "$out/lib/"
 mkdir -p "$out/licenses"
 cp "$src/LICENSE.md" "$out/licenses/lsfg-vk-MIT.md"

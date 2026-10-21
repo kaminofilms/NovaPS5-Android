@@ -13,6 +13,11 @@ set(CMAKE_C_VISIBILITY_PRESET hidden)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 add_compile_options(-Wno-deprecated-declarations -Wno-unused-template)
 
+# lsfg-vk-android's AHardwareBuffer paths use the Vulkan Android platform types.
+if(ANDROID)
+  add_compile_definitions(VK_USE_PLATFORM_ANDROID_KHR)
+endif()
+
 add_subdirectory(${LSFG_SOURCE}/thirdparty/dxbc dxbc EXCLUDE_FROM_ALL)
 add_subdirectory(${LSFG_SOURCE}/thirdparty/pe-parse/pe-parser-library pe-parse EXCLUDE_FROM_ALL)
 add_subdirectory(${LSFG_SOURCE}/thirdparty/volk volk EXCLUDE_FROM_ALL)
