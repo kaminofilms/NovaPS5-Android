@@ -400,16 +400,14 @@ cmake -S "$repo/native/pkg" -B "$work/build-novapkg-android" -G Ninja \
 cmake --build "$work/build-novapkg-android" --target novapkg --parallel "${NOVA_BUILD_JOBS:-1}"
 cp "$work/build-novapkg-android/libnovapkg.so" "$out/lib/"
 # 0.9.58: Lossless Scaling frame generation (libnovalsfg.so; shaders come from the user's DLL).
-# Optional: if it does not build, the APK ships without it and frame generation reports "off".
 mkdir -p "$out/source"
-if ANDROID_NDK="$NDK" ANDROID_API="${API:-33}" bash "$repo/tools/ci/build-android-lsfg.sh" "$repo" "$work" "$out" > "$out/logs/lsfg-build.txt" 2>&1; then
-    tail -8 "$out/logs/lsfg-build.txt"
-    "$TC/llvm-strip" --strip-unneeded "$out/lib/libnovalsfg.so"
-    tar --exclude='.git' -czf "$out/source/lsfg-vk-android-corresponding-source.tar.gz" -C "$work" lsfg-vk-android -C "$repo" native/novalsfg
-else
-    echo "NOVA_LSFG: BUILD FAILED, continuing without frame generation"; grep -E "error|Error" "$out/logs/lsfg-build.txt" | head -40
-    rm -f "$out/lib/libnovalsfg.so"
+# Required: the build fails (and nothing is released) if frame generation does not build.
+if ! ANDROID_NDK="$NDK" ANDROID_API="${API:-33}" bash "$repo/tools/ci/build-android-lsfg.sh" "$repo" "$work" "$out" > "$out/logs/lsfg-build.txt" 2>&1; then
+    echo "NOVA_LSFG: BUILD FAILED"; grep -E "error|Error|FAILED" "$out/logs/lsfg-build.txt" | head -60; exit 1
 fi
+tail -8 "$out/logs/lsfg-build.txt"
+"$TC/llvm-strip" --strip-unneeded "$out/lib/libnovalsfg.so"
+tar --exclude='.git' -czf "$out/source/lsfg-vk-android-corresponding-source.tar.gz" -C "$work" lsfg-vk-android -C "$repo" native/novalsfg
 mkdir -p "$out/source"
 tar -czf "$out/source/KytyPlus-PKG-corresponding-source.tar.gz" -C "$repo" native/pkg nova-android/src/com/kaminofilms/novaps5/PkgInstaller.java LICENSES/KytyPlus-NOTICE.txt
 ls -la "$out/lib"

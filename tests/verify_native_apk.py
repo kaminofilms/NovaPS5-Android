@@ -57,7 +57,7 @@ with tempfile.TemporaryDirectory() as tmp, zipfile.ZipFile(a.apk) as z:
     libs = [n for n in z.namelist() if n.startswith('lib/')]
     check('no non-arm64 libraries', all(n.startswith('lib/arm64-v8a/') for n in libs), str(libs))
     names = {n.rsplit('/', 1)[1] for n in libs}
-    for need in ['libSDL3.so', 'libmain.so', 'libnovafex.so', 'libnovapkg.so', 'libnova_anyps5_renderer.so', 'libc++_shared.so']:
+    for need in ['libSDL3.so', 'libmain.so', 'libnovafex.so', 'libnovapkg.so', 'libnova_anyps5_renderer.so', 'libc++_shared.so', 'libnovalsfg.so']:
         check(f'{need} present', need in names)
     dex = b''.join(z.read(n) for n in z.namelist() if n.endswith('.dex'))
     for cls in [b'Lcom/kaminofilms/novaps5/GameActivity;', b'Lcom/kaminofilms/novaps5/MainActivity;',
