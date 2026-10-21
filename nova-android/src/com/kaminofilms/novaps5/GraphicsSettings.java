@@ -16,6 +16,9 @@ final class GraphicsSettings {
     static final String[] VIDEO_OUT = {"1080p display (faster, recommended)", "4K display (game may render 4K)"};
     static final String[] SCALES = {"Native (100%)", "75%", "67%", "50%", "33%", "25% (fastest)"};
     static final int[] SCALE_PCT = {100, 75, 67, 50, 33, 25};
+    // 0.9.57: Mesa Turnip TU_DEBUG workarounds for Adreno GPU hangs (no effect on the system driver).
+    static final String[] TURNIP = {"Off", "Disable LRZ (nolrz; try if the GPU hangs)", "System-memory rendering (sysmem)", "Both (nolrz,sysmem)"};
+    static final String[] TURNIP_FLAGS = {"", "nolrz", "sysmem", "nolrz,sysmem"};
     static final String[] CAPS = {"Inherit existing FPS cap", "30", "40", "60", "90", "120", "Unlimited"};
     static String key(String title, String setting) { return title + ":" + setting; }
     static int value(SharedPreferences p, String title, String name, int fallback) {
@@ -69,6 +72,7 @@ final class GraphicsSettings {
         Switch window = toggle(a, box, "Write-fault window (faster uploads)", value56(p,title,"fault_window_v56",1,0)!=0);
         Switch async = toggle(a, box, "Background shader compilation (no shader stutter; objects can pop in briefly)", value56(p,title,"async_v56",1,0)!=0);
         Spinner video = choice(a, box, "Console video output", VIDEO_OUT, value56(p,title,"video_out_v56",0,1));
+        Spinner turnip = choice(a, box, "Turnip driver workaround", TURNIP, value(p,title,"tu_debug_v57",0));
         final Spinner resolution = choice(a, box, "Internal resolution", SCALES, value(p,title,"raster_scale_v54",0));
         TextView scaleNote = new TextView(a);
         scaleNote.setText("Lower values render eligible 16:9 colour/depth passes at a smaller size and are faster. Compute, shadow and unsupported passes stay native. Try Native if the picture breaks."); box.addView(scaleNote);
@@ -84,10 +88,11 @@ final class GraphicsSettings {
                     .putInt(key(title,"async_v56"),async.isChecked()?1:0);
                 e.putInt(key(title,"raster_scale_v54"),resolution.getSelectedItemPosition());
                 e.putInt(key(title,"video_out_v56"),video.getSelectedItemPosition());
+                e.putInt(key(title,"tu_debug_v57"),turnip.getSelectedItemPosition());
                 e.apply();
             })
             .setNeutralButton(title.isEmpty()?"Reset defaults":"Use global defaults",(d,w)->{
-                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","raster_scale_v54","sync_v56","readback_v56","fault_window_v56","video_out_v56","async_v56"})e.remove(key(title,n)); e.apply();
+                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","raster_scale_v54","sync_v56","readback_v56","fault_window_v56","video_out_v56","async_v56","tu_debug_v57"})e.remove(key(title,n)); e.apply();
             }).setNegativeButton("Close",null).show();
     }
     static void apply(Context c, String title) throws android.system.ErrnoException {
@@ -118,6 +123,8 @@ final class GraphicsSettings {
         boolean window=value56(p,title,"fault_window_v56",1,0)!=0;
         boolean async=value56(p,title,"async_v56",1,0)!=0;
         Os.setenv("NOVA_ASYNC_PIPELINES",async?"1":"0",true);
+        int tu=value(p,title,"tu_debug_v57",0); if(tu<0||tu>=TURNIP_FLAGS.length)tu=0;
+        if(tu==0)Os.unsetenv("TU_DEBUG"); else Os.setenv("TU_DEBUG",TURNIP_FLAGS[tu],true);
         Os.setenv("NOVA_LABEL_MODE",sync==0?"fast":"accurate",true);
         Os.setenv("NOVA_READBACK_MODE",READBACK_MODES[readback],true);
         // 0.9.54: periodic submits, 80 ms audio queue, normal (not low-latency) AAudio stream.
@@ -130,6 +137,6 @@ final class GraphicsSettings {
         Os.setenv("NOVA_GPU_LABELS","1",true);
         Os.setenv("NOVA_GPU_ORDERED_WAITS","1",true);
         if(cap>0&&cap<limits.length)Os.setenv("NOVA_FPS_CAP",Integer.toString(limits[cap]),true);
-        BootLog.write(c,"Graphics profile "+title+": present="+mode+" cap="+cap+" shader_cache="+cache+" pipeline_libraries="+gpl+" sync="+(sync==0?"fast":"accurate")+" readback="+READBACK_MODES[readback]+" fault_window="+window+" scale="+SCALE_PCT[ri]+"% video="+(vo==1?"4k":"1080p")+" async_shaders="+async+" safe_profile="+safe);
+        BootLog.write(c,"Graphics profile "+title+": present="+mode+" cap="+cap+" shader_cache="+cache+" pipeline_libraries="+gpl+" sync="+(sync==0?"fast":"accurate")+" readback="+READBACK_MODES[readback]+" fault_window="+window+" scale="+SCALE_PCT[ri]+"% video="+(vo==1?"4k":"1080p")+" async_shaders="+async+" safe_profile="+safe+" tu_debug="+(tu==0?"off":TURNIP_FLAGS[tu]));
     }
 }

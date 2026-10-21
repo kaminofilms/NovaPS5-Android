@@ -65,3 +65,13 @@ Owner logs from 0.9.56 show Dead Cells freezing about 30 s into play every time.
 0.9.56 owner logs: both titles end during memory setup, before any frame, with the safe profile active. `FORTIFY: pthread_mutex_lock called on a destroyed mutex` shows static destructors running, so the process called `exit()`. Kyty's guest `exit` HLE (libkernel `6Z83sYWFlA8`) calls `::exit` without logging, so the crash backtraces in those logs (`Config::HideCursorEnabled`, `Config::GetVblankFrequency`) are other threads touching state that was already destroyed. Neither title calls an EXIT/abort path. The last device evidence of progress is from the 0.9.36 era (Meat Boy gameplay at about 1 FPS, Luna 959 frames), so the regression lies between 0.9.36 and 0.9.53.
 
 `patch-0957-guest-exit-report.py` prints one report before the exit: the code, the guest return address and the stack modules (module+offset), any text on the stack (8-bit or UTF-16), and the thread's last 16 host calls with return values (new NovaFEX `DumpRecentHostCalls`). It then dumps the kernel memory trace. The exit itself is unchanged. Note: the "24 guest slots" pattern in both logs is the log limit of the slot message, not an allocation limit.
+
+## 0.9.57: Ever Forward deferred write faults
+
+`patch-0957-deferred-write-faults.py` (see its header for the full rules). In the 0.9.56 owner log, 978 of 978 write faults per window were `address_disjoint`, and they cost about 3 s of every 5 s in GPU waits. A qualifying fault now records an asynchronous copy of the page's GPU-written ranges and snapshots their guest bytes. It then releases the page without waiting. A later GPU-thread merge writes the GPU value into every byte the CPU has not changed since. While a merge is pending, uploads skip GPU-owned dirty bytes, and every shortcut treats them as GPU-modified.
+
+The path is on by default only for Ever Forward and only with Relaxed readback; `NOVA_DEFERRED_WRITE_FAULTS=1/0` overrides it. `tests/test_0957_deferred_write_faults.py` executes the production upload exclusion and merge (clean merge, CPU-kept bytes, re-dirtied page, pending copy, already-downloaded range, unreadable memory) in normal and ASan/UBSan builds, and checks the structural guards. The log line is `NOVA_DEFERRED_WRITE_FAULTS: deferred=… merged=… cpu_kept=… dropped=… pending=…`.
+
+## 0.9.57: Turnip workaround setting
+
+Graphics > Turnip driver workaround sets `TU_DEBUG` before the driver loads: off, `nolrz`, `sysmem`, or both. It is for GPU hangs and device loss such as Wonder Boy's; the system driver ignores it.

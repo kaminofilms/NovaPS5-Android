@@ -10,7 +10,7 @@ fix against.
 
 Before exiting, print once: exit code, the guest return address and the guest
 modules on the stack (module+offset), any text the stack points to (Unreal
-fatal messages are UTF-16 on PS5), this thread's last 16 host calls with their
+fatal messages are UTF-16 on PS5), the guest RIP, this thread's last 16 host calls (HLE calls) with their
 return values (the failing call, if any), and the kernel memory call trace.
 Behaviour is otherwise unchanged: the process still exits with the guest code.
 """
@@ -47,6 +47,7 @@ void NovaReportGuestExit(const char* who, int code) {
 	if (have) {
 		uint64_t ret = 0;
 		if (Graphics::HostMemoryIsReadable(g.rsp)) NovaGuest::Copy(&ret, reinterpret_cast<const void*>(g.rsp), 8);
+		std::fprintf(stderr, "NOVA_GUEST_EXIT: guest RIP %s\\n", where(g.rip).c_str());
 		std::fprintf(stderr, "NOVA_GUEST_EXIT: return %s rsp=0x%llx rbx=0x%llx rbp=0x%llx r12=0x%llx\\n", where(ret).c_str(),
 		             static_cast<unsigned long long>(g.rsp), static_cast<unsigned long long>(g.rbx),
 		             static_cast<unsigned long long>(g.rbp), static_cast<unsigned long long>(g.r12));

@@ -1,5 +1,5 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# NovaPS5 0.9.57 / 111: Dead Cells freeze fix (restored 0.9.10 WAIT_REG_MEM give-up) on top of 0.9.56.
+# NovaPS5 0.9.57 / 111: Dead Cells freeze fix, Ever Forward deferred write faults, guest exit report, Turnip workaround setting.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
@@ -228,7 +228,7 @@ jobs:
           cd dist/apk && sha256sum NovaPS5-0.9.57-android-arm64.apk > SHA256SUMS.txt
           gh release create "$tag" NovaPS5-0.9.57-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.57 Dead Cells freeze fix (CI ${GITHUB_SHA::7})" \
-            --notes "Dead Cells: restores the GPU-wait give-up it ran with at 50-60 FPS in 0.8.1-0.9.10 (removed in 0.9.14, the cause of the freeze ~30 s into play) and returns it to Fast sync. Includes all of 0.9.56: background shader compilation, Relaxed readback default, Luna/Meat Boy safe profile, heat/clock telemetry. Same package and signing key; installs as an update."
+            --notes "Dead Cells: restores the GPU-wait give-up it ran with at 50-60 FPS in 0.8.1-0.9.10 (the cause of the freeze ~30 s into play) and returns it to Fast sync. Ever Forward: CPU writes next to GPU-written bytes no longer wait for the GPU (deferred merge; Graphics default for this title only). Luna Abyss / Super Meat Boy 3D: when the game quits on its own, the log now shows the exit code, guest RIP and call stack, any error text and the last 16 system calls with results. New Graphics > Turnip driver workaround (off / nolrz / sysmem / both) for GPU hangs. Same package and signing key; installs as an update."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()
