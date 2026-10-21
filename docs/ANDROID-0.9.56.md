@@ -51,3 +51,11 @@ The values come from Android's thermal status and headroom, the battery temperat
 ## Validation
 
 `tests/test_0956.py` runs the production worker under normal, ThreadSanitizer and ASan/UBSan builds. It covers in-order single-thread execution, the skip timeout, the blocking wait for non-skippable draws, and draining on destruction. It also checks the switches, the readback default, the structure of the skip path (no render-target or pipeline work before the skip) and the raster counter. The launcher defaults were checked with a JVM test against stubs.
+
+## 0.9.57: Dead Cells freeze, the real cause
+
+Owner logs from 0.9.56 show Dead Cells freezing about 30 s into play every time. It happens with the system Vulkan driver and with Turnip, and with both Fast and Accurate sync. In each case a GPU queue waits on the 64-bit flag `0x20edb76d0` (equal, ref 1, value 0), which nothing in the emulated system sets.
+
+0.7.3 (`feb5fe7`) let such a wait continue after 2 s, and later waits on a remembered address after 100 ms. Dead Cells ran at 60 FPS on 0.8.1 and 53–57 FPS on 0.9.10 with it. 0.9.14 (`dd48245`) removed that give-up for every title, and the freeze has been there in every build since. The Accurate-sync default from 0.9.56 was based on a wrong theory and is reverted: Dead Cells is back on Fast, its 0.9.10 setting.
+
+`patch-0957-deadcells-wait.py` restores the 0.9.10 logic for Dead Cells only. `NOVA_GPU_WAIT_GIVEUP=1` enables it for any title, and `=0` disables it. `tests/test_0957_deadcells_wait.py` executes the production block (thresholds, the remembered-address table, title gating, overrides) in normal and ASan/UBSan builds.

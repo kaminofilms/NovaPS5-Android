@@ -29,9 +29,9 @@ final class GraphicsSettings {
         if (safe(title)) return safeValue;
         return p.getInt(key("", name), normal);
     }
-    /** Dead Cells: the completion-ordered (Accurate) label path it was fixed on in 0.9.50; Fast
-     *  labels publish before the GPU finishes, which can leave it waiting on a label forever. */
-    static boolean accurateSync(String title) { return safe(title) || "PPSA15552".equals(title); }
+    /** Titles that start with Accurate sync. Dead Cells is back on Fast (its 0.9.10 setting):
+     *  its freeze was the removed WAIT_REG_MEM give-up, restored natively in 0.9.57. */
+    static boolean accurateSync(String title) { return safe(title); }
     static int syncValue(SharedPreferences p, String title) {
         if (p.contains(key(title, "sync_v56"))) return p.getInt(key(title, "sync_v56"), 0);
         if (accurateSync(title)) return 1;
