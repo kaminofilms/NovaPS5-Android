@@ -10,6 +10,8 @@ import android.widget.*;
 /** Launch-time renderer controls. Overrides are keyed by metadata title ID. */
 final class GraphicsSettings {
     static final String[] MODES = {"Automatic (Mailbox)", "VSync (FIFO)", "Immediate (may tear)"};
+    static final String[] SYNC = {"Fast (recommended)", "Accurate (slower; try if a game hangs)"};
+    static final String[] READBACK = {"Relaxed (faster)", "Precise (try if visuals or physics break)"};
     static final String[] CAPS = {"Inherit existing FPS cap", "30", "40", "60", "90", "120", "Unlimited"};
     static String key(String title, String setting) { return title + ":" + setting; }
     static int value(SharedPreferences p, String title, String name, int fallback) {
@@ -40,8 +42,9 @@ final class GraphicsSettings {
         Spinner cap = choice(a, box, "Presentation FPS cap", CAPS, value(p,title,"cap",0));
         Switch cache = toggle(a, box, "Disk shader cache (recommended)", value(p,title,"cache",1)!=0);
         Switch gpl = toggle(a, box, "Pipeline libraries when supported", value(p,title,"gpl",1)!=0);
-        Switch labels = toggle(a, box, "Fast GPU completion (recommended; turn off if a game hangs or flickers)", value(p,title,"gpu_labels",1)!=0);
-        Switch ordered = toggle(a, box, "Ordered GPU waits (faster queues; turn off if visuals glitch)", value(p,title,"gpu_ordered",1)!=0);
+        Spinner sync = choice(a, box, "GPU sync", SYNC, value(p,title,"sync_v53",0));
+        Spinner readback = choice(a, box, "GPU memory readback", READBACK, value(p,title,"readback_v53",0));
+        Switch window = toggle(a, box, "Write-fault window (faster uploads)", value(p,title,"fault_window",1)!=0);
         final Spinner resolution = "PPSA04703".equals(title) ? choice(a, box,
             "Internal raster resolution (experimental)",
             new String[]{"Game default", "1920 × 1080", "1280 × 720", "960 × 540", "640 × 360"},
@@ -54,13 +57,14 @@ final class GraphicsSettings {
                 SharedPreferences.Editor e=p.edit().putInt(key(title,"present"),mode.getSelectedItemPosition())
                     .putInt(key(title,"cap"),cap.getSelectedItemPosition()).putInt(key(title,"cache"),cache.isChecked()?1:0)
                     .putInt(key(title,"gpl"),gpl.isChecked()?1:0)
-                    .putInt(key(title,"gpu_labels"),labels.isChecked()?1:0)
-                    .putInt(key(title,"gpu_ordered"),ordered.isChecked()?1:0);
+                    .putInt(key(title,"sync_v53"),sync.getSelectedItemPosition())
+                    .putInt(key(title,"readback_v53"),readback.getSelectedItemPosition())
+                    .putInt(key(title,"fault_window"),window.isChecked()?1:0);
                 if(resolution!=null)e.putInt(key(title,"raster_resolution_v2"),resolution.getSelectedItemPosition());
                 e.apply();
             })
             .setNeutralButton(title.isEmpty()?"Reset defaults":"Use global defaults",(d,w)->{
-                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","gpu_labels","gpu_ordered","raster_resolution_v2"})e.remove(key(title,n)); e.apply();
+                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","sync_v53","readback_v53","fault_window","raster_resolution_v2"})e.remove(key(title,n)); e.apply();
             }).setNegativeButton("Close",null).show();
     }
     static void apply(Context c, String title) throws android.system.ErrnoException {
@@ -80,11 +84,17 @@ final class GraphicsSettings {
         Os.setenv("NOVA_SHADER_CACHE",cache?"1":"0",true);
         Os.setenv("MESA_SHADER_CACHE_DISABLE",cache?"false":"true",true);
         Os.setenv("NOVA_PIPELINE_LIBRARIES",gpl?"1":"0",true);
-        boolean labels=value(p,title,"gpu_labels",1)!=0;
-        Os.setenv("NOVA_GPU_LABELS",labels?"1":"0",true);
-        boolean ordered=value(p,title,"gpu_ordered",1)!=0;
-        Os.setenv("NOVA_GPU_ORDERED_WAITS",ordered?"1":"0",true);
+        // 0.9.53: native-speed defaults (KytyPS5/shadPS4-style labels, relaxed readbacks).
+        int sync=value(p,title,"sync_v53",0); if(sync<0||sync>1)sync=0;
+        int readback=value(p,title,"readback_v53",0); if(readback<0||readback>1)readback=0;
+        boolean window=value(p,title,"fault_window",1)!=0;
+        Os.setenv("NOVA_LABEL_MODE",sync==0?"fast":"accurate",true);
+        Os.setenv("NOVA_READBACK_MODE",readback==0?"relaxed":"precise",true);
+        Os.setenv("NOVA_FAULT_WINDOW_KB",window?"64":"0",true);
+        // Accurate mode keeps the 0.9.52 GPU-label and ordered-wait paths.
+        Os.setenv("NOVA_GPU_LABELS","1",true);
+        Os.setenv("NOVA_GPU_ORDERED_WAITS","1",true);
         if(cap>0&&cap<limits.length)Os.setenv("NOVA_FPS_CAP",Integer.toString(limits[cap]),true);
-        BootLog.write(c,"Graphics profile "+title+": present="+mode+" cap="+cap+" shader_cache="+cache+" pipeline_libraries="+gpl+" gpu_labels="+labels+" ordered_waits="+ordered);
+        BootLog.write(c,"Graphics profile "+title+": present="+mode+" cap="+cap+" shader_cache="+cache+" pipeline_libraries="+gpl+" sync="+(sync==0?"fast":"accurate")+" readback="+(readback==0?"relaxed":"precise")+" fault_window="+window);
     }
 }

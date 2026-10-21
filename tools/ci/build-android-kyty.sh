@@ -272,6 +272,10 @@ NOVA_CACHE_TITLE_ID=PPSA27841 python3 "$repo/tests/test_ever_label_poll_vulkan.p
 python3 "$repo/tools/ci/patch-ordered-label-waits.py" "$work/kyty"
 python3 "$repo/tests/test_ordered_label_waits.py" "$work/kyty"
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_ordered_label_waits.py" "$work/kyty"
+# 0.9.53: native-speed sync for every title (fast labels, relaxed readbacks, 64 KiB fault window).
+python3 "$repo/tools/ci/patch-0953-native-sync.py" "$work/kyty"
+python3 "$repo/tests/test_native_sync.py" "$work/kyty"
+ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_native_sync.py" "$work/kyty"
 } 2>&1 | tee "$out/logs/regression-050.txt"
 
 
