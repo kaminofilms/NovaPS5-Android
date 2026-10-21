@@ -1,5 +1,5 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# NovaPS5 0.9.59 / 113 (0.9.58 + frame-generation library build fix): Lossless Scaling frame generation (user-supplied Lossless.dll), guest puts() echo.
+# NovaPS5 0.9.60 / 114: GPU-time, per-thread CPU and pass-break diagnostics (log only) on top of 0.9.59.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
@@ -201,14 +201,14 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.59-android-arm64.apk" \
-            --version-name 0.9.59-android --version-code 113 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.60-android-arm64.apk" \
+            --version-name 0.9.60-android --version-code 114 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.59-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.59-android --version-code 113 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.60-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.60-android --version-code 114 | tee dist/apk/verify.txt
       - name: Verify compiled performance features
-        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.59-android-arm64.apk
+        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.60-android-arm64.apk
       - name: Verify packaged mesh driver
-        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.59-android-arm64.apk
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.60-android-arm64.apk
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -225,11 +225,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.9.59-android-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.9.59-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.9.59-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.59 Lossless Scaling frame generation (CI ${GITHUB_SHA::7})" \
-            --notes "New: Lossless Scaling frame generation (2x/3x/4x) using your own Lossless.dll from Lossless Scaling on Steam; Nova does not include it. Import it in Settings > Lossless Scaling DLL, then pick a multiplier, flow scale and performance mode in a game's Graphics settings. Presentation switches to VSync while it is on; if the driver or DLL is not usable the log says why and the game runs normally. Frame generation is based on lsfg-vk 1.0.0 and lsfg-vk-android (MIT). Luna Abyss / Super Meat Boy 3D: the text the game prints before it quits now appears in the log (NOVA_GUEST_PUTS). Same package and signing key; installs as an update."
+          tag="v0.9.60-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.60-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.60-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.60 performance diagnostics (CI ${GITHUB_SHA::7})" \
+            --notes "Same as 0.9.59 (Lossless Scaling frame generation with your own Lossless.dll) plus three log measurements for frame-rate work: NOVA_GPU_TIME (real GPU busy time from GPU timestamps), NOVA_THREAD_CPU (CPU use of every emulator thread) and NOVA_PASS_BREAK (what ends each GPU render pass). No rendering change. Same package and signing key; installs as an update."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()

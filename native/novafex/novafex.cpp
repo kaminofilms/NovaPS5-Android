@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cerrno>
+#include <cstdlib>
 #include <cstdio>
 #include <cstring>
 #include <FEXCore/Core/NovaGuestVA.h>
@@ -568,6 +569,63 @@ void ReportGuestThreads() {
 	}
 }
 
+// Nova 0.9.60: CPU time of each thread over the report window (top 12), so a log shows
+// whether the GPU thread, a guest thread or the GPU itself limits the frame rate.
+// "guest" marks threads that run x86 code under NovaFEX.
+void ReportThreadCpu(double span) {
+	static std::unordered_map<int, uint64_t> last;
+	static const long hz = sysconf(_SC_CLK_TCK) > 0 ? sysconf(_SC_CLK_TCK) : 100;
+	std::unordered_set<int> guest;
+	{
+		std::lock_guard lock(g_threads_mutex);
+		for (auto* t: g_threads) guest.insert(t->tid);
+	}
+	struct Row { int tid; uint64_t ticks; char name[32]; };
+	std::vector<Row> rows;
+	std::unordered_map<int, uint64_t> now;
+	DIR* dir = opendir("/proc/self/task");
+	if (dir == nullptr) return;
+	while (auto* e = readdir(dir)) {
+		const int tid = std::atoi(e->d_name);
+		if (tid <= 0) continue;
+		char path[64], buf[512];
+		std::snprintf(path, sizeof(path), "/proc/self/task/%d/stat", tid);
+		FILE* f = std::fopen(path, "r");
+		if (f == nullptr) continue;
+		const size_t n = std::fread(buf, 1, sizeof(buf) - 1, f);
+		std::fclose(f);
+		buf[n] = 0;
+		// Fields after the ")" that closes comm: state is field 3, utime 14, stime 15.
+		const char* close = std::strrchr(buf, ')');
+		if (close == nullptr) continue;
+		unsigned long long utime = 0, stime = 0;
+		if (std::sscanf(close + 2, "%*c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u %llu %llu", &utime, &stime) != 2) continue;
+		const uint64_t ticks = utime + stime;
+		now[tid] = ticks;
+		const auto it = last.find(tid);
+		const uint64_t before = it == last.end() ? ticks : it->second;
+		if (ticks <= before) continue;
+		Row row {tid, ticks - before, {}};
+		std::snprintf(path, sizeof(path), "/proc/self/task/%d/comm", tid);
+		ReadSmall(path, row.name, sizeof(row.name));
+		for (char& c: row.name) if (c == '\n') c = 0;
+		rows.push_back(row);
+	}
+	closedir(dir);
+	const bool first = last.empty();
+	last = std::move(now);
+	if (first || span <= 0) return;
+	std::sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.ticks > b.ticks; });
+	char line[1400];
+	int at = std::snprintf(line, sizeof(line), "NOVA_THREAD_CPU: window_s=%.1f busy%% of one core:", span);
+	for (size_t i = 0; i < rows.size() && i < 12 && at < static_cast<int>(sizeof(line)) - 64; i++) {
+		const double pct = 100.0 * static_cast<double>(rows[i].ticks) / static_cast<double>(hz) / span;
+		at += std::snprintf(line + at, sizeof(line) - at, " %d/%s%s=%.0f", rows[i].tid, rows[i].name,
+		                    guest.count(rows[i].tid) ? "(guest)" : "", pct);
+	}
+	std::fprintf(stderr, "%s\n", line);
+}
+
 long ReadKb(const char* path, const char* key) {
 	long value = -1;
 	if (FILE* f = std::fopen(path, "r")) {
@@ -685,6 +743,7 @@ void Watchdog() {
 				}
 				process_ns = next_ns;
 				process_valid = true;
+				ReportThreadCpu(span);
 			} else {
 				process_valid = false;
 			}

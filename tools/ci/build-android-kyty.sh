@@ -303,6 +303,8 @@ ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_0957_deadcells_
 python3 "$repo/tools/ci/patch-0958-guest-puts.py" "$work/kyty"
 python3 "$repo/tools/ci/patch-0958-framegen.py" "$work/kyty"
 python3 "$repo/tests/test_0958_framegen.py" "$work/kyty"
+python3 "$repo/tools/ci/patch-0960-gpu-diagnostics.py" "$work/kyty"
+python3 "$repo/tests/test_0960_gpu_diagnostics.py" "$work/kyty"
 } 2>&1 | tee "$out/logs/regression-050.txt"
 
 
