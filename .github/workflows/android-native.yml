@@ -228,7 +228,7 @@ jobs:
           cd dist/apk && sha256sum NovaPS5-0.9.56-android-arm64.apk > SHA256SUMS.txt
           gh release create "$tag" NovaPS5-0.9.56-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.56 background shaders + safe profile (CI ${GITHUB_SHA::7})" \
-            --notes "New shaders compile on a background thread: draws whose shader is not ready are skipped for a frame instead of freezing the game (Graphics > Background shader compilation). GPU memory readback defaults to Relaxed again; Off could erase GPU-written data when the CPU wrote the same page. Luna Abyss and Super Meat Boy 3D start with their 0.9.52 settings (safe profile). Cleared scaled passes skip a copy. The engine log records FPS, thermal status, battery temperature and GPU/CPU clocks every 5 s. Same package and signing key; installs as an update."
+            --notes "New shaders compile on a background thread: draws whose shader is not ready are skipped for a frame instead of freezing the game (Graphics > Background shader compilation). GPU memory readback defaults to Relaxed again; Off could erase GPU-written data when the CPU wrote the same page. Luna Abyss and Super Meat Boy 3D start with their 0.9.52 settings (safe profile); Dead Cells starts with Accurate sync, the path its 0.9.50 freeze fix relies on. Cleared scaled passes skip a copy. The engine log records FPS, thermal status, battery temperature and GPU/CPU clocks every 5 s. Same package and signing key; installs as an update."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()

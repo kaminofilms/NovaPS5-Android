@@ -29,6 +29,14 @@ final class GraphicsSettings {
         if (safe(title)) return safeValue;
         return p.getInt(key("", name), normal);
     }
+    /** Dead Cells: the completion-ordered (Accurate) label path it was fixed on in 0.9.50; Fast
+     *  labels publish before the GPU finishes, which can leave it waiting on a label forever. */
+    static boolean accurateSync(String title) { return safe(title) || "PPSA15552".equals(title); }
+    static int syncValue(SharedPreferences p, String title) {
+        if (p.contains(key(title, "sync_v56"))) return p.getInt(key(title, "sync_v56"), 0);
+        if (accurateSync(title)) return 1;
+        return p.getInt(key("", "sync_v56"), 0);
+    }
     static final String[] V56 = {"sync_v56","readback_v56","fault_window_v56","video_out_v56","async_v56"};
     static Spinner choice(Activity a, LinearLayout box, String label, String[] options, int selected) {
         TextView text = new TextView(a); text.setText(label); box.addView(text);
@@ -56,7 +64,7 @@ final class GraphicsSettings {
         Switch cache = toggle(a, box, "Disk shader cache (recommended)", value(p,title,"cache",1)!=0);
         Switch gpl = toggle(a, box, "Pipeline libraries when supported", value(p,title,"gpl",1)!=0);
         if (safe(title)) { TextView safeNote = new TextView(a); safeNote.setText("Safe profile: this game starts with the settings it booted with on 0.9.52 (Accurate sync, Precise readback, 4K output, no background shaders). Change them here to experiment."); box.addView(safeNote); }
-        Spinner sync = choice(a, box, "GPU sync", SYNC, value56(p,title,"sync_v56",0,1));
+        Spinner sync = choice(a, box, "GPU sync", SYNC, syncValue(p,title));
         Spinner readback = choice(a, box, "GPU memory readback", READBACK, value56(p,title,"readback_v56",1,2));
         Switch window = toggle(a, box, "Write-fault window (faster uploads)", value56(p,title,"fault_window_v56",1,0)!=0);
         Switch async = toggle(a, box, "Background shader compilation (no shader stutter; objects can pop in briefly)", value56(p,title,"async_v56",1,0)!=0);
@@ -105,7 +113,7 @@ final class GraphicsSettings {
         // 0.9.56: Relaxed readback by default ("off" could drop GPU-written data);
         // Luna and Super Meat Boy keep their 0.9.52 behaviour unless changed.
         boolean safe=safe(title);
-        int sync=value56(p,title,"sync_v56",0,1); if(sync<0||sync>1)sync=0;
+        int sync=syncValue(p,title); if(sync<0||sync>1)sync=0;
         int readback=value56(p,title,"readback_v56",1,2); if(readback<0||readback>2)readback=1;
         boolean window=value56(p,title,"fault_window_v56",1,0)!=0;
         boolean async=value56(p,title,"async_v56",1,0)!=0;

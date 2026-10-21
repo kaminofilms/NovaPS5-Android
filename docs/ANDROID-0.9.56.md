@@ -28,6 +28,10 @@ Luna Abyss (PPSA36257) and Super Meat Boy 3D (PPSA31162) booted on 0.9.52 and cr
 
 The settings use new versioned keys (`*_v56`), so values saved by 0.9.53–0.9.55 do not carry over.
 
+## Dead Cells: Accurate sync by default
+
+Dead Cells' 0.9.50 freeze fix (`patch-deadcells-labels.py`) depends on completion labels being written only after the GPU has finished the work before them. 0.9.53's Fast sync publishes labels while packets are processed and turns that Dead Cells path off, so the game can again wait on a label that never matches. That is the same freeze recorded in versionCode 88. Without a per-game choice, Dead Cells now starts with Accurate sync. Every other 0.9.56 change still applies to it.
+
 ## Cheaper scaled clears (`patch-0956-raster-clear.py`)
 
 A scaled render pass copies each attachment down to the low-resolution proxy at the start and back up at the end. When the pass clears the attachment, the down copy is skipped. The `NOVA_RESOLUTION_RASTER` log line now includes `cleared_copies_skipped=`.
