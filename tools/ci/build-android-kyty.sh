@@ -280,6 +280,10 @@ ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_native_sync.py"
 python3 "$repo/tools/ci/patch-0954-stability-speed.py" "$work/kyty"
 python3 "$repo/tests/test_0954_stability_speed.py" "$work/kyty"
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_0954_stability_speed.py" "$work/kyty"
+# 0.9.55: 1080p display report, direct PM4 wait reads with readbacks off, readback telemetry.
+python3 "$repo/tools/ci/patch-0955-video-1080p.py" "$work/kyty"
+python3 "$repo/tests/test_0955_video_1080p.py" "$work/kyty"
+ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_0955_video_1080p.py" "$work/kyty"
 } 2>&1 | tee "$out/logs/regression-050.txt"
 
 

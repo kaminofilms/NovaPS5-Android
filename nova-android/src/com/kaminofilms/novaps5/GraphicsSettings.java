@@ -13,6 +13,7 @@ final class GraphicsSettings {
     static final String[] SYNC = {"Fast (recommended)", "Accurate (slower; try if a game hangs)"};
     static final String[] READBACK = {"Off (fastest; shadPS4 default)", "Relaxed (CPU writes keep GPU data)", "Precise (most compatible)"};
     static final String[] READBACK_MODES = {"off", "relaxed", "precise"};
+    static final String[] VIDEO_OUT = {"1080p display (faster, recommended)", "4K display (game may render 4K)"};
     static final String[] SCALES = {"Native (100%)", "75%", "67%", "50%", "33%", "25% (fastest)"};
     static final int[] SCALE_PCT = {100, 75, 67, 50, 33, 25};
     static final String[] CAPS = {"Inherit existing FPS cap", "30", "40", "60", "90", "120", "Unlimited"};
@@ -48,6 +49,7 @@ final class GraphicsSettings {
         Spinner sync = choice(a, box, "GPU sync", SYNC, value(p,title,"sync_v53",0));
         Spinner readback = choice(a, box, "GPU memory readback", READBACK, value(p,title,"readback_v54",0));
         Switch window = toggle(a, box, "Write-fault window (faster uploads)", value(p,title,"fault_window",1)!=0);
+        Spinner video = choice(a, box, "Console video output", VIDEO_OUT, value(p,title,"video_out_v55",0));
         final Spinner resolution = choice(a, box, "Internal resolution", SCALES, value(p,title,"raster_scale_v54",0));
         TextView scaleNote = new TextView(a);
         scaleNote.setText("Lower values render eligible 16:9 colour/depth passes at a smaller size and are faster. Compute, shadow and unsupported passes stay native. Try Native if the picture breaks."); box.addView(scaleNote);
@@ -61,10 +63,11 @@ final class GraphicsSettings {
                     .putInt(key(title,"readback_v54"),readback.getSelectedItemPosition())
                     .putInt(key(title,"fault_window"),window.isChecked()?1:0);
                 e.putInt(key(title,"raster_scale_v54"),resolution.getSelectedItemPosition());
+                e.putInt(key(title,"video_out_v55"),video.getSelectedItemPosition());
                 e.apply();
             })
             .setNeutralButton(title.isEmpty()?"Reset defaults":"Use global defaults",(d,w)->{
-                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","sync_v53","readback_v54","fault_window","raster_scale_v54"})e.remove(key(title,n)); e.apply();
+                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","sync_v53","readback_v54","fault_window","raster_scale_v54","video_out_v55"})e.remove(key(title,n)); e.apply();
             }).setNegativeButton("Close",null).show();
     }
     static void apply(Context c, String title) throws android.system.ErrnoException {
@@ -76,6 +79,8 @@ final class GraphicsSettings {
         Os.setenv("NOVA_UNITY_RESOLUTION","0",true);
         Os.setenv("NOVA_INTERNAL_RESOLUTION","0",true);
         Os.setenv("NOVA_RASTER_SCALE_PCT",Integer.toString(SCALE_PCT[ri]),true);
+        int vo=value(p,title,"video_out_v55",0); if(vo<0||vo>1)vo=0;
+        Os.setenv("NOVA_VIDEO_OUT_4K",vo==1?"1":"0",true);
         // Capture the default mode too, so a second launch can prove whether a request changed real rendering.
         Os.setenv("NOVA_TRACE_RESOLUTION","PPSA04703".equals(title)?"1":"0",true);
         BootLog.write(c,"Internal resolution: "+SCALE_PCT[ri]+"% of native for eligible 16:9 passes");
@@ -100,6 +105,6 @@ final class GraphicsSettings {
         Os.setenv("NOVA_GPU_LABELS","1",true);
         Os.setenv("NOVA_GPU_ORDERED_WAITS","1",true);
         if(cap>0&&cap<limits.length)Os.setenv("NOVA_FPS_CAP",Integer.toString(limits[cap]),true);
-        BootLog.write(c,"Graphics profile "+title+": present="+mode+" cap="+cap+" shader_cache="+cache+" pipeline_libraries="+gpl+" sync="+(sync==0?"fast":"accurate")+" readback="+READBACK_MODES[readback]+" fault_window="+window+" scale="+SCALE_PCT[ri]+"%");
+        BootLog.write(c,"Graphics profile "+title+": present="+mode+" cap="+cap+" shader_cache="+cache+" pipeline_libraries="+gpl+" sync="+(sync==0?"fast":"accurate")+" readback="+READBACK_MODES[readback]+" fault_window="+window+" scale="+SCALE_PCT[ri]+"% video="+(vo==1?"4k":"1080p"));
     }
 }
