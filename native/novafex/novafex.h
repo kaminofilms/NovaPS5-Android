@@ -116,6 +116,9 @@ NOVAFEX_API bool HandleHostFault(int signal, siginfo_t* info, void* ucontext);
 // Prints the guest view of a fault inside JIT code: guest registers, block rip, the host
 // function this thread called last and guest-code-looking values on the guest stack.
 NOVAFEX_API void ReportGuestFault(void* ucontext);
+// 0.9.57: print this thread's last 16 guest->host calls (name, first two arguments, return
+// value), newest first, each line prefixed with tag. Used when a guest exits on its own.
+NOVAFEX_API void DumpRecentHostCalls(const char* tag);
 // Called during a freeze report (no frame for seconds) so the emulator can add its own state.
 NOVAFEX_API void SetFreezeReportHook(void (*hook)());
 // Names a host function for crash/freeze reports when the dynamic symbol table cannot (static

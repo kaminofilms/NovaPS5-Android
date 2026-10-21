@@ -1134,6 +1134,25 @@ void SetFreezeReportHook(void (*hook)()) {
 	g_freeze_hook.store(hook);
 }
 
+void DumpRecentHostCalls(const char* tag) {
+	for (uint32_t i = 0; i < 16 && i < t_thread.recent_pos; i++) {
+		const auto& r = t_thread.recent[(t_thread.recent_pos - 1 - i) % 16];
+		Dl_info info {};
+		const char* name = "?";
+		char* demangled = nullptr;
+		if (dladdr(reinterpret_cast<void*>(r.target), &info) != 0 && info.dli_sname != nullptr) {
+			int status = 0;
+			demangled = abi::__cxa_demangle(info.dli_sname, nullptr, nullptr, &status);
+			name = demangled != nullptr ? demangled : info.dli_sname;
+		} else if (const char* known = HostName(r.target); known != nullptr) {
+			name = known;
+		}
+		std::fprintf(stderr, "%s call -%u: %.110s (0x%llx, 0x%llx) -> 0x%llx\n", tag, i, name,
+		             (unsigned long long)r.a0, (unsigned long long)r.a1, (unsigned long long)r.ret);
+		std::free(demangled);
+	}
+}
+
 void ReportGuestFault(void* ucontext) {
 	DumpWatchpointTrace();
 	auto* uc = static_cast<ucontext_t*>(ucontext);

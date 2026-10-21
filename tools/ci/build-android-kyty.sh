@@ -292,6 +292,7 @@ python3 "$repo/tests/test_0956.py" "$work/kyty"
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_0956.py" "$work/kyty"
 # 0.9.57: Dead Cells WAIT_REG_MEM give-up (0.7.3-0.9.10 behaviour, removed in 0.9.14).
 python3 "$repo/tools/ci/patch-0957-deadcells-wait.py" "$work/kyty"
+python3 "$repo/tools/ci/patch-0957-guest-exit-report.py" "$work/kyty"
 python3 "$repo/tests/test_0957_deadcells_wait.py" "$work/kyty"
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_0957_deadcells_wait.py" "$work/kyty"
 } 2>&1 | tee "$out/logs/regression-050.txt"
