@@ -215,7 +215,9 @@ SDL3's Android wait loop pumps joysticks without blocking.
 
 They report Dead Cells, Blasphemous, Animal Well, Greak and Isaac at 60 FPS on an AYN Odin 3 (Adreno 830, system driver). Unreal games start at 25% resolution.
 
-**Port these, in priority order:**
+**Owner decision: do NOT copy CapyPS5 code.** Use it only as evidence of what is possible. Nova writes its own implementations, designed below from general, well-documented techniques (yuzu's rescaler concept, Vulkan specialization constants).
+
+**What they have, in priority order (for reference only):**
 
 1. **A real resolution scaler. This is the feature Nova lacks.**
    - `core/src/graphics/host_gpu/renderer/cache/textureCache.cpp`: `TextureCache::ResolutionScale()` and `ChooseScale(desc)`. These scale RenderTarget, DepthTarget and VideoOut 2D colour images that are 1-sample, 1-mip and ≥1280x720. Their comment explains why display buffers must be scaled too (Greak).
@@ -233,4 +235,29 @@ They report Dead Cells, Blasphemous, Animal Well, Greak and Isaac at 60 FPS on a
 5. **`cpu/cpuBackend.cpp`** (around lines 458 and 475): JIT notes that Unreal's render thread is about 10%. Compare their FEX configuration with NovaFEX.
 6. **Dead Cells at 60 FPS:** diff their `guest_gpu/graphicsRun.cpp`, the EOP/label and WAIT_REG_MEM paths, against Nova's `patch-0957-deadcells-wait.py` and the fast-label path. They use the system driver on an Adreno 830.
 
-**Suggested order for GPT:** port (1) as `patch-0964-resolution-scale.py`, gated by a per-game setting (default Native; Unreal 25–50%). Test structurally, then ask the owner before building.
+## Nova's own resolution scaler (design; implement as `tools/ci/patch-0964-nova-rescale.py`)
+
+**Goal:** GPU-bound titles render their large targets at S×S of guest size (S = 0.5–0.75; Unreal defaults to 0.5). That cuts pixel work by 1/S², without the per-pass blits of NovaRaster.
+
+1. **Which images to scale.** Decide once, when the texture cache creates an image:
+   - 2D colour or depth/stencil images used as render or depth targets, or video-out images
+   - 1 sample, 1 mip, extent ≥1280x720
+   - Store `scale` on the Image and allocate the backing at `ceil(w*S) x ceil(h*S)`.
+   - Never scale images that are also written or read by the CPU path, uploaded from guest memory, or used as storage (imageStore), and never block-compressed images. Those keep S = 1.
+2. **Every consumer must agree.** When an image is used as an attachment, scale the render area, viewports and scissors by its S. A draw whose attachments disagree on S falls back: rebuild that pass at S = 1 by blitting scaled images up, then log it.
+3. **Shader side.** Add our own specialization constant for scale (pick an unused ID and document it) to the fragment, vertex and compute shaders the recompiler emits:
+   - Fragment `FragCoord.xy` is divided by S, so the guest sees guest-size coordinates.
+   - Integer texel fetches and `imageLoad`/`imageSize`/`textureSize` on a scaled image are multiplied or divided by S. This needs a per-binding "scaled" flag, so make it a push-constant bitmask rather than per-pipeline.
+   - Normalised sampling (UV) needs no change.
+   - Pipelines are specialised by the scale value; cache keys must include it.
+4. **Readback and CPU paths.** When guest memory of a scaled image must be read by the CPU (downloads, `MaterializeColorClear`, video-out presentation), blit it to a native-size temporary first. Track that per image so it only happens when needed.
+5. **Presentation.** Video-out images are scaled too, and the presenter blits them to the swapchain with linear filtering. Without this, a game that draws into a display buffer while a scaled depth buffer is bound renders into only part of it.
+6. **Settings.** Per-game "Resolution scale" (Native / 75% / 50% / 33%), with an "Unreal default" (detect `ue4commandline.txt`/`uecommandline.txt` or an engine folder in the game folder). Environment variable `NOVA_RESCALE_PERMILLE`. Log `NOVA_RESCALE: scaled_images= fallbacks=`.
+7. **Tests.**
+   - Structural tests for each patch.
+   - A host test of the extent rounding and the fallback rule.
+   - On device: Ever Forward and Wonder Boy at 50%; check `NOVA_GPU_TIME` and the FPS; look for wrong coordinates (UI offset, shadows misaligned).
+
+Remove NovaRaster (the 0.9.54 blit scaler) once this works.
+
+Ask the owner before building.
