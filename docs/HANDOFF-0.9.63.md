@@ -164,3 +164,20 @@ SDL3's Android wait loop pumps joysticks without blocking.
 2. Symbolize the 100% host thread from the `fp#` lines and fix the spin.
 3. Super Meat Boy / Luna: memory pressure and the stall; try leaving the safe profile.
 4. If VRS is unavailable on Turnip, test the System driver, or extend NovaRaster to stencil passes. Better still, start a yuzu-style rescaler.
+
+## 0.9.63 device results (owner, Red Magic "rise" performance mode)
+
+- **Spinning-core fix works.** The `SDLThread` at 100% is gone in every title (cooler).
+- **Unreal DCC absorb works.**
+  - Super Meat Boy: `NOVA_DCC_FILL absorbed=462 ran_on_gpu=50`, and TextureMetadata readbacks fell from about 280 to 55 per 5 s.
+  - But Super Meat Boy is still 2–5 FPS, with the GPU 76% busy, so the next bottleneck is elsewhere. Look at `NOVA_RENDER_COST` readback_read/wait and `NOVA_PASS_BREAK` in its log.
+- **Luna Abyss now gets past loading:** 5 → 15 FPS while loading, `absorbed=914`. A new milestone.
+- **Read-to-read barrier skip does nothing:** `read_to_read_elided=0` in every log.
+  - The condition in `NovaReadToRead` never matches. Kyty's tracked access masks probably always contain a write bit (e.g. `eMemoryWrite` or an attachment write), or the transitions are real read↔write changes.
+  - **Next:** log a histogram of the old/new access, layout and stage at `Image::Transit` call sites to see what the ~155 per frame transitions really are.
+- **Wonder Boy:** 12–15 FPS, GPU 73%. The CRIWARE audio thread is still at 94% of a core (12-channel AudioOut2).
+- **The owner reports no FPS gain from 0.9.63 in any title.** On the phone's "balanced" mode they run slower; use performance ("rise") mode.
+- **Owner request: an "auto max FPS" profile.** Proposed defaults per title:
+  - present FIFO, GPU turbo on, VRS 2x2 on, real GPU time on, internal resolution Native, video out 1080p
+  - frame generation off
+  - FPS cap 30 for Wonder Boy (heat)
