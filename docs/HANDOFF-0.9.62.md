@@ -1,0 +1,123 @@
+# Nova PS5 Android: handoff at 0.9.62 (for another AI assistant)
+
+**Repository:** `kaminofilms/NovaPS5-Android`. Moved from `kaminofilms/novaps5-android`; both URLs work.
+
+**Branch:** `perf/0952-eop-drain`. The CI workflow `.github/workflows/android-native.yml` runs only through `workflow_dispatch`:
+
+```
+gh workflow run android-native.yml --ref perf/0952-eop-drain -R kaminofilms/NovaPS5-Android
+```
+
+**Release tag:** each run publishes a prerelease `v<version>-android-<sha7>`. Its logs go to the `lab-logs` branch under `runs/android-<run id>-<sha8>/`.
+
+**Owner's device:** Red Magic 11 Pro (nubia NX809J), SM8850 / Adreno 840, Android 16. Turnip `v26.3.0-20261012-A8xx` is bundled; the System (Qualcomm) driver is also selectable.
+
+**Owner's rules (must follow):**
+- Ask before starting any APK build.
+- Prefer large, pre-tested batched builds.
+- Keep the same signing key (`tools/ci/novaps5-ci-test.keystore`).
+- Research root causes and cite sources.
+- Never bundle or distribute Lossless.dll. The owner imports their own copy.
+
+## How the code is built
+
+Nova is Kyty (`KYTY_COMMIT`), patched at build time by Python overlays in `tools/ci/patch-*.py`. Each overlay asserts its text anchors, and each has a structural test in `tests/test_*.py`. The order is set in `tools/ci/build-android-kyty.sh`.
+
+Other components:
+- **NovaFEX** (x86-64 → arm64, FEXCore): `native/novafex/`. Diagnostics live in `novafex.cpp`: freeze reports, `NOVA_THREAD_CPU`, stack dumps.
+- **Frame generation:** `native/novalsfg/`. It is built from lsfg-vk-android 3e89e54 (MIT) by `tools/ci/build-android-lsfg.sh`, and the CI build now fails if the library is missing.
+- **Launcher (Java):** `nova-android/src/com/kaminofilms/novaps5/`. `GraphicsSettings.java` maps per-game settings to environment variables.
+
+**Local checks without an NDK:**
+1. Apply the patches to a copy of the Kyty tree.
+2. Run `clang++ -std=c++20 -fsyntax-only -D__ANDROID__ -DKYTY_ANDROID -DVK_USE_PLATFORM_ANDROID_KHR` with stub Android headers.
+3. The only expected errors are the missing `GPU_*_SPV` shader symbols.
+
+Java is tested with stub `android.*` classes and javac.
+
+## What happened, 0.9.56 → 0.9.62
+
+| Version | Change | Result on device |
+|---|---|---|
+| 0.9.57 | Dead Cells WAIT_REG_MEM give-up restored; Ever Forward deferred write faults; guest exit report; Turnip workaround setting | Dead Cells fixed (owner confirmed) |
+| 0.9.58 | guest `puts()` echo; Lossless Scaling frame generation (user DLL) | lsfg library failed to compile (missing `VK_USE_PLATFORM_ANDROID_KHR`) |
+| 0.9.59 | lsfg build fix; lsfg build now required | Frame generation works, about 3 ms per generated frame. Real FPS fell 12–15 → 8 because pacing slept on the flip thread. |
+| 0.9.60 | Pacing moved to `VK_GOOGLE_display_timing`; diagnostics `NOVA_GPU_TIME` (Vulkan timestamps), `NOVA_PASS_BREAK` (EndRendering call sites), `NOVA_THREAD_CPU` | Diagnostics work |
+| 0.9.61 | Pass merging: skip redundant PM4 global barriers inside a pass; deferred-write-fault downloads at pass end; Unreal `/app0/ue4commandline.txt` virtual empty file; busy-thread stack dump | Passes ended halved (Ever about 11k → 6k per 5 s), but FPS unchanged. Super Meat Boy 3D now gets in-game (about 6 FPS), then stalls with low free RAM. |
+| 0.9.62 | GPU turbo; 2x2 variable-rate shading; real GPU timestamps; frame-pointer stack walk | **Needs a device test** |
+
+## Key measurements (0.9.61, Turnip)
+
+**Ever Forward (PPSA04703, Unity):**
+- About 12 FPS.
+- `NOVA_GPU_TIME` 86–88% busy, about 72 ms GPU per frame.
+- Render thread about 30–45% of one core; guest threads are not saturated.
+- **The limit is the phone GPU.**
+
+**Wonder Boy (PPSA27841, Unity):**
+- 9–10 FPS, GPU 90–92% busy.
+- It renders 3840x2160 even though Nova reports a 1080p display (`VideoOutGetOutputStatus` returns 1080p when `NOVA_VIDEO_OUT_4K` is not set).
+- The resolution scaler reaches only about 13% of draws.
+
+**Nova's resolution scaler (`NovaRaster`, 0.9.54):**
+- Only 16:9 passes ≥540p with no stencil, no storage/BDA writes, no feedback, and `CanRasterScale`.
+- It renders at a smaller size, then blits down and up.
+- Most Unity passes fail these conditions; stencil (deferred lighting) is the likely reason.
+
+**A host thread at 100% of one core** in every title:
+- It is the lowest Kyty `SDLThread` tid, not a guest thread.
+- The 0.9.61 stack dump shows it inside vdso `clock_gettime` called from libc, so it is a loop that keeps reading the clock.
+- 0.9.62 walks the frame-pointer chain (`NOVA_FEX:   fp#NN module+offset`). libmain.so ships unstripped, so offsets can be symbolized with `llvm-symbolizer` against the release APK's `lib/arm64-v8a/libmain.so`.
+- It is not the VideoOut present thread, `SleepMicro` (clock_nanosleep) or the SDL event loop (ALooper wait).
+
+**Luna Abyss (PPSA36257) and Super Meat Boy 3D (PPSA31162), Unreal:**
+- They exited with "File root is /devlog/app/" and then "GEngineLoop.PreInit Failed!".
+- **Cause:** a missing `/app0/ue4commandline.txt`, which Unreal uses to pick `/app0` as its file root. Sources: [AnyPS5 discussion #6275](https://github.com/boykopovar/AnyPS5/discussions/6275), and "Best Practices For Running On The PS4" (cnblogs AnKen), which says a blank file is enough.
+- Fixed in 0.9.61. Both now boot, slowly.
+- Super Meat Boy then stalls after about 2 minutes: every guest thread is in a condvar wait, `RHIFrameFlipThread` is in a timed wait, and free RAM is down to about 500 MB.
+- They use the "safe" profile: 4K output, precise readback, accurate sync. Next step: try the normal profile for them.
+
+## 0.9.62 contents (`tools/ci/patch-0962-gpu-boost.py`, `tests/test_0962_gpu_boost.py`)
+
+1. **`NOVA_GPU_TURBO=1`** (default on): sets KGSL `PWRCTRL` to 0 via `IOCTL_KGSL_SETPROPERTY`, the same call as `adrenotools_set_turbo`.
+   - It is re-asserted every second, as in Eden's turbo mode (SharpDroid `docs/vulkan.md` describes it).
+   - A launch without turbo clears it.
+   - Log line: `NOVA_GPU_TURBO`.
+2. **`NOVA_VRS=2`** (default on for PPSA04703 and PPSA27841): `VK_KHR_fragment_shading_rate` pipeline rate as dynamic state, set per draw.
+   - 2x2 only for 1-sample colour passes of at least 1280x720 that are not video-out images.
+   - HUD/display, MSAA and depth-only passes stay 1x1.
+   - It is enabled only if `pipelineFragmentShadingRate` and a 2x2 one-sample rate are reported.
+   - **Unverified:** whether the bundled Turnip exposes it. The log says `NOVA_VRS: ...`. If it is unavailable, try the System driver.
+   - Log line: `NOVA_VRS_REPORT draws_2x2 / draws_1x1`.
+3. **`NOVA_REAL_GPU_TIME=1`** (default on for the same two titles): GPU timestamps (fast EOP labels and COPY_DATA reference clock) are written at packet time, then rewritten in a priority operation after the GPU finishes that command buffer.
+   - Rationale: yuzu's "Use Fast GPU Time" reports a fast GPU so dynamic-resolution games stay at maximum resolution (yuzu progress report, August 2021). Nova's fast labels do the same by accident.
+   - Whether Ever Forward and Wonder Boy use dynamic resolution is **unknown**. Look for a changing `NOVA_RESOLUTION` render area, or for FPS changes.
+   - Log line: `NOVA_GPU_TIMESTAMPS`.
+4. NovaFEX stack dumps walk the frame-pointer chain.
+
+All three are per-game Graphics settings, so the owner can turn each off.
+
+## Research notes: how other emulators reduce GPU work
+
+- **RPCS3 (PS3):**
+  - Resolution scale applies through the surface cache to render targets above a "minimum scalable dimension".
+  - Shaders and coordinates are adjusted per surface.
+  - Many speed options trade accuracy, e.g. write-colour-buffers off and ZCULL approximate.
+- **yuzu/Eden/Citron (Switch):**
+  - A real resolution rescaler: render targets are allocated scaled, and the shader recompiler patches `gl_FragCoord`, texel fetches and image ops for rescaled textures, with per-game blacklisting.
+  - Downscaling to 0.5x or 0.75x for performance.
+  - "Fast GPU Time" (see above).
+  - GPU accuracy "normal" skips some sync work.
+  - Turbo mode via KGSL.
+- **Nova's per-pass blit scaler** is much cheaper to build but reaches few passes. The long-term fix for GPU-bound games is a yuzu-style rescaler: scaled image allocation plus shader patches for FragCoord, texelFetch and imageLoad/Store, and textureSize queries.
+
+## Next steps
+
+1. Owner tests 0.9.62 on Ever Forward and Wonder Boy. Check:
+   - `NOVA_VRS`, `NOVA_GPU_TURBO`, `NOVA_GPU_TIMESTAMPS`
+   - `NOVA_GPU_TIME` busy %
+   - FPS
+   - render area changes
+2. Symbolize the 100% host thread from the `fp#` lines and fix the spin.
+3. Super Meat Boy / Luna: memory pressure and the stall; try leaving the safe profile.
+4. If VRS is unavailable on Turnip, test the System driver, or extend NovaRaster to stencil passes. Better still, start a yuzu-style rescaler.

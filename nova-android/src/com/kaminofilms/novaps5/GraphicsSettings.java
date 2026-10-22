@@ -89,6 +89,7 @@ final class GraphicsSettings {
             + "Generated frames are shown between real ones, so motion looks smoother but input lag rises slightly. Presentation switches to VSync while it is on. Turn it off if the picture shows artefacts or the game gets slower."); box.addView(fgNote);
         Switch turbo = toggle(a, box, "GPU turbo (maximum GPU clock; warmer, uses more battery)", value(p,title,"gpu_turbo_v62",1)!=0);
         Switch vrs = toggle(a, box, "Variable-rate shading (2x2; faster, slightly softer 3D image; HUD stays sharp)", value(p,title,"vrs_v62",vrsDefault(title)?1:0)!=0);
+        Switch realTime = toggle(a, box, "Report real GPU time (games with dynamic resolution can lower it themselves)", value(p,title,"real_gpu_time_v62",vrsDefault(title)?1:0)!=0);
         final Spinner resolution = choice(a, box, "Internal resolution", SCALES, value(p,title,"raster_scale_v54",0));
         TextView scaleNote = new TextView(a);
         scaleNote.setText("Lower values render eligible 16:9 colour/depth passes at a smaller size and are faster. Compute, shadow and unsupported passes stay native. Try Native if the picture breaks."); box.addView(scaleNote);
@@ -110,10 +111,11 @@ final class GraphicsSettings {
                 e.putInt(key(title,"fg_perf_v58"),fgPerf.isChecked()?1:0);
                 e.putInt(key(title,"gpu_turbo_v62"),turbo.isChecked()?1:0);
                 e.putInt(key(title,"vrs_v62"),vrs.isChecked()?1:0);
+                e.putInt(key(title,"real_gpu_time_v62"),realTime.isChecked()?1:0);
                 e.apply();
             })
             .setNeutralButton(title.isEmpty()?"Reset defaults":"Use global defaults",(d,w)->{
-                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","raster_scale_v54","sync_v56","readback_v56","fault_window_v56","video_out_v56","async_v56","tu_debug_v57","fg_v58","fg_flow_v58","fg_perf_v58","gpu_turbo_v62","vrs_v62"})e.remove(key(title,n)); e.apply();
+                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","raster_scale_v54","sync_v56","readback_v56","fault_window_v56","video_out_v56","async_v56","tu_debug_v57","fg_v58","fg_flow_v58","fg_perf_v58","gpu_turbo_v62","vrs_v62","real_gpu_time_v62"})e.remove(key(title,n)); e.apply();
             }).setNegativeButton("Close",null).show();
     }
     static void apply(Context c, String title) throws android.system.ErrnoException {
@@ -151,6 +153,8 @@ final class GraphicsSettings {
         boolean vrs=value(p,title,"vrs_v62",vrsDefault(title)?1:0)!=0;
         Os.setenv("NOVA_GPU_TURBO",turbo?"1":"0",true);
         Os.setenv("NOVA_VRS",vrs?"2":"0",true);
+        boolean realTime=value(p,title,"real_gpu_time_v62",vrsDefault(title)?1:0)!=0;
+        Os.setenv("NOVA_REAL_GPU_TIME",realTime?"1":"0",true);
         boolean cache=value(p,title,"cache",1)!=0, gpl=value(p,title,"gpl",1)!=0;
         Os.setenv("NOVA_SHADER_CACHE",cache?"1":"0",true);
         Os.setenv("MESA_SHADER_CACHE_DISABLE",cache?"false":"true",true);
@@ -178,6 +182,6 @@ final class GraphicsSettings {
         Os.setenv("NOVA_GPU_LABELS","1",true);
         Os.setenv("NOVA_GPU_ORDERED_WAITS","1",true);
         if(cap>0&&cap<limits.length)Os.setenv("NOVA_FPS_CAP",Integer.toString(limits[cap]),true);
-        BootLog.write(c,"Graphics profile "+title+": present="+mode+" cap="+cap+" shader_cache="+cache+" pipeline_libraries="+gpl+" sync="+(sync==0?"fast":"accurate")+" readback="+READBACK_MODES[readback]+" fault_window="+window+" scale="+SCALE_PCT[ri]+"% video="+(vo==1?"4k":"1080p")+" async_shaders="+async+" safe_profile="+safe+" tu_debug="+(tu==0?"off":TURNIP_FLAGS[tu])+" gpu_turbo="+turbo+" vrs="+(vrs?"2x2":"off")+" framegen="+(fg==0?"off":(fg+1)+"x flow="+FLOW_VALUES[flow]+(fgPerf?" performance":" quality")));
+        BootLog.write(c,"Graphics profile "+title+": present="+mode+" cap="+cap+" shader_cache="+cache+" pipeline_libraries="+gpl+" sync="+(sync==0?"fast":"accurate")+" readback="+READBACK_MODES[readback]+" fault_window="+window+" scale="+SCALE_PCT[ri]+"% video="+(vo==1?"4k":"1080p")+" async_shaders="+async+" safe_profile="+safe+" tu_debug="+(tu==0?"off":TURNIP_FLAGS[tu])+" gpu_turbo="+turbo+" vrs="+(vrs?"2x2":"off")+" real_gpu_time="+realTime+" framegen="+(fg==0?"off":(fg+1)+"x flow="+FLOW_VALUES[flow]+(fgPerf?" performance":" quality")));
     }
 }

@@ -187,3 +187,69 @@ edit(rd, '''	dynamic_state.SetAttachmentFeedbackLoopAspects(feedback_aspects);
 for path, text in changes.items():
     path.write_text(text)
 print('NOVA_0962_GPU_BOOST: GPU turbo (NOVA_GPU_TURBO) and 2x2 variable-rate shading (NOVA_VRS=2)')
+
+# ---- 3. real GPU time for timestamp writes (NOVA_REAL_GPU_TIME=1) ----
+# yuzu's "Use Fast GPU Time" shows that games with dynamic resolution choose their render size
+# from reported GPU time (it reports a fast GPU so they stay at full resolution). Nova's fast
+# labels stamp GPU timestamps when the packet is read, i.e. a GPU that takes no time. With this
+# option each timestamp is written again when the GPU has really finished that command buffer,
+# so a game with dynamic resolution sees the real cost and can lower its own resolution.
+gr = src / 'graphics/guest_gpu/graphicsRun.cpp'
+s = gr.read_text()
+old = '''			if (timestamp) data = static_cast<decltype(data)>(Sync::ReadReferenceClock());
+			GuestMemory::Copy(dst_gpu_addr, &data, sizeof(data));
+#if defined(KYTY_NOVA_FEX)
+			NovaNoteGpuWrite(dst_gpu_addr, static_cast<uint64_t>(data),
+			                 static_cast<uint32_t>(m_interrupt_event_id), 'E');
+#endif'''
+if s.count(old) != 1:
+    raise SystemExit('NOVA_0962_GPU_BOOST: fast-label anchor changed')
+s = s.replace(old, '''			if (timestamp) data = static_cast<decltype(data)>(Sync::ReadReferenceClock());
+			GuestMemory::Copy(dst_gpu_addr, &data, sizeof(data));
+			if (timestamp && NovaRealGpuTime()) NovaRestampAtCompletion(GetScheduler(), dst_gpu_addr, sizeof(data));
+#if defined(KYTY_NOVA_FEX)
+			NovaNoteGpuWrite(dst_gpu_addr, static_cast<uint64_t>(data),
+			                 static_cast<uint32_t>(m_interrupt_event_id), 'E');
+#endif''')
+old = '''	const auto value = Sync::ReadReferenceClock();
+	GuestMemory::Write(dst_address, &value, num_bytes);'''
+if s.count(old) != 1:
+    raise SystemExit('NOVA_0962_GPU_BOOST: reference-clock anchor changed')
+s = s.replace(old, '''	const auto value = Sync::ReadReferenceClock();
+	GuestMemory::Write(dst_address, &value, num_bytes);
+	if (NovaRealGpuTime()) NovaRestampAtCompletion(GetScheduler(), reinterpret_cast<void*>(dst_address), num_bytes);''')
+helper = '''// Nova 0.9.62: NOVA_REAL_GPU_TIME=1 - rewrite a GPU timestamp with the time the GPU finished it.
+static bool NovaRealGpuTime() {
+	static const bool enabled = [] {
+		const char* v = std::getenv("NOVA_REAL_GPU_TIME");
+		const bool  on = v != nullptr && v[0] == '1';
+		std::fprintf(stderr, "NOVA_GPU_TIMESTAMPS: %s\\n",
+		             on ? "real (written when the GPU finishes; games with dynamic resolution can react)"
+		                : "at packet time (fast)");
+		return on;
+	}();
+	return enabled;
+}
+static void NovaRestampAtCompletion(CommandScheduler& scheduler, void* dst, uint32_t size) {
+	static std::atomic<uint64_t> restamped {0};
+	if (restamped.fetch_add(1, std::memory_order_relaxed) == 0) std::fprintf(stderr, "NOVA_GPU_TIMESTAMPS: first real timestamp queued\\n");
+	scheduler.DeferPriorityOperation([dst, size] {
+		const uint64_t now = Sync::ReadReferenceClock();
+		if (size == sizeof(uint32_t)) {
+			const auto v32 = static_cast<uint32_t>(now);
+			GuestMemory::Copy(dst, &v32, sizeof(v32));
+		} else {
+			GuestMemory::Copy(dst, &now, sizeof(now));
+		}
+	});
+}
+
+void CommandProcessor::WriteReferenceClock('''
+if s.count('void CommandProcessor::WriteReferenceClock(') != 1:
+    raise SystemExit('NOVA_0962_GPU_BOOST: WriteReferenceClock anchor changed')
+s = s.replace('void CommandProcessor::WriteReferenceClock(', helper, 1)
+for inc in ['#include <atomic>', '#include <cstdlib>', '#include <cstdio>']:
+    if inc not in s:
+        s = s.replace('#include', inc + '\n#include', 1)
+gr.write_text(s)
+print('NOVA_0962_GPU_BOOST: real GPU timestamps (NOVA_REAL_GPU_TIME=1)')

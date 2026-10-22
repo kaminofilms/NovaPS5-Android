@@ -29,4 +29,9 @@ for needle in ['rendering.num_color_attachments != 0', 'rendering.width * render
                'vkCmdSetFragmentShadingRateKHR']:
     assert needle in v, needle
 assert rd.index('dynamic_state.Commit(m_context.GetGraphics(), vk_buffer);') < rd.index('if (m_context.GetGraphics().nova_vrs_enabled) {')
+gr = (src / 'graphics/guest_gpu/graphicsRun.cpp').read_text()
+assert gr.count('NovaRestampAtCompletion(GetScheduler(),') == 2          # fast EOP labels + COPY_DATA clock
+assert 'scheduler.DeferPriorityOperation([dst, size] {' in gr          # rewritten only after the GPU finished
+fast = between(gr, 'if (timestamp) data = static_cast<decltype(data)>(Sync::ReadReferenceClock());\n\t\t\tGuestMemory::Copy', 'NovaNoteGpuWrite')
+assert fast.index('GuestMemory::Copy') < fast.index('NovaRestampAtCompletion')   # packet-time value written first
 print('NOVA_0962_GPU_BOOST: PASS')
