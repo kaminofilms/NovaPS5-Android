@@ -73,12 +73,12 @@ final class GraphicsSettings {
         Spinner cap = choice(a, box, "Presentation FPS cap", CAPS, value(p,title,"cap",0));
         Switch cache = toggle(a, box, "Disk shader cache (recommended)", value(p,title,"cache",1)!=0);
         Switch gpl = toggle(a, box, "Pipeline libraries when supported", value(p,title,"gpl",1)!=0);
-        if (safe(title)) { TextView safeNote = new TextView(a); safeNote.setText("Safe profile: this game starts with the settings it booted with on 0.9.52 (Accurate sync, Precise readback, 4K output, no background shaders). Change them here to experiment."); box.addView(safeNote); }
+        if (safe(title)) { TextView safeNote = new TextView(a); safeNote.setText("Safe profile: this game starts with Accurate sync and Precise readback. Since 0.9.63 it reports a 1080p display like other games (4x fewer pixels than 4K). Change them here to experiment."); box.addView(safeNote); }
         Spinner sync = choice(a, box, "GPU sync", SYNC, syncValue(p,title));
         Spinner readback = choice(a, box, "GPU memory readback", READBACK, value56(p,title,"readback_v56",1,2));
         Switch window = toggle(a, box, "Write-fault window (faster uploads)", value56(p,title,"fault_window_v56",1,0)!=0);
         Switch async = toggle(a, box, "Background shader compilation (no shader stutter; objects can pop in briefly)", value56(p,title,"async_v56",1,0)!=0);
-        Spinner video = choice(a, box, "Console video output", VIDEO_OUT, value56(p,title,"video_out_v56",0,1));
+        Spinner video = choice(a, box, "Console video output", VIDEO_OUT, value(p,title,"video_out_v63",0));
         Spinner turnip = choice(a, box, "Turnip driver workaround", TURNIP, value(p,title,"tu_debug_v57",0));
         boolean haveDll = lsfgDll(a).isFile();
         Spinner framegen = choice(a, box, "Frame generation (Lossless Scaling)", FRAMEGEN, value(p,title,"fg_v58",0));
@@ -104,7 +104,7 @@ final class GraphicsSettings {
                     .putInt(key(title,"fault_window_v56"),window.isChecked()?1:0)
                     .putInt(key(title,"async_v56"),async.isChecked()?1:0);
                 e.putInt(key(title,"raster_scale_v54"),resolution.getSelectedItemPosition());
-                e.putInt(key(title,"video_out_v56"),video.getSelectedItemPosition());
+                e.putInt(key(title,"video_out_v63"),video.getSelectedItemPosition());
                 e.putInt(key(title,"tu_debug_v57"),turnip.getSelectedItemPosition());
                 e.putInt(key(title,"fg_v58"),framegen.getSelectedItemPosition());
                 e.putInt(key(title,"fg_flow_v58"),flow.getSelectedItemPosition());
@@ -115,7 +115,7 @@ final class GraphicsSettings {
                 e.apply();
             })
             .setNeutralButton(title.isEmpty()?"Reset defaults":"Use global defaults",(d,w)->{
-                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","raster_scale_v54","sync_v56","readback_v56","fault_window_v56","video_out_v56","async_v56","tu_debug_v57","fg_v58","fg_flow_v58","fg_perf_v58","gpu_turbo_v62","vrs_v62","real_gpu_time_v62"})e.remove(key(title,n)); e.apply();
+                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","raster_scale_v54","sync_v56","readback_v56","fault_window_v56","video_out_v56","video_out_v63","async_v56","tu_debug_v57","fg_v58","fg_flow_v58","fg_perf_v58","gpu_turbo_v62","vrs_v62","real_gpu_time_v62"})e.remove(key(title,n)); e.apply();
             }).setNegativeButton("Close",null).show();
     }
     static void apply(Context c, String title) throws android.system.ErrnoException {
@@ -127,7 +127,7 @@ final class GraphicsSettings {
         Os.setenv("NOVA_UNITY_RESOLUTION","0",true);
         Os.setenv("NOVA_INTERNAL_RESOLUTION","0",true);
         Os.setenv("NOVA_RASTER_SCALE_PCT",Integer.toString(SCALE_PCT[ri]),true);
-        int vo=value56(p,title,"video_out_v56",0,1); if(vo<0||vo>1)vo=0;
+        int vo=value(p,title,"video_out_v63",0); if(vo<0||vo>1)vo=0;
         Os.setenv("NOVA_VIDEO_OUT_4K",vo==1?"1":"0",true);
         // Capture the default mode too, so a second launch can prove whether a request changed real rendering.
         Os.setenv("NOVA_TRACE_RESOLUTION","PPSA04703".equals(title)?"1":"0",true);

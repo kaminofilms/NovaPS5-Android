@@ -1,4 +1,4 @@
-# Nova PS5 Android: handoff at 0.9.62 (for another AI assistant)
+# Nova PS5 Android: handoff at 0.9.63 (for another AI assistant)
 
 **Repository:** `kaminofilms/NovaPS5-Android`. Moved from `kaminofilms/novaps5-android`; both URLs work.
 
@@ -44,7 +44,8 @@ Java is tested with stub `android.*` classes and javac.
 | 0.9.59 | lsfg build fix; lsfg build now required | Frame generation works, about 3 ms per generated frame. Real FPS fell 12–15 → 8 because pacing slept on the flip thread. |
 | 0.9.60 | Pacing moved to `VK_GOOGLE_display_timing`; diagnostics `NOVA_GPU_TIME` (Vulkan timestamps), `NOVA_PASS_BREAK` (EndRendering call sites), `NOVA_THREAD_CPU` | Diagnostics work |
 | 0.9.61 | Pass merging: skip redundant PM4 global barriers inside a pass; deferred-write-fault downloads at pass end; Unreal `/app0/ue4commandline.txt` virtual empty file; busy-thread stack dump | Passes ended halved (Ever about 11k → 6k per 5 s), but FPS unchanged. Super Meat Boy 3D now gets in-game (about 6 FPS), then stalls with low free RAM. |
-| 0.9.62 | GPU turbo; 2x2 variable-rate shading; real GPU timestamps; frame-pointer stack walk | **Needs a device test** |
+| 0.9.62 | GPU turbo; 2x2 variable-rate shading; real GPU timestamps; frame-pointer stack walk | **Ever Forward 12 → 20–25 FPS, Wonder Boy 9–10 → 12–24.** All three active on Turnip (`NOVA_VRS: 2x2 ... pipelineFragmentShadingRate=1`). Ever GPU now about 74% busy. Phone gets hot (worst in Wonder Boy). Internal resolution gives no FPS (it reaches about 8% of draws). |
+| 0.9.63 | Event-loop spin fix; read-to-read image barrier skip; Unreal DCC fill absorb; Luna/Super Meat Boy report 1080p | **Needs a device test** |
 
 ## Key measurements (0.9.61, Turnip)
 
@@ -110,6 +111,48 @@ All three are per-game Graphics settings, so the owner can turn each off.
   - GPU accuracy "normal" skips some sync work.
   - Turbo mode via KGSL.
 - **Nova's per-pass blit scaler** is much cheaper to build but reaches few passes. The long-term fix for GPU-bound games is a yuzu-style rescaler: scaled image allocation plus shader patches for FragCoord, texelFetch and imageLoad/Store, and textureSize queries.
+
+## 0.9.62 device results that drove 0.9.63
+
+**The 100% host thread is now identified.** The frame-pointer stack was:
+
+```
+libmain HostInputWaitEvent -> SDL_WaitEventTimeout -> (SDL events) -> SDL_UpdateJoysticks -> SDL_GetTicks -> clock_gettime
+```
+
+SDL3's Android wait loop pumps joysticks without blocking.
+
+**Ever Forward** at 20 FPS:
+- `NOVA_PASS_BREAK` shows `image.cpp:237` (`Image::Transit`) causing about 15,500 pass ends per 5 s, about 155 per frame.
+- `commandScheduler.cpp:446` (submit) about 5,000 per 5 s.
+- About 64 command buffers per frame.
+
+**Super Meat Boy 3D:**
+- 1–2 FPS.
+- The GPU thread spends about 3.8 s of every 5 s in readbacks: `readback_read` with about 280 calls and a 426 ms maximum.
+- `readback_caller=TextureMetadata` accounts for 35–45 MB per 5 s. That is `TextureCache::MaterializeColorClear` downloading GPU-written DCC/CMask metadata.
+- Unreal writes it with a constant-fill compute shader. SharpEmu `ConstantFillDetector.cs` (GPL-2.0-or-later) documents this; Nova's own implementation is independent.
+- It also reported a 4K display because of the safe profile.
+
+**Wonder Boy:**
+- The CRIWARE audio thread uses about 96% of a core mixing a 12-channel (7.1.4) AudioOut2 port, with "Voice buffer underrun".
+- Not changed yet. Next idea: check whether the game honours a stereo or 8-channel speaker report.
+
+## 0.9.63 contents
+
+- **`patch-0963-cpu-thermal.py` (`tests/test_0963_cpu_thermal.py`):**
+  - On Android, `HostInputWaitEvent` uses `SDL_PollEvent` plus `SDL_Delay` of up to 4 ms (`NOVA_EVENT_POLL_MS`).
+  - `Image::GetBarriers` (whole-image state only) skips a barrier when the layout stays the same and both old and new access are read-only. It merges the stages and accesses into the tracked state, so a later write waits for every reader.
+  - Log line: `NOVA_IMAGE_BARRIERS`. `NOVA_IMAGE_BARRIER_MERGE=0` restores 0.9.62.
+  - Per-subresource states are deliberately excluded, because that branch rewrites the tracked state afterwards.
+- **`patch-0963-unreal-dcc.py` (`tests/test_0963_unreal_dcc.py`):**
+  - The texture cache records colour-metadata ranges in `MaterializeColorClear`.
+  - In `TryConsumeComputeImageClear`, a uniform buffer fill (`ResolveComputeBufferFill`) that is not a whole-image clear, and lies wholly inside a known colour-metadata range with no pending GPU writes, is written to guest memory by the CPU (`InvalidateMemory` + `WriteBacking`). The dispatch is then skipped.
+  - Log line: `NOVA_DCC_FILL absorbed / ran_on_gpu`. `NOVA_DCC_FILL_ABSORB=0` restores 0.9.62.
+  - **Unverified:** whether Super Meat Boy's fill shader is recognised by Kyty's `uniform_fill` analysis. If `NOVA_DCC_FILL` stays at 0/0, port SharpEmu's pattern detector (v_lshl_add_u32 / s_buffer_load_dword / v_mov_b32 / buffer_store_format_x).
+- **Launcher:**
+  - The console video output setting moved to key `video_out_v63`, default 1080p for every title, including the safe-profile Unreal titles (they were 4K).
+  - Old `video_out_v56` choices are ignored.
 
 ## Next steps
 

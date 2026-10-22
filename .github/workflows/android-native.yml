@@ -1,5 +1,5 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# NovaPS5 0.9.63 / 117: event loop stops spinning a CPU core (cooler), read-to-read image barriers skipped.
+# NovaPS5 0.9.63 / 117: event loop stops spinning a CPU core (cooler), read-to-read image barriers skipped, Unreal DCC fills without readbacks.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
@@ -229,7 +229,7 @@ jobs:
           cd dist/apk && sha256sum NovaPS5-0.9.63-android-arm64.apk > SHA256SUMS.txt
           gh release create "$tag" NovaPS5-0.9.63-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.63 cooler and fewer GPU stalls (CI ${GITHUB_SHA::7})" \
-            --notes "Cooler: the window event loop kept one CPU core at 100% in every game (SDL's Android wait loop pumping controllers); it now checks for input every 4 ms and sleeps in between. Faster: image transitions that only change one kind of read to another no longer end the GPU pass (Ever Forward had ~155 per frame); every reader is still tracked, so later writes wait correctly. NOVA_IMAGE_BARRIERS in the log counts them; NOVA_IMAGE_BARRIER_MERGE=0 restores 0.9.62. Includes 0.9.62 (GPU turbo, variable-rate shading, real GPU time). Same package and signing key; installs as an update."
+            --notes "Cooler: the window event loop kept one CPU core at 100% in every game (SDL's Android wait loop pumping controllers); it now checks for input every 4 ms and sleeps in between. Faster: image transitions that only change one kind of read to another no longer end the GPU pass (Ever Forward had ~155 per frame). Unreal games (Super Meat Boy 3D, Luna Abyss): the compute fills Unreal uses to fast-clear colour compression metadata are now written by the CPU, so binding those images no longer waits for the GPU (Super Meat Boy spent ~3.8 s of every 5 s in these readbacks), and these two games now report a 1080p display instead of 4K (4x fewer pixels; selectable in Graphics). Log lines: NOVA_DCC_FILL, NOVA_IMAGE_BARRIERS. Includes 0.9.62 (GPU turbo, variable-rate shading, real GPU time). Same package and signing key; installs as an update."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()
