@@ -215,7 +215,7 @@ SDL3's Android wait loop pumps joysticks without blocking.
 
 They report Dead Cells, Blasphemous, Animal Well, Greak and Isaac at 60 FPS on an AYN Odin 3 (Adreno 830, system driver). Unreal games start at 25% resolution.
 
-**Owner decision: do NOT copy CapyPS5 code.** Use it only as evidence of what is possible. Nova writes its own implementations, designed below from general, well-documented techniques (yuzu's rescaler concept, Vulkan specialization constants).
+**Owner rule: study CapyPS5's code freely to learn how they solved things, but do NOT copy or paste it.** Nova writes its own implementations in its own patch style (scaler design below).
 
 **What they have, in priority order (for reference only):**
 
