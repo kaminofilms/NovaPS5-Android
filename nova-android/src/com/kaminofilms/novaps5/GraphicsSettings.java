@@ -16,6 +16,22 @@ final class GraphicsSettings {
     static final String[] VIDEO_OUT = {"1080p display (faster, recommended)", "4K display (game may render 4K)"};
     static final String[] SCALES = {"Native (100%)", "75%", "67%", "50%", "33%", "25% (fastest)"};
     static final int[] SCALE_PCT = {100, 75, 67, 50, 33, 25};
+    static final String[] SURFACE_SCALES = {"Automatic (Unreal 50%, other games Native)", "Native (100%)", "75%", "50%", "33%"};
+    static final int[] SURFACE_PERMILLE = {1000, 1000, 750, 500, 330};
+    static int surfacePermille(SharedPreferences p, String title, boolean unreal) {
+        int selected=value(p,title,"rescale_v64",0);
+        if(selected<0 || selected>=SURFACE_PERMILLE.length) selected=0;
+        return selected==0 ? (unreal?500:1000) : SURFACE_PERMILLE[selected];
+    }
+    static void maxFps(SharedPreferences p, String title) {
+        SharedPreferences.Editor e=p.edit().putInt(key(title,"present"),1)
+            .putInt(key(title,"gpu_turbo_v62"),1).putInt(key(title,"vrs_v62"),1)
+            .putInt(key(title,"real_gpu_time_v62"),1).putInt(key(title,"raster_scale_v54"),0)
+            .putInt(key(title,"rescale_v64"),1).putInt(key(title,"video_out_v63"),0)
+            .putInt(key(title,"fg_v58"),0);
+        if("PPSA27841".equals(title))e.putInt(key(title,"cap"),1);
+        e.apply();
+    }
     // 0.9.57: Mesa Turnip TU_DEBUG workarounds for Adreno GPU hangs (no effect on the system driver).
     static final String[] TURNIP = {"Off", "Disable LRZ (nolrz; try if the GPU hangs)", "System-memory rendering (sysmem)", "Both (nolrz,sysmem)"};
     static final String[] TURNIP_FLAGS = {"", "nolrz", "sysmem", "nolrz,sysmem"};
@@ -90,9 +106,18 @@ final class GraphicsSettings {
         Switch turbo = toggle(a, box, "GPU turbo (maximum GPU clock; warmer, uses more battery)", value(p,title,"gpu_turbo_v62",1)!=0);
         Switch vrs = toggle(a, box, "Variable-rate shading (2x2; faster, slightly softer 3D image; HUD stays sharp)", value(p,title,"vrs_v62",vrsDefault(title)?1:0)!=0);
         Switch realTime = toggle(a, box, "Report real GPU time (games with dynamic resolution can lower it themselves)", value(p,title,"real_gpu_time_v62",vrsDefault(title)?1:0)!=0);
-        final Spinner resolution = choice(a, box, "Internal resolution", SCALES, value(p,title,"raster_scale_v54",0));
+        final Spinner surfaceScale = choice(a, box, "Resolution scale (experimental)", SURFACE_SCALES, value(p,title,"rescale_v64",0));
+        final Spinner resolution = choice(a, box, "Compatibility resolution", SCALES, value(p,title,"raster_scale_v54",0));
         TextView scaleNote = new TextView(a);
         scaleNote.setText("Lower values render eligible 16:9 colour/depth passes at a smaller size and are faster. Compute, shadow and unsupported passes stay native. Try Native if the picture breaks."); box.addView(scaleNote);
+        Button maxFps = new Button(a); maxFps.setText("Auto Max FPS"); box.addView(maxFps);
+        maxFps.setOnClickListener(v->{
+            maxFps(p,title);
+            mode.setSelection(1);turbo.setChecked(true);vrs.setChecked(true);realTime.setChecked(true);
+            resolution.setSelection(0);surfaceScale.setSelection(1);video.setSelection(0);framegen.setSelection(0);
+            if("PPSA27841".equals(title))cap.setSelection(1);
+            note.setText("Auto Max FPS saved. Applies on next launch; results depend on the game and driver. Resolution scale stays Native; choose 50% and Save to test the new scaler.");
+        });
         ScrollView scroll = new ScrollView(a); scroll.addView(box);
         new AlertDialog.Builder(a).setTitle(title.isEmpty()?"Graphics defaults":"Graphics · "+title).setView(scroll)
             .setPositiveButton("Save",(d,w)->{
@@ -103,6 +128,7 @@ final class GraphicsSettings {
                     .putInt(key(title,"readback_v56"),readback.getSelectedItemPosition())
                     .putInt(key(title,"fault_window_v56"),window.isChecked()?1:0)
                     .putInt(key(title,"async_v56"),async.isChecked()?1:0);
+                e.putInt(key(title,"rescale_v64"),surfaceScale.getSelectedItemPosition());
                 e.putInt(key(title,"raster_scale_v54"),resolution.getSelectedItemPosition());
                 e.putInt(key(title,"video_out_v63"),video.getSelectedItemPosition());
                 e.putInt(key(title,"tu_debug_v57"),turnip.getSelectedItemPosition());
@@ -115,7 +141,7 @@ final class GraphicsSettings {
                 e.apply();
             })
             .setNeutralButton(title.isEmpty()?"Reset defaults":"Use global defaults",(d,w)->{
-                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","raster_scale_v54","sync_v56","readback_v56","fault_window_v56","video_out_v56","video_out_v63","async_v56","tu_debug_v57","fg_v58","fg_flow_v58","fg_perf_v58","gpu_turbo_v62","vrs_v62","real_gpu_time_v62"})e.remove(key(title,n)); e.apply();
+                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","rescale_v64","raster_scale_v54","sync_v56","readback_v56","fault_window_v56","video_out_v56","video_out_v63","async_v56","tu_debug_v57","fg_v58","fg_flow_v58","fg_perf_v58","gpu_turbo_v62","vrs_v62","real_gpu_time_v62"})e.remove(key(title,n)); e.apply();
             }).setNegativeButton("Close",null).show();
     }
     static void apply(Context c, String title) throws android.system.ErrnoException {
@@ -124,6 +150,11 @@ final class GraphicsSettings {
         int mode=value(p,title,"present",0); if(mode<0||mode>2)mode=0;
         int cap=value(p,title,"cap",0); int[] limits={-1,30,40,60,90,120,0};
         int ri=value(p,title,"raster_scale_v54",0); if(ri<0||ri>=SCALE_PCT.length)ri=0;
+        int surface=surfacePermille(p,title,"1".equals(Os.getenv("NOVA_GAME_UNREAL")));
+        Os.setenv("NOVA_RESCALE_PERMILLE",Integer.toString(surface),true);
+        // Surface and compatibility scaling must never multiply each other.
+        if(surface<1000)ri=0;
+        BootLog.write(c,"Resolution scale: "+surface+" permille (native fallbacks for unsupported uses)");
         Os.setenv("NOVA_UNITY_RESOLUTION","0",true);
         Os.setenv("NOVA_INTERNAL_RESOLUTION","0",true);
         Os.setenv("NOVA_RASTER_SCALE_PCT",Integer.toString(SCALE_PCT[ri]),true);

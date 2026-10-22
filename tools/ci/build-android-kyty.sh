@@ -315,6 +315,10 @@ python3 "$repo/tests/test_0963_cpu_thermal.py" "$work/kyty"
 python3 "$repo/tools/ci/patch-0963-unreal-dcc.py" "$work/kyty"
 python3 "$repo/tests/test_0963_unreal_dcc.py" "$work/kyty"
 python3 "$repo/tools/ci/patch-0964-transit-histogram.py" "$work/kyty"
+python3 "$repo/tools/ci/patch-0964-nova-rescale.py" "$work/kyty"
+python3 "$repo/tests/test_0964_nova_rescale.py" "$work/kyty"
+ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_0964_nova_rescale.py" "$work/kyty"
+python3 "$repo/tests/test_0964_rescale_settings.py"
 } 2>&1 | tee "$out/logs/regression-050.txt"
 
 
@@ -429,4 +433,3 @@ ls -la "$out/lib"
 # Publish the exact patched renderer and its source dependencies alongside the APK.
 mkdir -p "$out/source"
 tar --exclude='.git' -czf "$out/source/Kyty-Android-corresponding-source.tar.gz" -C "$work" kyty adrenotools
-

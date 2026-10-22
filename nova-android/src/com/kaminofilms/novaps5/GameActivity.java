@@ -107,6 +107,8 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
             int capIndex = getSharedPreferences("nova", 0).getInt("graphics_fps_index", 5);
             int cap = caps[Math.max(0, Math.min(caps.length - 1, capIndex))];
             Os.setenv("NOVA_FPS_CAP", Integer.toString(cap), true);
+            boolean unreal = unrealGame(new File(game), 0);
+            Os.setenv("NOVA_GAME_UNREAL",unreal?"1":"0",true);
             GraphicsSettings.apply(this, cacheTitleId);
             BootLog.write(this, "Presentation cap requested: " + Os.getenv("NOVA_FPS_CAP"));
             Os.setenv("NOVA_LIBC_HLE", homebrewLibc() ? "1" : "0", true);
@@ -115,7 +117,6 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
             boolean guestVa = !"PPSA15552".equals(titleId(new File(game)));
             Os.setenv("NOVA_GUEST_VA", guestVa ? "1" : "0", true);
             if (guestVa) BootLog.write(this, "Guest address translation on (addresses above 512 GB)");
-            boolean unreal = unrealGame(new File(game), 0);
             // With guest address translation the game's own libc heap (512/768 GB arena) works as on
             // the console. The emulator heap is only for titles without translation: under translation
             // it broke both Unreal test games in 0.9.6 (Meat Boy: out of memory at 32 MiB, Luna: crash
@@ -182,6 +183,8 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
         if (files == null || depth > 3) return false;
         for (File f : files) {
             String n = f.getName().toLowerCase(java.util.Locale.ROOT);
+            if (f.isFile() && (n.equals("ue4commandline.txt") || n.equals("uecommandline.txt"))) return true;
+            if (f.isDirectory() && n.equals("engine")) return true;
             // .utoc/.ucas (IoStore) or .pak inside <Project>/Content/Paks: Unreal only. A bare .pak is
             // not enough (Dead Cells ships one too).
             if (f.isFile() && (n.endsWith(".utoc") || n.endsWith(".ucas"))) return true;
@@ -304,5 +307,3 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
         super.onPause();
     }
 }
-
-
