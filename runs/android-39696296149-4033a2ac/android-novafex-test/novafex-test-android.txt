@@ -1,0 +1,135 @@
+NOVA_FEX: seccomp denied syscall 275 -> ENOSYS
+NOVAFEX_TEST: seccomp SIGSYS -> ENOSYS     PASS 
+NOVA_FEX: host AVX=1 SVE256=0 AFP=0 RCPC=1
+NOVAFEX_TEST: init                         PASS 
+NOVAFEX_TEST: host->guest CallGuest        PASS 
+NOVAFEX_TEST: host->guest fn pointer       PASS 
+NOVAFEX_TEST: guest loop                   PASS 
+NOVAFEX_TEST: guest->host gate             PASS 
+NOVAFEX_TEST: nested guest->host->guest    PASS 
+NOVAFEX_TEST: 8 int + 2 double args        PASS 
+NOVAFEX_TEST: 10 int args (AAPCS stack)    PASS 
+NOVAFEX_TEST: gate stack args pointer      PASS 
+NOVAFEX_TEST: double args/return           PASS 
+NOVAFEX_TEST: fs base                      PASS 
+NOVAFEX_TEST: split-line lock xadd         PASS 
+NOVAFEX_TEST: 4 host threads               PASS 
+NOVAFEX_TEST: invalidate + recompile       PASS 
+NOVAFEX_TEST: guest call context           PASS (rbx=1111 r12=2222 rip=+1d)
+NOVAFEX_TEST: gate exit hook               PASS 
+NOVAFEX_TEST: guest VA above 2^39          PASS (load=1122334455667788 store=cafef00d idx=77 xadd=cafef00d/cafef012 low=99)
+NOVAFEX_TEST: rep movs/stos on guest VA    PASS (copy=1/8fc0123c90 copyq=1/8fc0123d90 fill=1/8fc0124090 low=1)
+NOVAFEX_TEST: AVX2 gather on guest VA      PASS (dd=1 masked=1 qd=1 out0=5afffdbd)
+NOVAFEX_TEST: 128-bit cross-slot load      PASS (all 15 splits; poisoned host neighbor; ZF)
+NOVA_FEX: host access to guest VA 0x8fc0200100 emulated (pc=0x275ffc)
+NOVA_FEX: host access to guest VA 0x8fc0200100 emulated (pc=0x276008)
+NOVA_FEX: host access to guest VA 0x8fc0200108 emulated (pc=0x276014)
+NOVA_FEX: host access to guest VA 0x8fc0200108 emulated (pc=0x409bd0)
+NOVA_FEX: host access to guest VA 0x8fc0200140 emulated (pc=0x276060)
+NOVA_FEX: host access to guest VA 0x8fc0200140 emulated (pc=0x276070)
+NOVA_FEX: host access to guest VA 0x8fc0200150 emulated (pc=0x27607c)
+NOVA_FEX: host access to guest VA 0x8fc0200160 emulated (pc=0x276088)
+NOVAFEX_TEST: host access to guest VA      PASS 
+NOVAFEX_TEST: SIMD reserve slots           PASS 
+NOVAFEX_TEST: ST2 bytes/writeback/wrap     PASS 
+NOVAFEX_TEST: LD2 saved vector state       PASS 
+NOVAFEX_TEST: ST2 bytes/writeback/wrap     PASS 
+NOVAFEX_TEST: LD2 saved vector state       PASS 
+NOVAFEX_TEST: ST2 bytes/writeback/wrap     PASS 
+NOVAFEX_TEST: LD2 saved vector state       PASS 
+NOVAFEX_TEST: ST2 bytes/writeback/wrap     PASS 
+NOVAFEX_TEST: LD2 saved vector state       PASS 
+NOVAFEX_TEST: ST2 bytes/writeback/wrap     PASS 
+NOVAFEX_TEST: LD2 saved vector state       PASS 
+NOVAFEX_TEST: ST2 bytes/writeback/wrap     PASS 
+NOVAFEX_TEST: LD2 saved vector state       PASS 
+NOVAFEX_TEST: ST2 bytes/writeback/wrap     PASS 
+NOVAFEX_TEST: LD2 saved vector state       PASS 
+NOVAFEX_TEST: ST2 bytes/writeback/wrap     PASS 
+NOVAFEX_TEST: LD2 saved vector state       PASS 
+NOVAFEX_TEST: ST2 bytes/writeback/wrap     PASS 
+NOVAFEX_TEST: LD2 saved vector state       PASS 
+NOVAFEX_TEST: ST2 bytes/writeback/wrap     PASS 
+NOVAFEX_TEST: LD2 saved vector state       PASS 
+NOVAFEX_TEST: ST2 bytes/writeback/wrap     PASS 
+NOVAFEX_TEST: LD2 saved vector state       PASS 
+NOVAFEX_TEST: ST2 bytes/writeback/wrap     PASS 
+NOVAFEX_TEST: LD2 saved vector state       PASS 
+NOVAFEX_TEST: ST2 bytes/writeback/wrap     PASS 
+NOVAFEX_TEST: LD2 saved vector state       PASS 
+NOVAFEX_TEST: ST2 bytes/writeback/wrap     PASS 
+NOVAFEX_TEST: LD2 saved vector state       PASS 
+NOVAFEX_TEST: ST2 bytes/writeback/wrap     PASS 
+NOVAFEX_TEST: LD2 saved vector state       PASS 
+NOVAFEX_TEST: ST2 bytes/writeback/wrap     PASS 
+NOVAFEX_TEST: LD2 saved vector state       PASS 
+NOVAFEX_TEST: ST2 bytes/writeback/wrap     PASS 
+NOVAFEX_TEST: LD2 saved vector state       PASS 
+NOVAFEX_TEST: ST2 bytes/writeback/wrap     PASS 
+NOVAFEX_TEST: LD2 saved vector state       PASS 
+NOVAFEX_TEST: ST2 bytes/writeback/wrap     PASS 
+NOVAFEX_TEST: LD2 saved vector state       PASS 
+NOVAFEX_TEST: ST2 bytes/writeback/wrap     PASS 
+NOVAFEX_TEST: LD2 saved vector state       PASS 
+NOVAFEX_TEST: ST2 bytes/writeback/wrap     PASS 
+NOVAFEX_TEST: LD2 saved vector state       PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: ST1 contiguous/writeback/wrap PASS 
+NOVAFEX_TEST: LD1 contiguous/load/writeback PASS 
+NOVAFEX_TEST: LD1 exact 4c40a021 device fault PASS 
+NOVAFEX_TEST: ST2 real signal return       PASS 
+NOVAFEX_TEST: ST1 real signal return       PASS 
+NOVAFEX_TEST: LD1 real signal return       PASS 
+NOVAFEX_TEST: ST2 unmapped no mutation     PASS 
+NOVAFEX_TEST: LD1 unmapped page no vector mutation PASS 
+NOVAFEX_TEST: bulk guest memory no signals PASS 
+NOVAFEX_TEST: DC ZVA translated block      PASS 
+NOVAFEX_TEST: gate call overhead           PASS (58.2 ns per guest->host call)
+NOVAFEX_TEST: CallGuest overhead           PASS (74.1 ns per CallGuest)
+NOVAFEX_TEST: fault bridge overhead        PASS (1546.6 ns per fault-bridged call)
+NOVAFEX_TEST: ALL PASS (0 failures)
