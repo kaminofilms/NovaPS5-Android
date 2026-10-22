@@ -1,5 +1,5 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# NovaPS5 0.9.62 / 116: GPU turbo (KGSL max clock), 2x2 variable-rate shading for GPU-bound titles, frame-pointer stacks for busy threads.
+# NovaPS5 0.9.63 / 117: event loop stops spinning a CPU core (cooler), read-to-read image barriers skipped.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
@@ -201,14 +201,14 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.62-android-arm64.apk" \
-            --version-name 0.9.62-android --version-code 116 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.63-android-arm64.apk" \
+            --version-name 0.9.63-android --version-code 117 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.62-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.62-android --version-code 116 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.63-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.63-android --version-code 117 | tee dist/apk/verify.txt
       - name: Verify compiled performance features
-        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.62-android-arm64.apk
+        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.63-android-arm64.apk
       - name: Verify packaged mesh driver
-        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.62-android-arm64.apk
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.63-android-arm64.apk
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -225,11 +225,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.9.62-android-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.9.62-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.9.62-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.62 GPU turbo and variable-rate shading (CI ${GITHUB_SHA::7})" \
-            --notes "Ever Forward and Wonder Boy were limited by the phone GPU (86-92 % busy on 0.9.61). New Graphics settings: GPU turbo keeps the Adreno at its maximum clock (on by default; warmer, more battery), and variable-rate shading shades large 3D passes per 2x2 pixel block while depth, edges and the HUD stay full resolution (on by default for Ever Forward and Wonder Boy; needs driver support, the log says NOVA_VRS). Report real GPU time: GPU timestamps are written when the GPU really finishes, so games with dynamic resolution can lower their own resolution (yuzu's Fast GPU Time shows the reverse effect; on by default for Ever Forward and Wonder Boy). The busy-thread report now prints the full call chain. Includes 0.9.61 (fewer GPU pass breaks, Unreal boot fix for Luna Abyss / Super Meat Boy 3D). Same package and signing key; installs as an update."
+          tag="v0.9.63-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.63-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.63-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.63 cooler and fewer GPU stalls (CI ${GITHUB_SHA::7})" \
+            --notes "Cooler: the window event loop kept one CPU core at 100% in every game (SDL's Android wait loop pumping controllers); it now checks for input every 4 ms and sleeps in between. Faster: image transitions that only change one kind of read to another no longer end the GPU pass (Ever Forward had ~155 per frame); every reader is still tracked, so later writes wait correctly. NOVA_IMAGE_BARRIERS in the log counts them; NOVA_IMAGE_BARRIER_MERGE=0 restores 0.9.62. Includes 0.9.62 (GPU turbo, variable-rate shading, real GPU time). Same package and signing key; installs as an update."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()
