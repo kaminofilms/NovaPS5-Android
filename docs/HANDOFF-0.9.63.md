@@ -181,3 +181,30 @@ SDL3's Android wait loop pumps joysticks without blocking.
   - present FIFO, GPU turbo on, VRS 2x2 on, real GPU time on, internal resolution Native, video out 1080p
   - frame generation off
   - FPS cap 30 for Wonder Boy (heat)
+
+## Prepared for 0.9.64 (committed, NOT built; ask the owner before building)
+
+- `tools/ci/patch-0964-transit-histogram.py`: diagnostic `NOVA_TRANSITIONS` lines, the top 8 (layout, access) old→new pairs of emitted image barriers every 5 s. Compiles in Android mode.
+- The workflow is already bumped to 0.9.64 / versionCode 118. Update the release notes text before building.
+- **Use it to fix the read-to-read skip.** Decode the access flags; for example, 0x20 is SHADER_READ and 0x100 is COLOR_ATTACHMENT_WRITE. If the top pairs are COLOR_ATTACHMENT_WRITE→SHADER_READ, those barriers are real; look at render-target-as-texture patterns instead.
+
+## Research to do next (owner asked: Unreal / Unity / emulator sources)
+
+1. **Unity games (Ever Forward, Wonder Boy):**
+   - Check whether either game uses `ScalableBufferManager` dynamic resolution. A changing render area in `NOVA_RESOLUTION` with `NOVA_REAL_GPU_TIME=1` would show it.
+   - If not, the real fix is a **yuzu-style resolution rescaler**: allocate render targets scaled; in the shader recompiler, patch `gl_FragCoord`, texelFetch/imageLoad coordinates and textureSize for rescaled images; blacklist targets that fail.
+   - Nova's NovaRaster blit scaler reaches only about 8–13% of draws. Stencil passes are the main exclusion.
+2. **Unreal (Super Meat Boy 2–5 FPS, Luna about 15):**
+   - Profile their remaining readbacks and waits (`NOVA_RENDER_COST`, `readback_caller`).
+   - Port SharpEmu's `BoundedFillDetector` / `ComputeImageClear` (GPL-2.0-or-later, compatible with Nova) for fills Kyty's `uniform_fill` misses (`ran_on_gpu=50`).
+   - Consider leaving the safe profile (Precise readback, Accurate sync) for these titles now that the real PreInit cause is fixed.
+3. **Wonder Boy audio:** CRIWARE mixes 12 channels (AudioOut2 7.1.4) at 94% of a core. Check how AnyPS5 (`boykopovar/AnyPS5`) and shadPS4 report AudioOut2 speaker info and port formats, and whether a game accepts 8 or 2 channels.
+4. **Adreno 840 / Turnip:**
+   - Test the System (Qualcomm) driver against Turnip for each title.
+   - Test `TU_DEBUG` variants.
+   - Check SharpDroid's `docs/vulkan.md` notes on memory types: HOST_CACHED staging buffers make guest stores much cheaper.
+5. **Auto max-FPS profile** (owner request): one launcher button applying, per title:
+   - FIFO present, GPU turbo, VRS 2x2, real GPU time
+   - Native internal resolution, 1080p video out
+   - frame generation off
+   - an FPS cap of 30 where the game swings above 30 (Wonder Boy, for heat)

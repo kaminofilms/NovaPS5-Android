@@ -201,14 +201,14 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.63-android-arm64.apk" \
-            --version-name 0.9.63-android --version-code 117 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.64-android-arm64.apk" \
+            --version-name 0.9.64-android --version-code 118 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.63-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.63-android --version-code 117 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.64-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.64-android --version-code 118 | tee dist/apk/verify.txt
       - name: Verify compiled performance features
-        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.63-android-arm64.apk
+        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.64-android-arm64.apk
       - name: Verify packaged mesh driver
-        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.63-android-arm64.apk
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.64-android-arm64.apk
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -225,9 +225,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.9.63-android-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.9.63-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.9.63-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+          tag="v0.9.64-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.64-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.64-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.63 cooler and fewer GPU stalls (CI ${GITHUB_SHA::7})" \
             --notes "Cooler: the window event loop kept one CPU core at 100% in every game (SDL's Android wait loop pumping controllers); it now checks for input every 4 ms and sleeps in between. Faster: image transitions that only change one kind of read to another no longer end the GPU pass (Ever Forward had ~155 per frame). Unreal games (Super Meat Boy 3D, Luna Abyss): the compute fills Unreal uses to fast-clear colour compression metadata are now written by the CPU, so binding those images no longer waits for the GPU (Super Meat Boy spent ~3.8 s of every 5 s in these readbacks), and these two games now report a 1080p display instead of 4K (4x fewer pixels; selectable in Graphics). Log lines: NOVA_DCC_FILL, NOVA_IMAGE_BARRIERS. Includes 0.9.62 (GPU turbo, variable-rate shading, real GPU time). Same package and signing key; installs as an update."
   logs:

@@ -314,6 +314,7 @@ python3 "$repo/tools/ci/patch-0963-cpu-thermal.py" "$work/kyty"
 python3 "$repo/tests/test_0963_cpu_thermal.py" "$work/kyty"
 python3 "$repo/tools/ci/patch-0963-unreal-dcc.py" "$work/kyty"
 python3 "$repo/tests/test_0963_unreal_dcc.py" "$work/kyty"
+python3 "$repo/tools/ci/patch-0964-transit-histogram.py" "$work/kyty"
 } 2>&1 | tee "$out/logs/regression-050.txt"
 
 
