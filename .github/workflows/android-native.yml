@@ -1,0 +1,13 @@
+name: Nova PS5 Android-native (no DroidDeck)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  select-feature-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the Android feature branch
+        run: |
+          echo "::error::Select perf/0952-eop-drain in Run workflow. The APK workflow lives on that branch; main is registration only."
+          exit 1
