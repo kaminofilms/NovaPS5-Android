@@ -208,3 +208,29 @@ SDL3's Android wait loop pumps joysticks without blocking.
    - Native internal resolution, 1080p video out
    - frame generation off
    - an FPS cap of 30 where the game swings above 30 (Wonder Boy, for heat)
+
+## CapyPS5 v0.0.1 source review (owner supplied the source; GPL-2.0, KytyPS5 + FEX, the same base as Nova)
+
+**Source:** <https://git.capyps5.org/CapyPS5/CapyPS5>, tag `v0.0.1`; mirror `github.com/Ghael-V/CapyPS5`. Its licence is compatible with Nova's GPL-2.0. Credit it when porting.
+
+They report Dead Cells, Blasphemous, Animal Well, Greak and Isaac at 60 FPS on an AYN Odin 3 (Adreno 830, system driver). Unreal games start at 25% resolution.
+
+**Port these, in priority order:**
+
+1. **A real resolution scaler. This is the feature Nova lacks.**
+   - `core/src/graphics/host_gpu/renderer/cache/textureCache.cpp`: `TextureCache::ResolutionScale()` and `ChooseScale(desc)`. These scale RenderTarget, DepthTarget and VideoOut 2D colour images that are 1-sample, 1-mip and ≥1280x720. Their comment explains why display buffers must be scaled too (Greak).
+   - `image/image.cpp`: `IsScaled()` paths, around lines 404 and 447.
+   - Shader side: specialization constant `IR::ResolutionScaleSpecId = 100` (`ir/ShaderIR.h`), used in `backend/spirv/spirvEmitterFlow.cpp` (FragCoord, around lines 50 and 148), `spirvEmitterImage.cpp` (texel coordinates, around 186–198) and `spirvEmitterMesh.cpp` (`ResolutionScale()`). It is set in `pipeline/shaders.cpp`.
+   - `renderCompute.cpp:153`: compute dispatches over scaled images.
+   - The Android launcher has a per-game "Resolution scale", with a separate default for Unreal games (25%). See `android/app/.../Settings.kt` `ueResolution()` and `GameItem.isUnreal`, which detects `ue4commandline.txt`/`uecommandline.txt` or an engine folder.
+   - This replaces Nova's NovaRaster blit scaler, which reaches only about 8–13% of draws.
+2. **Video-out 1080p report** (`videoOut.cpp`, around line 1820). Nova already does this (`NOVA_VIDEO_OUT_4K`). Their note: Unreal rendered 4800x2700 for a "4K" output.
+3. **Unreal yield backoff** (`kernel/pthread.cpp` `SchedulerBackoffOnce`): "Unreal polls completion with millions of guest yields". An optional short sleep after 32 yields within 2 ms (`debug.capy.yield_us`) saves power and heat.
+4. **Unreal memory layout:**
+   - `kernel/memory.cpp` (comments around lines 195, 1213, 3867, 3934, 3992) and `memoryAddressSpace.inc`.
+   - UE4 reserves 512 GiB, UE5 reserves 256 GiB at a fixed address, and Unreal hands out pools 128 GiB apart.
+   - Compare with Nova's guest-VA folding when debugging Super Meat Boy and Luna.
+5. **`cpu/cpuBackend.cpp`** (around lines 458 and 475): JIT notes that Unreal's render thread is about 10%. Compare their FEX configuration with NovaFEX.
+6. **Dead Cells at 60 FPS:** diff their `guest_gpu/graphicsRun.cpp`, the EOP/label and WAIT_REG_MEM paths, against Nova's `patch-0957-deadcells-wait.py` and the fast-label path. They use the system driver on an Adreno 830.
+
+**Suggested order for GPT:** port (1) as `patch-0964-resolution-scale.py`, gated by a per-game setting (default Native; Unreal 25–50%). Test structurally, then ask the owner before building.
