@@ -1,5 +1,5 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# NovaPS5 0.9.61 / 115: render-pass merging (redundant barriers, deferred write-fault downloads), Unreal /app0 file root (Luna Abyss, Super Meat Boy 3D).
+# NovaPS5 0.9.62 / 116: GPU turbo (KGSL max clock), 2x2 variable-rate shading for GPU-bound titles, frame-pointer stacks for busy threads.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
@@ -201,14 +201,14 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.61-android-arm64.apk" \
-            --version-name 0.9.61-android --version-code 115 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.62-android-arm64.apk" \
+            --version-name 0.9.62-android --version-code 116 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.61-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.61-android --version-code 115 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.62-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.62-android --version-code 116 | tee dist/apk/verify.txt
       - name: Verify compiled performance features
-        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.61-android-arm64.apk
+        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.62-android-arm64.apk
       - name: Verify packaged mesh driver
-        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.61-android-arm64.apk
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.62-android-arm64.apk
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -225,11 +225,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.9.61-android-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.9.61-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.9.61-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.61 fewer GPU pass breaks, Unreal boot fix (CI ${GITHUB_SHA::7})" \
-            --notes "Faster rendering: GPU render passes stay open across cache-flush barriers that only follow render-target writes, and write-fault downloads wait for the pass to end, instead of ending it (Ever Forward ended ~2,000 passes a second on 0.9.60). NOVA_PASS_MERGE in the log counts what was saved; NOVA_PASS_MERGE=0 restores 0.9.60. Luna Abyss / Super Meat Boy 3D: Unreal quit with 'GEngineLoop.PreInit Failed!' because the dumps have no /app0/ue4commandline.txt; Nova now supplies an empty one (the game folder is not changed). NOVA_THREAD_CPU now prints the call stack of a host thread that uses a whole CPU core. Same package and signing key; installs as an update."
+          tag="v0.9.62-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.62-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.62-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.62 GPU turbo and variable-rate shading (CI ${GITHUB_SHA::7})" \
+            --notes "Ever Forward and Wonder Boy were limited by the phone GPU (86-92 % busy on 0.9.61). New Graphics settings: GPU turbo keeps the Adreno at its maximum clock (on by default; warmer, more battery), and variable-rate shading shades large 3D passes per 2x2 pixel block while depth, edges and the HUD stay full resolution (on by default for Ever Forward and Wonder Boy; needs driver support, the log says NOVA_VRS). The busy-thread report now prints the full call chain. Includes 0.9.61 (fewer GPU pass breaks, Unreal boot fix for Luna Abyss / Super Meat Boy 3D). Same package and signing key; installs as an update."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()

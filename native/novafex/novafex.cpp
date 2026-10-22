@@ -488,6 +488,35 @@ void DumpSelf(int, siginfo_t*, void* ucontext) {
 		if (length > 0 && static_cast<size_t>(length) < sizeof(context)) {
 			(void)!write(2, context, static_cast<size_t>(length));
 		}
+		// 0.9.61: walk the AArch64 frame-pointer chain from the interrupted state, so stacks
+		// stopped by the vdso or the signal trampoline still name their callers.
+		uint64_t addrs[18];
+		int      depth = 0;
+		addrs[depth++] = uc->uc_mcontext.regs[30];
+		uint64_t fp    = uc->uc_mcontext.regs[29];
+		const uint64_t sp = uc->uc_mcontext.sp;
+		while (depth < 18 && fp != 0 && (fp & 15u) == 0 && fp >= sp && fp - sp < (16ull << 20)) {
+			const auto* frame = reinterpret_cast<const uint64_t*>(fp);
+			const uint64_t next = frame[0], ret = frame[1];
+			if (ret == 0) break;
+			addrs[depth++] = ret;
+			if (next <= fp) break;
+			fp = next;
+		}
+		for (int i = 0; i < depth; i++) {
+			Dl_info info {};
+			char line[300];
+			int len;
+			if (dladdr(reinterpret_cast<void*>(addrs[i]), &info) != 0 && info.dli_fname != nullptr) {
+				const char* base = std::strrchr(info.dli_fname, '/');
+				len = std::snprintf(line, sizeof(line), "NOVA_FEX:   fp#%02d %s+0x%llx %s\n", i, base ? base + 1 : info.dli_fname,
+				                    static_cast<unsigned long long>(addrs[i] - reinterpret_cast<uint64_t>(info.dli_fbase)),
+				                    info.dli_sname ? info.dli_sname : "");
+			} else {
+				len = std::snprintf(line, sizeof(line), "NOVA_FEX:   fp#%02d 0x%llx\n", i, static_cast<unsigned long long>(addrs[i]));
+			}
+			if (len > 0) (void)!write(2, line, static_cast<size_t>(std::min<int>(len, sizeof(line) - 1)));
+		}
 	}
 	backtrace_symbols_fd(frames, count, 2);
 }

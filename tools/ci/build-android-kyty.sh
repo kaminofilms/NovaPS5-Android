@@ -308,6 +308,8 @@ python3 "$repo/tests/test_0960_gpu_diagnostics.py" "$work/kyty"
 python3 "$repo/tools/ci/patch-0961-pass-merge.py" "$work/kyty"
 python3 "$repo/tools/ci/patch-0961-ue-commandline.py" "$work/kyty"
 python3 "$repo/tests/test_0961_pass_merge.py" "$work/kyty"
+python3 "$repo/tools/ci/patch-0962-gpu-boost.py" "$work/kyty"
+python3 "$repo/tests/test_0962_gpu_boost.py" "$work/kyty"
 } 2>&1 | tee "$out/logs/regression-050.txt"
 
 
