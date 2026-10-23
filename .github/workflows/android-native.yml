@@ -1,10 +1,10 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# NovaPS5 0.9.64 / 118: independent experimental surface scaler and Auto Max FPS preset.
+# NovaPS5 0.9.65 / 119: uploaded Kyty 9dcff95 DPP shader compatibility fix.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
   push:
-    branches: [work/novaps5-runtime-timing, fix/novaps5-0941-anyps5-presentation, android-native, feature/guest-va, feature/anyps5-android-gpu, fix/0923-arm64-ld1-boot, fix/0924-native-guest-hotpaths, fix/0925-agc-commandbuffer-hostviews, fix/0926-shader-cache-persistence, fix/0927-gpu-host-memory, fix/0929-renderer-performance, fix/0931-luna-super-meat-boy, fix/novaps5-0936-luna-watchpoint]
+    branches: [update/0965-kyty-dpp, work/novaps5-runtime-timing, fix/novaps5-0941-anyps5-presentation, android-native, feature/guest-va, feature/anyps5-android-gpu, fix/0923-arm64-ld1-boot, fix/0924-native-guest-hotpaths, fix/0925-agc-commandbuffer-hostviews, fix/0926-shader-cache-persistence, fix/0927-gpu-host-memory, fix/0929-renderer-performance, fix/0931-luna-super-meat-boy, fix/novaps5-0936-luna-watchpoint]
   workflow_dispatch:
 permissions:
   contents: write
@@ -201,14 +201,14 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.64-android-arm64.apk" \
-            --version-name 0.9.64-android --version-code 118 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.65-android-arm64.apk" \
+            --version-name 0.9.65-android --version-code 119 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.64-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.64-android --version-code 118 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.65-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.65-android --version-code 119 | tee dist/apk/verify.txt
       - name: Verify compiled performance features
-        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.64-android-arm64.apk
+        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.65-android-arm64.apk
       - name: Verify packaged mesh driver
-        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.64-android-arm64.apk
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.65-android-arm64.apk
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -225,11 +225,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.9.64-android-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.9.64-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.9.64-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.64 experimental surface scaling (CI ${GITHUB_SHA::7})" \
-            --notes "Experimental independent Nova surface scaler: Automatic (Unreal 50%, other games Native), Native, 75%, 50%, 33%. Eligible single-sample render/depth/display targets use smaller Vulkan allocations and shader coordinate/size correction. Compute, storage, CPU uploads/readbacks, copies, mixed-scale and unsupported descriptor uses fall back to native size. No reduced compute dispatch. Auto Max FPS saves FIFO, turbo/VRS/real GPU time, native resolution, 1080p output and frame generation off; Wonder Boy gets a 30 FPS presentation cap. The old compatibility scaler is retained and does not stack with the new scaler. Device FPS/visual correctness are unverified. Includes NOVA_TRANSITIONS and NOVA_RESCALE diagnostics. Same package and signing key; the user supplies Lossless.dll separately. See docs/ANDROID-SURFACE-RESCALE-0.9.64.md."
+          tag="v0.9.65-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.65-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.65-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.65 Kyty DPP shader fix (CI ${GITHUB_SHA::7})" \
+            --notes "Ports the uploaded KytyPS5 9dcff95 DPP shader write fix and emitter predicate, addressing an upstream packed-ancillary compilation crash. Keeps Nova 0.9.64 native Android/FEX, synchronization, surface scaler, cache, driver and frame-generation integrations. This is a targeted upstream port, not a full Kyty upgrade or a working original PS5 dashboard. Device behavior/FPS remain unverified. Same package/signing key. Includes exact corresponding source. See docs/KYTY-UPSTREAM-20261023.md."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()

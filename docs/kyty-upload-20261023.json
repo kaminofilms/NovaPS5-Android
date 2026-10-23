@@ -1,0 +1,8 @@
+{
+  "uploaded_archive_sha256": "84b4ae842661c77ca73e2c853dac935878e812416dcdff3146ffe22564f55b4d",
+  "uploaded_revision": "9dcff95e809ec43ba66f56648164070f4b16348f",
+  "verified_git_blobs": 660,
+  "mismatches": [],
+  "integration_scope": "DPP shader write fix and equivalent emitter predicate only; full merge pending",
+  "build_upstream_base": "df5b9b92be7dfd463b47756b707d6d356a9f0550"
+}
