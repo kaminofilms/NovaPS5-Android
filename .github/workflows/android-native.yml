@@ -1,10 +1,10 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# NovaPS5 0.9.65 / 119: uploaded Kyty 9dcff95 DPP shader compatibility fix.
+# NovaPS5 0.9.66 / 120: stereo downmix and bounded, timed frame generation.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
   push:
-    branches: [update/0965-kyty-dpp, work/novaps5-runtime-timing, fix/novaps5-0941-anyps5-presentation, android-native, feature/guest-va, feature/anyps5-android-gpu, fix/0923-arm64-ld1-boot, fix/0924-native-guest-hotpaths, fix/0925-agc-commandbuffer-hostviews, fix/0926-shader-cache-persistence, fix/0927-gpu-host-memory, fix/0929-renderer-performance, fix/0931-luna-super-meat-boy, fix/novaps5-0936-luna-watchpoint]
+    branches: [fix/0966-pacing-audio, update/0965-kyty-dpp, work/novaps5-runtime-timing, fix/novaps5-0941-anyps5-presentation, android-native, feature/guest-va, feature/anyps5-android-gpu, fix/0923-arm64-ld1-boot, fix/0924-native-guest-hotpaths, fix/0925-agc-commandbuffer-hostviews, fix/0926-shader-cache-persistence, fix/0927-gpu-host-memory, fix/0929-renderer-performance, fix/0931-luna-super-meat-boy, fix/novaps5-0936-luna-watchpoint]
   workflow_dispatch:
 permissions:
   contents: write
@@ -200,14 +200,14 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.65-android-arm64.apk" \
-            --version-name 0.9.65-android --version-code 119 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.66-android-arm64.apk" \
+            --version-name 0.9.66-android --version-code 120 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.65-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.65-android --version-code 119 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.66-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.66-android --version-code 120 | tee dist/apk/verify.txt
       - name: Verify compiled performance features
-        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.65-android-arm64.apk
+        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.66-android-arm64.apk
       - name: Verify packaged mesh driver
-        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.65-android-arm64.apk
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.66-android-arm64.apk
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -224,11 +224,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.9.65-android-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.9.65-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.9.65-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.65 Kyty DPP shader fix (CI ${GITHUB_SHA::7})" \
-            --notes "Ports the uploaded KytyPS5 9dcff95 DPP shader write fix and emitter predicate, addressing an upstream packed-ancillary compilation crash. Keeps Nova 0.9.64 native Android/FEX, synchronization, surface scaler, cache, driver and frame-generation integrations. This is a targeted upstream port, not a full Kyty upgrade or a working original PS5 dashboard. Device behavior/FPS remain unverified. Same package/signing key. Includes exact corresponding source. See docs/KYTY-UPSTREAM-20261023.md."
+          tag="v0.9.66-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.66-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.66-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.66 Audio and frame-generation overhead (CI ${GITHUB_SHA::7})" \
+            --notes "Explicit surround-to-stereo mixing using actual SDL device format; capped 1080p frame-generation working images; no unpaced generated-frame fallback; clear stale inherited FPS caps. Native Android Kyty/NovaFEX and fixed signing key retained. Device performance/smoothness unverified; does not resolve all Super Meat Boy readback stalls or implement the unfinished full Kyty merge. Exact corresponding source included. See docs/PACING-AUDIO-0966.md."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()
@@ -250,3 +250,4 @@ jobs:
           git add -A
           git -c user.name=nova-lab -c user.email=nova-lab@users.noreply.github.com commit -qm "android logs $dest"
           for i in 1 2 3; do git push -q origin HEAD:lab-logs && break; git pull -q --rebase origin lab-logs; done
+

@@ -192,3 +192,4 @@ changes[rc] = rcs[:first_include] + '#include "graphics/host_gpu/novaSync.h"\n' 
 for path, s in changes.items():
     path.write_text(s)
 print('NOVA_SYNC: fast labels (IRQ on real completion), relaxed readbacks, 64 KiB write-fault window; per-game opt-outs')
+

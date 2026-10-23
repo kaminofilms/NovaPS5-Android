@@ -16,7 +16,7 @@ def between(s, a, b):
 # Env switches and their safe defaults: off unless a multiplier AND the user's DLL path are set.
 for needle in ['std::getenv("NOVA_FRAMEGEN")', 'std::getenv("NOVA_LSFG_DLL")', 'std::getenv("NOVA_FRAMEGEN_FLOW")',
                'std::getenv("NOVA_FRAMEGEN_PERF")', 'return Multiplier() > 1 && std::getenv("NOVA_LSFG_DLL") != nullptr;',
-               'return !m_failed && Requested() && AhbEnabled();', 'dlopen("libnovalsfg.so"',
+               'return !m_failed && Requested() && AhbEnabled() && DisplayTiming();', 'dlopen("libnovalsfg.so"',
                'dlsym(lib, "nova_lsfg_init")', 'dlsym(lib, "nova_lsfg_create")', 'dlsym(lib, "nova_lsfg_present")',
                'dlsym(lib, "nova_lsfg_destroy")', 'VK_FORMAT_R16G16B16A16_SFLOAT', 'AHARDWAREBUFFER_FORMAT_R16G16B16A16_FLOAT',
                'Multiplier() - 1']:
@@ -60,3 +60,4 @@ pos = [pres.index(n) for n in order]
 assert pos == sorted(pos), list(zip(order, pos))
 assert 'if (nova_fg_input) {' in pres
 print('NOVA_0958_FRAMEGEN: PASS')
+

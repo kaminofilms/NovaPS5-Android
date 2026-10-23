@@ -386,6 +386,8 @@ PY
 python3 "$repo/tools/ci/patch-0965-upstream-dpp.py" "$work/kyty"
 python3 "$repo/tests/test_0965_upstream_dpp.py" "$work/kyty"
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_0965_upstream_dpp.py" "$work/kyty"
+python3 "$repo/tools/ci/patch-0966-audio-stereo.py" "$work/kyty"
+python3 "$repo/tests/test_0966_audio_frame_extent.py" "$work/kyty"
 bash "$repo/tools/ci/build-android-anyps5.sh" "$repo" "$work" "$out"
 cmake -S kyty -B build-kyty-android -G Ninja -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" -DANDROID_ABI=arm64-v8a \
@@ -437,3 +439,4 @@ ls -la "$out/lib"
 # Publish the exact patched renderer and its source dependencies alongside the APK.
 mkdir -p "$out/source"
 tar --exclude='.git' -czf "$out/source/Kyty-Android-corresponding-source.tar.gz" -C "$work" kyty adrenotools
+
