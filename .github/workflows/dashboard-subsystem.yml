@@ -1,0 +1,23 @@
+name: Dashboard subsystem host checks
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'src/core/vfs/SystemDumpMount.*'
+      - 'src/core/kernel/RnpsIoctlHle.*'
+      - 'src/core/hle/HleShellCoreIpc.*'
+      - 'src/core/db/AppDbSynchronizer.*'
+      - 'native/dashboard/**'
+      - 'tests/dashboard_subsystem.cpp'
+      - '.github/workflows/dashboard-subsystem.yml'
+permissions:
+  contents: read
+jobs:
+  host:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev nlohmann-json3-dev
+      - run: cmake -S native/dashboard -B build-dashboard -DCMAKE_BUILD_TYPE=Debug
+      - run: cmake --build build-dashboard -j2
+      - run: ctest --test-dir build-dashboard --output-on-failure
