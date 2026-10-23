@@ -161,13 +161,13 @@ public final class MainActivity extends Activity {
             try {
                 getContentResolver().takePersistableUriPermission(uri, data.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION);
             } catch (SecurityException e) {
-                info("Folder access", "This provider cannot retain access. Choose a folder on internal storage.");
+                info("Folder access", "This provider cannot retain access. Choose the game folder on internal storage, a USB drive or an SD card using Android Files.");
                 return;
             }
             busy("Importing game folder", () -> {
                 List<GameStore.Entry> found = store.scan(uri);
                 store.addAll(found);
-                store.addRoot(GameStore.pathOf(uri.toString()));
+                store.addRoot(store.pathOf(uri.toString()));
                 store.loadImages();
                 return found.size() + " game folder(s) found.";
             }, value -> { home.invalidate(); info("Library updated", value); });
@@ -213,14 +213,13 @@ public final class MainActivity extends Activity {
         }
     }
 
-    /** A game folder picked through Android Files, as a path on internal storage. */
+    /** Resolve internal, USB and SD game folders using Android's mounted volume identities. */
     String resolveGame(GameStore.Entry e) throws Exception {
         Uri uri = Uri.parse(e.uri);
+        if (!GameStore.STORAGE_AUTHORITY.equals(uri.getAuthority()))
+            throw new IOException("Choose the game folder from a mounted USB drive, SD card or internal storage in Android Files. This provider does not expose a native filesystem folder.");
         String doc = DocumentsContract.getDocumentId(uri);
-        if (!doc.startsWith("primary:")) throw new IOException("Nova launches games from internal shared storage. Select the extracted game folder on internal storage.");
-        File base = Environment.getExternalStorageDirectory().getCanonicalFile();
-        File game = new File(base, doc.substring(8)).getCanonicalFile();
-        if (!game.getPath().startsWith(base.getPath() + File.separator)) throw new IOException("Invalid game folder path");
+        File game = VolumePaths.resolve(GameStore.volumes(this), doc);
         if (!new File(game, "eboot.bin").canRead()) {
             if (!Environment.isExternalStorageManager()) {
                 ui(this::askFileAccess);
@@ -545,5 +544,6 @@ public final class MainActivity extends Activity {
         return super.dispatchKeyEvent(e);
     }
 }
+
 
 
