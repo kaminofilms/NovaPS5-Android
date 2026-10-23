@@ -5,7 +5,7 @@ Compiled Nova baseline: 0.9.64, repository commit 5474e56b15c4c243f22f763d38c48a
 
 ## Included in this update
 
-Port the uploaded revision's DPP write fix: avoid preserving an old vector-register value for full-mask DPP writes that overwrite all active lanes, and use the upstream mask/row-shift write predicate. This addresses an upstream packed-ancillary shader compilation crash. Adopt the equivalent emitter helper refactor from that revision so the write predicate matches its tested source.
+Port the uploaded revision's DPP write fix: avoid preserving an old vector-register value for full-mask DPP writes that overwrite all active lanes, and use the upstream mask/row-shift write predicate. This addresses an upstream packed-ancillary shader compilation crash. Adopt the equivalent emitter helper refactor from that revision so the write predicate matches its tested source. Bump the driver/shader cache signature to NovaPC65DPP so cached pre-fix shaders are not reused. Reuse the unchanged NovaFEX/FFmpeg artifacts from successful run 39865101483 only after verifying their source/build recipes match the baseline; re-run ARM64 bridge tests and rebuild the changed Kyty library.
 
 The Android core remains on the pinned Nova base with its existing native/FEX, synchronization, scaler, cache and driver patches. This is a targeted upstream fix, NOT a full update of Kyty to 9dcff95. No PS5 dashboard assets or runtime are added.
 

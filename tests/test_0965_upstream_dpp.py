@@ -8,6 +8,9 @@ import sys
 import tempfile
 
 root = Path(sys.argv[1])
+cache = (root / 'src/graphics/host_gpu/renderer/pipeline/pipelineCache.cpp').read_text()
+if 'NovaPC26:' in cache or cache.count('NovaPC65DPP:') != 1:
+    raise SystemExit('DPP shader semantics must use a fresh cache signature')
 emitter = (root / 'src/graphics/shader/recompiler/backend/spirv/spirvEmitterFlow.cpp').read_text()
 start = emitter.index('uint32_t EmitDppWriteCondition(')
 end = emitter.index('\nuint32_t ', start + 10)

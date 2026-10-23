@@ -8,6 +8,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+  actions: read
 concurrency:
   group: android-native-${{ github.ref }}
   cancel-in-progress: true
@@ -42,20 +43,17 @@ jobs:
           python3 tests/test_host_access_tracking.py
       - name: Dependencies
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ninja-build ccache python3
-      - uses: actions/cache@v4
+      - name: Verify unchanged baseline dependency sources
+        run: |
+          git fetch --no-tags --depth=1 origin 5474e56b15c4c243f22f763d38c48aeff0e30afc
+          git diff --exit-code 5474e56b15c4c243f22f763d38c48aeff0e30afc HEAD -- native/novafex patches/fex-android tools/ci/build-android-novafex.sh tools/ci/patch-0936-fex-watchpoint.py
+      - name: Reuse verified unchanged NovaFEX binaries and corresponding source
+        uses: actions/download-artifact@v4
         with:
-          path: ~/.cache/ccache
-          key: android-fex-ccache-${{ env.FEX_COMMIT }}-${{ hashFiles('native/**', 'patches/fex-android/**') }}
-          restore-keys: android-fex-ccache-${{ env.FEX_COMMIT }}-
-      - name: Build libnovafex.so (NDK)
-        run: |
-          set -o pipefail
-          export ANDROID_NDK=$ANDROID_NDK_LATEST_HOME
-          bash tools/ci/build-android-novafex.sh "$PWD" "$PWD/work" "$PWD/dist/novafex" 2>&1 | tail -150
-      - name: Archive compiled FEX source and dependencies
-        run: |
-          mkdir -p dist/novafex/source
-          tar --exclude='.git' -czf dist/novafex/source/FEX-Android-corresponding-source.tar.gz -C work fex
+          name: android-novafex
+          path: dist/novafex
+          run-id: 39865101483
+          github-token: ${{ github.token }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -107,16 +105,17 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        id: cache
-        with:
-          path: dist/ffmpeg
-          key: android-ffmpeg-n7.1-${{ hashFiles('tools/ci/build-android-ffmpeg.sh') }}
-      - name: Build FFmpeg (NDK)
-        if: steps.cache.outputs.cache-hit != 'true'
+      - name: Verify unchanged FFmpeg build recipe
         run: |
-          export ANDROID_NDK=$ANDROID_NDK_LATEST_HOME
-          bash tools/ci/build-android-ffmpeg.sh "$PWD/work" "$PWD/dist/ffmpeg"
+          git fetch --no-tags --depth=1 origin 5474e56b15c4c243f22f763d38c48aeff0e30afc
+          git diff --exit-code 5474e56b15c4c243f22f763d38c48aeff0e30afc HEAD -- tools/ci/build-android-ffmpeg.sh
+      - name: Reuse verified unchanged FFmpeg binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: android-ffmpeg
+          path: dist/ffmpeg
+          run-id: 39865101483
+          github-token: ${{ github.token }}
       - uses: actions/upload-artifact@v4
         with:
           name: android-ffmpeg
