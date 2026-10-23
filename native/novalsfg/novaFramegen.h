@@ -10,6 +10,7 @@
 
 #include "graphics/host_gpu/graphicContext.h"
 #include "graphics/host_gpu/vulkanCommon.h"
+#include "novaFrameExtent.h"
 
 #include <thread>
 #include <algorithm>
@@ -67,7 +68,7 @@ inline bool Performance() {
 #if defined(__ANDROID__)
 class State {
 public:
-	[[nodiscard]] bool Active() const { return !m_failed && Requested() && AhbEnabled(); }
+	[[nodiscard]] bool Active() const { return !m_failed && Requested() && AhbEnabled() && DisplayTiming(); }
 	[[nodiscard]] vk::Extent2D Extent() const { return m_extent; }
 
 	// Records the copy of the finished game frame (already in TRANSFER_SRC_OPTIMAL).
@@ -237,6 +238,8 @@ private:
 	}
 
 	bool Ensure(GraphicContext& g, vk::Extent2D extent) {
+		const auto work = WorkingSize(extent.width, extent.height);
+		extent = vk::Extent2D {work.width, work.height};
 		if (m_context >= 0 && extent.width == m_extent.width && extent.height == m_extent.height) return true;
 		if (m_context >= 0) {
 			// The game changed its output size: start over (rare; title start or mode change).
@@ -383,3 +386,4 @@ public:
 #endif
 
 } // namespace Libs::Graphics::NovaFramegen
+

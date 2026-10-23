@@ -102,7 +102,7 @@ final class GraphicsSettings {
         Switch fgPerf = toggle(a, box, "Frame generation performance mode (faster, softer)", value(p,title,"fg_perf_v58",1)!=0);
         TextView fgNote = new TextView(a);
         fgNote.setText((haveDll ? "Lossless.dll imported. " : "Import your Lossless.dll first (Settings → Lossless Scaling DLL); until then this stays off. ")
-            + "Generated frames are shown between real ones, so motion looks smoother but input lag rises slightly. Presentation switches to VSync while it is on. Turn it off if the picture shows artefacts or the game gets slower."); box.addView(fgNote);
+            + "Frame generation needs stable real FPS. It uses at most 1080p processing and requires timed VSync presentation. It cannot fix slow game simulation. Turn it off if the picture shows artefacts or the game gets slower."); box.addView(fgNote);
         Switch turbo = toggle(a, box, "GPU turbo (maximum GPU clock; warmer, uses more battery)", value(p,title,"gpu_turbo_v62",1)!=0);
         Switch vrs = toggle(a, box, "Variable-rate shading (2x2; faster, slightly softer 3D image; HUD stays sharp)", value(p,title,"vrs_v62",vrsDefault(title)?1:0)!=0);
         Switch realTime = toggle(a, box, "Report real GPU time (games with dynamic resolution can lower it themselves)", value(p,title,"real_gpu_time_v62",vrsDefault(title)?1:0)!=0);
@@ -213,6 +213,8 @@ final class GraphicsSettings {
         Os.setenv("NOVA_GPU_LABELS","1",true);
         Os.setenv("NOVA_GPU_ORDERED_WAITS","1",true);
         if(cap>0&&cap<limits.length)Os.setenv("NOVA_FPS_CAP",Integer.toString(limits[cap]),true);
+        else Os.unsetenv("NOVA_FPS_CAP");
         BootLog.write(c,"Graphics profile "+title+": present="+mode+" cap="+cap+" shader_cache="+cache+" pipeline_libraries="+gpl+" sync="+(sync==0?"fast":"accurate")+" readback="+READBACK_MODES[readback]+" fault_window="+window+" scale="+SCALE_PCT[ri]+"% video="+(vo==1?"4k":"1080p")+" async_shaders="+async+" safe_profile="+safe+" tu_debug="+(tu==0?"off":TURNIP_FLAGS[tu])+" gpu_turbo="+turbo+" vrs="+(vrs?"2x2":"off")+" real_gpu_time="+realTime+" framegen="+(fg==0?"off":(fg+1)+"x flow="+FLOW_VALUES[flow]+(fgPerf?" performance":" quality")));
     }
 }
+

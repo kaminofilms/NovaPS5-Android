@@ -32,6 +32,7 @@ def edit(path, old, new, count=1):
 
 
 shutil.copyfile(repo / 'native/novalsfg/novaFramegen.h', src / 'graphics/presentation/window/novaFramegen.h')
+shutil.copyfile(repo / 'native/novalsfg/novaFrameExtent.h', src / 'graphics/presentation/window/novaFrameExtent.h')
 
 # ---- device extensions ----
 vw = src / 'graphics/presentation/window/vulkanWindow.cpp'
@@ -59,7 +60,7 @@ edit(vw, '''		if (HasExtension(available_extensions, VK_EXT_ATTACHMENT_FEEDBACK_
 					device_extensions.push_back("VK_GOOGLE_display_timing");
 					NovaFramegen::DisplayTiming() = true;
 				} else {
-					std::fprintf(stderr, "NOVA_FRAMEGEN: no VK_GOOGLE_display_timing; generated frames are shown unpaced\\n");
+					std::fprintf(stderr, "NOVA_FRAMEGEN: off (no VK_GOOGLE_display_timing; refusing unpaced generated bursts)\\n");
 				}
 			} else {
 				std::fprintf(stderr, "NOVA_FRAMEGEN: off (driver lacks VK_ANDROID_external_memory_android_hardware_buffer)\\n");
@@ -200,3 +201,4 @@ edit(sc, '''		{
 for path, text in changes.items():
     path.write_text(text)
 print('NOVA_0958_FRAMEGEN: Lossless Scaling frame generation in the presenter (NOVA_FRAMEGEN / NOVA_LSFG_DLL)')
+
