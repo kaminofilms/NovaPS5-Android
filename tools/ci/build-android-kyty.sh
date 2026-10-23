@@ -382,6 +382,10 @@ if s.count(old) != 1:
 p.write_text(s.replace(old, new, 1))
 PY
 
+# Uploaded upstream 9dcff95: isolated DPP shader fix; preserve the native base and overlays.
+python3 "$repo/tools/ci/patch-0965-upstream-dpp.py" "$work/kyty"
+python3 "$repo/tests/test_0965_upstream_dpp.py" "$work/kyty"
+ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_0965_upstream_dpp.py" "$work/kyty"
 bash "$repo/tools/ci/build-android-anyps5.sh" "$repo" "$work" "$out"
 cmake -S kyty -B build-kyty-android -G Ninja -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" -DANDROID_ABI=arm64-v8a \
