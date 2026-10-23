@@ -10,7 +10,7 @@ The patch preserves the native x86-64 implementation. An ARM64 fiber without an 
 
 ## Validation
 
-The regression runner extracts the actual patched fiber definitions from libKernel.cpp and executes the exact production x86-64 wrapper bytes with a SysV gate adapter on the build host. It verifies Run/Switch/yield/resume, entry and resume arguments, returned values, nested-run/self-switch errors, termination, FP controls, callee-saved state and 64 migrations between host threads. It runs at O0/O2/O3 with UBSan. Assembly generation and immediate patch offsets are checked against switch.S. This harness substitutes the gate adapter; it does not claim to execute FEX or Wolverine.
+The regression runner extracts the actual patched fiber definitions from libKernel.cpp and executes the exact production x86-64 wrapper bytes with a SysV gate adapter on the build host. It verifies Run/Switch/yield/resume, entry and resume arguments, returned values, nested-run/self-switch errors, termination, concurrent ownership rejection, MXCSR/x87 control words, callee-saved state and 64 migrations between host threads. It runs at O0/O2/O3 with UBSan. Assembly generation and immediate patch offsets are checked against switch.S. This harness substitutes the gate adapter; it does not claim to execute FEX or Wolverine.
 
 CI builds the actual Android Kyty library, runs the existing ARM64 NovaFEX tests, checks external folder resolution, builds/signs the APK using the fixed key and verifies the APK and packaged driver. The 0.9.67 USB/SD changes remain included. The native log emits NOVA_FIBER when creating a translated switching wrapper.
 

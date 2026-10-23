@@ -42,12 +42,7 @@ static bool GetGuestCallContext(GuestCallContext* c) {
 static void RegisterGuestCodeRange(uint64_t,uint64_t){}
 static uint64_t MakeGate(const void*);
 }
-extern "C" uint64_t NovaTestDispatch(GateFrame* f) {
- auto* old=gateFrame;gateFrame=f;
- using Function=uint64_t(*)(uint64_t,uint64_t,uint64_t,uint64_t,uint64_t,uint64_t);
- auto ret=reinterpret_cast<Function>(f->target)(f->args[0],f->args[1],f->args[2],f->args[3],f->args[4],f->args[5]);
- gateFrame=old;return ret;
-}
+extern "C" uint64_t NovaTestDispatch(GateFrame* f);
 extern "C" void NovaTestGate();
 asm(R"(
 .text
@@ -85,11 +80,25 @@ uint64_t NovaFex::MakeGate(const void* host) {
  auto address=reinterpret_cast<uint64_t>(p);gates.emplace(host,address);return address;
 }
 #include "fiber-under-test.inc"
+extern "C" uint64_t NovaTestDispatch(GateFrame* f) {
+ auto* old=gateFrame;gateFrame=f;uint64_t ret=0;
+ if(f->target==reinterpret_cast<uint64_t>(&FiberRun))
+  ret=FiberRun(reinterpret_cast<FiberObject*>(f->args[0]),f->args[1],reinterpret_cast<uint64_t*>(f->args[2]));
+ else if(f->target==reinterpret_cast<uint64_t>(&FiberSwitch))
+  ret=FiberSwitch(reinterpret_cast<FiberObject*>(f->args[0]),f->args[1],reinterpret_cast<uint64_t*>(f->args[2]));
+ else if(f->target==reinterpret_cast<uint64_t>(&FiberReturnToThread))
+  ret=FiberReturnToThread(f->args[0],reinterpret_cast<uint64_t*>(f->args[1]));
+ else if(f->target==reinterpret_cast<uint64_t>(&NovaFiberComplete)) ret=NovaFiberComplete();
+ else if(f->target==reinterpret_cast<uint64_t>(&NovaFiberEntryReturned)) ret=NovaFiberEntryReturned();
+ else std::abort();
+ gateFrame=old;return ret;
+}
 using RunFn=uint32_t(*)(FiberObject*,uint64_t,uint64_t*);
 using ReturnFn=uint32_t(*)(uint64_t,uint64_t*);
 static RunFn runFiber, switchFiber;
 static ReturnFn returnThread;
-static FiberObject a{},b{},migrating{};
+static FiberObject a{},b{},migrating{},busy{};
+static std::atomic<bool> entered{},releaseBusy{};
 static std::atomic<int> phase{};
 static void entryA(uint64_t init,uint64_t arg) {
  assert(init==11&&arg==22);
@@ -118,12 +127,18 @@ static void entryMigration(uint64_t init,uint64_t arg) {
  register uint64_t saved asm("r12")=0x123456789abcdef0;
  asm volatile("" : "+r"(saved));
  _mm_setcsr(0x7f80);
+ uint16_t cw=0x0b7f;asm volatile("fldcw %0"::"m"(cw));
  uint64_t next=0;
  assert(returnThread(2,&next)==0&&next==3);
  asm volatile("" : "+r"(saved));assert(saved==0x123456789abcdef0);
  assert(_mm_getcsr()==0x7f80);
+ uint16_t restored=0;asm volatile("fnstcw %0":"=m"(restored));assert(restored==cw);
  FiberObject* self=nullptr;assert(FiberGetSelf(&self)==0&&self==&migrating);
  phase.fetch_add(1);
+}
+static void entryBusy(uint64_t,uint64_t) {
+ entered.store(true,std::memory_order_release);
+ while(!releaseBusy.load(std::memory_order_acquire)) std::this_thread::yield();
 }
 static void initFiber(FiberObject& f,const char* name,FiberEntry entry,uint64_t arg,void* stack,size_t size) {
  assert(FiberInitialize(&f,name,entry,arg,stack,size,nullptr,0x03500000)==0);
@@ -132,7 +147,7 @@ int main() {
  runFiber=reinterpret_cast<RunFn>(NovaFiberWrap(reinterpret_cast<uint64_t>(&FiberRun)));
  switchFiber=reinterpret_cast<RunFn>(NovaFiberWrap(reinterpret_cast<uint64_t>(&FiberSwitch)));
  returnThread=reinterpret_cast<ReturnFn>(NovaFiberWrap(reinterpret_cast<uint64_t>(&FiberReturnToThread)));
- alignas(16) static unsigned char sa[131072],sb[131072],sm[131072];
+ alignas(16) static unsigned char sa[131072],sb[131072],sm[131072],sc[131072];
  initFiber(a,"A",entryA,11,sa,sizeof(sa));initFiber(b,"B",entryB,12,sb,sizeof(sb));
  assert(runFiber(nullptr,0,nullptr)==uint32_t(FIBER_ERROR_INVALID));
  assert(returnThread(0,nullptr)==uint32_t(FIBER_ERROR_PERMISSION));
@@ -152,6 +167,12 @@ int main() {
   std::thread second([&]{assert(runFiber(&migrating,3,nullptr)==uint32_t(FIBER_ERROR_STATE));assert(_mm_getcsr()==0x1f80);});second.join();
  }
  assert(phase.load()==65);
+ initFiber(busy,"ownership",entryBusy,0,sc,sizeof(sc));
+ std::thread owner([&]{assert(runFiber(&busy,0,nullptr)==uint32_t(FIBER_ERROR_STATE));});
+ while(!entered.load(std::memory_order_acquire))std::this_thread::yield();
+ assert(runFiber(&busy,0,nullptr)==uint32_t(FIBER_ERROR_STATE));
+ assert(FiberFinalize(&busy)==FIBER_ERROR_STATE);
+ releaseBusy.store(true,std::memory_order_release);owner.join();
  assert(gateFrame==nullptr&&FiberGetThreadContext()==nullptr);
- std::puts("PASS: guest Run/Switch/yield/resume, arguments, termination, errors, FP controls, callee-save and 64 thread migrations");
+ std::puts("PASS: guest Run/Switch/yield/resume, arguments, termination, errors, FP controls, callee-save, concurrent ownership and 64 thread migrations");
 }
