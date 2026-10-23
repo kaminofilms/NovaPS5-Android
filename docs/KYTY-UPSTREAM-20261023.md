@@ -48,4 +48,11 @@ The broader merge is pending. Its APIs and Nova behavior require a separate port
 
 ## PS5Themes lead
 
-MasterPS0/PS5Themes publishes theme archives for listed console firmware versions. Its repository tree contains only a short README. No standalone Sony dashboard engine or offline PUP decryption implementation was found in that repository. Theme binary contents have not been inspected or incorporated.
+Inspected PS5Theme02-fix.7z from MasterPS0/PS5Themes release 1.0. Size: 186,931,849 bytes; SHA-256: 9bca0157bf639cd7204d6325cb77d038acdf1dc6ba53f39b9885035c2ff465b6 (matches published release digest).
+
+The archive contains 590 paths, including dashboard artwork, four AT9 files, metadata and two application.ps.bundle files. It contains no .elf, .sprx or eboot.bin. Both bundles start with RNPSHEDR version 2 and remain protected:
+
+- NPXS40037: PlayStation Plus, 3,922,560 bytes, manifest RNPS 0.63.4-6.23, twinTurbo=true.
+- NPXS40063: Explore, 3,631,248 bytes, manifest RNPS 0.63.4-6.16, twinTurbo=true.
+
+These are evidence about assets and runtime versions, not decrypted Home/Control Center bundles. Scripts use WinSCP/FTP to replace files on an existing console. No downloaded script was executed and no theme assets/binaries are incorporated into Nova.
