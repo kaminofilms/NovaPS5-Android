@@ -1,0 +1,79 @@
+name: Overdrive experimental PS5 guest
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/overdrive-guest]
+    paths: [tools/overdrive/**, .github/workflows/overdrive-guest.yml]
+permissions:
+  contents: read
+concurrency:
+  group: overdrive-guest-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  guest:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch exact uploaded upstream revision
+        run: |
+          git clone --filter=blob:none --no-checkout https://github.com/MyLuxy/overdrive.git "$RUNNER_TEMP/overdrive"
+          git -C "$RUNNER_TEMP/overdrive" checkout --detach ce407214eee01df732d859434085ebea1399ef70
+          test "$(git -C "$RUNNER_TEMP/overdrive" rev-parse HEAD)" = ce407214eee01df732d859434085ebea1399ef70
+      - name: Guest sandbox regression tests
+        run: python3 tools/overdrive/test_guest.py "$RUNNER_TEMP/overdrive"
+      - name: Toolchain
+        timeout-minutes: 20
+        run: |
+          sudo apt-get -o Acquire::Retries=3 update
+          sudo apt-get install -y --no-install-recommends clang-18 llvm-18 llvm-18-dev cmake ninja-build nodejs npm python3-venv zlib1g-dev build-essential pkg-config unzip zip curl zstd ca-certificates
+          mkdir -p "$RUNNER_TEMP/llvm18"
+          for tool in clang clang++ llvm-config; do
+            ln -s "/usr/bin/$tool-18" "$RUNNER_TEMP/llvm18/$tool"
+          done
+          echo "$RUNNER_TEMP/llvm18" >> "$GITHUB_PATH"
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --disable-pip-version-check -r "$RUNNER_TEMP/overdrive/ps5-react/requirements.txt"
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+      - name: Apply Nova sandbox profile
+        run: python3 tools/overdrive/prepare_guest.py "$RUNNER_TEMP/overdrive" --ca-bundle /etc/ssl/certs/ca-certificates.crt
+      - name: Compile PS5 guest
+        run: |
+          cd "$RUNNER_TEMP/overdrive/ps5-react"
+          python3 tools/build_ps5.py --app-dir "$RUNNER_TEMP/overdrive/app" --llvm "$RUNNER_TEMP/llvm18"
+      - name: Stage folder recognized by Nova
+        run: |
+          mkdir -p out
+          cp -a "$RUNNER_TEMP/overdrive/ps5-react/dist/PPSA99058" out/
+          # Use the linked plaintext guest ELF, named eboot.bin as Nova's scanner expects.
+          cp "$RUNNER_TEMP/overdrive/ps5-react/.build/app/ps5/eboot.elf" out/PPSA99058/eboot.bin
+          python3 -c 'from pathlib import Path; assert Path("out/PPSA99058/eboot.bin").read_bytes()[:4] == b"\x7fELF"'
+          cp docs/OVERDRIVE-GUEST.md out/README.md
+          cp "$RUNNER_TEMP/overdrive/ps5-react/dist/PPSA99058.receipt.json" out/upstream-receipt.json
+          python3 tools/overdrive/make_receipt.py out
+          cd out
+          zip -q -r Overdrive-Nova-PS5-guest-experimental.zip PPSA99058 README.md receipt.json upstream-receipt.json
+          sha256sum Overdrive-Nova-PS5-guest-experimental.zip > SHA256SUMS
+      - name: Corresponding source and dependency archives
+        run: |
+          # Include the exact modified source, dependency checkouts/downloads, notices and build scripts.
+          # Preserve the original GL SDK archive: it carries its own source and third-party notices.
+          tar --exclude=.git --exclude=node_modules --exclude=.build --exclude=dist --exclude='*.o' --exclude='*.a' -czf out/Overdrive-Nova-corresponding-source.tar.gz -C "$RUNNER_TEMP" overdrive
+          tar -czf out/Nova-guest-profile-source.tar.gz tools/overdrive .github/workflows/overdrive-guest.yml docs/OVERDRIVE-GUEST.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Overdrive-Nova-experimental-guest
+          path: |
+            out/*.zip
+            out/*.tar.gz
+            out/SHA256SUMS
+          if-no-files-found: error
+      - name: Preserve failure and compilation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: overdrive-guest-build-logs
+          include-hidden-files: true
+          path: |
+            ${{ runner.temp }}/overdrive/ps5-react/.build/**/*.log
+          if-no-files-found: ignore
