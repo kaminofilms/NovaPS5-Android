@@ -1,10 +1,10 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# NovaPS5 0.9.66 / 120: stereo downmix and bounded, timed frame generation.
+# NovaPS5 0.9.68 / 122: translated guest fiber switching for the ARM64 host.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
   push:
-    branches: [fix/0966-pacing-audio, update/0965-kyty-dpp, work/novaps5-runtime-timing, fix/novaps5-0941-anyps5-presentation, android-native, feature/guest-va, feature/anyps5-android-gpu, fix/0923-arm64-ld1-boot, fix/0924-native-guest-hotpaths, fix/0925-agc-commandbuffer-hostviews, fix/0926-shader-cache-persistence, fix/0927-gpu-host-memory, fix/0929-renderer-performance, fix/0931-luna-super-meat-boy, fix/novaps5-0936-luna-watchpoint]
+    branches: [fix/0968-guest-fibers, fix/0966-pacing-audio, update/0965-kyty-dpp, work/novaps5-runtime-timing, fix/novaps5-0941-anyps5-presentation, android-native, feature/guest-va, feature/anyps5-android-gpu, fix/0923-arm64-ld1-boot, fix/0924-native-guest-hotpaths, fix/0925-agc-commandbuffer-hostviews, fix/0926-shader-cache-persistence, fix/0927-gpu-host-memory, fix/0929-renderer-performance, fix/0931-luna-super-meat-boy, fix/novaps5-0936-luna-watchpoint]
   workflow_dispatch:
 permissions:
   contents: write
@@ -170,6 +170,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: External folder regression
+        run: python3 tests/test_external_volume_paths.py
       - uses: actions/download-artifact@v4
         with:
           name: android-kyty
@@ -200,14 +202,14 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.66-android-arm64.apk" \
-            --version-name 0.9.66-android --version-code 120 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.68-android-arm64.apk" \
+            --version-name 0.9.68-android --version-code 122 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.66-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.66-android --version-code 120 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.68-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.68-android --version-code 122 | tee dist/apk/verify.txt
       - name: Verify compiled performance features
-        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.66-android-arm64.apk
+        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.68-android-arm64.apk
       - name: Verify packaged mesh driver
-        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.66-android-arm64.apk
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.68-android-arm64.apk
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -224,11 +226,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.9.66-android-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.9.66-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.9.66-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.66 Audio and frame-generation overhead (CI ${GITHUB_SHA::7})" \
-            --notes "Explicit surround-to-stereo mixing using actual SDL device format; capped 1080p frame-generation working images; no unpaced generated-frame fallback; clear stale inherited FPS caps. Native Android Kyty/NovaFEX and fixed signing key retained. Device performance/smoothness unverified; does not resolve all Super Meat Boy readback stalls or implement the unfinished full Kyty merge. Exact corresponding source included. See docs/PACING-AUDIO-0966.md."
+          tag="v0.9.68-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.68-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.68-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.68 ARM64 guest fiber switching (CI ${GITHUB_SHA::7})" \
+            --notes "Implement Run, Switch and ReturnToThread using translated x86-64 fiber continuations on the native ARM64 host. Preserve guest stack, SysV callee-saved registers, FP control words and cross-thread resumptions; publish idle only after leaving the departing stack. Includes USB/SD support from 0.9.67. Production-code regression tests at O0/O2/O3 with UBSan and Android build/APK checks. Fixes the logged x86-only FiberRun implementation gap; Wolverine boot/gameplay remains device-test pending and further blockers may exist. Fixed signing key and exact corresponding source included. See docs/GUEST-FIBERS-0968.md."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()
