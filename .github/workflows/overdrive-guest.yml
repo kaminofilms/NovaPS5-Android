@@ -49,9 +49,10 @@ jobs:
           cp "$RUNNER_TEMP/overdrive/ps5-react/.build/app/ps5/eboot.elf" out/PPSA99058/eboot.bin
           python3 -c 'from pathlib import Path; assert Path("out/PPSA99058/eboot.bin").read_bytes()[:4] == b"\x7fELF"'
           cp docs/OVERDRIVE-GUEST.md out/README.md
-          cp "$RUNNER_TEMP/overdrive/ps5-react/dist/PPSA99058.receipt.json" out/receipt.json
+          cp "$RUNNER_TEMP/overdrive/ps5-react/dist/PPSA99058.receipt.json" out/upstream-receipt.json
+          python3 tools/overdrive/make_receipt.py out
           cd out
-          zip -q -r Overdrive-Nova-PS5-guest-experimental.zip PPSA99058 README.md receipt.json
+          zip -q -r Overdrive-Nova-PS5-guest-experimental.zip PPSA99058 README.md receipt.json upstream-receipt.json
           sha256sum Overdrive-Nova-PS5-guest-experimental.zip > SHA256SUMS
       - name: Corresponding source and dependency archives
         run: |
@@ -72,6 +73,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: overdrive-guest-build-logs
+          include-hidden-files: true
           path: |
             ${{ runner.temp }}/overdrive/ps5-react/.build/**/*.log
           if-no-files-found: ignore

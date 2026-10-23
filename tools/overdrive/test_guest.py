@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Exercise the production guest filesystem and pinned-source profile edits."""
 import argparse
+import ast
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -18,7 +20,7 @@ def main(source):
     with tempfile.TemporaryDirectory(prefix="nova-overdrive-tests-") as temp:
         temp = Path(temp)
         source_copy = temp / "source"
-        for name in ("ps5-react/tools/build_ps5.py", "ps5-react/native/ps5/network_platform.cpp",
+        for name in ("ps5-react/tools/build_ps5.py", "ps5-react/tools/verify.py", "ps5-react/native/ps5/network_platform.cpp",
                      "ps5-react/native/ps5/filesystem_access.hpp", "ps5-react/native/ps5/payload_loader.hpp",
                      "app/state/update.js", "app/app.json"):
             dest = source_copy / name
@@ -30,6 +32,25 @@ def main(source):
         native = source_copy / "ps5-react/native/ps5"
         b = (source_copy / "ps5-react/tools/build_ps5.py").read_text()
         compile(b, "build_ps5.py", "exec")
+        verifier = (source_copy / "ps5-react/tools/verify.py").read_text()
+        compile(verifier, "verify.py", "exec")
+        assert 'guest["ca_sha256"] == digest(app / "nova/ca-bundle.pem")' in verifier
+        assert 'helper["elf_sha256"] == digest(app / "lapy.elf")' in verifier
+        check = next(node for node in ast.parse(verifier).body if isinstance(node, ast.FunctionDef) and node.name == 'main')
+        branch = next(node for node in check.body if isinstance(node, ast.If) and 'filesystemAccess' in ast.unparse(node.test))
+        executable_check = compile(ast.Module(body=[branch], type_ignores=[]), 'verify-guest-block', 'exec')
+        context = {'receipt': {'config': {'filesystemAccess': 'console'}},
+                   'app': source_copy / 'app', 'param': {'downloadDataSize': '1048576'},
+                   'TITLE': 'PPSA99058', 'json': json,
+                   'digest': lambda path: hashlib.sha256(path.read_bytes()).hexdigest()}
+        exec(executable_check, context)
+        ca = source_copy / 'app/nova/ca-bundle.pem'
+        ca.write_bytes(ca.read_bytes() + b'tampered')
+        try:
+            exec(executable_check, context)
+            raise RuntimeError('Verifier accepted a different CA bundle')
+        except AssertionError:
+            pass
         assert 'access_client = None' in b
         assert 'sources.extend(compatibility_client /' in b
         assert 'ROOT / "native/ps5/elevation_transport.cpp"' not in b

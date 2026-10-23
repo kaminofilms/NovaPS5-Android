@@ -21,6 +21,7 @@ def prepare(root, certificates):
     build = framework / "tools/build_ps5.py"
     network = framework / "native/ps5/network_platform.cpp"
     update = root / "app/state/update.js"
+    verifier = framework / "tools/verify.py"
     # Calculate every source edit before writing any of them.
     build_text = replace_once(build.read_text(),
         'access_client = dependency("filesystemHelperClient") if config.get("filesystemAccess") == "console" else None',
@@ -48,6 +49,22 @@ def prepare(root, certificates):
     return null;
   }
 ''' + update_text[end:]
+    helper_check = '''        helper = json.loads((app / "lapy-manifest.json").read_text())
+        assert helper["target_title"] == TITLE
+        assert helper["mode"] == "elf-helper" and helper["max_requests"] == 1
+        assert helper["service"] is False
+        assert helper["elf_sha256"] == digest(app / "lapy.elf")'''
+    guest_check = '''        if (app / "nova/guest-profile.json").exists():
+            guest = json.loads((app / "nova/guest-profile.json").read_text())
+            assert guest["profile"] == "nova-overdrive-guest-experimental-1"
+            assert guest["upstream"] == "ce407214eee01df732d859434085ebea1399ef70"
+            assert guest["runtime_tested"] is False
+            assert guest["ca_sha256"] == digest(app / "nova/ca-bundle.pem")
+            assert not (app / "lapy.elf").exists()
+            assert not (app / "lapy-manifest.json").exists()
+        else:
+''' + '\n'.join('    ' + line for line in helper_check.splitlines())
+    verify_text = replace_once(verifier.read_text(), helper_check, guest_check)
     pem = Path(certificates).read_bytes()
     if b"-----BEGIN CERTIFICATE-----" not in pem or len(pem) > 4 * 1024 * 1024:
         raise ValueError("--ca-bundle must be a public PEM certificate bundle")
@@ -68,6 +85,7 @@ def prepare(root, certificates):
     build.write_text(build_text)
     network.write_text(network_text)
     update.write_text(update_text)
+    verifier.write_text(verify_text)
     config_file.write_text(json.dumps(config, indent=2) + "\n")
     shutil.copyfile(Path(__file__).with_name("filesystem_access.cpp"),
                     framework / "native/ps5/filesystem_access.cpp")
