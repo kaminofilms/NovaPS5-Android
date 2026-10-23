@@ -12,14 +12,25 @@ struct NovaFiberContext {
 };
 static_assert(sizeof(NovaFiberContext) == 96 && offsetof(NovaFiberContext, rsp) == 48 &&
               offsetof(NovaFiberContext, mxcsr) == 80 && offsetof(NovaFiberContext, rax) == 88);
+// Android malloc/emulated-TLS pointers may carry a top-byte heap tag. Contexts
+// read by translated x86 instructions must use untagged, non-MTE mmap memory.
+struct NovaFiberContextDeleter {
+    void operator()(NovaFiberContext* cpu) const { munmap(cpu,4096); }
+};
+using NovaFiberContextPtr=std::unique_ptr<NovaFiberContext,NovaFiberContextDeleter>;
+static NovaFiberContextPtr NovaFiberNewContext() {
+    auto* memory=mmap(nullptr,4096,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
+    if(memory==MAP_FAILED) std::abort();
+    return NovaFiberContextPtr(new(memory) NovaFiberContext{});
+}
 struct NovaFiberState {
-    NovaFiberContext cpu;
+    NovaFiberContextPtr cpu=NovaFiberNewContext();
     uint64_t* resume_out{};
     bool started{};
 };
 struct NovaFiberThread {
     FiberThreadContext shared{};
-    NovaFiberContext caller;
+    NovaFiberContextPtr caller=NovaFiberNewContext();
     uint64_t* result_out{};
 };
 static thread_local NovaFiberThread g_nova_fiber_thread;
@@ -111,15 +122,15 @@ static void NovaFiberPrepare(FiberObject* fiber, NovaFiberState& state, uint64_t
     fiber->arg_on_run=argument;
     fiber->arg_on_return=0;
     if (!state.started) {
-        state.cpu={};
+        *state.cpu={};
         if (!(fiber->flags & FIBER_FLAG_SET_FPU_REGS)) {
-            state.cpu.mxcsr=parent.mxcsr;state.cpu.fcw=parent.fcw;
+            state.cpu->mxcsr=parent.mxcsr;state.cpu->fcw=parent.fcw;
         }
-        state.cpu.rip=reinterpret_cast<uint64_t>(fiber->entry);
-        state.cpu.rsp=((reinterpret_cast<uint64_t>(fiber->addr_context)+fiber->size_context)&~uint64_t{15})-8;
-        state.cpu.rdi=fiber->arg_on_initialize;state.cpu.rsi=argument;
+        state.cpu->rip=reinterpret_cast<uint64_t>(fiber->entry);
+        state.cpu->rsp=((reinterpret_cast<uint64_t>(fiber->addr_context)+fiber->size_context)&~uint64_t{15})-8;
+        state.cpu->rdi=fiber->arg_on_initialize;state.cpu->rsi=argument;
         auto ret=NovaFiberReturnGate();
-        NovaGuest::Copy(reinterpret_cast<void*>(state.cpu.rsp),&ret,8);
+        NovaGuest::Copy(reinterpret_cast<void*>(state.cpu->rsp),&ret,8);
         state.started=true;
     } else {
         NovaFiberWrite(state.resume_out,argument);
@@ -132,14 +143,14 @@ static uint64_t NovaFiberRun(FiberObject* fiber,uint64_t argument,uint64_t* resu
         return uint32_t(FIBER_ERROR_INVALID);
     auto& thread=g_nova_fiber_thread;
     // Capturing before ownership changes also rejects accidental direct host calls.
-    if(!NovaFiberCapture(thread.caller)) return uint32_t(FIBER_ERROR_PERMISSION);
+    if(!NovaFiberCapture(*thread.caller)) return uint32_t(FIBER_ERROR_PERMISSION);
     if(!FiberCompareExchangeState(fiber,FIBER_STATE_IDLE,FIBER_STATE_RUNNING))
         return uint32_t(FIBER_ERROR_STATE);
     auto state=NovaFiberSidecar(fiber);
-    NovaFiberPrepare(fiber,*state,argument,thread.caller);
+    NovaFiberPrepare(fiber,*state,argument,*thread.caller);
     thread.shared={};thread.shared.current_fiber=fiber;thread.result_out=result;
     FiberSetThreadContext(&thread.shared);
-    return NovaFiberRedirect(state->cpu);
+    return NovaFiberRedirect(*state->cpu);
 }
 static uint64_t NovaFiberSwitch(FiberObject* target,uint64_t argument,uint64_t* result) {
     if(!FiberIsValid(target)) return uint32_t(FIBER_ERROR_INVALID);
@@ -151,25 +162,25 @@ static uint64_t NovaFiberSwitch(FiberObject* target,uint64_t argument,uint64_t* 
         return uint32_t(FIBER_ERROR_STATE);
     auto* caller=thread->current_fiber;
     auto from=NovaFiberSidecar(caller);
-    if(!NovaFiberCapture(from->cpu)) {
+    if(!NovaFiberCapture(*from->cpu)) {
         FiberStoreState(target,FIBER_STATE_IDLE);return uint32_t(FIBER_ERROR_PERMISSION);
     }
     from->resume_out=result;FiberSetContextValid(caller,true);
-    auto to=NovaFiberSidecar(target);NovaFiberPrepare(target,*to,argument,from->cpu);
+    auto to=NovaFiberSidecar(target);NovaFiberPrepare(target,*to,argument,*from->cpu);
     thread->pending_idle_fiber=caller;thread->current_fiber=target;
-    return NovaFiberRedirect(to->cpu);
+    return NovaFiberRedirect(*to->cpu);
 }
 static uint64_t NovaFiberReturn(uint64_t result,uint64_t* resume) {
     auto* thread=FiberGetThreadContext();
     if(!thread || !thread->current_fiber) return uint32_t(FIBER_ERROR_PERMISSION);
     auto* fiber=thread->current_fiber;auto state=NovaFiberSidecar(fiber);
-    if(!NovaFiberCapture(state->cpu)) return uint32_t(FIBER_ERROR_PERMISSION);
+    if(!NovaFiberCapture(*state->cpu)) return uint32_t(FIBER_ERROR_PERMISSION);
     state->resume_out=resume;FiberSetContextValid(fiber,true);
     fiber->arg_on_return=result;
     NovaFiberWrite(g_nova_fiber_thread.result_out,result);
     thread->pending_idle_fiber=fiber;thread->current_fiber=nullptr;
-    g_nova_fiber_thread.caller.rax=0;
-    return NovaFiberRedirect(g_nova_fiber_thread.caller);
+    g_nova_fiber_thread.caller->rax=0;
+    return NovaFiberRedirect(*g_nova_fiber_thread.caller);
 }
 static uint64_t NovaFiberEntryReturned() {
     auto* thread=FiberGetThreadContext();
@@ -178,8 +189,8 @@ static uint64_t NovaFiberEntryReturned() {
     FiberSetContextValid(fiber,false);FiberStoreState(fiber,FIBER_STATE_TERMINATED);
     fiber->arg_on_return=0;NovaFiberWrite(g_nova_fiber_thread.result_out,0);
     thread->current_fiber=nullptr;
-    g_nova_fiber_thread.caller.rax=uint32_t(FIBER_ERROR_STATE);
-    return NovaFiberRedirect(g_nova_fiber_thread.caller);
+    g_nova_fiber_thread.caller->rax=uint32_t(FIBER_ERROR_STATE);
+    return NovaFiberRedirect(*g_nova_fiber_thread.caller);
 }
 #else
 using FiberResult = int32_t;
