@@ -1,0 +1,90 @@
+name: Nova PS5 external game folders
+on:
+  push:
+    branches: [fix/0967-external-folders]
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: android-external-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: External volume resolver regression tests
+        run: python3 tests/test_external_volume_paths.py
+      - name: Verify native sources match the successful 0.9.67 build
+        run: |
+          git fetch --no-tags --depth=1 origin 8deee96ecd89b72436f3d76054dacb1535b52b76
+          git diff --exit-code 8deee96ecd89b72436f3d76054dacb1535b52b76 HEAD -- native patches tools/ci build-native-apk.py
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-kyty
+          path: dist/kyty
+          run-id: 39991812960
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-novafex
+          path: dist/novafex
+          run-id: 39991812960
+          github-token: ${{ github.token }}
+      - name: Include licenses and corresponding source
+        run: |
+          mkdir -p dist/assets/licenses dist/apk
+          cp LICENSE dist/assets/licenses/Nova-GPL-2.0.txt
+          cp LICENSES/* dist/assets/licenses/
+          if [[ -d dist/kyty/licenses ]]; then cp dist/kyty/licenses/* dist/assets/licenses/; fi
+          cp docs/ANYPS5-GPU-INTEGRATION.md docs/ANDROID-SHADER-FEATURES-0.9.15.md docs/ANYPS5-COMPUTE-WORKGROUPS-0.9.16.md docs/ANDROID-MESH-DRIVER-0.9.17.md docs/ANDROID-MESH-WAVE32-0.9.18.md docs/ANDROID-MESH-SUBGROUP-0.9.19.md docs/ANDROID-GUEST-MEMORY-0.9.20.md docs/ANDROID-AGC-PACKETS-0.9.21.md docs/ANDROID-NATIVE-PACKETS-0.9.22.md docs/ANDROID-LD1-BOOT-0.9.23.md docs/ANDROID-HOTPATHS-0.9.24.md docs/ANDROID-AGC-HOTPATHS-0.9.25.md docs/ANDROID-PIPELINE-CACHE-0.9.26.md docs/ANDROID-GPU-HOTPATHS-0.9.27.md dist/assets/licenses/
+          cp dist/kyty/source/*.tar.gz dist/novafex/source/*.tar.gz dist/apk/
+          git archive --format=tar.gz HEAD > dist/apk/NovaPS5-build-source.tar.gz
+      - name: Bundled Turnip (Adreno 8xx, adrenotools build)
+        run: |
+          set -euo pipefail
+          mkdir -p dist/assets/drivers
+          curl -fsSL -o dist/assets/drivers/turnip-a8xx.zip \
+            https://github.com/The412Banner/Banners-Turnip/releases/download/v26.3.0-20261012/Turnip-v26.3.0-20261012-A8xx.zip
+          python3 tests/verify_mesh_driver.py dist/assets/drivers/turnip-a8xx.zip
+          unzip -l dist/assets/drivers/turnip-a8xx.zip | tee dist/turnip-contents.txt
+          unzip -p dist/assets/drivers/turnip-a8xx.zip meta.json
+      - name: Build and sign the APK
+        run: |
+          set -euo pipefail
+          python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.67-android-arm64.apk" \
+            --version-name 0.9.67-android --version-code 121 2>&1 | tee dist/apk-build.txt
+      - name: Verify the APK
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.67-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.67-android --version-code 121 | tee dist/apk/verify.txt
+      - name: Verify compiled performance features
+        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.67-android-arm64.apk
+      - name: Verify packaged mesh driver
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.67-android-arm64.apk
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: android-apk-build-log
+          path: |
+            dist/apk-build.txt
+            dist/apk/verify.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: dist/apk
+          retention-days: 14
+      - name: Publish device test build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="v0.9.67-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.67-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.67-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.67 USB and SD game folders (CI ${GITHUB_SHA::7})" \
+            --notes "Add and launch extracted game folders directly from Android-mounted USB drives and SD cards. Keeps library entries while the drive is disconnected and resolves volume IDs when reconnected. Requires Android all-files access. Uses the unchanged verified 0.9.66 native core and fixed signing key. Resolver regression tests and APK checks run in CI; physical USB launch remains device-test pending. This release adds external storage support; additional native FPS optimizations are still in progress. Exact corresponding source included."

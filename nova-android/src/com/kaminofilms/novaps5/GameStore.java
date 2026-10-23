@@ -69,19 +69,31 @@ final class GameStore {
     // ---- Auto refresh: the folders games live in are rescanned whenever the library is shown. ----
     static final String STORAGE_AUTHORITY="com.android.externalstorage.documents";
     static File base(){try{return android.os.Environment.getExternalStorageDirectory().getCanonicalFile();}catch(IOException x){return android.os.Environment.getExternalStorageDirectory();}}
-    /** The internal-storage folder of a game entry (or of a picked tree), or null. */
-    static File pathOf(String uri){try{Uri u=Uri.parse(uri);String doc=DocumentsContract.isTreeUri(u)&&!uri.contains("/document/")?DocumentsContract.getTreeDocumentId(u):DocumentsContract.getDocumentId(u);
-        if(doc==null||!doc.startsWith("primary:"))return null;return new File(base(),doc.substring(8)).getCanonicalFile();}catch(Exception x){return null;}}
+    static Map<String,File> volumes(Context context){
+        LinkedHashMap<String,File> roots=new LinkedHashMap<>();roots.put("primary",base());
+        android.os.storage.StorageManager manager=context.getSystemService(android.os.storage.StorageManager.class);
+        if(manager!=null)for(android.os.storage.StorageVolume volume:manager.getStorageVolumes()){
+            String state=volume.getState();
+            if(!android.os.Environment.MEDIA_MOUNTED.equals(state)&&!android.os.Environment.MEDIA_MOUNTED_READ_ONLY.equals(state))continue;
+            File directory=volume.getDirectory();String id=volume.isPrimary()?"primary":volume.getUuid();
+            if(directory!=null&&id!=null)roots.put(id,directory);
+        }
+        return roots;
+    }
+    /** Mounted internal/USB/SD game folder, or null while its volume is disconnected. */
+    File pathOf(String uri){try{Uri u=Uri.parse(uri);if(!STORAGE_AUTHORITY.equals(u.getAuthority()))return null;
+        String doc=DocumentsContract.isTreeUri(u)&&!uri.contains("/document/")?DocumentsContract.getTreeDocumentId(u):DocumentsContract.getDocumentId(u);
+        return VolumePaths.resolve(volumes(context),doc);}catch(Exception x){return null;}}
     synchronized void addRoot(File root){if(root==null)return;try{JSONArray a=new JSONArray(context.getSharedPreferences("nova",0).getString("roots","[]"));for(int i=0;i<a.length();i++)if(root.getPath().equals(a.optString(i)))return;a.put(root.getPath());context.getSharedPreferences("nova",0).edit().putString("roots",a.toString()).apply();}catch(JSONException ignored){}}
     synchronized LinkedHashSet<File> roots(){LinkedHashSet<File> r=new LinkedHashSet<>();
         try{JSONArray a=new JSONArray(context.getSharedPreferences("nova",0).getString("roots","[]"));for(int i=0;i<a.length();i++)r.add(new File(a.getString(i)));}catch(JSONException ignored){}
         for(Entry e:entries){File g=pathOf(e.uri);if(g!=null&&g.getParentFile()!=null&&!g.getParentFile().equals(base()))r.add(g.getParentFile());}
         return r;}
-    static Uri documentUri(File dir){String rel=dir.getPath().substring(base().getPath().length()+1);return DocumentsContract.buildDocumentUri(STORAGE_AUTHORITY,"primary:"+rel);}
+    Uri documentUri(File dir){try{return DocumentsContract.buildDocumentUri(STORAGE_AUTHORITY,VolumePaths.documentId(volumes(context),dir));}catch(IOException x){return null;}}
     void fileScan(File dir,int depth,List<Entry> out,int[] visited){
         if(++visited[0]>2048||depth>4)return;File[] files=dir.listFiles();if(files==null)return;
         File boot=new File(dir,"eboot.bin");
-        if(boot.isFile()){Entry e=new Entry();e.uri=documentUri(dir).toString();e.eboot=Uri.fromFile(boot).toString();e.name=dir.getName();e.id="Unknown title";e.version="";e.icon="";e.background="";
+        if(boot.isFile()){Uri folder=documentUri(dir);if(folder==null)return;Entry e=new Entry();e.uri=folder.toString();e.eboot=Uri.fromFile(boot).toString();e.name=dir.getName();e.id="Unknown title";e.version="";e.icon="";e.background="";
             File sys=new File(dir,"sce_sys");
             File param=new File(sys,"param.json");if(param.isFile()&&param.length()<1048576)try{meta(e,java.nio.file.Files.readAllBytes(param.toPath()));}catch(Exception ignored){}
             for(String n:new String[]{"icon0.png","icon0.jpg"}){File f=new File(sys,n);if(f.isFile()){e.icon=Uri.fromFile(f).toString();break;}}
@@ -107,3 +119,4 @@ final class GameStore {
         return changed;
     }
 }
+
