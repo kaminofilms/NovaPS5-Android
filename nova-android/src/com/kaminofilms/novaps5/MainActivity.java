@@ -270,7 +270,7 @@ public final class MainActivity extends Activity {
         }, 400);
     }
 
-    void graphics(GameStore.Entry e) { GraphicsSettings.show(this, e.id); }
+    void graphics(GameStore.Entry e) { GraphicsPanel.show(this, e.id, e.name); }
 
     void entry(GameStore.Entry e) {
         new AlertDialog.Builder(this).setTitle(e.name)
