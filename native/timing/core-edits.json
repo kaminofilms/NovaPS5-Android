@@ -111,7 +111,7 @@
   },
   {
     "path": "graphics/presentation/window/vulkanWindow.cpp",
-    "old": "NOVA_FRAMEGEN: no VK_GOOGLE_display_timing; generated frames are shown unpaced",
+    "old": "NOVA_FRAMEGEN: off (no VK_GOOGLE_display_timing; refusing unpaced generated bursts)",
     "new": "NOVA_FRAMEGEN: disabled; driver lacks VK_GOOGLE_display_timing (normal presentation remains available)"
   },
   {
