@@ -58,7 +58,7 @@ int main() {
   fs::remove_all(root);
   fs::create_directory(root);
   int failures = 0;
-  auto run = [&](std::string name, B data, bool success, bool install = false) {
+  auto run = [&](std::string name, B data, bool success, bool install = false, const std::string& expectedError = "") {
     auto src = root + "/" + name + ".pkg", dst = root + "/" + name;
     save(src, data);
     try {
@@ -67,8 +67,9 @@ int main() {
         NovaPkg::Install(src, dst);
       } else
         NovaPkg::ExtractTablePfs(src, 0, data.size(), 5 * 4096, dst);
-      if (!success)
-        throw std::runtime_error("invalid fixture accepted");
+      if (!success) {
+        ++failures;std::cerr << "FAIL " << name << ": invalid fixture accepted\n";return;
+      }
       std::ifstream f(dst + (install ? "/pfs_files" : "") + "/eboot.bin",
                       std::ios::binary);
       char magic[4]{};
@@ -80,8 +81,9 @@ int main() {
       if (success) {
         ++failures;
         std::cerr << "FAIL " << name << ": " << e.what() << "\n";
-      } else
-        std::cout << "PASS rejected " << name << "\n";
+      } else if(!expectedError.empty()&&std::string(e.what()).find(expectedError)==std::string::npos){
+        ++failures;std::cerr << "FAIL " << name << ": unexpected error " << e.what() << "\n";
+      } else std::cout << "PASS rejected " << name << "\n";
     }
   };
   run("plain", image(), true);
@@ -114,6 +116,31 @@ int main() {
   std::copy(b.begin() + 2 * 4096, b.begin() + 3 * 4096, b.begin());
   put(b, 6 * 4096 + 0xa8 + 0x64, 0, 4);
   run("block-zero-fragmented", b, true);
+  // Declared data-first inode table can be separate from the superblock.
+  b=image();b.resize(12*4096);std::copy(b.begin()+6*4096,b.begin()+7*4096,b.begin()+9*4096);put(b,5*4096+0xd8,9,8);run("explicit-inode-table",b,true);
+  // Allocation metadata can count additional blocks beyond the file payload.
+  b=image();put(b,6*4096+0xa8+0x60,4,4);run("allocation-padding",b,true);
+  // Wide unsigned records use 0x100 stride, with no per-pointer hashes.
+  b=image(true);B wideRecord(b.begin()+6*4096+0x310,b.begin()+6*4096+0x620);
+  put(b,5*4096+0x1c,2,2);
+  for(size_t i=0;i<2;i++){
+    B oldRecord=i?wideRecord:B(b.begin()+6*4096,b.begin()+6*4096+0x310);
+    const size_t dst=6*4096+i*0x100;
+    std::fill(b.begin()+dst,b.begin()+dst+0x100,0);
+    std::copy(oldRecord.begin(),oldRecord.begin()+0x68,b.begin()+dst);
+    put(b,dst+0x68,i?2:1,8);put(b,dst+0x70,UINT64_MAX,8);
+  }
+  run("unsigned-wide",b,true);
+  // Directory padding ends at each block, not the entire multi-block directory.
+  b=image();put(b,6*4096+8,8192,8);put(b,6*4096+0x60,2,4);put(b,6*4096+0x64,3,4);
+  std::copy(b.begin()+4096,b.begin()+4096+32,b.begin()+4*4096);
+  std::fill(b.begin()+3*4096,b.begin()+4*4096,0);
+  run("directory-block-padding",b,true);
+  // NAPS is reported explicitly; it must not be silently installed as ordinary PFS.
+  b=image();put(b,4096+8,20,4);put(b,4096+12,40,4);put(b,6*4096+8,40,8);
+  std::fill(b.begin()+4096+16,b.begin()+4096+40,0);memcpy(b.data()+4096+16,"naps_pkg_layout.dat",20);
+  put(b,6*4096+0xa8+8,16,8);std::fill(b.begin()+2*4096,b.begin()+2*4096+16,0);
+  run("naps-explicit-blocker",b,false,false,"NAPS streaming layout detected");
   // PFSC file decompression, including stored and compressed blocks.
   b = image();
   B compressed(4096, 0x5a);

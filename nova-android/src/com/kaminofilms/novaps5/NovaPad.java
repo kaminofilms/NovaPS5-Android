@@ -24,6 +24,10 @@ final class NovaPad extends View {
 
     static native void nativeState(int buttons, float lx, float ly, float rx, float ry, float l2, float r2);
     static native long nativeFrames();
+    static native long[] nativeFrameStats();
+    static native void nativeWorkload(int level,boolean paused);
+    static void workload(int level,boolean paused){try{nativeWorkload(level,paused);}catch(UnsatisfiedLinkError ignored){}}
+    static long[] frameStats(){try{return nativeFrameStats();}catch(UnsatisfiedLinkError e){return new long[]{0,0,0};}}
 
     static long frames() {
         try { return nativeFrames(); } catch (UnsatisfiedLinkError e) { return 0; }

@@ -29,14 +29,18 @@ final class Telemetry {
         thread.start();
         final Handler handler = new Handler(thread.getLooper());
         handler.post(new Runnable() {
-            long lastFrames = -1, lastTime;
+            long lastFrames = -1, lastPresented=-1, lastGenerated=-1, lastTime;
             public void run() {
                 try {
-                    long now = SystemClock.uptimeMillis(), frames = NovaPad.frames();
+                    long[] stats=NovaPad.frameStats();
+                    long now = SystemClock.uptimeMillis(), frames = stats[0], presented=stats[1],generated=stats[2];
                     String fps = "n/a";
                     if (lastFrames >= 0 && now > lastTime)
                         fps = String.format(Locale.US, "%.1f", (frames - lastFrames) * 1000f / (now - lastTime));
-                    lastFrames = frames; lastTime = now;
+                    String output=lastPresented>=0&&now>lastTime?String.format(Locale.US,"%.1f",(presented-lastPresented)*1000f/(now-lastTime)):"n/a";
+                    String gen=lastGenerated>=0&&now>lastTime?String.format(Locale.US,"%.1f",(generated-lastGenerated)*1000f/(now-lastTime)):"n/a";
+                    lastFrames = frames; lastPresented=presented;lastGenerated=generated; lastTime = now;
+                    BootLog.write(app,"NOVA_FPS: game_fps="+fps+" presented_fps="+output+" generated_fps="+gen+" (queue submits; display timing may differ)");
                     BootLog.write(app, line(app, fps));
                 } catch (Throwable ignored) {
                 }
@@ -48,7 +52,7 @@ final class Telemetry {
     static String line(Context c, String fps) {
         PowerManager pm = (PowerManager) c.getSystemService(Context.POWER_SERVICE);
         int status = pm == null ? -1 : pm.getCurrentThermalStatus();
-        float headroom = pm == null ? Float.NaN : pm.getThermalHeadroom(10);
+        float headroom = ThermalController.headroom();
         Intent battery = c.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         int tenths = battery == null ? Integer.MIN_VALUE : battery.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Integer.MIN_VALUE);
         return String.format(Locale.US,

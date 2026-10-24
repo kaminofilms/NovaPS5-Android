@@ -1,0 +1,197 @@
+[
+  {
+    "path": "graphics/presentation/videoOut.cpp",
+    "old": "#include \"common/novaFex.h\"",
+    "new": "#include \"common/novaFex.h\"\n#include \"common/timing/Deadline.h\"\n#include \"common/timing/Runtime.h\"\n#if defined(KYTY_ANDROID)\nvoid NovaAndroidNoteGameFrame();\nvoid NovaAndroidClockAudit();\n#endif"
+  },
+  {
+    "path": "graphics/presentation/videoOut.cpp",
+    "old": "\t\tm_present_thread = std::jthread([this](std::stop_token token) { PresentThread(token); });",
+    "new": "\t\tm_vblank_thread = std::jthread([this](std::stop_token token) { VblankThread(token); });\n\t\tm_present_thread = std::jthread([this](std::stop_token token) { PresentThread(token); });"
+  },
+  {
+    "path": "graphics/presentation/videoOut.cpp",
+    "old": "\tvoid PresentThread(std::stop_token token);",
+    "new": "\tvoid PresentThread(std::stop_token token);\n\tvoid VblankThread(std::stop_token token);"
+  },
+  {
+    "path": "graphics/presentation/videoOut.cpp",
+    "old": "\tstd::jthread             m_present_thread;",
+    "new": "\tstd::jthread             m_present_thread;\n\tstd::jthread             m_vblank_thread;"
+  },
+  {
+    "path": "graphics/presentation/videoOut.cpp",
+    "old": "VideoOutDriver::Impl::~Impl() {",
+    "new": "VideoOutDriver::Impl::~Impl() {\n    if (m_vblank_thread.joinable()) {\n        m_vblank_thread.request_stop();\n        m_vblank_thread.join();\n    }"
+  },
+  {
+    "path": "graphics/presentation/videoOut.cpp",
+    "old": "void VideoOutDriver::Impl::PresentThread(std::stop_token token) {\n\tconst auto frequency = Common::Timer::QueryPerformanceFrequency();\n\tEXIT_IF(frequency == 0);\n\n\tint64_t total_wait = 0;\n\twhile (!token.stop_requested()) {\n\t\tconst auto sleep_begin = Common::Timer::QueryPerformanceCounter();\n\t\tif (total_wait > 0) {\n\t\t\tconst auto remaining_us =\n\t\t\t    (static_cast<uint64_t>(total_wait) * 1000000u + frequency - 1) / frequency;\n\t\t\tCommon::Thread::SleepMicro(static_cast<uint32_t>(\n\t\t\t    std::clamp<uint64_t>(remaining_us, 1, std::numeric_limits<uint32_t>::max())));\n\t\t}\n\t\tif (token.stop_requested()) {\n\t\t\tbreak;\n\t\t}\n\t\tconst auto frame_begin = Common::Timer::QueryPerformanceCounter();\n        const bool nova_frame_late = total_wait <\n            static_cast<int64_t>(frame_begin - sleep_begin);\n        // A delayed frame/scheduler wake must not accumulate negative sleep\n        // debt and emit a burst of synthetic vblanks to catch up afterwards.\n        total_wait = std::max<int64_t>(0, total_wait -\n            static_cast<int64_t>(frame_begin - sleep_begin));\n\n\t\tconst auto refresh = std::max(Config::GetVblankFrequency(), 1u);\n\t\tconst auto period  = std::max(frequency / refresh, uint64_t {1});\n\n\t\tif (m_presenter.IsGuestPaused()) {\n\t\t\t(void)m_presenter.PresentLastFrame();\n\t\t\tconst auto frame_end = Common::Timer::QueryPerformanceCounter();\n\t\t\ttotal_wait +=\n\t\t\t    static_cast<int64_t>(period) - static_cast<int64_t>(frame_end - frame_begin);\n\t\t\tcontinue;\n\t\t}\n\n\t\tVblankBegin();\n\t\tbool presented = m_flip_queue.Flip(0);\n\t\tif (!presented && m_presenter.NeedsSystemOverlayRefresh()) {\n\t\t\tif (m_presenter.PresentLastFrame()) {\n\t\t\t\tpresented = true;\n\t\t\t} else {\n\t\t\t\tuint32_t width  = 0;\n\t\t\t\tuint32_t height = 0;\n\t\t\t\t{\n\t\t\t\t\tCommon::LockGuard lock(m_mutex);\n\t\t\t\t\twidth  = m_video_out_ctx[0].width;\n\t\t\t\t\theight = m_video_out_ctx[0].height;\n\t\t\t\t}\n\t\t\t\tauto& blank = m_presenter.PrepareBlankFrame(width, height, true);\n\t\t\t\tm_presenter.Present(blank);\n\t\t\t\tpresented = true;\n\t\t\t}\n\t\t}\n\t\tif (!presented && nova_frame_late) {\n\t\t\tbool     any_open = false;\n\t\t\tuint32_t width    = 0;\n\t\t\tuint32_t height   = 0;\n\t\t\t{\n\t\t\t\tCommon::LockGuard lock(m_mutex);\n\t\t\t\twidth  = m_video_out_ctx[0].width;\n\t\t\t\theight = m_video_out_ctx[0].height;\n\t\t\t\tfor (int handle = 1; handle < VIDEO_OUT_NUM_MAX; handle++) {\n\t\t\t\t\tany_open |= m_video_out_ctx[handle].opened;\n\t\t\t\t}\n\t\t\t}\n\t\t\tif (!any_open) {\n\t\t\t\tauto& blank = m_presenter.PrepareBlankFrame(width, height, true);\n\t\t\t\tm_presenter.Present(blank);\n\t\t\t}\n\t\t}\n\t\tVblankEnd();\n\n\t\tconst auto frame_end = Common::Timer::QueryPerformanceCounter();\n\t\ttotal_wait += static_cast<int64_t>(period) - static_cast<int64_t>(frame_end - frame_begin);\n\t}\n}\n",
+    "new": "namespace {\nuint64_t NovaWaitDeadline(NovaTiming::Deadline& deadline,uint64_t frequency,uint64_t period,\n                         uint64_t epoch,std::stop_token token) {\n    for (;;) {\n        const auto now=Common::Timer::QueryPerformanceCounter();\n        const auto remaining=deadline.Wait(now,period,epoch);\n        if (!remaining || token.stop_requested()) return now;\n        const auto us=(remaining*1000000u+frequency-1)/frequency;\n        Common::Thread::SleepMicro(static_cast<uint32_t>(std::clamp<uint64_t>(us,1,20000)));\n    }\n}\n}\nvoid VideoOutDriver::Impl::VblankThread(std::stop_token token) {\n    const auto frequency=Common::Timer::QueryPerformanceFrequency();\n    EXIT_IF(!frequency);\n    NovaTiming::Deadline deadline;\n    bool previous_paused=false;\n    while (!token.stop_requested()) {\n        const auto refresh=std::max(Config::GetVblankFrequency(),1u);\n        const auto period=std::max(frequency/refresh,uint64_t{1});\n        const bool paused=NovaRuntime::background.load(std::memory_order_relaxed)||m_presenter.IsGuestPaused();\n        if (paused!=previous_paused) {deadline.Reset();previous_paused=paused;}\n        NovaWaitDeadline(deadline,frequency,period,NovaRuntime::epoch.load(),token);\n        if(token.stop_requested())break;\n        if(!paused) {VblankBegin();VblankEnd();}\n        deadline.Finish(Common::Timer::QueryPerformanceCounter());\n    }\n}\nvoid VideoOutDriver::Impl::PresentThread(std::stop_token token) {\n    const auto frequency=Common::Timer::QueryPerformanceFrequency();\n    EXIT_IF(!frequency);\n    NovaTiming::Deadline deadline;\n    bool previous_paused=false;\n    while(!token.stop_requested()) {\n        const auto refresh=std::max(Config::GetVblankFrequency(),1u);\n        const auto period=std::max(frequency/refresh,uint64_t{1});\n        const bool background=NovaRuntime::background.load(std::memory_order_relaxed);\n        const bool paused=background||m_presenter.IsGuestPaused();\n        if(paused!=previous_paused){deadline.Reset();previous_paused=paused;}\n        NovaWaitDeadline(deadline,frequency,period,NovaRuntime::epoch.load(),token);\n        if(token.stop_requested())break;\n        if(paused){\n            if(!background)(void)m_presenter.PresentLastFrame();\n            deadline.Finish(Common::Timer::QueryPerformanceCounter());\n            continue;\n        }\n        bool presented=m_flip_queue.Flip(0);\n        if(!presented&&m_presenter.NeedsSystemOverlayRefresh()) {\n            if(m_presenter.PresentLastFrame())presented=true;\n            else {\n                uint32_t width=0,height=0;\n                {Common::LockGuard lock(m_mutex);width=m_video_out_ctx[0].width;height=m_video_out_ctx[0].height;}\n                auto& blank=m_presenter.PrepareBlankFrame(width,height,true);\n                m_presenter.Present(blank);\n            }\n        }\n#if defined(KYTY_ANDROID)\n        NovaAndroidClockAudit();\n#endif\n        deadline.Finish(Common::Timer::QueryPerformanceCounter());\n    }\n}\n"
+  },
+  {
+    "path": "graphics/presentation/videoOut.cpp",
+    "old": "\tif (due) {\n\t\tm_presenter.Present(std::span(layers.data(), count));",
+    "new": "    for (size_t i=count;i!=0;i--) requests[i-1].cfg->mutex.Unlock();\n    if (due) {\n        m_presenter.Present(std::span(layers.data(), count));\n#if defined(KYTY_ANDROID)\n        NovaAndroidNoteGameFrame();\n#endif"
+  },
+  {
+    "path": "graphics/presentation/videoOut.cpp",
+    "old": "\t}\n\n\tm_mutex.Lock();\n\tfor (auto it = m_requests.begin(); it != m_requests.end();) {",
+    "new": "\t}\n    for(size_t i=0;i<count;i++)requests[i].cfg->mutex.Lock();\n\tm_mutex.Lock();\n\tfor (auto it = m_requests.begin(); it != m_requests.end();) {"
+  },
+  {
+    "path": "graphics/presentation/videoOut.cpp",
+    "old": "\t\tauto& r = *it;\n\t\tr.cfg->flip_status.count++;",
+    "new": "        auto& r=*it;\n        if(!r.cfg->opened||r.cfg->closing||r.cfg->generation!=r.generation){\n            it=m_requests.erase(it);continue;\n        }\n        r.cfg->flip_status.count++;"
+  },
+  {
+    "path": "graphics/presentation/window/swapchain.cpp",
+    "old": "#include \"common/novaFex.h\"",
+    "new": "#include \"common/novaFex.h\"\n#include \"common/timing/Deadline.h\"\n#include \"common/timing/Runtime.h\""
+  },
+  {
+    "path": "graphics/presentation/window/swapchain.cpp",
+    "old": "\tstatic auto last_present = std::chrono::steady_clock::time_point {};\n\tif (fps_cap != 0) {\n\t\tconst auto interval = std::chrono::nanoseconds(1000000000ll / fps_cap);\n\t\tconst auto now = std::chrono::steady_clock::now();\n\t\tif (last_present != std::chrono::steady_clock::time_point {} && now < last_present + interval)\n\t\t\tstd::this_thread::sleep_until(last_present + interval);\n\t\tlast_present = std::chrono::steady_clock::now();\n\t}",
+    "new": "    const int output_cap=NovaRuntime::OutputCap(fps_cap);\n    static NovaTiming::Deadline output_deadline;\n    const auto monotonic_ns=[](){return uint64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());};\n    if(output_cap>0){\n        const auto interval=uint64_t(1000000000ull/output_cap);\n        for(;;){auto now=monotonic_ns();auto wait=output_deadline.Wait(now,interval,NovaRuntime::epoch.load());if(!wait)break;std::this_thread::sleep_for(std::chrono::nanoseconds(wait));}\n        output_deadline.Finish(monotonic_ns());\n    }else output_deadline.Reset();\n    framegen.SetWorkloadAllowed(NovaRuntime::FramegenAllowed());"
+  },
+  {
+    "path": "novaAndroid.cpp",
+    "old": "#include <atomic>",
+    "new": "#include <atomic>\n#include \"common/timing/Runtime.h\"\n#include \"common/timing/Diagnostics.h\"\n#include <chrono>"
+  },
+  {
+    "path": "novaAndroid.cpp",
+    "old": "\tg_frames.fetch_add(1, std::memory_order_relaxed);",
+    "new": "\tg_frames.fetch_add(1, std::memory_order_relaxed);\n    NovaRuntime::presentedFrames.fetch_add(1,std::memory_order_relaxed);"
+  },
+  {
+    "path": "novaAndroid.cpp",
+    "old": "return static_cast<jlong>(g_frames.load(std::memory_order_relaxed));",
+    "new": "return static_cast<jlong>(NovaRuntime::gameFrames.load(std::memory_order_relaxed));"
+  },
+  {
+    "path": "novaAndroid.cpp",
+    "old": "// The Vulkan driver:",
+    "new": "void NovaAndroidNoteGameFrame() {\n    NovaRuntime::gameFrames.fetch_add(1,std::memory_order_relaxed);\n    static NovaTiming::FrameWindow frames;\n    static uint64_t lastReport=0,lastGame=0,lastPresented=0,lastVblank=0,epoch=0;\n    const auto now=uint64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());\n    const auto generation=NovaRuntime::epoch.load();\n    if(generation!=epoch){frames.Reset();lastReport=0;epoch=generation;}\n    frames.Add(now);\n    if(!lastReport){lastReport=now;lastGame=NovaRuntime::gameFrames.load();lastPresented=NovaRuntime::presentedFrames.load();lastVblank=NovaRuntime::vblanks.load();}\n    if(now-lastReport>=5000000000ull){\n        const auto game=NovaRuntime::gameFrames.load(),presented=NovaRuntime::presentedFrames.load(),vblank=NovaRuntime::vblanks.load();\n        const double seconds=(now-lastReport)/1e9;\n        std::fprintf(stderr,\"NOVA_PACING: game_fps=%.2f presented_fps=%.2f vblank_hz=%.2f p50_ms=%.2f p95_ms=%.2f p99_ms=%.2f max_ms=%.2f (completed flips vs successful present submissions; sampled interval window)\\n\",\n            (game-lastGame)/seconds,(presented-lastPresented)/seconds,(vblank-lastVblank)/seconds,\n            frames.Percentile(50)/1e6,frames.Percentile(95)/1e6,frames.Percentile(99)/1e6,frames.maximum/1e6);\n        frames.Reset();lastReport=now;lastGame=game;lastPresented=presented;lastVblank=vblank;\n    }\n}\nextern \"C\" JNIEXPORT jlongArray JNICALL Java_com_kaminofilms_novaps5_NovaPad_nativeFrameStats(JNIEnv* env,jclass) {\n    const jlong values[]={static_cast<jlong>(NovaRuntime::gameFrames.load()),static_cast<jlong>(NovaRuntime::presentedFrames.load())};\n    auto array=env->NewLongArray(2);if(array)env->SetLongArrayRegion(array,0,2,values);return array;\n}\nextern \"C\" JNIEXPORT void JNICALL Java_com_kaminofilms_novaps5_NovaPad_nativeWorkload(JNIEnv*,jclass,jint level,jboolean paused) {\n    NovaRuntime::Set(level,paused);\n}\n\n// The Vulkan driver:"
+  },
+  {
+    "path": "graphics/presentation/videoOut.cpp",
+    "old": "        if(!paused) {VblankBegin();VblankEnd();}",
+    "new": "        if(!paused) {VblankBegin();VblankEnd();NovaRuntime::vblanks.fetch_add(1,std::memory_order_relaxed);}"
+  },
+  {
+    "path": "@CMakeLists.txt",
+    "old": "add_library(kyty_emulator SHARED \"${KYTY_SOURCE_DIR}/main.cpp\" \"${KYTY_SOURCE_DIR}/novaAndroid.cpp\" ${kyty_emulator_src})",
+    "new": "add_library(kyty_emulator SHARED \"${KYTY_SOURCE_DIR}/main.cpp\" \"${KYTY_SOURCE_DIR}/novaAndroid.cpp\" \"${KYTY_SOURCE_DIR}/common/timing/ClockAudit.cpp\" ${kyty_emulator_src})"
+  },
+  {
+    "path": "graphics/presentation/window/swapchain.cpp",
+    "old": "\tNovaFramegen::State   framegen;",
+    "new": "\tNovaFramegen::State   framegen;\n    bool nova_new_game_input=false;"
+  },
+  {
+    "path": "graphics/presentation/window/swapchain.cpp",
+    "old": "\t\tprevious = layer;",
+    "new": "\t\tprevious = layer;\n        if(layer.bus==0&&layer.frame&&!layer.frame->blank)m_impl->nova_new_game_input=true;"
+  },
+  {
+    "path": "graphics/presentation/window/swapchain.cpp",
+    "old": "\tconst auto overlay_visual = GetSystemOverlayVisualState();",
+    "new": "    const bool nova_fresh_input=std::exchange(nova_new_game_input,false);\n\tconst auto overlay_visual = GetSystemOverlayVisualState();"
+  },
+  {
+    "path": "graphics/presentation/window/swapchain.cpp",
+    "old": "source != nullptr && !source->blank && framegen.Active()",
+    "new": "source != nullptr && !source->blank && nova_fresh_input && framegen.Active()"
+  },
+  {
+    "path": "graphics/presentation/window/swapchain.cpp",
+    "old": "\tstatus        = Present();\n\tm_image_index = real_index;",
+    "new": "\tstatus        = Present();\n    if(status==Status::Success)NovaRuntime::generatedFrames.fetch_add(1,std::memory_order_relaxed);\n\tm_image_index = real_index;"
+  },
+  {
+    "path": "graphics/presentation/window/vulkanWindow.cpp",
+    "old": "NOVA_FRAMEGEN: no VK_GOOGLE_display_timing; generated frames are shown unpaced",
+    "new": "NOVA_FRAMEGEN: disabled; driver lacks VK_GOOGLE_display_timing (normal presentation remains available)"
+  },
+  {
+    "path": "novaAndroid.cpp",
+    "old": "static_cast<jlong>(NovaRuntime::presentedFrames.load())};",
+    "new": "static_cast<jlong>(NovaRuntime::presentedFrames.load()),static_cast<jlong>(NovaRuntime::generatedFrames.load())};"
+  },
+  {
+    "path": "novaAndroid.cpp",
+    "old": "env->NewLongArray(2);if(array)env->SetLongArrayRegion(array,0,2,values);",
+    "new": "env->NewLongArray(3);if(array)env->SetLongArrayRegion(array,0,3,values);"
+  },
+  {
+    "path": "graphics/presentation/window/swapchain.cpp",
+    "old": "#if defined(KYTY_ANDROID)\n\t// Pace real presentation on its own thread, after frame completion. No guest\n\t// timestamps or game simulation clocks are changed. Unlimited is the default.\n\tstatic const int fps_cap = [] {\n\t\tconst char* text = std::getenv(\"NOVA_FPS_CAP\");\n\t\tconst int value = text == nullptr ? 0 : std::atoi(text);\n\t\treturn value == 30 || value == 40 || value == 60 || value == 90 || value == 120 ? value : 0;\n\t}();\n    const int output_cap=NovaRuntime::OutputCap(fps_cap);\n    static NovaTiming::Deadline output_deadline;\n    const auto monotonic_ns=[](){return uint64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());};\n    if(output_cap>0){\n        const auto interval=uint64_t(1000000000ull/output_cap);\n        for(;;){auto now=monotonic_ns();auto wait=output_deadline.Wait(now,interval,NovaRuntime::epoch.load());if(!wait)break;std::this_thread::sleep_for(std::chrono::nanoseconds(wait));}\n        output_deadline.Finish(monotonic_ns());\n    }else output_deadline.Reset();\n    framegen.SetWorkloadAllowed(NovaRuntime::FramegenAllowed());\n#endif",
+    "new": "    framegen.SetWorkloadAllowed(NovaRuntime::FramegenAllowed());"
+  },
+  {
+    "path": "graphics/presentation/window/swapchain.cpp",
+    "old": "Swapchain::Status Swapchain::Present() {\n\tEXIT_IF(m_image_index >= m_render_complete.size());",
+    "new": "Swapchain::Status Swapchain::Present() {\n    EXIT_IF(m_image_index >= m_render_complete.size());\n#if defined(KYTY_ANDROID)\n    // Cap every output submission, generated and repeated frames included.\n    // The independent vblank worker never sleeps on this presentation budget.\n    static const int user_cap=[] {\n        const auto* text=std::getenv(\"NOVA_FPS_CAP\");const int cap=text?std::atoi(text):0;\n        return cap==30||cap==40||cap==60||cap==90||cap==120?cap:0;\n    }();\n    static NovaTiming::Deadline output_deadline;\n    const auto output_cap=NovaRuntime::OutputCap(user_cap);\n    const auto output_ns=[] {return uint64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());};\n    if(output_cap>0){\n        const auto period=uint64_t(1000000000ull/output_cap);\n        for(;;){const auto wait=output_deadline.Wait(output_ns(),period,NovaRuntime::epoch.load());if(!wait)break;std::this_thread::sleep_for(std::chrono::nanoseconds(wait));}\n    }else output_deadline.Reset();\n#endif"
+  },
+  {
+    "path": "graphics/presentation/window/swapchain.cpp",
+    "old": "\tm_frame_index = (m_frame_index + 1u) % static_cast<uint32_t>(m_images.size());",
+    "new": "#if defined(KYTY_ANDROID)\n    if(output_cap>0)output_deadline.Finish(output_ns());\n#endif\n\tm_frame_index = (m_frame_index + 1u) % static_cast<uint32_t>(m_images.size());"
+  },
+  {
+    "path": "graphics/presentation/window/swapchain.cpp",
+    "old": "        for(;;){const auto wait=output_deadline.Wait(output_ns(),period,NovaRuntime::epoch.load());if(!wait)break;std::this_thread::sleep_for(std::chrono::nanoseconds(wait));}\n    }else output_deadline.Reset();",
+    "new": "        for(;;){const auto wait=output_deadline.Wait(output_ns(),period,NovaRuntime::epoch.load());if(!wait)break;std::this_thread::sleep_for(std::chrono::nanoseconds(wait));}\n        output_deadline.Finish(output_ns());\n    }else output_deadline.Reset();"
+  },
+  {
+    "path": "graphics/presentation/window/swapchain.cpp",
+    "old": "#if defined(KYTY_ANDROID)\n    if(output_cap>0)output_deadline.Finish(output_ns());\n#endif\n\tm_frame_index = (m_frame_index + 1u) % static_cast<uint32_t>(m_images.size());",
+    "new": "\tm_frame_index = (m_frame_index + 1u) % static_cast<uint32_t>(m_images.size());"
+  },
+  {
+    "path": "graphics/presentation/window/swapchain.cpp",
+    "old": "\t\tframes.SetFormat(swapchain.Format());",
+    "new": "\t\tframes.SetFormat(swapchain.Format());\n        framegen.ResetHistory();"
+  },
+  {
+    "path": "graphics/presentation/window/swapchain.cpp",
+    "old": "    const auto output_cap=NovaRuntime::OutputCap(user_cap);",
+    "new": "    const auto output_cap=NovaRuntime::OutputCap(user_cap);\n    static int previous_workload=-1;\n    const int workload=NovaRuntime::workload.load(std::memory_order_relaxed);\n    if(previous_workload!=workload){\n        std::fprintf(stderr,\"NOVA_WORKLOAD: applied_level=%d output_cap=%d framegen_policy_allowed=%d; no guest clock or render-size change\\n\",workload,output_cap,NovaRuntime::FramegenAllowed()?1:0);\n        previous_workload=workload;\n    }"
+  },
+  {
+    "path": "kernel/fileSystem.cpp",
+    "old": "#include \"common/startup/NativeStat.h\"",
+    "new": "#include \"common/startup/NativeStat.h\"\n#include \"common/startup/StatTrace.h\""
+  },
+  {
+    "path": "kernel/fileSystem.cpp",
+    "old": "    const auto nova_stat_call = ++nova_stat_calls;",
+    "new": "    const auto nova_stat_call = ++nova_stat_calls;\n    static const bool nova_trace_title=[]{const char* id=std::getenv(\"NOVA_CACHE_TITLE_ID\");return id&&std::strcmp(id,\"PPSA27581\")==0;}();\n    NovaStartup::StatTrace nova_pending(nova_trace_title,nova_stat_call,path);"
+  },
+  {
+    "path": "kernel/fileSystem.cpp",
+    "old": "    if (real_file_name.empty()) return KERNEL_ERROR_ENOENT;",
+    "new": "    const auto nova_resolved=std::chrono::steady_clock::now();\n    nova_pending.Native(real_file_name.c_str());\n    if (real_file_name.empty()) return KERNEL_ERROR_ENOENT;"
+  },
+  {
+    "path": "kernel/fileSystem.cpp",
+    "old": "\"NOVA_STAT: end call=%llu us=%lld errno=%d guest=%s host=%s\\n\",",
+    "new": "\"NOVA_STAT: end call=%llu total_us=%lld errno=%d guest=%s host=%s resolve_us=%lld stat_us=%lld\\n\","
+  },
+  {
+    "path": "kernel/fileSystem.cpp",
+    "old": "static_cast<long long>(us), error, path, real_file_name.c_str());",
+    "new": "static_cast<long long>(us), error, path, real_file_name.c_str(),\n                         static_cast<long long>(std::chrono::duration_cast<std::chrono::microseconds>(nova_resolved-nova_stat_start).count()),\n                         static_cast<long long>(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-nova_resolved).count()));"
+  },
+  {
+    "path": "graphics/presentation/videoOut.cpp",
+    "old": "#include \"common/timing/Runtime.h\"",
+    "new": "#include \"common/timing/Runtime.h\"\n#include \"common/startup/StatTrace.h\""
+  },
+  {
+    "path": "graphics/presentation/videoOut.cpp",
+    "old": "void NovaVideoOutFreezeReport() {",
+    "new": "void NovaVideoOutFreezeReport() {\n    NovaStartup::StatTrace::Report();"
+  }
+]

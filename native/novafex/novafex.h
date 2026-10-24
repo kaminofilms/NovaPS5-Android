@@ -54,6 +54,10 @@ struct CallArgs {
 	Vec128   ret_vec[2] {};
 };
 
+// Actual translated RDTSC, RDTSCP and CPUID leaf 0x15, not inferred host values.
+struct ClockCounters { uint64_t rdtsc,rdtscp;uint32_t eax,ebx,ecx,edx; };
+NOVAFEX_API bool ReadClockCounters(ClockCounters* out);
+
 // One-time initialisation. Returns false (and logs) if FEXCore cannot start.
 NOVAFEX_API bool Init();
 NOVAFEX_API bool IsInitialized();

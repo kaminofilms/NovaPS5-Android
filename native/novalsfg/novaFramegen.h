@@ -68,8 +68,17 @@ inline bool Performance() {
 #if defined(__ANDROID__)
 class State {
 public:
-	[[nodiscard]] bool Active() const { return !m_failed && Requested() && AhbEnabled() && DisplayTiming(); }
+	[[nodiscard]] bool Active() const { return !m_thermal_suspended && !m_failed && Requested() && AhbEnabled() && DisplayTiming(); }
 	[[nodiscard]] vk::Extent2D Extent() const { return m_extent; }
+    void SetWorkloadAllowed(bool allow) {
+        if(m_thermal_suspended==!allow)return;
+        m_thermal_suspended=!allow;
+        // Re-prime both inputs after a thermal/background suspension; do not
+        // interpolate against stale pre-pause history or replay old deadlines.
+        ResetHistory();
+    }
+    void ResetHistory(){m_frame=0;m_interval_ns=0;m_last_real={};m_slot={};}
+
 
 	// Records the copy of the finished game frame (already in TRANSFER_SRC_OPTIMAL).
 	bool RecordInput(GraphicContext& g, vk::CommandBuffer command, vk::Image source, vk::Extent2D extent) {
@@ -121,6 +130,7 @@ public:
 	}
 
 private:
+    bool m_thermal_suspended=false;
 	struct Shared {
 		AHardwareBuffer* ahb    = nullptr;
 		VkImage          image  = VK_NULL_HANDLE;
@@ -380,6 +390,8 @@ public:
 	bool RecordInput(GraphicContext&, vk::CommandBuffer, vk::Image, vk::Extent2D) { return false; }
 	std::vector<vk::Image> Generate() { return {}; }
 	static void RecordOutput(vk::CommandBuffer, vk::Image, vk::Extent2D, vk::Image, vk::Extent2D) {}
+	void ResetHistory() {}
+	void SetWorkloadAllowed(bool) {}
 	void CountReal() {}
 	[[nodiscard]] uint64_t NextSlotNs() { return 0; }
 };

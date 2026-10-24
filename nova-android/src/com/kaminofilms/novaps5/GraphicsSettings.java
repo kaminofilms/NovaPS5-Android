@@ -90,7 +90,7 @@ final class GraphicsSettings {
         TextView fgNote = new TextView(a);
         fgNote.setText((haveDll ? "Lossless.dll imported. " : "Import your Lossless.dll first (Settings → Lossless Scaling DLL); until then this stays off. ")
             + "Frame generation needs stable real FPS. It uses at most 1080p processing and requires timed VSync presentation. It cannot fix slow game simulation. Turn it off if the picture shows artefacts or the game gets slower."); box.addView(fgNote);
-        Switch turbo = toggle(a, box, "GPU turbo (maximum GPU clock; warmer, uses more battery)", value(p,title,"gpu_turbo_v62",1)!=0);
+        box.addView(GraphicsPanel.text(a,"Android manages GPU clocks and thermal protection.",13,0xffafbdd3));
         Switch vrs = toggle(a, box, "Variable-rate shading (2x2; faster, slightly softer 3D image; HUD stays sharp)", value(p,title,"vrs_v62",vrsDefault(title)?1:0)!=0);
         Switch realTime = toggle(a, box, "Report real GPU time (games with dynamic resolution can lower it themselves)", value(p,title,"real_gpu_time_v62",vrsDefault(title)?1:0)!=0);
         ScrollView scroll = new ScrollView(a); scroll.addView(box);
@@ -117,7 +117,7 @@ final class GraphicsSettings {
                 e.putInt(key(title,"fg_v58"),framegen.getSelectedItemPosition());
 
 
-                e.putInt(key(title,"gpu_turbo_v62"),turbo.isChecked()?1:0);
+                e.putInt(key(title,"gpu_turbo_v62"),0);
                 e.putInt(key(title,"vrs_v62"),vrs.isChecked()?1:0);
                 e.putInt(key(title,"real_gpu_time_v62"),realTime.isChecked()?1:0);
                 e.apply();
@@ -166,7 +166,7 @@ final class GraphicsSettings {
         }
         Os.setenv("NOVA_PRESENT_MODE",new String[]{"mailbox","fifo","immediate"}[mode],true);
         // 0.9.62: GPU turbo (KGSL max clock) and 2x2 variable-rate shading.
-        boolean turbo=value(p,title,"gpu_turbo_v62",1)!=0;
+        boolean turbo=false; // Legacy saved turbo must never re-enable forced clocks.
         boolean vrs=value(p,title,"vrs_v62",vrsDefault(title)?1:0)!=0;
         Os.setenv("NOVA_GPU_TURBO",turbo?"1":"0",true);
         Os.setenv("NOVA_VRS",vrs?"2":"0",true);

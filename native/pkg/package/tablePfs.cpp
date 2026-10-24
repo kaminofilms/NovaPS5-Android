@@ -10,6 +10,7 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <sstream>
 #include <stdexcept>
 #include <vector>
 #include <zlib.h>
@@ -20,8 +21,12 @@ using Bytes = std::vector<uint8_t>;
   throw std::runtime_error(std::string("PKG filesystem: ") + s);
 }
 void Range(uint64_t total, uint64_t off, uint64_t size) {
-  if (off > total || size > total - off)
-    Bad("extent outside image");
+  if (off > total || size > total - off) {
+    std::ostringstream detail;
+    detail << "PKG filesystem: extent outside image (offset=0x" << std::hex << off
+           << ", bytes=0x" << size << ", image=0x" << total << ")";
+    throw std::runtime_error(detail.str());
+  }
 }
 uint64_t Add(uint64_t a, uint64_t b) {
   if (b > UINT64_MAX - a)
@@ -168,19 +173,23 @@ class Tree {
     const auto &n = nodes.at(index);
     if (!n.size)
       return Slice(image, 0, 0);
-    if (!n.blocks || n.blocks > 16000000 || n.blocks > image->size / bs)
-      Bad("invalid file block count");
+    if (!n.blocks) Bad("invalid file block count");
     uint64_t storedSize = (n.flags & 1) ? n.logical : n.size;
     if (!storedSize)
       Bad("missing stored file size");
+    const auto blockCount=Add(storedSize,bs-1)/bs;
+    if(blockCount>16000000||blockCount>image->size/bs||n.blocks<blockCount)
+      Bad("invalid payload block count");
+    // Allocation counts may include padding/metadata; only map payload blocks.
+
     size_t p = po + (sign ? 32 : 0);
     auto first = ptr(n.rec, p), second = ptr(n.rec, p + ps);
     bool contiguous =
-        n.blocks <= 1 || second == (pw == 8 ? UINT64_MAX : UINT32_MAX);
+        blockCount <= 1 || second == (pw == 8 ? UINT64_MAX : UINT32_MAX);
     Img stored;
     if (contiguous) {
-      Range(image->size, Mul(first, bs), Mul(n.blocks, bs));
-      Range(Mul(n.blocks, bs), 0, storedSize);
+      Range(image->size, Mul(first, bs), Mul(blockCount, bs));
+      Range(Mul(blockCount, bs), 0, storedSize);
       stored = Slice(image, Mul(first, bs), storedSize);
     } else {
       std::vector<uint64_t> blocks;
@@ -189,14 +198,14 @@ class Tree {
         Range(image->size, Mul(b, bs), bs);
         blocks.push_back(b);
       };
-      for (size_t i = 0; i < 12 && blocks.size() < n.blocks; i++)
+      for (size_t i = 0; i < 12 && blocks.size() < blockCount; i++)
         add(ptr(n.rec, p + i * ps));
       std::function<void(uint64_t, int)> indirect = [&](uint64_t block,
                                                         int depth) {
         if (!seen.insert(block).second)
           Bad("cyclic indirect chain");
         auto b = image->bytes(Mul(block, bs), bs);
-        for (size_t pos = 0; pos + ps <= b.size() && blocks.size() < n.blocks;
+        for (size_t pos = 0; pos + ps <= b.size() && blocks.size() < blockCount;
              pos += ps) {
           auto next = ptr(b, pos + (sign ? 32 : 0));
           if (depth == 1)
@@ -205,9 +214,9 @@ class Tree {
             indirect(next, depth - 1);
         }
       };
-      for (int i = 0; i < 5 && blocks.size() < n.blocks; i++)
+      for (int i = 0; i < 5 && blocks.size() < blockCount; i++)
         indirect(ptr(n.rec, p + (12 + i) * ps), i + 1);
-      if (blocks.size() != n.blocks)
+      if (blocks.size() != blockCount)
         Bad("truncated block chain");
       stored = Chain(image, blocks, bs, storedSize);
     }
@@ -234,10 +243,9 @@ class Tree {
       uint32_t child = LE(b, p, 4), type = LE(b, p + 4, 4),
                len = LE(b, p + 8, 4), span = LE(b, p + 12, 4);
       if (!span) {
-        for (size_t k = p; k < b.size(); k++)
-          if (b[k])
-            Bad("nonzero directory padding");
-        break;
+        const auto next=std::min<uint64_t>(b.size(),Add(p,bs-p%bs));
+        for(size_t k=p;k<next;k++)if(b[k])Bad("nonzero directory padding");
+        p=next;continue;
       }
       if (span < 16 || span > b.size() - p || !len || len > span - 16 ||
           len > 256 || child >= nodes.size())
@@ -257,7 +265,18 @@ class Tree {
   void Walk(uint32_t ino, const std::string &prefix, int depth) {
     if (depth > 64 || !visited.insert(ino).second)
       Bad("cyclic/deep directory tree");
-    for (const auto &e : Directory(ino)) {
+    const auto entries=Directory(ino);
+    for(const auto& e:entries)if(e.type==2&&e.name=="naps_pkg_layout.dat") {
+        auto layout=Data(e.inode);auto h=layout->bytes(0,16);
+        const auto a=LE(h,0,8),b=LE(h,8,8);
+        std::ostringstream error;
+        error << "PKG filesystem: NAPS streaming layout detected (files=" << ((a&0xffffff)+1)
+              << ", compression=" << ((a>>24)&3) << ", logical_blocks=" << ((a>>32)&0xffffff)
+              << ", stored_blocks=" << (b&0xffffff)
+              << "). This format needs a NAPS/Kraken decoder; ordinary PFS extraction cannot decode it.";
+        throw std::runtime_error(error.str());
+    }
+    for (const auto &e : entries) {
       auto path = prefix + e.name;
       if (!names.insert(path).second)
         Bad("duplicate path");
@@ -266,7 +285,8 @@ class Tree {
       else {
         if ((nodes[e.inode].mode & 0xf000) != 0x8000)
           Bad("file entry references non-file");
-        files.push_back({path, Data(e.inode)});
+        try {files.push_back({path, Data(e.inode)});}
+        catch(const std::exception& error){throw std::runtime_error(std::string(error.what())+" [file="+path+", inode="+std::to_string(e.inode)+"]");}
         if (files.size() > 1000000)
           Bad("too many files");
       }
@@ -286,9 +306,7 @@ public:
       Bad("encrypted PFS data");
     sign = mode & 1;
     bool wide = mode & 2;
-    if (wide && !sign)
-      Bad("unsigned wide inode format");
-    stride = sign ? (wide ? 0x310 : 0x2c8) : 0xa8;
+    stride = sign ? (wide ? 0x310 : 0x2c8) : (wide ? 0x100 : 0xa8);
     pw = wide ? 8 : 4;
     po = wide ? 0x68 : 0x64;
     ps = pw + (sign ? 32 : 0);
@@ -300,7 +318,11 @@ public:
     auto per = bs / stride, needed = (count + per - 1) / per;
     if (tableBlocks < needed || Mul(needed, bs) > 128 * 1024 * 1024)
       Bad("invalid inode table extent");
-    auto table = img->bytes(Add(super, bs), Mul(needed, bs));
+    // The data-first outer header can place the table explicitly at +0xd8.
+    // Zero retains legacy superblock-adjacent layout; never scan for inodes.
+    const auto tableBlock=LE(h,0xd8,8);
+    const auto tableAt=tableBlock?Mul(tableBlock,bs):Add(super,bs);
+    auto table = img->bytes(tableAt, Mul(needed, bs));
     for (uint64_t i = 0; i < count; i++) {
       auto p = i / per * bs + i % per * stride;
       Bytes r(table.begin() + p, table.begin() + p + stride);

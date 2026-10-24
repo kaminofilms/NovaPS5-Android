@@ -1,7 +1,7 @@
 # Nova PS5 FEXCore bridge. Built inside the FEX source tree (Source/Tools/NovaFex) so it uses
 # FEX's own targets and generated headers; see .github/workflows/novafex.yml.
 # libnovafex.so links FEXCore and its dependencies statically and exports only novafex.h.
-add_library(novafex SHARED novafex.cpp novafex_arm64.S watchpoint/NovaFexWatchpointBridge.cpp)
+add_library(novafex SHARED clock_probe.cpp novafex.cpp novafex_arm64.S watchpoint/NovaFexWatchpointBridge.cpp)
 target_include_directories(novafex PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(novafex PRIVATE ${CMAKE_BINARY_DIR}/generated)
 target_link_libraries(novafex PRIVATE FEXCore Common JemallocDummy ${PTHREAD_LIB})
@@ -15,7 +15,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Android")
 	target_link_libraries(novafex PRIVATE log dl)
 
 	# Static bionic test binary: runs on any Linux arm64 kernel without Android's linker.
-	add_executable(novafex_test_static test/novafex_test.cpp novafex.cpp novafex_arm64.S guest_memory.cpp watchpoint/NovaFexWatchpointBridge.cpp)
+	add_executable(novafex_test_static test/novafex_test.cpp clock_probe.cpp novafex.cpp novafex_arm64.S guest_memory.cpp watchpoint/NovaFexWatchpointBridge.cpp)
 	target_link_options(novafex_test_static PRIVATE -Wl,--wrap=memset,--wrap=memcpy,--wrap=memmove,--wrap=memcmp)
 	target_include_directories(novafex_test_static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_BINARY_DIR}/generated)
 	target_link_libraries(novafex_test_static PRIVATE FEXCore Common JemallocDummy)

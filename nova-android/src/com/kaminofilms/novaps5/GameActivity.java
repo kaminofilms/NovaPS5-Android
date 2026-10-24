@@ -29,15 +29,17 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
     private AlertDialog menu;
     private android.widget.TextView fps;
     private final android.os.Handler ticker = new android.os.Handler(android.os.Looper.getMainLooper());
-    private long lastFrames, lastTime;
+    private long lastFrames, lastPresented, lastTime;
     private final Runnable fpsTick = new Runnable() {
         public void run() {
-            long now = android.os.SystemClock.uptimeMillis(), frames = NovaPad.frames();
+            long[] stats=NovaPad.frameStats();
+            long now = android.os.SystemClock.uptimeMillis(), frames = stats[0], presented=stats[1];
             if (lastTime != 0 && now > lastTime) {
                 float rate = (frames - lastFrames) * 1000f / (now - lastTime);
-                fps.setText(String.format(java.util.Locale.US, "%.0f FPS", rate));
+                float output=(presented-lastPresented)*1000f/(now-lastTime);
+                fps.setText(String.format(java.util.Locale.US,"%.0f game · %.0f output",rate,output));
             }
-            lastFrames = frames;
+            lastFrames = frames;lastPresented=presented;
             lastTime = now;
             ticker.postDelayed(this, 500);
         }
@@ -67,6 +69,7 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
         showFps(getSharedPreferences("nova", 0).getBoolean("show_fps", true));
         BootLog.write(this, "Game started: " + game);
         Telemetry.start(this);
+        ThermalController.start(this, titleId(new File(game)));
     }
 
     private void prepareEnvironment() {
@@ -302,7 +305,16 @@ public final class GameActivity extends SDLActivity implements NovaPad.Listener 
         return super.dispatchKeyEvent(event);
     }
 
+    @Override protected void onResume() {
+        super.onResume();
+        ThermalController.background(false);
+    }
+    @Override protected void onDestroy() {
+        ThermalController.stop();
+        super.onDestroy();
+    }
     @Override protected void onPause() {
+        ThermalController.background(true);
         if (pad != null) pad.release();
         super.onPause();
     }

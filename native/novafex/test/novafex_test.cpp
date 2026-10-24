@@ -647,6 +647,7 @@ int main() {
 		Check("fault bridge overhead", acc == kF * (kF - 1) / 2 + kF, d);
 	}
 
+#include "clock_probe.inc"
 #include "watchpoint.inc"
 	std::printf("NOVAFEX_TEST: %s (%d failures)\n", g_failures ? "FAILED" : "ALL PASS", g_failures);
 	return g_failures ? 1 : 0;
