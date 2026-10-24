@@ -1,0 +1,4 @@
+{
+ global: Java_com_kaminofilms_novaps5_PkgInstaller_extract;
+ local: *;
+};
