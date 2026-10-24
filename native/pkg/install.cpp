@@ -1,4 +1,5 @@
 #include "install.h"
+#include "package/tablePfs.h"
 #include "package/pkgParser.h"
 #include "package/pfsParser.h"
 #include "IO/Decompressor.hpp"
@@ -22,14 +23,16 @@ std::string Install(const std::string& input, const std::string& output) {
     if (!package.ok) throw std::runtime_error(package.error);
     if (package.is_encrypted) throw std::runtime_error("Encrypted PKG data is unsupported; use a decrypted package or extracted game folder");
     if (!package.extraction_error.empty()) throw std::runtime_error(package.extraction_error);
-    if (package.is_finalized_image && package.pfs_image_offset != package.pfs_segment_offset)
-        throw std::runtime_error("Data-first finalized PKG requires a verified filesystem table; use the extracted game folder");
+    const auto root = fs::path(output) / "pfs_files";
+    if (package.is_finalized_image && package.pfs_image_offset != package.pfs_segment_offset) {
+        ExtractTablePfs(input, package.pfs_segment_offset, package.pfs_segment_size,
+                        package.pfs_image_offset, root.string());
+    } else {
     const auto extracted = Libs::Firmware::PkgParser::ExtractAll(package, input, output);
     if (!extracted) throw std::runtime_error("Package filesystem extraction failed; no game was installed");
     const auto image = fs::path(output) / "body.pfs";
     const auto parsed = Libs::Firmware::PfsParser::Parse(image.string());
     if (!parsed.ok || parsed.is_encrypted) throw std::runtime_error("Installed filesystem validation failed");
-    const auto root = fs::path(output) / "pfs_files";
     const auto canonical = fs::canonical(root);
     std::set<std::string> names;
     uint32_t expected = 0;
@@ -49,12 +52,13 @@ std::string Install(const std::string& input, const std::string& output) {
         if (resolved.empty() || *resolved.begin() == "..") throw std::runtime_error("Package path escapes staging");
     }
     if (expected != extracted) throw std::runtime_error("Incomplete package extraction");
+        fs::remove(image);
+    }
     std::ifstream boot(root / "eboot.bin", std::ios::binary);
     unsigned char h[20]{};
     boot.read(reinterpret_cast<char*>(h), sizeof(h));
     if (boot.gcount() != sizeof(h) || h[0] != 0x7f || h[1] != 'E' || h[2] != 'L' || h[3] != 'F' || h[4] != 2 || h[5] != 1 || h[18] != 62 || h[19] != 0)
         throw std::runtime_error("Package has no decrypted x86-64 ELF eboot.bin supported by Nova");
-    fs::remove(image);
     return root.string();
 }
 }
