@@ -25,7 +25,7 @@ final class GraphicsSettings {
     }
     static void maxFps(SharedPreferences p, String title) {
         SharedPreferences.Editor e=p.edit().putInt(key(title,"present"),1)
-            .putInt(key(title,"gpu_turbo_v62"),1).putInt(key(title,"vrs_v62"),1)
+            .putInt(key(title,"gpu_turbo_v62"),0).putInt(key(title,"vrs_v62"),1)
             .putInt(key(title,"real_gpu_time_v62"),1).putInt(key(title,"raster_scale_v54"),0)
             .putInt(key(title,"rescale_v64"),1).putInt(key(title,"video_out_v63"),0)
             .putInt(key(title,"fg_v58"),0);
@@ -103,7 +103,9 @@ final class GraphicsSettings {
         TextView fgNote = new TextView(a);
         fgNote.setText((haveDll ? "Lossless.dll imported. " : "Import your Lossless.dll first (Settings → Lossless Scaling DLL); until then this stays off. ")
             + "Frame generation needs stable real FPS. It uses at most 1080p processing and requires timed VSync presentation. It cannot fix slow game simulation. Turn it off if the picture shows artefacts or the game gets slower."); box.addView(fgNote);
-        Switch turbo = toggle(a, box, "GPU turbo (maximum GPU clock; warmer, uses more battery)", value(p,title,"gpu_turbo_v62",1)!=0);
+        TextView powerNote = new TextView(a);
+        powerNote.setText("GPU clocks and thermal protection are managed by Android. Legacy forced GPU turbo is disabled.");
+        box.addView(powerNote);
         Switch vrs = toggle(a, box, "Variable-rate shading (2x2; faster, slightly softer 3D image; HUD stays sharp)", value(p,title,"vrs_v62",vrsDefault(title)?1:0)!=0);
         Switch realTime = toggle(a, box, "Report real GPU time (games with dynamic resolution can lower it themselves)", value(p,title,"real_gpu_time_v62",vrsDefault(title)?1:0)!=0);
         final Spinner surfaceScale = choice(a, box, "Resolution scale (experimental)", SURFACE_SCALES, value(p,title,"rescale_v64",0));
@@ -113,7 +115,7 @@ final class GraphicsSettings {
         Button maxFps = new Button(a); maxFps.setText("Auto Max FPS"); box.addView(maxFps);
         maxFps.setOnClickListener(v->{
             maxFps(p,title);
-            mode.setSelection(1);turbo.setChecked(true);vrs.setChecked(true);realTime.setChecked(true);
+            mode.setSelection(1);vrs.setChecked(true);realTime.setChecked(true);
             resolution.setSelection(0);surfaceScale.setSelection(1);video.setSelection(0);framegen.setSelection(0);
             if("PPSA27841".equals(title))cap.setSelection(1);
             note.setText("Auto Max FPS saved. Applies on next launch; results depend on the game and driver. Resolution scale stays Native; choose 50% and Save to test the new scaler.");
@@ -135,7 +137,7 @@ final class GraphicsSettings {
                 e.putInt(key(title,"fg_v58"),framegen.getSelectedItemPosition());
                 e.putInt(key(title,"fg_flow_v58"),flow.getSelectedItemPosition());
                 e.putInt(key(title,"fg_perf_v58"),fgPerf.isChecked()?1:0);
-                e.putInt(key(title,"gpu_turbo_v62"),turbo.isChecked()?1:0);
+                e.putInt(key(title,"gpu_turbo_v62"),0);
                 e.putInt(key(title,"vrs_v62"),vrs.isChecked()?1:0);
                 e.putInt(key(title,"real_gpu_time_v62"),realTime.isChecked()?1:0);
                 e.apply();
@@ -180,7 +182,7 @@ final class GraphicsSettings {
         }
         Os.setenv("NOVA_PRESENT_MODE",new String[]{"mailbox","fifo","immediate"}[mode],true);
         // 0.9.62: GPU turbo (KGSL max clock) and 2x2 variable-rate shading.
-        boolean turbo=value(p,title,"gpu_turbo_v62",1)!=0;
+        boolean turbo=false; // Ignore legacy saved max-clock overrides.
         boolean vrs=value(p,title,"vrs_v62",vrsDefault(title)?1:0)!=0;
         Os.setenv("NOVA_GPU_TURBO",turbo?"1":"0",true);
         Os.setenv("NOVA_VRS",vrs?"2":"0",true);

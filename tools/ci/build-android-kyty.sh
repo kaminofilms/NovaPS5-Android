@@ -389,6 +389,7 @@ ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_0965_upstream_d
 python3 "$repo/tools/ci/patch-0966-audio-stereo.py" "$work/kyty"
 python3 "$repo/tests/test_0966_audio_frame_extent.py" "$work/kyty"
 python3 "$repo/tools/ci/patch-0968-guest-fibers.py" "$work/kyty"
+python3 "$repo/tools/ci/patch-0969-startup-power.py" "$work/kyty"
 python3 "$repo/tests/test_0968_guest_fibers.py" "$work/kyty"
 CXX=clang++ python3 "$repo/tests/test_0968_guest_fibers.py" "$work/kyty"
 bash "$repo/tools/ci/build-android-anyps5.sh" "$repo" "$work" "$out"
