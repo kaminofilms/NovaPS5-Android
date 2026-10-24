@@ -39,3 +39,19 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+0.9.70 follow-up after owner device report:
+- A data-first segment can use physical block zero for file content. Zero data
+  and indirect block indices are now bounds-checked/read like other indices;
+  zero allocated-block counts for nonempty files still fail.
+- Inode +0x08 is logical size; +0x10 is compressed size. PFSC backing reads use
+  compressed size and the decoder's logical length must match the inode.
+- Reference checked: videobitva/orbis orbis-pfs/src/inode.rs and file.rs.
+- Added block-zero contiguous/fragmented fixtures. All parser regressions pass
+  under ASan/UBSan. Owner's actual package remains device-test pending.
+
+Graphics panel: Nova-owned dark-blue sheet, simple resolution targets and
+Off/2x/3x/4x frame generation. Technical options live in Advanced. Legacy
+percentage selectors and engine-dependent automatic half-resolution are removed.
+Resolution targets are relative to a 1080p game base; actual supported passes
+remain renderer/game dependent. MainActivity uses the friendly game name.
