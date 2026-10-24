@@ -15,6 +15,9 @@ import android.widget.*;
 /** Nova's small, controller-friendly graphics sheet. Renderer details stay in Advanced. */
 final class GraphicsPanel {
     static final String[] RESOLUTIONS = {"Native", "1080p", "720p", "540p", "360p"};
+    static final String[] FILTERS = {"Nearest", "Bilinear", "AMD FSR 1"};
+    static final String[] SHARPNESS = {"0%", "25%", "50%", "75%", "100%"};
+    static final String[] ANISOTROPY = {"Game default", "2x", "4x", "8x", "16x"};
     static final String[] FRAMES = {"Off", "2x", "3x", "4x"};
     static final String[] LIMITS = {"Game default", "30 FPS", "40 FPS", "60 FPS", "90 FPS", "120 FPS", "Unlimited"};
     private static final int WHITE = 0xfff4f7ff, MUTED = 0xffafbdd3, BLUE = 0xff91c6ff;
@@ -77,20 +80,23 @@ final class GraphicsPanel {
         TextView titleView=text(a,"Graphics",27,WHITE);titleView.setTypeface(null,Typeface.BOLD);box.addView(titleView);
         TextView subtitle=text(a,title.isEmpty()?"Default settings for your games":gameName,13,MUTED);subtitle.setSingleLine(true);subtitle.setEllipsize(android.text.TextUtils.TruncateAt.END);box.addView(subtitle);gap(a,box,14);
         ScrollView scroll=new ScrollView(a);scroll.setFillViewport(false);LinearLayout settings=new LinearLayout(a);settings.setOrientation(LinearLayout.VERTICAL);scroll.addView(settings);box.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        Setting res=new Setting(a,settings,"Render resolution","Lower = faster. Higher = sharper.",RESOLUTIONS,GraphicsSettings.value(p,title,"render_height_v70",0));
+        Setting res=new Setting(a,settings,"Render resolution","Scales supported rendering passes; compute and readback stay native.",RESOLUTIONS,GraphicsSettings.value(p,title,"render_height_v70",0));
+        Setting filter=new Setting(a,settings,"Upscaling filter","FSR 1 adaptively upscales SDR frames. Use separately from frame generation.",FILTERS,GraphicsSettings.value(p,title,"upscale_filter_v72",1));
+        Setting sharp=new Setting(a,settings,"FSR sharpness","0% disables sharpening; the adaptive upscale still runs.",SHARPNESS,GraphicsSettings.value(p,title,"fsr_sharpness_v72",1));
+        Setting af=new Setting(a,settings,"Anisotropic filtering","Applies to anisotropic game samplers. Higher settings can cost GPU time.",ANISOTROPY,GraphicsSettings.value(p,title,"anisotropy_v72",0));
         boolean dll=GraphicsSettings.lsfgDll(a).isFile();
         Setting fg=new Setting(a,settings,"Frame generation",dll?"Adds frames for smoother motion.":"Requires your Lossless Scaling DLL in Settings.",FRAMES,GraphicsSettings.value(p,title,"fg_v58",0));
         Setting power=new Setting(a,settings,"Power & heat","Automatic adapts. Cooler limits extra frames. Performance keeps your choices until hot.",ThermalController.MODES,GraphicsSettings.value(p,title,"power_mode_v71",0));
         Setting limit=new Setting(a,settings,"FPS limit","Limits output frames.",LIMITS,GraphicsSettings.value(p,title,"cap",0));
-        TextView note=text(a,"Changes apply when you restart the game. Resolution targets use a 1080p base; supported game passes may vary.",12,MUTED);settings.addView(note);gap(a,settings,12);
+        TextView note=text(a,"Changes apply when you restart the game. Unsupported rendering passes retain native resolution. FSR 1 uses the final image and does not create extra frames.",12,MUTED);settings.addView(note);gap(a,settings,12);
         Button advanced=action(a,"Advanced options  ›");settings.addView(advanced,new LinearLayout.LayoutParams(-1,dp(a,48)));
         gap(a,box,12);LinearLayout footer=new LinearLayout(a);footer.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);box.addView(footer);
         Button reset=action(a,title.isEmpty()?"Reset":"Use defaults"),cancel=action(a,"Cancel"),save=action(a,"Save");
         for(Button b:new Button[]{reset,cancel,save}){LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-2,dp(a,48));bp.leftMargin=dp(a,8);footer.addView(b,bp);}
         Dialog d=dialog(a,box,true);advanced.setOnClickListener(v->{d.dismiss();GraphicsSettings.showAdvanced(a,title);});cancel.setOnClickListener(v->d.dismiss());
-        reset.setOnClickListener(v->{SharedPreferences.Editor e=p.edit();for(String name:new String[]{"power_mode_v71","render_height_v70","rescale_v64","raster_scale_v54","fg_v58","cap"})e.remove(GraphicsSettings.key(title,name));e.apply();d.dismiss();show(a,title,gameName);});
-        save.setOnClickListener(v->{if(fg.index>0&&!GraphicsSettings.lsfgDll(a).isFile()){Toast.makeText(a,"Import your Lossless Scaling DLL in Settings, or choose Off.",Toast.LENGTH_LONG).show();return;}
-            p.edit().putInt(GraphicsSettings.key(title,"render_height_v70"),res.index).putInt(GraphicsSettings.key(title,"fg_v58"),fg.index).putInt(GraphicsSettings.key(title,"cap"),limit.index).putInt(GraphicsSettings.key(title,"power_mode_v71"),power.index)
+        reset.setOnClickListener(v->{SharedPreferences.Editor e=p.edit();for(String name:new String[]{"upscale_filter_v72","fsr_sharpness_v72","anisotropy_v72","power_mode_v71","render_height_v70","rescale_v64","raster_scale_v54","fg_v58","cap"})e.remove(GraphicsSettings.key(title,name));e.apply();d.dismiss();show(a,title,gameName);});
+        save.setOnClickListener(v->{if(filter.index==2&&fg.index>0){Toast.makeText(a,"Choose FSR 1 or frame generation for this build.",Toast.LENGTH_LONG).show();return;}if(fg.index>0&&!GraphicsSettings.lsfgDll(a).isFile()){Toast.makeText(a,"Import your Lossless Scaling DLL in Settings, or choose Off.",Toast.LENGTH_LONG).show();return;}
+            p.edit().putInt(GraphicsSettings.key(title,"upscale_filter_v72"),filter.index).putInt(GraphicsSettings.key(title,"fsr_sharpness_v72"),sharp.index).putInt(GraphicsSettings.key(title,"anisotropy_v72"),af.index).putInt(GraphicsSettings.key(title,"render_height_v70"),res.index).putInt(GraphicsSettings.key(title,"fg_v58"),fg.index).putInt(GraphicsSettings.key(title,"cap"),limit.index).putInt(GraphicsSettings.key(title,"power_mode_v71"),power.index)
                 .putInt(GraphicsSettings.key(title,"raster_scale_v54"),0).putInt(GraphicsSettings.key(title,"rescale_v64"),1).putInt(GraphicsSettings.key(title,"video_out_v63"),0)
                 .putInt(GraphicsSettings.key(title,"fg_flow_v58"),2).putInt(GraphicsSettings.key(title,"fg_perf_v58"),1).apply();d.dismiss();Toast.makeText(a,"Saved · applies on next launch",Toast.LENGTH_SHORT).show();});
         d.show();save.requestFocus();

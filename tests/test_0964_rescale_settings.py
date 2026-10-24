@@ -60,17 +60,17 @@ public class RescaleTest {
 '''+detector+'''
  public static void main(String[] args)throws Exception {
   android.app.Activity c=new android.app.Activity();SharedPreferences p=c.getSharedPreferences("graphics",0);
-  eq(GraphicsSettings.surfacePermille(p,"PPSA31162",true),1000);
-  eq(GraphicsSettings.surfacePermille(p,"PPSA04703",false),1000);
+  eq(GraphicsSettings.renderHeight(p,"PPSA31162"),0);
+  eq(GraphicsSettings.renderHeight(p,"PPSA04703"),0);
   p.edit().putInt(":render_height_v70",2).apply();
-  eq(GraphicsSettings.surfacePermille(p,"PPSA31162",true),666);
+  eq(GraphicsSettings.renderHeight(p,"PPSA31162"),720);
   p.edit().putInt("PPSA31162:render_height_v70",1).apply();
-  eq(GraphicsSettings.surfacePermille(p,"PPSA31162",true),1000);
+  eq(GraphicsSettings.renderHeight(p,"PPSA31162"),1080);
   p.edit().putInt("PPSA31162:render_height_v70",99).apply();
-  eq(GraphicsSettings.surfacePermille(p,"PPSA31162",true),1000);
+  eq(GraphicsSettings.renderHeight(p,"PPSA31162"),0);
   p.edit().putInt("PPSA04703:render_height_v70",3).putInt("PPSA04703:raster_scale_v54",5).apply();
   Os.setenv("NOVA_GAME_UNREAL","0",true);GraphicsSettings.apply(c,"PPSA04703");
-  eq(Os.getenv("NOVA_RESCALE_PERMILLE"),"500");eq(Os.getenv("NOVA_RASTER_SCALE_PCT"),"100");
+  eq(Os.getenv("NOVA_RESCALE_PERMILLE"),"1000");eq(Os.getenv("NOVA_RENDER_HEIGHT"),"540");eq(Os.getenv("NOVA_RASTER_SCALE_PCT"),"100");
   p.edit().putInt("PPSA04703:render_height_v70",1).apply();GraphicsSettings.apply(c,"PPSA04703");
   eq(Os.getenv("NOVA_RESCALE_PERMILLE"),"1000");
   p.edit().putInt("PPSA27841:sync_v56",1).putInt("PPSA27841:readback_v56",2).apply();
@@ -78,9 +78,13 @@ public class RescaleTest {
   eq(Os.getenv("NOVA_FPS_CAP"),"30");eq(Os.getenv("NOVA_PRESENT_MODE"),"fifo");
   eq(Os.getenv("NOVA_GPU_TURBO"),"0");eq(Os.getenv("NOVA_VRS"),"2");
   eq(Os.getenv("NOVA_REAL_GPU_TIME"),"1");eq(Os.getenv("NOVA_VIDEO_OUT_4K"),"0");
-  eq(Os.getenv("NOVA_RESCALE_PERMILLE"),"666");
+  eq(Os.getenv("NOVA_RESCALE_PERMILLE"),"1000");eq(Os.getenv("NOVA_RENDER_HEIGHT"),"720");
   eq(p.getInt("PPSA27841:sync_v56",0),1);eq(p.getInt("PPSA27841:readback_v56",0),2);
   if(Os.getenv("NOVA_FRAMEGEN")!=null)throw new AssertionError("framegen must be off");
+  p.edit().putInt("PPSA27841:upscale_filter_v72",2).putInt("PPSA27841:fsr_sharpness_v72",3).putInt("PPSA27841:anisotropy_v72",4).putInt("PPSA27841:fg_v58",2).apply();
+  GraphicsSettings.apply(c,"PPSA27841");
+  eq(Os.getenv("NOVA_UPSCALE_FILTER"),"2");eq(Os.getenv("NOVA_FSR_SHARPNESS"),"75");eq(Os.getenv("NOVA_ANISOTROPY"),"16");
+  if(Os.getenv("NOVA_FRAMEGEN")!=null)throw new AssertionError("FSR must not activate the unsupported framegen combination");
   GraphicsSettings.show(c,"PPSA27841");
   File game=Files.createTempDirectory("nova-unreal-detection").toFile();
   new File(game,"sample.pak").createNewFile();eq(unrealGame(game,0),false);

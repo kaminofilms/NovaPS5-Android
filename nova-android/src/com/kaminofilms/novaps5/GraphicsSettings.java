@@ -14,10 +14,9 @@ final class GraphicsSettings {
     static final String[] READBACK_MODES = {"off", "relaxed", "precise"};
     static final String[] VIDEO_OUT = {"1080p display (faster, recommended)", "4K display (game may render 4K)"};
     static final int[] SCALE_PCT = {100,75,67,50,33,25};
-    static int surfacePermille(SharedPreferences p, String title, boolean unreal) {
-        int selected=value(p,title,"render_height_v70",0);
-        int[] targets={1000,1000,666,500,333};
-        return selected>=0 && selected<targets.length ? targets[selected] : 1000;
+    static int renderHeight(SharedPreferences p,String title) {
+        int i=value(p,title,"render_height_v70",0);int[] heights={0,1080,720,540,360};
+        return i>=0&&i<heights.length?heights[i]:0;
     }
     // 0.9.57: Mesa Turnip TU_DEBUG workarounds for Adreno GPU hangs (no effect on the system driver).
     static final String[] TURNIP = {"Off", "Disable LRZ (nolrz; try if the GPU hangs)", "System-memory rendering (sysmem)", "Both (nolrz,sysmem)"};
@@ -124,7 +123,7 @@ final class GraphicsSettings {
             dialog.dismiss();
         });
         reset.setOnClickListener(v->{
-                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","render_height_v70","rescale_v64","raster_scale_v54","sync_v56","readback_v56","fault_window_v56","video_out_v56","video_out_v63","async_v56","tu_debug_v57","fg_v58","fg_flow_v58","fg_perf_v58","gpu_turbo_v62","vrs_v62","real_gpu_time_v62"})e.remove(key(title,n)); e.apply();
+                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"upscale_filter_v72","fsr_sharpness_v72","anisotropy_v72","present","cap","cache","gpl","render_height_v70","rescale_v64","raster_scale_v54","sync_v56","readback_v56","fault_window_v56","video_out_v56","video_out_v63","async_v56","tu_debug_v57","fg_v58","fg_flow_v58","fg_perf_v58","gpu_turbo_v62","vrs_v62","real_gpu_time_v62"})e.remove(key(title,n)); e.apply();
             dialog.dismiss();
         });
         dialog.show();
@@ -136,7 +135,16 @@ final class GraphicsSettings {
         int mode=value(p,title,"present",0); if(mode<0||mode>2)mode=0;
         int cap=value(p,title,"cap",0); int[] limits={-1,30,40,60,90,120,0};
         int ri=value(p,title,"raster_scale_v54",0); if(ri<0||ri>=SCALE_PCT.length)ri=0;
-        int surface=surfacePermille(p,title,"1".equals(Os.getenv("NOVA_GAME_UNREAL")));
+        int surface=1000; // Never promote guest image backings in the resolution selector.
+        int height=renderHeight(p,title);
+        int filter=value(p,title,"upscale_filter_v72",1);if(filter<0||filter>2)filter=1;
+        int sharp=value(p,title,"fsr_sharpness_v72",1);int[] sharpness={0,25,50,75,100};if(sharp<0||sharp>=sharpness.length)sharp=1;
+        int af=value(p,title,"anisotropy_v72",0);int[] anisotropy={0,2,4,8,16};if(af<0||af>=anisotropy.length)af=0;
+        Os.setenv("NOVA_RENDER_HEIGHT",Integer.toString(height),true);
+        Os.setenv("NOVA_UPSCALE_FILTER",Integer.toString(filter),true);
+        Os.setenv("NOVA_FSR_SHARPNESS",Integer.toString(sharpness[sharp]),true);
+        Os.setenv("NOVA_ANISOTROPY",Integer.toString(anisotropy[af]),true);
+        BootLog.write(c,"Render target: "+(height==0?"Native":height+"p")+"; conservative raster proxies, native compute/readback; output filter="+filter+" FSR sharpness="+sharpness[sharp]);
         Os.setenv("NOVA_RESCALE_PERMILLE",Integer.toString(surface),true);
         // Surface and compatibility scaling must never multiply each other.
         ri=0;
@@ -154,6 +162,7 @@ final class GraphicsSettings {
         int flow=value(p,title,"fg_flow_v58",2); if(flow<0||flow>=FLOW_VALUES.length)flow=2;
         boolean fgPerf=value(p,title,"fg_perf_v58",1)!=0;
         java.io.File dll=lsfgDll(c);
+        if(filter==2&&fg>0){BootLog.write(c,"FSR 1 selected: frame generation stays off in this build");fg=0;}
         if(fg>0&&!dll.isFile()){BootLog.write(c,"Frame generation requested but Lossless.dll is not imported; off");fg=0;}
         if(fg>0){
             Os.setenv("NOVA_FRAMEGEN",Integer.toString(fg+1),true);

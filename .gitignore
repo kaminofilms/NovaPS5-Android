@@ -17,3 +17,8 @@ firmware/
 games/
 droid-runtime/app/src/main/assets/engine/memory-compat.zip
 droid-runtime/app/src/main/assets/engine/memory-compat.json
+
+# Rebuilt from pinned, checksum-verified AMD FSR source.
+native/upscale/fsr_shaders.h
+native/upscale/vendor/ffx_a.h
+native/upscale/vendor/ffx_fsr1.h

@@ -1,0 +1,24 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+layout(local_size_x=8,local_size_y=8) in;
+layout(set=0,binding=0) uniform sampler2D sourceImage;
+layout(set=0,binding=1,rgba16f) uniform writeonly image2D resultImage;
+layout(push_constant) uniform Params {uvec4 con0;uvec4 con1;uvec4 con2;uvec4 con3;uvec4 meta;} p;
+#define A_GPU 1
+#define A_GLSL 1
+#include "vendor/ffx_a.h"
+#define FSR_EASU_F 1
+#include "vendor/ffx_fsr1.h"
+vec4 perceptual(vec4 x){
+ if(p.meta.x==0u)return x;
+ return mix(1.055*pow(max(x,vec4(0)),vec4(1.0/2.4))-0.055,12.92*x,lessThanEqual(x,vec4(.0031308)));
+}
+AF4 FsrEasuRF(AF2 uv){return perceptual(textureGather(sourceImage,uv,0));}
+AF4 FsrEasuGF(AF2 uv){return perceptual(textureGather(sourceImage,uv,1));}
+AF4 FsrEasuBF(AF2 uv){return perceptual(textureGather(sourceImage,uv,2));}
+void main(){
+ uvec2 xy=gl_GlobalInvocationID.xy;
+ if(any(greaterThanEqual(xy,uvec2(imageSize(resultImage)))))return;
+ vec3 color;FsrEasuF(color,xy,p.con0,p.con1,p.con2,p.con3);
+ imageStore(resultImage,ivec2(xy),vec4(clamp(color,0.,1.),1.));
+}

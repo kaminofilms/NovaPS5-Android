@@ -31,8 +31,12 @@ git -C kyty submodule update --init --recursive --depth 1 --jobs "${NOVA_BUILD_J
 # from the current branch; add the isolated EOP batching change below.
 base_sha=740c60496616f265e1edec54f0248ba728946a75
 base_patch="$work/kyty-nova-arm64-base.patch"
-git -C "$repo" fetch --no-tags --depth=1 origin "$base_sha"
-git -C "$repo" show "$base_sha:patches/kyty-nova-arm64.patch" > "$base_patch"
+if [[ -n "${NOVA_BASE_PATCH:-}" ]]; then
+    cp "$NOVA_BASE_PATCH" "$base_patch"
+else
+    git -C "$repo" fetch --no-tags --depth=1 origin "$base_sha"
+    git -C "$repo" show "$base_sha:patches/kyty-nova-arm64.patch" > "$base_patch"
+fi
 while IFS= read -r p || [[ -n "$p" ]]; do
     [[ -z "$p" || "$p" == \#* ]] && continue
     patch_file="$repo/patches/$p"
@@ -252,7 +256,7 @@ ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_pm4_word_public
 python3 "$repo/tools/ci/patch-raster-resolution.py" "$work/kyty"
 python3 "$repo/tests/test_raster_policy.py" "$work/kyty"
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_raster_policy.py" "$work/kyty"
-python3 "$repo/tests/test_raster_resolution.py" "$work/kyty"
+# The complete production raster Vulkan test runs after the final overlays below.
 {
 python3 "$repo/tests/test_raster_startup.py" "$work/kyty"
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 "$repo/tests/test_raster_startup.py" "$work/kyty"
@@ -392,6 +396,11 @@ python3 "$repo/tools/ci/patch-0968-guest-fibers.py" "$work/kyty"
 python3 "$repo/tools/ci/patch-0969-startup-power.py" "$work/kyty"
 python3 "$repo/tools/ci/patch-0971-timing-power.py" "$work/kyty"
 python3 "$repo/tests/test_0971_timing.py" "$work/kyty"
+python3 "$repo/tools/ci/compile-fsr.py"
+python3 "$repo/tools/ci/patch-0972-upscale.py" "$work/kyty"
+python3 "$repo/tests/test_0972_raster_vulkan.py" "$work/kyty"
+python3 "$repo/tests/test_0972_fsr.py"
+python3 "$repo/tests/test_0972_present_copy.py" "$work/kyty"
 python3 "$repo/tests/test_0968_guest_fibers.py" "$work/kyty"
 CXX=clang++ python3 "$repo/tests/test_0968_guest_fibers.py" "$work/kyty"
 bash "$repo/tools/ci/build-android-anyps5.sh" "$repo" "$work" "$out"

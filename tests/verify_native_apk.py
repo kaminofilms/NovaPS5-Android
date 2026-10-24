@@ -16,6 +16,7 @@ p.add_argument('--sdk', required=True)
 p.add_argument('--ndk', default=os.environ.get('ANDROID_NDK_LATEST_HOME') or os.environ.get('ANDROID_NDK_HOME'))
 p.add_argument('--version-name', default='0.9.8-android')
 p.add_argument('--version-code', default='56')
+p.add_argument('--package-name', default='com.kaminofilms.novaps5')
 a = p.parse_args()
 root = pathlib.Path(__file__).resolve().parents[1]
 sdk = pathlib.Path(a.sdk)
@@ -44,7 +45,7 @@ check('signed with the Nova test key', apk_sha is not None and key_sha is not No
       apk_sha.group(1) == key_sha.group(1).replace(':', '').lower(), certs[:200])
 
 badging = out(bt / 'aapt', 'dump', 'badging', a.apk)
-check('package', "package: name='com.kaminofilms.novaps5'" in badging)
+check('package', f"package: name='{a.package_name}'" in badging)
 check('version', f"versionCode='{a.version_code}'" in badging and f"versionName='{a.version_name}'" in badging)
 check('arm64-v8a only', "native-code: 'arm64-v8a'" in badging)
 tree = out(bt / 'aapt', 'dump', 'xmltree', a.apk, 'AndroidManifest.xml')
