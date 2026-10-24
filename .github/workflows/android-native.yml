@@ -1,10 +1,10 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# NovaPS5 0.9.68 / 122: translated guest fiber switching for the ARM64 host.
+# NovaPS5 0.9.71 / 125: independent pacing and Android thermal workload controls.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
   push:
-    branches: [fix/0968-guest-fibers, fix/0966-pacing-audio, update/0965-kyty-dpp, work/novaps5-runtime-timing, fix/novaps5-0941-anyps5-presentation, android-native, feature/guest-va, feature/anyps5-android-gpu, fix/0923-arm64-ld1-boot, fix/0924-native-guest-hotpaths, fix/0925-agc-commandbuffer-hostviews, fix/0926-shader-cache-persistence, fix/0927-gpu-host-memory, fix/0929-renderer-performance, fix/0931-luna-super-meat-boy, fix/novaps5-0936-luna-watchpoint]
+    branches: [work/0971-timing-thermal-pkg, fix/0968-guest-fibers, fix/0966-pacing-audio, update/0965-kyty-dpp, work/novaps5-runtime-timing, fix/novaps5-0941-anyps5-presentation, android-native, feature/guest-va, feature/anyps5-android-gpu, fix/0923-arm64-ld1-boot, fix/0924-native-guest-hotpaths, fix/0925-agc-commandbuffer-hostviews, fix/0926-shader-cache-persistence, fix/0927-gpu-host-memory, fix/0929-renderer-performance, fix/0931-luna-super-meat-boy, fix/novaps5-0936-luna-watchpoint]
   workflow_dispatch:
 permissions:
   contents: write
@@ -43,17 +43,20 @@ jobs:
           python3 tests/test_host_access_tracking.py
       - name: Dependencies
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ninja-build ccache python3
-      - name: Verify unchanged baseline dependency sources
-        run: |
-          git fetch --no-tags --depth=1 origin 5474e56b15c4c243f22f763d38c48aeff0e30afc
-          git diff --exit-code 5474e56b15c4c243f22f763d38c48aeff0e30afc HEAD -- native/novafex patches/fex-android tools/ci/build-android-novafex.sh tools/ci/patch-0936-fex-watchpoint.py
-      - name: Reuse verified unchanged NovaFEX binaries and corresponding source
-        uses: actions/download-artifact@v4
+      - uses: actions/cache@v4
         with:
-          name: android-novafex
-          path: dist/novafex
-          run-id: 39865101483
-          github-token: ${{ github.token }}
+          path: ~/.cache/ccache
+          key: android-fex-0971-${{ env.FEX_COMMIT }}-${{ hashFiles('native/novafex/**', 'patches/fex-android/**') }}
+          restore-keys: android-fex-0971-${{ env.FEX_COMMIT }}-
+      - name: Guest clock probe encoding regression
+        run: python3 tests/test_guest_clock_probe.py
+      - name: Rebuild NovaFEX with translated clock probe
+        run: |
+          set -euo pipefail
+          export ANDROID_NDK=$ANDROID_NDK_LATEST_HOME
+          bash tools/ci/build-android-novafex.sh "$PWD" "$PWD/work" "$PWD/dist/novafex"
+          mkdir -p dist/novafex/source
+          tar --exclude=.git -czf dist/novafex/source/NovaFEX-android-source.tar.gz -C work fex
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -170,8 +173,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: External folder regression
-        run: python3 tests/test_external_volume_paths.py
+      - name: Frontend thermal and external folder regressions
+        run: |
+          set -euo pipefail
+          python3 tests/test_external_volume_paths.py
+          javac -d /tmp/nova-thermal nova-android/src/com/kaminofilms/novaps5/ThermalPolicy.java tests/ThermalPolicyTest.java
+          java -cp /tmp/nova-thermal com.kaminofilms.novaps5.ThermalPolicyTest
       - uses: actions/download-artifact@v4
         with:
           name: android-kyty
@@ -202,14 +209,14 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.68-android-arm64.apk" \
-            --version-name 0.9.68-android --version-code 122 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.71-android-arm64.apk" \
+            --version-name 0.9.71-android --version-code 125 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.68-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.68-android --version-code 122 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.71-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.71-android --version-code 125 | tee dist/apk/verify.txt
       - name: Verify compiled performance features
-        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.68-android-arm64.apk
+        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.71-android-arm64.apk
       - name: Verify packaged mesh driver
-        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.68-android-arm64.apk
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.71-android-arm64.apk
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -226,11 +233,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.9.68-android-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.9.68-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.9.68-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.68 ARM64 guest fiber switching (CI ${GITHUB_SHA::7})" \
-            --notes "Implement Run, Switch and ReturnToThread using translated x86-64 fiber continuations on the native ARM64 host. Preserve guest stack, SysV callee-saved registers, FP control words and cross-thread resumptions; publish idle only after leaving the departing stack. Includes USB/SD support from 0.9.67. Production-code regression tests at O0/O2/O3 with UBSan and Android build/APK checks. Fixes the logged x86-only FiberRun implementation gap; Wolverine boot/gameplay remains device-test pending and further blockers may exist. Fixed signing key and exact corresponding source included. See docs/GUEST-FIBERS-0968.md."
+          tag="v0.9.71-android-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.71-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.71-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.71 timing and thermal controls (CI ${GITHUB_SHA::7})" \
+            --notes "Independent vblank pacing, missed-deadline handling, separate real/output FPS counters, clock/startup diagnostics, Android-managed GPU power and Automatic/Cooler/Performance workload controls. Preserves 0.9.70 UI and installer. Rebuilds NovaFEX and requires ARM64 bridge tests plus full native linking and APK verification. Device FPS, heat reduction and Hellblade/Wolverine boot remain unverified. Fixed signing key and corresponding source included."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()
