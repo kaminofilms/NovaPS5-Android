@@ -1,7 +1,6 @@
 package com.kaminofilms.novaps5;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.system.Os;
@@ -14,30 +13,17 @@ final class GraphicsSettings {
     static final String[] READBACK = {"Off (experimental; can lose GPU data)", "Relaxed (recommended)", "Precise (most compatible; slower)"};
     static final String[] READBACK_MODES = {"off", "relaxed", "precise"};
     static final String[] VIDEO_OUT = {"1080p display (faster, recommended)", "4K display (game may render 4K)"};
-    static final String[] SCALES = {"Native (100%)", "75%", "67%", "50%", "33%", "25% (fastest)"};
-    static final int[] SCALE_PCT = {100, 75, 67, 50, 33, 25};
-    static final String[] SURFACE_SCALES = {"Automatic (Unreal 50%, other games Native)", "Native (100%)", "75%", "50%", "33%"};
-    static final int[] SURFACE_PERMILLE = {1000, 1000, 750, 500, 330};
+    static final int[] SCALE_PCT = {100,75,67,50,33,25};
     static int surfacePermille(SharedPreferences p, String title, boolean unreal) {
-        int selected=value(p,title,"rescale_v64",0);
-        if(selected<0 || selected>=SURFACE_PERMILLE.length) selected=0;
-        return selected==0 ? (unreal?500:1000) : SURFACE_PERMILLE[selected];
-    }
-    static void maxFps(SharedPreferences p, String title) {
-        SharedPreferences.Editor e=p.edit().putInt(key(title,"present"),1)
-            .putInt(key(title,"gpu_turbo_v62"),1).putInt(key(title,"vrs_v62"),1)
-            .putInt(key(title,"real_gpu_time_v62"),1).putInt(key(title,"raster_scale_v54"),0)
-            .putInt(key(title,"rescale_v64"),1).putInt(key(title,"video_out_v63"),0)
-            .putInt(key(title,"fg_v58"),0);
-        if("PPSA27841".equals(title))e.putInt(key(title,"cap"),1);
-        e.apply();
+        int selected=value(p,title,"render_height_v70",0);
+        int[] targets={1000,1000,666,500,333};
+        return selected>=0 && selected<targets.length ? targets[selected] : 1000;
     }
     // 0.9.57: Mesa Turnip TU_DEBUG workarounds for Adreno GPU hangs (no effect on the system driver).
     static final String[] TURNIP = {"Off", "Disable LRZ (nolrz; try if the GPU hangs)", "System-memory rendering (sysmem)", "Both (nolrz,sysmem)"};
     static final String[] TURNIP_FLAGS = {"", "nolrz", "sysmem", "nolrz,sysmem"};
     // 0.9.58: Lossless Scaling frame generation with the user's own Lossless.dll (never bundled).
-    static final String[] FRAMEGEN = {"Off", "2x (one generated frame per real frame)", "3x", "4x"};
-    static final String[] FLOW = {"100% (sharpest motion, slowest)", "75%", "50% (recommended)", "35%", "25% (fastest)"};
+    static final String[] FRAMEGEN = {"Off", "2x", "3x", "4x"};
     static final String[] FLOW_VALUES = {"1.0", "0.75", "0.5", "0.35", "0.25"};
     /** 0.9.62: titles that start with 2x2 variable-rate shading (GPU-bound on Adreno 840). */
     static boolean vrsDefault(String title) { return "PPSA04703".equals(title) || "PPSA27841".equals(title); }
@@ -79,12 +65,13 @@ final class GraphicsSettings {
             p.edit().putInt(key(title,"cap"),3).putBoolean("deadcells_cap_v50",true).apply();
         }
     }
-    static void show(Activity a, String title) {
+    static void show(Activity a, String title) { GraphicsPanel.show(a,title,title.isEmpty()?"Default graphics":title); }
+    static void showAdvanced(Activity a, String title) {
         SharedPreferences p = a.getSharedPreferences("graphics", 0);
         migrateDeadCellsCap(p,title);
         LinearLayout box = new LinearLayout(a); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(32, 16, 32, 16);
         TextView note = new TextView(a);
-        note.setText("Applies on next game launch. Per-game values override defaults. Unsupported presentation modes fall back to FIFO. These settings do not raise a game's native FPS limit."); box.addView(note);
+        note.setText("Leave these at their defaults unless a game has a problem. Changes apply on next launch."); box.addView(note);
         Spinner mode = choice(a, box, "Presentation", MODES, value(p,title,"present",0));
         Spinner cap = choice(a, box, "Presentation FPS cap", CAPS, value(p,title,"cap",0));
         Switch cache = toggle(a, box, "Disk shader cache (recommended)", value(p,title,"cache",1)!=0);
@@ -98,29 +85,24 @@ final class GraphicsSettings {
         Spinner turnip = choice(a, box, "Turnip driver workaround", TURNIP, value(p,title,"tu_debug_v57",0));
         boolean haveDll = lsfgDll(a).isFile();
         Spinner framegen = choice(a, box, "Frame generation (Lossless Scaling)", FRAMEGEN, value(p,title,"fg_v58",0));
-        Spinner flow = choice(a, box, "Frame generation flow scale", FLOW, value(p,title,"fg_flow_v58",2));
-        Switch fgPerf = toggle(a, box, "Frame generation performance mode (faster, softer)", value(p,title,"fg_perf_v58",1)!=0);
+
+
         TextView fgNote = new TextView(a);
         fgNote.setText((haveDll ? "Lossless.dll imported. " : "Import your Lossless.dll first (Settings → Lossless Scaling DLL); until then this stays off. ")
             + "Frame generation needs stable real FPS. It uses at most 1080p processing and requires timed VSync presentation. It cannot fix slow game simulation. Turn it off if the picture shows artefacts or the game gets slower."); box.addView(fgNote);
         Switch turbo = toggle(a, box, "GPU turbo (maximum GPU clock; warmer, uses more battery)", value(p,title,"gpu_turbo_v62",1)!=0);
         Switch vrs = toggle(a, box, "Variable-rate shading (2x2; faster, slightly softer 3D image; HUD stays sharp)", value(p,title,"vrs_v62",vrsDefault(title)?1:0)!=0);
         Switch realTime = toggle(a, box, "Report real GPU time (games with dynamic resolution can lower it themselves)", value(p,title,"real_gpu_time_v62",vrsDefault(title)?1:0)!=0);
-        final Spinner surfaceScale = choice(a, box, "Resolution scale (experimental)", SURFACE_SCALES, value(p,title,"rescale_v64",0));
-        final Spinner resolution = choice(a, box, "Compatibility resolution", SCALES, value(p,title,"raster_scale_v54",0));
-        TextView scaleNote = new TextView(a);
-        scaleNote.setText("Lower values render eligible 16:9 colour/depth passes at a smaller size and are faster. Compute, shadow and unsupported passes stay native. Try Native if the picture breaks."); box.addView(scaleNote);
-        Button maxFps = new Button(a); maxFps.setText("Auto Max FPS"); box.addView(maxFps);
-        maxFps.setOnClickListener(v->{
-            maxFps(p,title);
-            mode.setSelection(1);turbo.setChecked(true);vrs.setChecked(true);realTime.setChecked(true);
-            resolution.setSelection(0);surfaceScale.setSelection(1);video.setSelection(0);framegen.setSelection(0);
-            if("PPSA27841".equals(title))cap.setSelection(1);
-            note.setText("Auto Max FPS saved. Applies on next launch; results depend on the game and driver. Resolution scale stays Native; choose 50% and Save to test the new scaler.");
-        });
         ScrollView scroll = new ScrollView(a); scroll.addView(box);
-        new AlertDialog.Builder(a).setTitle(title.isEmpty()?"Graphics defaults":"Graphics · "+title).setView(scroll)
-            .setPositiveButton("Save",(d,w)->{
+        LinearLayout panel=GraphicsPanel.panel(a);
+        panel.addView(GraphicsPanel.text(a,"Advanced graphics",24,0xfff4f7ff));
+        panel.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        LinearLayout footer=new LinearLayout(a);footer.setGravity(android.view.Gravity.RIGHT);panel.addView(footer);
+        android.app.Dialog dialog=GraphicsPanel.dialog(a,panel,true);
+        Button reset=GraphicsPanel.action(a,"Reset"),close=GraphicsPanel.action(a,"Close"),save=GraphicsPanel.action(a,"Save");
+        for(Button button:new Button[]{reset,close,save}){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,GraphicsPanel.dp(a,48));lp.leftMargin=GraphicsPanel.dp(a,8);footer.addView(button,lp);}
+        close.setOnClickListener(v->dialog.dismiss());
+        save.setOnClickListener(v->{
                 SharedPreferences.Editor e=p.edit().putInt(key(title,"present"),mode.getSelectedItemPosition())
                     .putInt(key(title,"cap"),cap.getSelectedItemPosition()).putInt(key(title,"cache"),cache.isChecked()?1:0)
                     .putInt(key(title,"gpl"),gpl.isChecked()?1:0)
@@ -128,21 +110,25 @@ final class GraphicsSettings {
                     .putInt(key(title,"readback_v56"),readback.getSelectedItemPosition())
                     .putInt(key(title,"fault_window_v56"),window.isChecked()?1:0)
                     .putInt(key(title,"async_v56"),async.isChecked()?1:0);
-                e.putInt(key(title,"rescale_v64"),surfaceScale.getSelectedItemPosition());
-                e.putInt(key(title,"raster_scale_v54"),resolution.getSelectedItemPosition());
+
+
                 e.putInt(key(title,"video_out_v63"),video.getSelectedItemPosition());
                 e.putInt(key(title,"tu_debug_v57"),turnip.getSelectedItemPosition());
                 e.putInt(key(title,"fg_v58"),framegen.getSelectedItemPosition());
-                e.putInt(key(title,"fg_flow_v58"),flow.getSelectedItemPosition());
-                e.putInt(key(title,"fg_perf_v58"),fgPerf.isChecked()?1:0);
+
+
                 e.putInt(key(title,"gpu_turbo_v62"),turbo.isChecked()?1:0);
                 e.putInt(key(title,"vrs_v62"),vrs.isChecked()?1:0);
                 e.putInt(key(title,"real_gpu_time_v62"),realTime.isChecked()?1:0);
                 e.apply();
-            })
-            .setNeutralButton(title.isEmpty()?"Reset defaults":"Use global defaults",(d,w)->{
-                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","rescale_v64","raster_scale_v54","sync_v56","readback_v56","fault_window_v56","video_out_v56","video_out_v63","async_v56","tu_debug_v57","fg_v58","fg_flow_v58","fg_perf_v58","gpu_turbo_v62","vrs_v62","real_gpu_time_v62"})e.remove(key(title,n)); e.apply();
-            }).setNegativeButton("Close",null).show();
+            dialog.dismiss();
+        });
+        reset.setOnClickListener(v->{
+                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","render_height_v70","rescale_v64","raster_scale_v54","sync_v56","readback_v56","fault_window_v56","video_out_v56","video_out_v63","async_v56","tu_debug_v57","fg_v58","fg_flow_v58","fg_perf_v58","gpu_turbo_v62","vrs_v62","real_gpu_time_v62"})e.remove(key(title,n)); e.apply();
+            dialog.dismiss();
+        });
+        dialog.show();
+
     }
     static void apply(Context c, String title) throws android.system.ErrnoException {
         SharedPreferences p=c.getSharedPreferences("graphics",0);
@@ -153,7 +139,7 @@ final class GraphicsSettings {
         int surface=surfacePermille(p,title,"1".equals(Os.getenv("NOVA_GAME_UNREAL")));
         Os.setenv("NOVA_RESCALE_PERMILLE",Integer.toString(surface),true);
         // Surface and compatibility scaling must never multiply each other.
-        if(surface<1000)ri=0;
+        ri=0;
         BootLog.write(c,"Resolution scale: "+surface+" permille (native fallbacks for unsupported uses)");
         Os.setenv("NOVA_UNITY_RESOLUTION","0",true);
         Os.setenv("NOVA_INTERNAL_RESOLUTION","0",true);
