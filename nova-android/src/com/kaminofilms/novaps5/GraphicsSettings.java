@@ -141,6 +141,7 @@ final class GraphicsSettings {
     static void apply(Context c, String title) throws android.system.ErrnoException {
         SharedPreferences p=c.getSharedPreferences("graphics",0);
         migrateDeadCellsCap(p,title);
+        Os.setenv("NOVA_AUDIO_PROFILE","PPSA27841".equals(title)?"1":"0",true);
         int mode=value(p,title,"present",0); if(mode<0||mode>2)mode=0;
         int cap=value(p,title,"cap",0); int[] limits={-1,30,40,60,90,120,0};
         int ri=value(p,title,"raster_scale_v54",0); if(ri<0||ri>=SCALE_PCT.length)ri=0;
