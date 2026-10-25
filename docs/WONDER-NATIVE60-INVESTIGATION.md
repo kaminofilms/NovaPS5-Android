@@ -80,3 +80,52 @@ validation, comparative heavy-scene captures, and sustained 60 FPS verification.
 Remaining substantial candidates: resource-safe pass retention/barrier batching,
 critical-path CPU scheduling, and measured CRI/AudioOut2 hot-code attribution.
 Do not describe all bottlenecks as fixed or add the overlapping scope costs.
+
+## Own guarded depth-retention patch (additional work)
+
+`StableDepth.h` retains the current writable attachment layout only for whole,
+unbound, unsampled depth/stencil images with no separate subresource state.
+It does not change pipeline depth/stencil tests, write-enable flags, clears,
+loads/stores, descriptor layouts, feedback processing or access barriers.
+Read-only draws can use a writable layout: the pipeline controls whether a draw
+writes. Sampled/bound/partial images take the original path. Unlike the wider
+upstream depth-feedback system, this patch needs no content-serial machinery.
+
+The policy test covers depth-only, stencil-only and combined formats, unknown
+layouts, all guard combinations, and alternating write/test-only requests.
+For a deterministic 1,000-draw request stream, layout changes fall from 999 to
+zero after initial setup. This is a calculation of layout choices, not an FPS
+benchmark or proof of 999 real game pass endings removed.
+
+The inserted decision block compiles/runs against pinned Vulkan-Hpp headers.
+A real Vulkan test on Mesa llvmpipe (LLVM 20.1.2) with Khronos synchronization
+validation executes 64 clear/LOAD/STORE passes with alternating attachment
+layouts and copies both depth and stencil to host memory. Layout transitions:
+reference 66, stable 3; all 256 depth and stencil samples match the reference and
+expected values; zero validation errors. This test does not issue game shaders
+or establish mobile GPU performance. Render-pass count in this test is unchanged.
+
+### Performance budget
+
+60 FPS means 16.67 ms per completed real frame. 10 FPS means about 100 ms.
+The heavy log windows therefore need roughly a sixfold throughput improvement,
+not merely a 60 FPS cap. For example, one neighboring sample records 3,281.7 ms
+of graphics-scheduler GPU intervals and about 48 completed flips in roughly five
+seconds: around 68 ms of recorded GPU intervals per flip. Windows are not exactly
+aligned; timestamp intervals are not hardware utilization counters. This ratio
+is a profiling clue, not an isolated shader cost or a linear speedup prediction.
+CPU/GPU measurements overlap and must not be added. The pacing correction can
+remove an extra refresh wait, but cannot alone explain a 100-to-16.67 ms gain.
+
+Further correctness/performance reference:
+https://docs.vulkan.org/guide/latest/depth.html
+https://docs.vulkan.org/samples/latest/samples/performance/render_passes/README.html
+Vulkan community discussions suggest layout churn can matter, but only the
+specification, source review, controlled tests and device measurements are used
+to justify a patch. Game-specific offsets/settings have not been invented.
+
+The stable-depth path is opt-in through NOVA_STABLE_DEPTH, enabled only for
+PPSA27841 by the launch profile; other titles explicitly clear the flag. Both
+flag states are tested. Run test_0974_stable_depth.py CORE_ROOT normally for
+host policy/integration checks, or with NOVA_TEST_VULKAN=1 plus a Vulkan ICD and
+Khronos validation layer installed for the real GPU clear/LOAD/STORE test.
