@@ -392,6 +392,8 @@ python3 "$repo/tools/ci/patch-0968-guest-fibers.py" "$work/kyty"
 python3 "$repo/tools/ci/patch-0969-startup-power.py" "$work/kyty"
 python3 "$repo/tools/ci/patch-0971-timing-power.py" "$work/kyty"
 python3 "$repo/tests/test_0971_timing.py" "$work/kyty"
+python3 "$repo/tools/ci/patch-0974-image-stages.py" "$work/kyty"
+python3 "$repo/tests/test_0974_renderer.py" "$work/kyty"
 python3 "$repo/tests/test_0968_guest_fibers.py" "$work/kyty"
 CXX=clang++ python3 "$repo/tests/test_0968_guest_fibers.py" "$work/kyty"
 bash "$repo/tools/ci/build-android-anyps5.sh" "$repo" "$work" "$out"
@@ -445,4 +447,5 @@ ls -la "$out/lib"
 # Publish the exact patched renderer and its source dependencies alongside the APK.
 mkdir -p "$out/source"
 tar --exclude='.git' -czf "$out/source/Kyty-Android-corresponding-source.tar.gz" -C "$work" kyty adrenotools
+
 
