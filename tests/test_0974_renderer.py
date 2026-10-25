@@ -15,13 +15,16 @@ with tempfile.TemporaryDirectory() as td:
  body=source[start:end]
  assert 'NovaRender::ImageStages' in body
  assert 'GetBarriers(destination_layout, destination_access, destination_stage, range)' in body
- assert body.index('if (barriers.empty())')<body.index('m_scheduler.EndRendering()')
+ assert body.index('if (barriers.empty())')<body.rindex('m_scheduler.EndRendering()')
  fixture='''#include <vulkan/vulkan.hpp>
 #include "ImageStages.h"
 #include <optional>
 #include <vector>
 struct ImageSubresourceRange {};
-struct Scheduler {void EndRendering();};
+namespace NovaRaster {bool Enabled();}
+struct Image;
+struct Command {bool RasterScaleNeedsFlush(Image*,vk::ImageLayout,vk::AccessFlags2);};
+struct Scheduler {void EndRendering(); bool Active(); Command& Current();};
 struct Image {
  Scheduler m_scheduler;
  std::vector<vk::ImageMemoryBarrier2> GetBarriers(vk::ImageLayout,vk::AccessFlags2,vk::PipelineStageFlags2,std::optional<ImageSubresourceRange>);
