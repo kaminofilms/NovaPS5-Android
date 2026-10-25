@@ -60,6 +60,15 @@ public class RescaleTest {
 '''+detector+'''
  public static void main(String[] args)throws Exception {
   android.app.Activity c=new android.app.Activity();SharedPreferences p=c.getSharedPreferences("graphics",0);
+  p.edit().putInt("PPSA27841:cap",1).putInt("PPSA27841:fg_v58",1).putInt("PPSA27841:tu_debug_v57",1).apply();
+  GraphicsSettings.migrateDeadCellsCap(p,"PPSA27841");
+  eq(GraphicsSettings.value(p,"PPSA27841","cap",0),3);
+  eq(GraphicsSettings.value(p,"PPSA27841","fg_v58",9),0);
+  eq(GraphicsSettings.value(p,"PPSA27841","tu_debug_v57",9),0);
+  GraphicsSettings.apply(c,"PPSA27841");eq(Os.getenv("NOVA_FPS_CAP"),"60");
+  eq(Os.getenv("NOVA_PRESENT_MODE"),"mailbox");
+  if(Os.getenv("TU_DEBUG")!=null)throw new AssertionError("nolrz must be cleared");
+
   eq(GraphicsSettings.surfacePermille(p,"PPSA31162",true),1000);
   eq(GraphicsSettings.surfacePermille(p,"PPSA04703",false),1000);
   p.edit().putInt(":render_height_v70",2).apply();
@@ -78,7 +87,7 @@ public class RescaleTest {
   eq(Os.getenv("NOVA_FPS_CAP"),"30");eq(Os.getenv("NOVA_PRESENT_MODE"),"fifo");
   eq(Os.getenv("NOVA_GPU_TURBO"),"0");eq(Os.getenv("NOVA_VRS"),"2");
   eq(Os.getenv("NOVA_REAL_GPU_TIME"),"1");eq(Os.getenv("NOVA_VIDEO_OUT_4K"),"0");
-  eq(Os.getenv("NOVA_RESCALE_PERMILLE"),"666");
+  eq(Os.getenv("NOVA_RESCALE_PERMILLE"),"1000");
   eq(p.getInt("PPSA27841:sync_v56",0),1);eq(p.getInt("PPSA27841:readback_v56",0),2);
   if(Os.getenv("NOVA_FRAMEGEN")!=null)throw new AssertionError("framegen must be off");
   GraphicsSettings.show(c,"PPSA27841");
@@ -100,3 +109,4 @@ with tempfile.TemporaryDirectory() as tmp:
     subprocess.run([*compiler,'-d',str(t/'classes'),*map(str,t.rglob('*.java'))],check=True)
     subprocess.run(['java','-cp',str(t/'classes'),'com.kaminofilms.novaps5.RescaleTest'],check=True)
 print('Nova rescale settings: production Java compilation, inheritance, current v70 inheritance, legacy turbo rejection, explicit caps and Unreal detection passed')
+
