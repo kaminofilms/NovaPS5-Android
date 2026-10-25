@@ -66,6 +66,7 @@ public class RescaleTest {
   eq(GraphicsSettings.value(p,"PPSA27841","fg_v58",9),0);
   eq(GraphicsSettings.value(p,"PPSA27841","tu_debug_v57",9),0);
   GraphicsSettings.apply(c,"PPSA27841");eq(Os.getenv("NOVA_FPS_CAP"),"60");
+  eq(Os.getenv("NOVA_STABLE_DEPTH"),"1");
   eq(Os.getenv("NOVA_PRESENT_MODE"),"mailbox");
   if(Os.getenv("TU_DEBUG")!=null)throw new AssertionError("nolrz must be cleared");
 
@@ -79,6 +80,7 @@ public class RescaleTest {
   eq(GraphicsSettings.surfacePermille(p,"PPSA31162",true),1000);
   p.edit().putInt("PPSA04703:render_height_v70",3).putInt("PPSA04703:raster_scale_v54",5).apply();
   Os.setenv("NOVA_GAME_UNREAL","0",true);GraphicsSettings.apply(c,"PPSA04703");
+  eq(Os.getenv("NOVA_STABLE_DEPTH"),"0");
   eq(Os.getenv("NOVA_RESCALE_PERMILLE"),"500");eq(Os.getenv("NOVA_RASTER_SCALE_PCT"),"100");
   p.edit().putInt("PPSA04703:render_height_v70",1).apply();GraphicsSettings.apply(c,"PPSA04703");
   eq(Os.getenv("NOVA_RESCALE_PERMILLE"),"1000");
