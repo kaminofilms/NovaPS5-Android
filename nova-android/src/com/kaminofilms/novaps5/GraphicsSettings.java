@@ -60,6 +60,14 @@ final class GraphicsSettings {
         Switch s = new Switch(a); s.setText(label); s.setChecked(selected); box.addView(s); return s;
     }
     static void migrateDeadCellsCap(SharedPreferences p, String title) {
+        if ("PPSA27841".equals(title) && !p.getBoolean("wonder_native_v74",false)) {
+            // One-time correction of the prior 30 FPS/native profile and saved
+            // nolrz workaround. Manual changes after migration remain respected.
+            p.edit().putInt(key(title,"cap"),3).putInt(key(title,"fg_v58"),0)
+                .putInt(key(title,"present"),0).putInt(key(title,"tu_debug_v57"),0)
+                .putInt(key(title,"render_height_v70"),0).putInt(key(title,"video_out_v63"),0)
+                .putInt(key(title,"power_mode_v71"),0).putBoolean("wonder_native_v74",true).apply();
+        }
         if ("PPSA15552".equals(title) && !p.getBoolean("deadcells_cap_v50", false)) {
             // Owner-requested 60 FPS profile. One migration only; later edits remain user-controlled.
             p.edit().putInt(key(title,"cap"),3).putBoolean("deadcells_cap_v50",true).apply();
@@ -203,4 +211,5 @@ final class GraphicsSettings {
         BootLog.write(c,"Graphics profile "+title+": present="+mode+" cap="+cap+" shader_cache="+cache+" pipeline_libraries="+gpl+" sync="+(sync==0?"fast":"accurate")+" readback="+READBACK_MODES[readback]+" fault_window="+window+" scale="+SCALE_PCT[ri]+"% video="+(vo==1?"4k":"1080p")+" async_shaders="+async+" safe_profile="+safe+" tu_debug="+(tu==0?"off":TURNIP_FLAGS[tu])+" gpu_turbo="+turbo+" vrs="+(vrs?"2x2":"off")+" real_gpu_time="+realTime+" framegen="+(fg==0?"off":(fg+1)+"x flow="+FLOW_VALUES[flow]+(fgPerf?" performance":" quality")));
     }
 }
+
 
