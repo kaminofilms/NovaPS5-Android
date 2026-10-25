@@ -129,3 +129,20 @@ PPSA27841 by the launch profile; other titles explicitly clear the flag. Both
 flag states are tested. Run test_0974_stable_depth.py CORE_ROOT normally for
 host policy/integration checks, or with NOVA_TEST_VULKAN=1 plus a Vulkan ICD and
 Khronos validation layer installed for the real GPU clear/LOAD/STORE test.
+
+## Buffer upload dependency range
+
+SynchronizeBuffer previously applied both upload memory barriers to the entire
+cached buffer, even when the copy updated a small region. The new patch bounds
+both barriers to the smallest contiguous span covering every destination copy.
+Stages, access masks, copy commands, pass endings and ordering remain unchanged.
+Empty, zero-sized, out-of-bounds or overflowing ranges retain the original full
+buffer dependency. This reduces memory-dependency scope, not the execution-stage
+scope; drivers may still synchronize/cache-flush coarsely. No FPS gain is claimed.
+
+Validation: actual inserted Vulkan-Hpp barrier assignments compiled and executed;
+10,000 randomized multi-copy cases cover every copied byte without exceeding the
+buffer; invalid/overflow cases and gaps covered under UBSan. A synthetic 4 KiB
+upload in a 1 MiB buffer changes the dependency range from 1 MiB to 4 KiB (256x
+fewer bytes described, **not** 256x faster). Full Android/device validation remains
+outstanding. Reference: https://docs.vulkan.org/refpages/latest/refpages/source/VkBufferMemoryBarrier.html
