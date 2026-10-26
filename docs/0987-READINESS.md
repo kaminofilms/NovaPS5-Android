@@ -17,6 +17,9 @@ discarding a frame, or changing guest-visible queue semantics.
   `KernelTriggerEvent` results (`OK`, `EBADF`, `ENOENT`). The request retains the event
   state shared pointer captured at reservation, so close/reopen cannot race the freeze
   report's ownership read.
+- The report includes the maintained count of active flip-event registrations, which
+  distinguishes a Ready group with no subscriber from a subscribed queue whose real
+  trigger returned an error.
 - The former report read `flip_status` fields without the port mutex while holding the
   queue mutex. Taking that mutex would invert the presentation lock order. 0987 removes
   those unsynchronized reads and derives blockers only from queue-owned state.
