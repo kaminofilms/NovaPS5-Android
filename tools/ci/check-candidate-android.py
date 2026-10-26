@@ -46,7 +46,7 @@ with tempfile.TemporaryDirectory(prefix='nova-native-config-') as tmp:
  probe.write_text('''#include "common/novaPower/FrameHints.h"
 #include "common/novaPower/WorkerAffinity.h"
 extern "C" void NovaCandidatePowerLinkProbe(){
- NovaPower::ApplyWorkerAffinity("Job.Worker 0");NovaPower::CriticalGuest guest("UnityGfxDeviceW");
+ NovaPower::ApplyWorkerAffinity("Job.Worker 0");NovaPower::RegisterMainGuest();
  NovaPower::Current().Begin();NovaPower::Current().End();
 }
 ''')
