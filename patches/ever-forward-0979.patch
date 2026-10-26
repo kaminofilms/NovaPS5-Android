@@ -1,0 +1,160 @@
+--- a/src/graphics/guest_gpu/graphicsRun.cpp
++++ b/src/graphics/guest_gpu/graphicsRun.cpp
+@@ -1213,10 +1213,13 @@
+ static void NovaPeriodicSubmit(Scheduler& scheduler) {
+ 	static thread_local uint32_t work = 0;
+ 	const auto every = NovaSync::SubmitEveryDraws();
+-	if (every != 0 && ++work >= every) {
+-		work = 0;
+-		scheduler.Flush();
+-	}
++	if (every == 0) return;
++	// Only the opportunistic draw-count flush may be delayed. Explicit waits,
++	// flips, guest barriers, ring-wrap retirement and readbacks retain their path.
++	++work;
++	const uint32_t budget = scheduler.Current().NovaRendering()
++	    ? std::max<uint32_t>(every,4096u) : every;
++	if (work >= budget) { work=0; scheduler.Flush(); }
+ }
+ 
+ void CommandProcessor::DrawIndex(DrawIndexArgs args) {
+--- a/src/graphics/host_gpu/renderer/commandScheduler.cpp
++++ b/src/graphics/host_gpu/renderer/commandScheduler.cpp
+@@ -167,18 +167,18 @@
+ 	}
+ }
+ 
+-void CommandScheduler::Flush() {
++void CommandScheduler::Flush(std::source_location where) {
+ 	SubmitInfo submit;
+-	Flush(submit);
+-}
+-
+-void CommandScheduler::Flush(SubmitInfo& submit) {
++	Flush(submit,where);
++}
++
++void CommandScheduler::Flush(SubmitInfo& submit, std::source_location where) {
+ 	if (!m_command.IsInvalid() && !m_command.m_has_commands &&
+ 	    submit.num_wait_semaphores == 0 && submit.num_signal_semaphores == 0) {
+ 	    std::lock_guard lock(m_operation_mutex);
+ 	    if (m_pending_operations.empty() && m_priority_operations.empty() && !m_priority_active) return;
+ 	}
+-	Submit(submit);
++	Submit(submit,where);
+ 	BeginNext();
+ }
+ 
+@@ -451,7 +451,24 @@
+ 	m_nova_qp_slot = -1;
+ }
+ 
+-uint64_t CommandScheduler::Submit(SubmitInfo submit) {
++uint64_t CommandScheduler::Submit(SubmitInfo submit, std::source_location where) {
++	// Bounded, opt-in call-site accounting. This reports the reason for submitting,
++	// not the timestamp hook that happens to end rendering during every Submit.
++	static const bool trace=[] {const char* v=std::getenv("NOVA_SUBMIT_REASONS");return v&&v[0]=='1';}();
++	if(trace){
++	 struct Site {const void* scheduler=nullptr;const char* file=nullptr;uint32_t line=0;uint64_t calls=0;};
++	 static std::mutex mutex;static std::array<Site,64> sites{};
++	 static uint64_t overflow=0;static auto start=std::chrono::steady_clock::now();
++	 std::lock_guard lock(mutex);bool found=false;
++	 for(auto& site:sites){if(site.file==nullptr||(site.scheduler==this&&site.file==where.file_name()&&site.line==where.line())){
++	  site.scheduler=this;site.file=where.file_name();site.line=where.line();++site.calls;found=true;break;}}
++	 if(!found)++overflow;
++	 const auto now=std::chrono::steady_clock::now();
++	 if(now-start>=std::chrono::seconds(5)){
++	  for(auto& site:sites)if(site.calls){std::fprintf(stderr,"NOVA_SUBMIT_REASON: scheduler=%p file=%s line=%u calls=%llu\n",site.scheduler,site.file,site.line,(unsigned long long)site.calls);site.calls=0;}
++	  std::fprintf(stderr,"NOVA_SUBMIT_REASON: overflow=%llu\n",(unsigned long long)overflow);overflow=0;start=now;
++	 }
++	}
+ 	NovaRender::Scope nova_cost(NovaRender::Cost::Submit);
+ 	EXIT_IF(m_command.IsInvalid());
+ 	EXIT_IF(submit.num_wait_semaphores > SubmitInfo::MaxSemaphores ||
+--- a/src/graphics/host_gpu/renderer/commandScheduler.h
++++ b/src/graphics/host_gpu/renderer/commandScheduler.h
+@@ -26,12 +26,12 @@
+ 	void           Begin(HW::Context& registers, HW::UserConfig& user_config, HW::Shader& shaders);
+ 	void           BeginRendering(const RenderState& state);
+ 	void           EndRendering(std::source_location where = std::source_location::current());
+-	void           Flush();
+-	void           Flush(SubmitInfo& submit);
++	void           Flush(std::source_location where = std::source_location::current());
++	void           Flush(SubmitInfo& submit, std::source_location where = std::source_location::current());
+ 	void           FlushAndWait();
+ 	void           Finish();
+ 	CommandBuffer& BeginCommand();
+-	uint64_t       Submit(SubmitInfo submit = {});
++	uint64_t       Submit(SubmitInfo submit = {}, std::source_location where = std::source_location::current());
+ 	// Deferred callbacks can observe an externally owned drain, but cannot initiate shutdown:
+ 	// the priority runner cannot join itself.
+ 	void                      Shutdown();
+--- a/src/graphics/host_gpu/renderer/image/image.cpp
++++ b/src/graphics/host_gpu/renderer/image/image.cpp
+@@ -191,6 +191,12 @@
+ 				                              vk::AccessFlagBits2::eMemoryWrite;
+ 				const bool     repeated_write =
+ 				    static_cast<bool>(subresource_state.access_mask & write_access);
++				if (NovaReadToRead(subresource_state,destination_layout,destination_access)) {
++					subresource_state.pl_stage |= destination_stage;
++					subresource_state.access_mask |= destination_access;
++					NovaCountImageBarrier(true);
++					continue;
++				}
+ 				if (subresource_state.layout != destination_layout ||
+ 				    subresource_state.access_mask != destination_access || repeated_write) {
+ 					vk::ImageMemoryBarrier2 barrier {};
+@@ -210,7 +216,7 @@
+ 					barrier.subresourceRange.layerCount     = 1;
+ 					barriers.push_back(barrier);
+ 					subresource_state = {destination_stage, destination_access, destination_layout};
+-				}
++				} else { subresource_state.pl_stage |= destination_stage; }
+ 			}
+ 		}
+ 
+--- a/src/kernel/semaphore.cpp
++++ b/src/kernel/semaphore.cpp
+@@ -61,7 +61,7 @@
+ 
+ 	void AddWaiter(WaitingThread* waiter);
+ 	void RemoveWaiter(WaitingThread* waiter);
+-	void WakeWaiters();
++	bool WakeWaiters();
+ 
+ 	Common::Mutex               m_mutex;
+ 	Common::CondVar             m_cond_var;
+@@ -145,9 +145,9 @@
+ 
+ 	m_count += signal_count;
+ 
+-	WakeWaiters();
+-
+-	m_cond_var.SignalAll();
++	// A signal with no newly satisfied waiter needs no condition-variable broadcast.
++	// Keep the broadcast for multiple ready waiters: SignalOne could wake the wrong one.
++	if (WakeWaiters()) m_cond_var.SignalAll();
+ 
+ 	return Result::Ok;
+ }
+@@ -172,14 +172,17 @@
+ 	}
+ }
+ 
+-void KernelSemaPrivate::WakeWaiters() {
++bool KernelSemaPrivate::WakeWaiters() {
++	bool changed = false;
+ 	for (auto* waiter: m_waiting_threads) {
+ 		if (!waiter->ready && waiter->need_count <= m_count) {
+ 			m_count -= waiter->need_count;
+ 			waiter->result = Result::Ok;
+ 			waiter->ready  = true;
+-		}
+-	}
++			changed = true;
++		}
++	}
++	return changed;
+ }
+ 
+ KernelSemaPrivate::Result KernelSemaPrivate::Wait(int need_count, uint32_t* ptr_micros) {
