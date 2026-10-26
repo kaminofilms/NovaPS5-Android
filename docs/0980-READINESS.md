@@ -1,5 +1,7 @@
 # 0.9.80 completion and scheduling candidate — APK BLOCKED
 
+Latest checkpoint: read [0984-READINESS.md](0984-READINESS.md) before judging current readiness. The historical task list below describes the 0980 checkpoint. New binding, audio-lock, read-only-depth and invalid-context source candidates are saved; six host suites pass. Android/GPU/device gates remain open. No APK is ready.
+
 User instruction: do not build an APK until the original six tasks and added
 Ever Forward work are implemented and validated. No APK is produced here.
 
