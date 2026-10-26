@@ -1,0 +1,236 @@
+--- a/src/graphics/presentation/videoOut.cpp
++++ b/src/graphics/presentation/videoOut.cpp
+@@ -104,6 +104,11 @@
+ 	VideoOutEventQueues pre_vblank;
+ 	VideoOutEventQueues vblank;
+ 	VideoOutEventQueues output_mode;
++	std::atomic<uint64_t> flip_publish_calls {0};
++	std::atomic<uint64_t> flip_registration_ok {0};
++	std::atomic<uint64_t> flip_registration_badf {0};
++	std::atomic<uint64_t> flip_registration_enoent {0};
++	std::atomic<uint64_t> last_flip_publish_tick {0};
+ };
+ 
+ struct VideoOutBufferAttribute2 {
+@@ -217,22 +222,50 @@
+ 	}
+ 	// Nova: freeze report of pending flips.
+ 	void NovaReport() {
++		const auto now       = Common::Timer::QueryPerformanceCounter();
++		const auto frequency = Common::Timer::QueryPerformanceFrequency();
++		const bool background = NovaRuntime::background.load(std::memory_order_relaxed);
++		const bool paused     = m_presenter.IsGuestPaused();
+ 		Common::LockGuard lock(m_mutex);
+-		std::fprintf(stderr, "NOVA_VIDEO: flips gpu=%zu cpu=%zu cancelled=%zu processing=%d next_id=%llu\n", m_requests.size(),
++		std::fprintf(stderr, "NOVA_VIDEO: flips gpu=%zu cpu=%zu cancelled=%zu processing=%d next_id=%llu background=%d guest_paused=%d attempts=%llu empty=%llu no_owner=%llu group_blocked=%llu due_false=%llu presented=%llu\n", m_requests.size(),
+ 		             m_cpu_requests.size(), m_cancelled_requests.size(), m_processing ? 1 : 0,
+-		             static_cast<unsigned long long>(m_next_request_id));
++		             static_cast<unsigned long long>(m_next_request_id), background ? 1 : 0,
++		             paused ? 1 : 0, static_cast<unsigned long long>(m_flip_attempts),
++		             static_cast<unsigned long long>(m_empty_attempts),
++		             static_cast<unsigned long long>(m_no_owner_attempts),
++		             static_cast<unsigned long long>(m_group_blocked_attempts),
++		             static_cast<unsigned long long>(m_due_false_attempts),
++		             static_cast<unsigned long long>(m_presented_groups));
+ 		for (auto* queue: {&m_requests, &m_cpu_requests}) {
+ 			for (const auto& r: *queue) {
+ 				// State 2 is Ready (completion callback already published), not Recording.
+ 				constexpr const char* names[]={"Reserved","Recording","Ready","Presenting"};
+ 				static_assert(static_cast<unsigned>(RequestState::Presenting)==3);
+ 				const auto state=static_cast<unsigned>(r.state);
+-				std::fprintf(stderr, "NOVA_VIDEO:   request %llu index=%d state=%d state_name=%s source=%d pending=%d gcq=%d group=%llu owner=%d generation=%llu prepared=%d\n",
++				const auto age_ms = [now, frequency](uint64_t tick) -> unsigned long long {
++					return tick == 0 || frequency == 0 || now < tick ? 0 :
++					       static_cast<unsigned long long>((now - tick) * 1000u / frequency);
++				};
++				const auto gpu_blockers = static_cast<unsigned>(std::count_if(
++				    m_requests.begin(), m_requests.end(), [&r](const auto& other) {
++					    return other.group == r.group && other.state != RequestState::Ready;
++				    }));
++				const auto cpu_blockers = static_cast<unsigned>(std::count_if(
++				    m_cpu_requests.begin(), m_cpu_requests.end(), [&r](const auto& other) {
++					    return other.group == r.group;
++				    }));
++				const auto& events = *r.events;
++				std::fprintf(stderr, "NOVA_VIDEO:   request %llu index=%d state=%d state_name=%s source=%d group=%llu owner=%d generation=%llu prepared=%d age_ms=%llu recording_age_ms=%llu ready_age_ms=%llu presenting_age_ms=%llu due_retries=%u gpu_blockers=%u cpu_blockers=%u flip_publish_calls=%llu flip_reg_ok=%llu flip_reg_badf=%llu flip_reg_enoent=%llu flip_publish_age_ms=%llu\n",
+ 				             static_cast<unsigned long long>(r.id), r.index, static_cast<int>(r.state),state<4?names[state]:"Invalid",static_cast<int>(r.source),
+-				             r.cfg != nullptr ? static_cast<int>(r.cfg->flip_status.flipPendingNum) : -1,
+-				             r.cfg != nullptr ? static_cast<int>(r.cfg->flip_status.gcQueueNum) : -1,
+ 				             static_cast<unsigned long long>(r.group),r.group==r.id,
+-				             static_cast<unsigned long long>(r.generation),r.frame!=nullptr);
++				             static_cast<unsigned long long>(r.generation),r.frame!=nullptr,
++				             age_ms(r.reserved_tick), age_ms(r.recording_tick), age_ms(r.ready_tick),
++				             age_ms(r.presenting_tick), r.due_retries, gpu_blockers, cpu_blockers,
++				             static_cast<unsigned long long>(events.flip_publish_calls.load(std::memory_order_relaxed)),
++				             static_cast<unsigned long long>(events.flip_registration_ok.load(std::memory_order_relaxed)),
++				             static_cast<unsigned long long>(events.flip_registration_badf.load(std::memory_order_relaxed)),
++				             static_cast<unsigned long long>(events.flip_registration_enoent.load(std::memory_order_relaxed)),
++				             age_ms(events.last_flip_publish_tick.load(std::memory_order_relaxed)));
+ 			}
+ 		}
+ 	}
+@@ -258,6 +291,7 @@
+ 		uint64_t                    group;
+ 		VideoOutConfig*             cfg;
+ 		VideoOutConfig*             master;
++		std::shared_ptr<VideoOutEventState> events;
+ 		uint64_t                    generation;
+ 		int                         index;
+ 		int64_t                     flip_arg;
+@@ -266,6 +300,11 @@
+ 		RequestState                state;
+ 		Graphics::Presenter::Frame* frame;
+ 		bool                        premultiplied_alpha;
++		uint64_t                    reserved_tick;
++		uint64_t                    recording_tick;
++		uint64_t                    ready_tick;
++		uint64_t                    presenting_tick;
++		uint32_t                    due_retries;
+ 	};
+ 
+ 	Graphics::Presenter& m_presenter;
+@@ -278,6 +317,12 @@
+ 	std::list<Request>   m_cancelled_requests;
+ 	bool                 m_processing      = false;
+ 	uint64_t             m_next_request_id = 1;
++	uint64_t             m_flip_attempts = 0;
++	uint64_t             m_empty_attempts = 0;
++	uint64_t             m_no_owner_attempts = 0;
++	uint64_t             m_group_blocked_attempts = 0;
++	uint64_t             m_due_false_attempts = 0;
++	uint64_t             m_presented_groups = 0;
+ };
+ 
+ struct VideoOutDriver::Impl {
+@@ -411,6 +456,11 @@
+ 
+ static void TriggerVideoOutEvents(VideoOutConfig& video_out, VideoOutEventKind kind,
+                                   void* trigger_data) {
++	if (kind == VideoOutEventKind::Flip) {
++		video_out.events->flip_publish_calls.fetch_add(1, std::memory_order_relaxed);
++		video_out.events->last_flip_publish_tick.store(Common::Timer::QueryPerformanceCounter(),
++		                                                std::memory_order_relaxed);
++	}
+ 	VideoOutEventQueues queues;
+ 	{
+ 		Common::LockGuard lock(video_out.events->mutex);
+@@ -423,6 +473,13 @@
+ 		const auto result =
+ 		    EventQueue::KernelTriggerEvent(registration->handle, VideoOutEventId(kind),
+ 		                                   EventQueue::KERNEL_EVFILT_VIDEO_OUT, trigger_data);
++		if (kind == VideoOutEventKind::Flip && result == OK) {
++			video_out.events->flip_registration_ok.fetch_add(1, std::memory_order_relaxed);
++		} else if (kind == VideoOutEventKind::Flip && result == LibKernel::KERNEL_ERROR_EBADF) {
++			video_out.events->flip_registration_badf.fetch_add(1, std::memory_order_relaxed);
++		} else if (kind == VideoOutEventKind::Flip && result == LibKernel::KERNEL_ERROR_ENOENT) {
++			video_out.events->flip_registration_enoent.fetch_add(1, std::memory_order_relaxed);
++		}
+ 		EXIT_NOT_IMPLEMENTED(result != OK && result != LibKernel::KERNEL_ERROR_EBADF &&
+ 		                     result != LibKernel::KERNEL_ERROR_ENOENT);
+ 	}
+@@ -982,12 +1039,14 @@
+ 	r.group      = cfg.master == nullptr ? r.id : 0;
+ 	r.cfg        = &cfg;
+ 	r.master     = cfg.master;
++	r.events     = cfg.events;
+ 	r.generation = cfg.generation;
+ 	r.index      = index;
+ 	r.flip_arg   = flip_arg;
+ 	r.submit_ptc = LibKernel::KernelGetProcessTimeCounter();
+ 	r.source     = source;
+ 	r.state      = RequestState::Reserved;
++	r.reserved_tick = Common::Timer::QueryPerformanceCounter();
+ 	if (cfg.slave_count != 0) {
+ 		for (auto* queue: {&m_requests, &m_cpu_requests}) {
+ 			for (auto& slave: *queue) {
+@@ -1080,6 +1139,7 @@
+ 					EXIT("cannot prepare video-out request id=%" PRIu64 "\n", request_id);
+ 				}
+ 				cancelled->state = RequestState::Recording;
++				cancelled->recording_tick = Common::Timer::QueryPerformanceCounter();
+ 				return;
+ 			}
+ 			request = m_requests.insert(m_requests.end(), *pending);
+@@ -1089,6 +1149,7 @@
+ 			EXIT("cannot prepare video-out request id=%" PRIu64 "\n", request_id);
+ 		}
+ 		request->state = RequestState::Recording;
++		request->recording_tick = Common::Timer::QueryPerformanceCounter();
+ 		cfg            = request->cfg;
+ 		generation     = request->generation;
+ 		index          = request->index;
+@@ -1182,6 +1243,7 @@
+ 			EXIT("completed GPU flip has no prepared recording, id=%" PRIu64 "\n", request_id);
+ 		}
+ 		request->state = RequestState::Ready;
++		request->ready_tick = Common::Timer::QueryPerformanceCounter();
+ 		m_submit_cond_var.Signal();
+ 		m_mutex.Unlock();
+ 		return;
+@@ -1231,13 +1293,18 @@
+ 	KYTY_PROFILER_BLOCK("FlipQueue::Flip");
+ 
+ 	m_mutex.Lock();
++	m_flip_attempts++;
+ 	if (m_requests.empty()) {
+ 		m_submit_cond_var.WaitFor(&m_mutex, micros);
+ 	}
++	if (m_requests.empty()) {
++		m_empty_attempts++;
++	}
+ 	EXIT_IF(m_processing);
+ 	const auto owner = std::find_if(m_requests.begin(), m_requests.end(),
+ 	                               [](const auto& r) { return r.group == r.id; });
+ 	if (owner == m_requests.end()) {
++		m_no_owner_attempts++;
+ 		m_mutex.Unlock();
+ 		return false;
+ 	}
+@@ -1247,6 +1314,7 @@
+ 	    std::any_of(m_requests.begin(), m_requests.end(), [group](const auto& r) {
+ 		    return r.group == group && r.state != RequestState::Ready;
+ 	    })) {
++		m_group_blocked_attempts++;
+ 		m_mutex.Unlock();
+ 		return false;
+ 	}
+@@ -1256,6 +1324,7 @@
+ 		if (request.group == group) {
+ 			EXIT_IF(count == requests.size());
+ 			request.state = RequestState::Presenting;
++			request.presenting_tick = Common::Timer::QueryPerformanceCounter();
+ 			requests[count++] = request;
+ 		}
+ 	}
+@@ -1288,13 +1357,19 @@
+ 	}
+     for(size_t i=0;i<count;i++)requests[i].cfg->mutex.Lock();
+ 	m_mutex.Lock();
++	if (!due) {
++		m_due_false_attempts++;
++	}
+ 	for (auto it = m_requests.begin(); it != m_requests.end();) {
+ 		if (it->group != group) {
+ 			++it;
+ 			continue;
+ 		}
+ 		if (!due) {
+-			it++->state = RequestState::Ready;
++			it->state = RequestState::Ready;
++			it->presenting_tick = 0;
++			it->due_retries++;
++			it++;
+ 			continue;
+ 		}
+         auto& r=*it;
+@@ -1313,6 +1388,9 @@
+ 		it = m_requests.erase(it);
+ 	}
+ 	m_processing = false;
++	if (due) {
++		m_presented_groups++;
++	}
+ 	m_done_cond_var.SignalAll();
+ 	m_submit_slot_cond_var.SignalAll();
+ 	m_mutex.Unlock();
+
