@@ -145,6 +145,14 @@ public final class MainActivity extends Activity {
         super.onActivityResult(request, result, data);
         if (result != RESULT_OK || data == null || data.getData() == null) return;
         Uri uri = data.getData();
+        if (request == 16) {
+            try {
+                getContentResolver().takePersistableUriPermission(uri, data.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                getSharedPreferences("welcome_hub",0).edit().putString("wallpaper",uri.toString()).putInt("background",3).apply();
+                home.loadWallpaper();
+            } catch (SecurityException error) { info("Background", "Choose a photo from a provider that allows retained access."); }
+            return;
+        }
         if (request == PACKAGE) {
             busy("Installing package", () -> {
                 File game = PkgInstaller.install(this, uri);
@@ -539,8 +547,13 @@ public final class MainActivity extends Activity {
             if (key == KeyEvent.KEYCODE_DPAD_LEFT) { home.move(-1); return true; }
             if (key == KeyEvent.KEYCODE_DPAD_RIGHT) { home.move(1); return true; }
             if (key == KeyEvent.KEYCODE_BUTTON_A || key == KeyEvent.KEYCODE_DPAD_CENTER) { home.activate(); return true; }
-            if (key == KeyEvent.KEYCODE_BUTTON_START) { settings(); return true; }
+            if (key == KeyEvent.KEYCODE_DPAD_UP) { home.vertical(-1); return true; }
+            if (key == KeyEvent.KEYCODE_DPAD_DOWN) { home.vertical(1); return true; }
+            if (key == KeyEvent.KEYCODE_BUTTON_L1 || key == KeyEvent.KEYCODE_BUTTON_R1) { home.tab(); return true; }
+            if (key == KeyEvent.KEYCODE_BUTTON_B) { if (home.back()) return true; }
+            if (key == KeyEvent.KEYCODE_BUTTON_START) { home.open("Settings"); return true; }
         }
+        if (key == KeyEvent.KEYCODE_BACK && e.getAction() == KeyEvent.ACTION_UP && home.back()) return true;
         return super.dispatchKeyEvent(e);
     }
 }
