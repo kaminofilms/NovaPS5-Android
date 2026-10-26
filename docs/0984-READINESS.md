@@ -1,7 +1,7 @@
 # 0981–0984 source candidates — APK BLOCKED
 
 Branch: fix/wonder-native60-no-apk. No APK and no Actions run.
-The full overlay chain from the recovered Android 0967 source through 0984
+The full overlay chain from the recovered Android 0967 source through 0985
 applies successfully. This does not establish Android compilation or 60 FPS.
 
 ## Implemented source in this checkpoint
@@ -43,11 +43,23 @@ generation and prepared-frame presence. This changes diagnostics only.
 - Complete integrated libAudio2.cpp passes host C++20 syntax compilation using
   its real headers and a generated Linux config. Complete context.cpp also
   passes. This is NOT an ARM64 Android compile/link or GPU runtime test.
-- Full renderDraw/descriptors host checks encounter pre-existing GCC/Vulkan-Hpp
-  aggregate assignment ambiguities; do not describe these as passing or as a
-  demonstrated new Android failure. Exact Android toolchain build remains needed.
-- Vulkan loader is present, but vkCreateInstance returns
-  VK_ERROR_INCOMPATIBLE_DRIVER (-9); no local GPU test can be claimed.
+- All twelve real modified translation units compile to AArch64 objects with
+  Android NDK r29 Clang 21, API 33, C++20/O2 and the production novaBionic forced
+  include. Includes renderDraw, descriptors, context, libAudio2, audio, pthread,
+  commandScheduler, graphicsRun, videoOut, bufferCache, image and semaphore.
+  The ADPF/affinity header probe also links with real Android API 33 libandroid
+  and --no-undefined. ELF headers verify AArch64. This is NOT a full core link,
+  Android execution, timing benchmark, or final CMake release build.
+- Recovered an isolated Mesa software Vulkan runtime. The dynamic-rendering
+  depth/stencil clear/LOAD replay compares baseline STORE with guarded NONE:
+  48 read-only passes using NONE for both aspects, all 256 depth and stencil pixels match, and zero
+  core/synchronization validation errors. Both cases retain 66 layout changes.
+  No shader draws, feedback loops, texture sampling, Adreno or FPS validated.
+- Reproducible native check: tools/ci/check-candidate-android.py CORE --out OUT
+  --ndk NDK --repo REPO. It compiles objects and a framework link probe only.
+  Reproducible Vulkan test: tests/readonly_depth_vulkan.cpp, compiled with the
+  repo and pinned Vulkan-Headers include paths and linked to libvulkan; run
+  with an explicit ICD and the Khronos validation layer.
 
 ## Important freeze correction from the actual source
 
@@ -68,7 +80,7 @@ mutexes around Present; do not reintroduce the older blocking lock scope.
    implemented; arbitrary disjoint-fault bypass/automatic promotion is not.
 2. Actual GPU validation of read-only stores, aspect/layout/feedback behavior,
    and remaining real G-buffer sampling dependencies. No general MRT pass merge.
-3. Full Android build and Vulkan execution/lifetime tests of the binding caches;
+3. Full Android core link/build and Vulkan execution/lifetime tests of the binding caches;
    measure hit rates and CPU cost before assigning an FPS gain.
 4. Exact ready-queue/presentation/EOP freeze edge remains unresolved. Existing
    notification hardening preserves timeline ordering; no invented event fix.
@@ -85,3 +97,10 @@ Candidate integration is opt-in in build-android-kyty.sh with
 NOVA_VALIDATE_COMPLETION_CANDIDATES=1. This selects overlays and host checks
 for a native core validation build; it does not certify or authorize an APK.
 Power policy remains independently opt-in and has no forced clocks.
+
+Local validation tools recovered for subsequent source work: NDK r29 is at
+/workspace/novaps5-toolchain/android-ndk-r29; isolated Mesa ICD/layer packages
+are under /workspace/novaps5-toolchain/vulkan-host. Select lvp_icd.json explicitly
+and set that directory's usr/lib/x86_64-linux-gnu in LD_LIBRARY_PATH; the system
+loader alone has no ICD. Actual check outputs remain in active-source/android-check.
+These paths are setup notes, not portable release requirements.
