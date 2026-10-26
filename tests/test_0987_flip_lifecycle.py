@@ -16,6 +16,7 @@ assert "pending=%d" not in report_body and "gcq=%d" not in report_body
 assert "recording_age_ms=%llu" in report_body
 assert "gpu_blockers=%u cpu_blockers=%u" in report_body
 assert "flip_publish_calls=%llu" in report_body
+assert "active_flip_regs=%u" in report_body
 
 trigger = re.search(
     r"static void TriggerVideoOutEvents\(.*?\n\}(?=\n\nstatic void DeleteVideoOutEvents)",
@@ -28,6 +29,9 @@ assert "kind == VideoOutEventKind::Flip" in trigger_body
 assert "flip_registration_ok.fetch_add" in trigger_body
 assert "flip_registration_badf.fetch_add" in trigger_body
 assert "flip_registration_enoent.fetch_add" in trigger_body
+assert "active_flip_registrations.fetch_add" in source
+assert "active_flip_registrations.fetch_sub" in source
+assert "active_flip_registrations.store(0" in source
 
 assert source.count("request->ready_tick = Common::Timer::QueryPerformanceCounter()") == 1
 assert source.count("request.presenting_tick = Common::Timer::QueryPerformanceCounter()") == 1
