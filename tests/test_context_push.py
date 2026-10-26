@@ -1,7 +1,8 @@
 from pathlib import Path
 import subprocess,tempfile,sys,os
 s=(Path(sys.argv[1])/'src/libs/libAudio2.cpp').read_text();a=s.index('int KYTY_SYSV_ABI AudioOut2ContextPush(');b=s.index('int KYTY_SYSV_ABI AudioOut2ContextGetQueueLevel(',a)
-fixture='''
+attribution = '#include "common/novaAudio/GuestGateCost.h"\n' if 'GuestGateCostScope attribution' in s else ''
+fixture=attribution+'''
 #include <cstdint>
 #include <mutex>
 #include <cassert>
@@ -31,6 +32,7 @@ int main(){
 '''
 with tempfile.TemporaryDirectory() as d:
  d=Path(d);(d/'test.cpp').write_text(fixture)
- subprocess.run(['c++','-std=c++20','-pthread','-Wall','-Wextra','-Werror','-fsanitize=address,undefined',str(d/'test.cpp'),'-o',str(d/'test')],check=True)
+ subprocess.run(['c++','-I'+str(Path(sys.argv[1])/'src'),'-std=c++20','-pthread','-Wall','-Wextra','-Werror','-fsanitize=address,undefined',str(d/'test.cpp'),'-o',str(d/'test')],check=True)
  subprocess.run([str(d/'test')],check=True,env=dict(os.environ,ASAN_OPTIONS='detect_leaks=0'))
 print('PASS actual ContextPush: invalid handles, destroy while waiting, async full queue, device and grain pacing')
+
