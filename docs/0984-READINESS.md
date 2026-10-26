@@ -1,4 +1,4 @@
-# 0981–0986 source candidates — APK BLOCKED
+> Superseded for current readiness by [0987-READINESS.md](0987-READINESS.md). The implementation history below remains accurate.\n\n# 0981–0986 source candidates — APK BLOCKED
 
 Branch: fix/wonder-native60-no-apk. No APK and no Actions run.
 The full overlay chain from the recovered Android 0967 source through 0986
