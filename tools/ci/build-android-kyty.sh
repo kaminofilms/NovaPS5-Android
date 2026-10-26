@@ -405,6 +405,17 @@ python3 "$repo/tools/ci/patch-0978-wonder.py" "$work/kyty"
 python3 "$repo/tests/test_0978_audio.py" "$work/kyty"
 python3 "$repo/tools/ci/patch-0979-ever.py" "$work/kyty"
 python3 "$repo/tests/test_0979.py" "$work/kyty"
+# Source candidates are opt-in for native-core validation, not APK release gates.
+# Their Android/GPU/device checks remain open in docs/0984-READINESS.md.
+if [[ "${NOVA_VALIDATE_COMPLETION_CANDIDATES:-0}" == "1" ]]; then
+    python3 "$repo/tools/ci/patch-0980-completion-power.py" "$work/kyty"
+    python3 "$repo/tools/ci/patch-0981-bindings.py" "$work/kyty"
+    python3 "$repo/tools/ci/patch-0982-audio-lock.py" "$work/kyty"
+    python3 "$repo/tools/ci/patch-0983-readonly-depth.py" "$work/kyty"
+    python3 "$repo/tools/ci/patch-0984-audio-context.py" "$work/kyty"
+    python3 "$repo/tools/ci/patch-0985-flip-state-report.py" "$work/kyty"
+    python3 "$repo/tests/test_completion_candidates.py" "$work/kyty"
+fi
 python3 "$repo/tests/test_0968_guest_fibers.py" "$work/kyty"
 CXX=clang++ python3 "$repo/tests/test_0968_guest_fibers.py" "$work/kyty"
 bash "$repo/tools/ci/build-android-anyps5.sh" "$repo" "$work" "$out"
