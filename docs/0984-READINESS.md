@@ -1,7 +1,7 @@
-# 0981–0984 source candidates — APK BLOCKED
+# 0981–0986 source candidates — APK BLOCKED
 
 Branch: fix/wonder-native60-no-apk. No APK and no Actions run.
-The full overlay chain from the recovered Android 0967 source through 0985
+The full overlay chain from the recovered Android 0967 source through 0986
 applies successfully. This does not establish Android compilation or 60 FPS.
 
 ## Implemented source in this checkpoint
@@ -28,6 +28,15 @@ applies successfully. This does not establish Android compilation or 60 FPS.
 
 0985 additionally labels freeze requests with actual state names, group/owner,
 generation and prepared-frame presence. This changes diagnostics only.
+
+0986 fixes a coverage gap: the initial guest thread bypasses RunThread. Its
+real TID now registers at PthreadInitSelfForMainThread using a TLS registration
+so native pthread_exit can release it. This adds no affinity or clock override.
+The host service test covers this exit path; Android lifecycle testing remains.
+
+Complete C++ diff: patches/0981-0986-core.patch against the historical 0980
+patched core (before the three new helper headers). git apply --check passes.
+Use either that complete diff or the numbered build overlays, not both.
 
 ## Actual validation
 
