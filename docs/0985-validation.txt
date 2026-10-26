@@ -78,7 +78,7 @@ cb6972cf47676cdeb7cdbabed2dcc5236cadbff45e2c843b5b12e48dd1b43716  src/libs/libAu
 668dead492fb5615f715dbafd962328532a4726763f6852f8d6c0ef426804cc0  src/graphics/host_gpu/renderer/context.cpp
 965ca351568a1ac7109b897e1c1e6794eace324f792348b278554fd238009e5e  src/graphics/host_gpu/renderer/renderDraw.cpp
 537a82557fc69a1b315b149a379bf6a027583466e912ad79e6da8800b7f444dc  src/graphics/host_gpu/renderer/pipeline/descriptors.cpp
-32651f43457fa6fca0995cfadd6cf9c585bf4c333771e2a769a542d6c9cb2323  src/kernel/pthread.cpp
+94caaf5e8e3f3713b118c4646de3fdc71c1e22a11d75d9bba6593c383729dcfd  src/kernel/pthread.cpp
 befcedde60e85a6cb7ddafc783199a53eaad602cce53f66dbdc4314efa83edf5  src/graphics/host_gpu/renderer/commandScheduler.cpp
 4e1ce06754fa0999a70557ebc34099d245ebf52b2782c875f60a83f25107da08  src/graphics/presentation/videoOut.cpp
 a1f13f2401ac8b409101d01bb385f28c478598407f44815f4dd136e8f6156b90  src/graphics/guest_gpu/graphicsRun.cpp
@@ -86,3 +86,8 @@ acf53c04bc1241b784458ae936254ec79c5a746d005f2e5c60f7d2e43f621916  src/libs/audio
 2848a15f3f1e1ef80d58beca1168ee1839064cb2513cbbdc73ed3b37dda3c83b  src/graphics/host_gpu/renderer/cache/bufferCache.cpp
 c70e60f6c737ede6eb74b1195289fbedddff3fdb96463ebb03fcb1c91ca29f38  src/graphics/host_gpu/renderer/image/image.cpp
 10b20bc4ab5b38eeddc718a4c3ddec9d8bcb66d0a78ee52e9c560afbb33af83a  src/kernel/semaphore.cpp
+
+0986 follow-up: initial guest main bypasses RunThread; added TLS registration. Updated host hint suite passes explicit pthread_exit TLS cleanup. Changed pthread.cpp recompiled successfully to AArch64, and updated main-registration power API probe links with --no-undefined. Other eleven object sources unchanged.
+321bcf52d9b5dddc0f554acc59d01e52a0da611d85367cbc6cf09b057c421c85  src/common/novaPower/FrameHints.h
+16e8376fd340cc22c586f8578257519a3e110747adb44963e616d8a1523848a1  src/common/novaPower/WorkerAffinity.h
+771a32af6d9d7ccf2f831e7a4dddbae7c1b40458b53bdd997b1a09fa7ec9b3d3  src/common/novaPower/WorkerPolicy.h
