@@ -1,0 +1,525 @@
+diff --git a/src/common/novaAudio/HandleLeases.h b/src/common/novaAudio/HandleLeases.h
+new file mode 100644
+--- /dev/null
++++ b/src/common/novaAudio/HandleLeases.h
+@@ -0,0 +1,34 @@
++#pragma once
++#include <map>
++#include <memory>
++#include <mutex>
++namespace NovaAudio {
++using CloseHandle=void(*)(int);
++class HandleLease {
++ int handle;CloseHandle close;
++public:
++ HandleLease(int h,CloseHandle c):handle(h),close(c){}
++ ~HandleLease(){close(handle);}
++ HandleLease(const HandleLease&)=delete;HandleLease& operator=(const HandleLease&)=delete;
++};
++class HandleLeases {
++ std::mutex mutex;
++ std::map<int,std::shared_ptr<HandleLease>> live;
++public:
++ // Acquire under the caller's port-registry lock, before removal can retire it.
++ std::shared_ptr<HandleLease> Acquire(int handle,CloseHandle close){
++  if(handle<=0)return {};
++  std::lock_guard lock(mutex);auto& lease=live[handle];
++  if(!lease)lease=std::make_shared<HandleLease>(handle,close);
++  return lease;
++ }
++ // Remove under this lock; destroy only AFTER unlocking. Remaining snapshots
++ // delay the actual native close. Their PCM storage is independently owned.
++ void Retire(int handle,CloseHandle close){
++  if(handle<=0)return;
++  std::shared_ptr<HandleLease> lease;
++  {std::lock_guard lock(mutex);auto it=live.find(handle);if(it!=live.end()){lease=std::move(it->second);live.erase(it);}}
++  if(!lease)close(handle);
++ }
++};
++}
+diff --git a/src/common/novaPower/FrameHints.h b/src/common/novaPower/FrameHints.h
+--- a/src/common/novaPower/FrameHints.h
++++ b/src/common/novaPower/FrameHints.h
+@@ -37,8 +37,11 @@
+  void End(){if(!Enabled())return;if(NovaRuntime::background.load(std::memory_order_relaxed)){Cancel();return;}auto now=Clock::now();if(start==Clock::time_point{})return;auto duration=std::chrono::duration_cast<std::chrono::nanoseconds>(now-start).count();start={};if(duration<=0||duration>1000000000LL)return;int desired=60;if(const char* value=std::getenv("NOVA_FPS_CAP")){char* end=nullptr;long parsed=std::strtol(value,&end,10);if(end!=value&&*end==0&&parsed>0&&parsed<=240)desired=int(parsed);}int cap=NovaRuntime::OutputCap(desired);int64_t budget=1000000000LL/(cap>0?cap:60);ensure(now,budget);if(session&&APerformanceHint_reportActualWorkDuration(session,duration)!=0)close();}
+  void Cancel(){start={};close();}
+ };
++// Execute's initial guest thread does not pass through RunThread. Keep its
++// registration in TLS so native pthread_exit also runs its cleanup.
++inline void RegisterMainGuest(){static thread_local CriticalGuest main("SDLThread");}
+ inline FrameHints& Current(){static thread_local FrameHints hints;return hints;}
+ }
+ #else
+-namespace NovaPower {struct CriticalGuest {explicit CriticalGuest(std::string_view){}};struct FrameHints {void Begin(){}void End(){}void Cancel(){}};inline FrameHints& Current(){static thread_local FrameHints h;return h;}}
++namespace NovaPower {inline void RegisterMainGuest(){}struct CriticalGuest {explicit CriticalGuest(std::string_view){}};struct FrameHints {void Begin(){}void End(){}void Cancel(){}};inline FrameHints& Current(){static thread_local FrameHints h;return h;}}
+ #endif
+diff --git a/src/common/novaRender/BindingCache.h b/src/common/novaRender/BindingCache.h
+new file mode 100644
+--- /dev/null
++++ b/src/common/novaRender/BindingCache.h
+@@ -0,0 +1,79 @@
++#pragma once
++#include <vulkan/vulkan.hpp>
++#include <array>
++#include <algorithm>
++#include <cstddef>
++#include <cstdint>
++#include <cstring>
++#include <span>
++#include <type_traits>
++namespace NovaRender {
++template<class H> uint64_t HandleBits(H handle){
++ using Raw=typename H::CType;Raw raw=static_cast<Raw>(handle);
++ if constexpr(std::is_pointer_v<Raw>)return reinterpret_cast<uintptr_t>(raw);
++ else return static_cast<uint64_t>(raw);
++}
++// Only records binding COMMAND state. Never caches resource contents or bypasses
++// ownership, resource preparation, memory dependencies or GPU completion.
++class BindingCache {
++ static constexpr size_t MaxVertices=32,MaxWords=1024,PushBytes=256,Stages=32;
++ struct Vertex {vk::Buffer buffer{};uint64_t offset=0,size=0;bool valid=false;};
++ std::array<Vertex,MaxVertices> vertices{};
++ struct Descriptors {std::array<uint64_t,MaxWords> words;size_t count=0;};
++ std::array<Descriptors,2> descriptors;
++ struct PushStage {uint64_t layout=0;std::array<uint64_t,4> valid{};std::array<std::byte,PushBytes> bytes;};
++ std::array<PushStage,Stages> push;
++public:
++ void Reset(){for(auto& v:vertices)v.valid=false;for(auto& d:descriptors)d.count=0;for(auto& p:push){p.layout=0;p.valid.fill(0);}}
++ bool VertexNeeded(uint32_t first,uint32_t count,const vk::Buffer* buffers,const vk::DeviceSize* offsets,const vk::DeviceSize* sizes){
++  if(!count||first>MaxVertices||count>MaxVertices-first||!buffers||!offsets||!sizes){for(auto& v:vertices)v.valid=false;return true;}
++  bool changed=false;
++  for(uint32_t i=0;i<count;++i){auto& old=vertices[first+i];changed|=!old.valid||old.buffer!=buffers[i]||old.offset!=offsets[i]||old.size!=sizes[i];}
++  if(changed)for(uint32_t i=0;i<count;++i)vertices[first+i]={buffers[i],offsets[i],sizes[i],true};
++  return changed;
++ }
++ // Set zero and zero dynamic offsets only; dynamic descriptor types fall back.
++ bool DescriptorsNeeded(unsigned point,vk::PipelineLayout layout,bool pushed,std::span<const vk::WriteDescriptorSet> writes){
++  if(point>=descriptors.size())return true;
++  auto& old=descriptors[point];std::array<uint64_t,MaxWords> words;size_t count=0;
++  const auto add=[&](uint64_t value){if(count==words.size())return false;words[count++]=value;return true;};
++  const auto fail=[&](){old.count=0;return true;};
++  if(!layout||writes.empty()||!add(HandleBits(layout))||!add(pushed)||!add(writes.size()))return fail();
++  for(const auto& w:writes){
++   if(w.pNext||!w.descriptorCount||w.descriptorCount>MaxWords/3||!add(w.dstBinding)||!add(w.dstArrayElement)||!add(uint64_t(w.descriptorType))||!add(w.descriptorCount))return fail();
++   for(uint32_t i=0;i<w.descriptorCount;++i){
++    switch(w.descriptorType){
++    case vk::DescriptorType::eUniformBuffer:case vk::DescriptorType::eStorageBuffer:
++     if(!w.pBufferInfo||!add(HandleBits(w.pBufferInfo[i].buffer))||!add(w.pBufferInfo[i].offset)||!add(w.pBufferInfo[i].range))return fail();
++     break;
++    case vk::DescriptorType::eSampler:case vk::DescriptorType::eCombinedImageSampler:
++    case vk::DescriptorType::eSampledImage:case vk::DescriptorType::eStorageImage:case vk::DescriptorType::eInputAttachment:
++     if(!w.pImageInfo||!add(HandleBits(w.pImageInfo[i].sampler))||!add(HandleBits(w.pImageInfo[i].imageView))||!add(uint64_t(w.pImageInfo[i].imageLayout)))return fail();
++     break;
++    case vk::DescriptorType::eUniformTexelBuffer:case vk::DescriptorType::eStorageTexelBuffer:
++     if(!w.pTexelBufferView||!add(HandleBits(w.pTexelBufferView[i])))return fail();
++     break;
++    default:return fail();
++    }
++   }
++  }
++  if(old.count==count&&std::equal(words.begin(),words.begin()+count,old.words.begin()))return false;
++  std::copy_n(words.begin(),count,old.words.begin());old.count=count;return true;
++ }
++ bool PushNeeded(vk::PipelineLayout layout,vk::ShaderStageFlags flags,uint32_t offset,uint32_t size,const void* data){
++  const uint32_t stages=static_cast<VkShaderStageFlags>(flags);
++  if(!layout||!stages||!size||!data||offset%4||size%4||offset>PushBytes||size>PushBytes-offset){for(auto& p:push){p.layout=0;p.valid.fill(0);}return true;}
++  const auto* bytes=static_cast<const std::byte*>(data);const auto key=HandleBits(layout);bool changed=false;
++  for(unsigned s=0;s<Stages;++s)if(stages&(uint32_t(1)<<s)){
++   const auto& p=push[s];if(p.layout!=key){changed=true;continue;}
++   for(uint32_t b=0;b<size;++b){size_t at=offset+b;if(!(p.valid[at/64]&(uint64_t(1)<<(at%64)))||p.bytes[at]!=bytes[b]){changed=true;break;}}
++  }
++  if(changed)for(unsigned s=0;s<Stages;++s)if(stages&(uint32_t(1)<<s)){
++   auto& p=push[s];if(p.layout!=key){p.layout=key;p.valid.fill(0);}
++   std::memcpy(p.bytes.data()+offset,data,size);
++   for(size_t b=offset;b<offset+size;++b)p.valid[b/64]|=uint64_t(1)<<(b%64);
++  }
++  return changed;
++ }
++};
++}
+diff --git a/src/common/novaRender/ReadOnlyDepth.h b/src/common/novaRender/ReadOnlyDepth.h
+new file mode 100644
+--- /dev/null
++++ b/src/common/novaRender/ReadOnlyDepth.h
+@@ -0,0 +1,7 @@
++#pragma once
++#include <vulkan/vulkan.h>
++namespace NovaRender {
++inline bool CanOmitDepthStore(uint32_t apiVersion,bool scaled,VkImageAspectFlags writes,bool depthClear,bool stencilClear){
++ return apiVersion>=VK_API_VERSION_1_3&&!scaled&&writes==0&&!depthClear&&!stencilClear;
++}
++}
+diff --git a/src/graphics/host_gpu/renderer/context.cpp b/src/graphics/host_gpu/renderer/context.cpp
+--- a/src/graphics/host_gpu/renderer/context.cpp
++++ b/src/graphics/host_gpu/renderer/context.cpp
+@@ -41,6 +41,7 @@
+ 	auto buffer = m_buffer;
+ 	m_has_commands = false;
+ 	m_bound_pipelines = {};
++	InvalidateBindingCache();
+ 
+ 	vk::CommandBufferBeginInfo begin_info {};
+ 	begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+@@ -55,6 +56,16 @@
+ 	if (m_bound_pipelines[index] == pipeline) return;
+ 	Handle().bindPipeline(point,pipeline);
+ 	m_bound_pipelines[index] = pipeline;
++}
++
++void CommandBuffer::BindVertexBuffers(uint32_t first,uint32_t count,const vk::Buffer* buffers,const vk::DeviceSize* offsets,const vk::DeviceSize* sizes){
++	if(m_nova_bindings.VertexNeeded(first,count,buffers,offsets,sizes))Handle().bindVertexBuffers2(first,count,buffers,offsets,sizes,nullptr);
++}
++void CommandBuffer::PushConstants(vk::PipelineLayout layout,vk::ShaderStageFlags stages,uint32_t offset,uint32_t size,const void* data){
++	if(m_nova_bindings.PushNeeded(layout,stages,offset,size,data))Handle().pushConstants(layout,stages,offset,size,data);
++}
++bool CommandBuffer::DescriptorBindingsNeeded(vk::PipelineBindPoint point,vk::PipelineLayout layout,bool pushed,std::span<const vk::WriteDescriptorSet> writes){
++	return m_nova_bindings.DescriptorsNeeded(point==vk::PipelineBindPoint::eGraphics?0u:1u,layout,pushed,writes);
+ }
+ 
+ void CommandBuffer::End() const {
+@@ -138,7 +149,7 @@
+ 	depth.imageLayout = depth_stencil.image_layout;
+ 	depth.loadOp =
+ 	    depth_stencil.depth_clear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eLoad;
+-	depth.storeOp                       = vk::AttachmentStoreOp::eStore;
++	depth.storeOp = depth_stencil.depth_stencil_read_only ? vk::AttachmentStoreOp::eNone : vk::AttachmentStoreOp::eStore;
+ 	depth.clearValue.depthStencil.depth = std::bit_cast<float>(depth_stencil.clear_value[0]);
+ 
+ 	vk::RenderingAttachmentInfo stencil {};
+@@ -146,7 +157,7 @@
+ 	stencil.imageLayout = depth_stencil.image_layout;
+ 	stencil.loadOp =
+ 	    depth_stencil.stencil_clear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eLoad;
+-	stencil.storeOp                         = vk::AttachmentStoreOp::eStore;
++	stencil.storeOp = depth_stencil.depth_stencil_read_only ? vk::AttachmentStoreOp::eNone : vk::AttachmentStoreOp::eStore;
+ 	stencil.clearValue.depthStencil.stencil = depth_stencil.clear_value[1];
+ 
+ 	vk::RenderingInfo rendering {};
+@@ -203,6 +214,8 @@
+ } // namespace
+ 
+ void CommandBuffer::EndRendering(std::source_location where) const {
++	// Raw tiler/transfer helpers may change Vulkan binding state after this boundary.
++	InvalidateBindingCache();
+ 	if (!m_rendering) {
+ 		return;
+ 	}
+diff --git a/src/graphics/host_gpu/renderer/pipeline/descriptors.cpp b/src/graphics/host_gpu/renderer/pipeline/descriptors.cpp
+--- a/src/graphics/host_gpu/renderer/pipeline/descriptors.cpp
++++ b/src/graphics/host_gpu/renderer/pipeline/descriptors.cpp
+@@ -1151,11 +1151,12 @@
+ 	}
+ 
+ 	if (has_push_data) {
+-		vk_buffer.pushConstants(pipeline.pipeline_layout, push_stages, 0, sizeof(push_data),
++		buffer.PushConstants(pipeline.pipeline_layout, push_stages, 0, sizeof(push_data),
+ 		                        push_data.dwords.data());
+ 	}
+ 
+-	if (!m_descriptor_writes.empty()) {
++	if (!m_descriptor_writes.empty() && buffer.DescriptorBindingsNeeded(
++	        pipeline_bind_point,pipeline.pipeline_layout,pipeline.uses_push_descriptors,m_descriptor_writes)) {
+ 		EXIT_IF(pipeline.descriptor_set_layout == nullptr);
+ 		if (pipeline.uses_push_descriptors) {
+ 			vk_buffer.pushDescriptorSetKHR(pipeline_bind_point, pipeline.pipeline_layout, 0,
+diff --git a/src/graphics/host_gpu/renderer/render.h b/src/graphics/host_gpu/renderer/render.h
+--- a/src/graphics/host_gpu/renderer/render.h
++++ b/src/graphics/host_gpu/renderer/render.h
+@@ -9,6 +9,7 @@
+ #include "graphics/host_gpu/renderer/renderTarget.h"
+ #include "graphics/host_gpu/vulkanCommon.h"
+ 
++#include "common/novaRender/BindingCache.h"
+ #include <array>
+ #include <atomic>
+ #include <cstdlib>
+@@ -134,6 +135,10 @@
+ 	void SetDebugInfo(uint32_t op, uint64_t submit_id, uint32_t arg0 = 0, uint32_t arg1 = 0,
+ 	                  uint32_t arg2 = 0, uint32_t arg3 = 0, uint64_t arg4 = 0);
+ 	void BindPipeline(vk::PipelineBindPoint point, vk::Pipeline pipeline);
++	void BindVertexBuffers(uint32_t first,uint32_t count,const vk::Buffer* buffers,const vk::DeviceSize* offsets,const vk::DeviceSize* sizes);
++	void PushConstants(vk::PipelineLayout layout,vk::ShaderStageFlags stages,uint32_t offset,uint32_t size,const void* data);
++	bool DescriptorBindingsNeeded(vk::PipelineBindPoint point,vk::PipelineLayout layout,bool pushed,std::span<const vk::WriteDescriptorSet> writes);
++	void InvalidateBindingCache() const {m_nova_bindings.Reset();m_bound_pipelines={};}
+ 	void BeginRendering(const RenderState& state) const;
+ 	void EndRendering(std::source_location where = std::source_location::current()) const;
+ 	// Nova 0.9.61: true while a render pass is open.
+@@ -190,7 +195,8 @@
+ 	uint32_t            m_debug_arg3      = 0;
+ 	uint64_t            m_debug_arg4      = 0;
+ 	mutable bool m_has_commands = false;
+-	std::array<vk::Pipeline,2> m_bound_pipelines {};
++	mutable std::array<vk::Pipeline,2> m_bound_pipelines {};
++	mutable NovaRender::BindingCache m_nova_bindings;
+ 	mutable RenderState m_render_state;
+ 	mutable bool        m_rendering   = false;
+ 	mutable std::vector<std::function<void(vk::CommandBuffer)>> m_nova_after_pass;
+diff --git a/src/graphics/host_gpu/renderer/renderDraw.cpp b/src/graphics/host_gpu/renderer/renderDraw.cpp
+--- a/src/graphics/host_gpu/renderer/renderDraw.cpp
++++ b/src/graphics/host_gpu/renderer/renderDraw.cpp
+@@ -1,3 +1,4 @@
++#include "common/novaRender/ReadOnlyDepth.h"
+ #include "common/novaRender/StableDepth.h"
+ #include <cstdlib>
+ #include "graphics/host_gpu/novaSync.h"
+@@ -560,10 +561,11 @@
+ 		EXIT_IF(image_view == nullptr || image.backing.samples != depth.desc.info.samples);
+ 		const auto draw_writes = depth.AttachmentWriteAspects();
+ 		vk::ImageAspectFlags sampled_aspects;
++		bool depth_other_binding=false;
+ 		for (const auto* stage: stages) {
+ 			for (const auto& binding: stage->images) {
+-				if (binding.image_id != depth.image_id ||
+-				    binding.desc.type != TextureCache::BindingType::Texture) continue;
++				if(binding.image_id!=depth.image_id)continue;
++				if(binding.desc.type!=TextureCache::BindingType::Texture){depth_other_binding=true;continue;}
+ 				const auto native =
+ 				    std::ranges::find(image.views, binding.image_view, &CachedImageView::view);
+ 				EXIT_IF(native == image.views.end());
+@@ -595,9 +597,14 @@
+ 			             ? vk::ImageLayout::eAttachmentFeedbackLoopOptimalEXT
+ 			             : vk::ImageLayout::eGeneral;
+ 		}
+-		// The attachment store writes even when guest depth/stencil tests do not.
+-		const auto access = vk::AccessFlagBits2::eDepthStencilAttachmentRead |
+-		                    vk::AccessFlagBits2::eDepthStencilAttachmentWrite;
++		// A truly read-only native pass needs no attachment store. Keep a stable
++		// read superset when shader sampling is toggled, without claiming writes.
++		const bool read_only = !depth_other_binding && NovaRender::CanOmitDepthStore(
++		    m_context.GetGraphics().physical_device_properties.apiVersion,NovaRaster::Enabled(),
++		    static_cast<VkImageAspectFlags>(draw_writes),depth.depth_load_clear_enable,depth.stencil_clear_enable);
++		vk::AccessFlags2 access=vk::AccessFlagBits2::eDepthStencilAttachmentRead;
++		if(read_only)access|=vk::AccessFlagBits2::eShaderRead;
++		else {access|=vk::AccessFlagBits2::eDepthStencilAttachmentWrite;if(sampled_aspects)access|=vk::AccessFlagBits2::eShaderRead;}
+ 		image.binding.attachment_layout = layout;
+ 		image.binding.attachment_access = access;
+ 		const auto& view                = depth.desc.view_info;
+@@ -611,6 +618,7 @@
+ 		const auto aspects        = ImageViewOps::DepthAspectMask(depth.desc.view_info.format);
+ 		auto&      attachment     = state.depth_stencil_attachment;
+ 		attachment.image_access = access;
++		attachment.depth_stencil_read_only = read_only;
+ 		attachment.raster_owner   = &image;
+ 		attachment.image_view     = image_view;
+ 		attachment.image_layout   = layout;
+@@ -1019,15 +1027,15 @@
+ 	return prepared;
+ }
+ 
+-static void CommitVertexBuffers(vk::CommandBuffer            vk_buffer,
++static void CommitVertexBuffers(CommandBuffer&              owner,
+                                 const PreparedVertexBuffers& prepared) {
+ 	for (uint32_t i = 0; i < prepared.count; i++) {
+ 		EXIT_IF(prepared.buffers[i] == nullptr);
+ 	}
+ 	if (prepared.count != 0) {
+ 		// Guest descriptor bounds must survive allocation merging in the cache.
+-		vk_buffer.bindVertexBuffers2(0, prepared.count, prepared.buffers.data(),
+-		                             prepared.offsets.data(), prepared.sizes.data(), nullptr);
++		owner.BindVertexBuffers(0, prepared.count, prepared.buffers.data(),
++		                             prepared.offsets.data(), prepared.sizes.data());
+ 	}
+ }
+ 
+@@ -1318,7 +1326,7 @@
+ 	auto vk_buffer = buffer.Handle();
+ 	SetDrawDebugPhase(buffer, submit_id, draw, draw.IsIndexed() ? 0x100u : 0x200u);
+ 	if (!mesh_active) {
+-		CommitVertexBuffers(vk_buffer, vertex_bindings);
++		CommitVertexBuffers(buffer, vertex_bindings);
+ 	}
+ 	if (state.ps_active && !draw.IsIndexed()) {
+ 		SetDrawDebugPhase(buffer, submit_id, draw, 0x300u);
+@@ -1332,7 +1340,7 @@
+ 		    static_cast<uint32_t>(index_source.address),
+ 		    static_cast<uint32_t>(index_source.address >> 32u)};
+ 		static_assert(std::size(draw_data) == ShaderRecompiler::IR::PushData::MeshDrawDwordCount);
+-		vk_buffer.pushConstants(pipeline.pipeline_layout,
++		buffer.PushConstants(pipeline.pipeline_layout,
+ 		                        vk::ShaderStageFlagBits::eMeshEXT |
+ 		                            vk::ShaderStageFlagBits::eFragment,
+ 		                        NovaRaster::Enabled()?8u:0u, sizeof(draw_data), draw_data);
+@@ -1345,7 +1353,7 @@
+                                    rendering.nova_backing_scaled?1.f/rendering.nova_scale_y:(rendering.raster_height?float(rendering.height)/rendering.raster_height:1.f)};
+     vk::ShaderStageFlags raster_stages=vk::ShaderStageFlagBits::eFragment;
+     for(const auto& stage:vertex_stages)raster_stages|=NativeShaderStage(stage.logical_stage);
+-    vk_buffer.pushConstants(pipeline.pipeline_layout,raster_stages,0,sizeof(raster_inverse),raster_inverse);
++    buffer.PushConstants(pipeline.pipeline_layout,raster_stages,0,sizeof(raster_inverse),raster_inverse);
+     }
+ 	auto& dynamic_state = m_context.GetCommandScheduler().GetDynamicState();
+ 	UpdateGraphicsDynamicState(buffer, dynamic_state, vertex_stages.back(), state.depth_info,
+diff --git a/src/graphics/host_gpu/renderer/renderTarget.h b/src/graphics/host_gpu/renderer/renderTarget.h
+--- a/src/graphics/host_gpu/renderer/renderTarget.h
++++ b/src/graphics/host_gpu/renderer/renderTarget.h
+@@ -23,6 +23,7 @@
+ 	bool                    depth_clear   = false;
+ 	bool                    has_stencil   = false;
+ 	bool                    stencil_clear = false;
++	bool                    depth_stencil_read_only = false;
+ 
+ 	bool operator==(const RenderAttachment&) const = default;
+ };
+diff --git a/src/graphics/presentation/videoOut.cpp b/src/graphics/presentation/videoOut.cpp
+--- a/src/graphics/presentation/videoOut.cpp
++++ b/src/graphics/presentation/videoOut.cpp
+@@ -223,10 +223,16 @@
+ 		             static_cast<unsigned long long>(m_next_request_id));
+ 		for (auto* queue: {&m_requests, &m_cpu_requests}) {
+ 			for (const auto& r: *queue) {
+-				std::fprintf(stderr, "NOVA_VIDEO:   request %llu index=%d state=%d source=%d pending=%d gcq=%d\n",
+-				             static_cast<unsigned long long>(r.id), r.index, static_cast<int>(r.state), static_cast<int>(r.source),
++				// State 2 is Ready (completion callback already published), not Recording.
++				constexpr const char* names[]={"Reserved","Recording","Ready","Presenting"};
++				static_assert(static_cast<unsigned>(RequestState::Presenting)==3);
++				const auto state=static_cast<unsigned>(r.state);
++				std::fprintf(stderr, "NOVA_VIDEO:   request %llu index=%d state=%d state_name=%s source=%d pending=%d gcq=%d group=%llu owner=%d generation=%llu prepared=%d\n",
++				             static_cast<unsigned long long>(r.id), r.index, static_cast<int>(r.state),state<4?names[state]:"Invalid",static_cast<int>(r.source),
+ 				             r.cfg != nullptr ? static_cast<int>(r.cfg->flip_status.flipPendingNum) : -1,
+-				             r.cfg != nullptr ? static_cast<int>(r.cfg->flip_status.gcQueueNum) : -1);
++				             r.cfg != nullptr ? static_cast<int>(r.cfg->flip_status.gcQueueNum) : -1,
++				             static_cast<unsigned long long>(r.group),r.group==r.id,
++				             static_cast<unsigned long long>(r.generation),r.frame!=nullptr);
+ 			}
+ 		}
+ 	}
+diff --git a/src/kernel/pthread.cpp b/src/kernel/pthread.cpp
+--- a/src/kernel/pthread.cpp
++++ b/src/kernel/pthread.cpp
+@@ -1079,6 +1079,7 @@
+ #endif
+ 	g_pthread_self->host_thread_id = os_thread_id;
+ 	g_pthread_main                 = g_pthread_self;
++	NovaPower::RegisterMainGuest();
+ 
+ 	LOGF("\tPthread main self: id = %d, os_thread_id = %" PRIu64 ", stack_addr = 0x%016" PRIx64
+ 	     ", stack_size = %" PRIu64 "\n",
+diff --git a/src/libs/libAudio2.cpp b/src/libs/libAudio2.cpp
+--- a/src/libs/libAudio2.cpp
++++ b/src/libs/libAudio2.cpp
+@@ -14,6 +14,9 @@
+ #include <cmath>
+ #include <cstring>
+ #include <vector>
++#include <memory>
++#include <mutex>
++#include "common/novaAudio/HandleLeases.h"
+ 
+ namespace Libs::Audio {
+ 
+@@ -179,6 +182,7 @@
+ 	uint64_t               last_update         = 0;
+ 	int                    object_audio_handle = 0;
+ 	std::vector<float>     object_mix;
++	std::shared_ptr<std::mutex> output_mutex;
+ };
+ 
+ struct AudioOut2PortStateEntry {
+@@ -403,39 +407,66 @@
+ 	}
+ }
+ 
++static NovaAudio::HandleLeases& audioout2_leases() {
++	// Port retirement is the normal cleanup path. AudioOutClose also checks
++	// whether the backend has already shut down.
++	static NovaAudio::HandleLeases leases;
++	return leases;
++}
+ static void audioout2_queue_context_audio(AudioOut2ContextHandle ctx, bool blocking) {
+-	// The backend consumes the buffers synchronously, but can block while pacing SDL's queue.
+-	// Keep both PCM storage and port handles alive until it returns.
+-	Common::LockGuard lock(g_audioout2_state_mutex);
+-	auto*             context = audioout2_find_context_locked(ctx);
+-	if (context == nullptr) {
+-		return;
+-	}
+-	context->object_mix.clear();
+-	std::vector<AudioInternal::OutputParam> params;
+-	params.reserve(AudioInternal::OUT_PORTS_MAX);
+-	for (const auto& state: g_audioout2_ports) {
+-		if (!state.used || state.context != ctx || state.pcm_data.empty()) {
+-			continue;
+-		}
+-		if (audioout2_port_type_is_object(state.port_type)) {
+-			audioout2_mix_object(*context, state);
+-		} else if (state.audio_handle > 0 && params.size() < AudioInternal::OUT_PORTS_MAX) {
+-			params.push_back({state.audio_handle, state.pcm_data.data(), state.gains.data()});
+-		}
+-	}
+-	if (!context->object_mix.empty() && params.size() < AudioInternal::OUT_PORTS_MAX) {
+-		params.push_back({context->object_audio_handle, context->object_mix.data()});
+-	}
+-	if (!params.empty()) {
+-		(void)AudioInternal::AudioOutOutputs(params.data(), static_cast<uint32_t>(params.size()),
+-		                                     blocking);
+-	}
++	std::shared_ptr<std::mutex> serializer;
++	{
++		Common::LockGuard lock(g_audioout2_state_mutex);
++		auto* context=audioout2_find_context_locked(ctx);
++		if(!context)return;
++		if(!context->output_mutex)context->output_mutex=std::make_shared<std::mutex>();
++		serializer=context->output_mutex;
++	}
++	// Only submissions to THIS context serialize. Never wait for it under the
++	// global registry mutex, and keep it alive through concurrent context destroy.
++	std::unique_lock submit_lock(*serializer);
++	struct Snapshot {
++		std::array<std::vector<uint8_t>,AudioInternal::OUT_PORTS_MAX> pcm;
++		std::array<std::array<float,16>,AudioInternal::OUT_PORTS_MAX> gains;
++		std::array<AudioInternal::OutputParam,AudioInternal::OUT_PORTS_MAX> params;
++		std::array<std::shared_ptr<NovaAudio::HandleLease>,AudioInternal::OUT_PORTS_MAX> leases;
++		uint32_t count=0;
++	};
++	// Capacity reuse without exposing writable PCM to another thread or a nested call.
++	thread_local Snapshot scratch;
++	thread_local bool scratch_busy=false;
++	Snapshot nested;
++	Snapshot& batch=scratch_busy?nested:scratch;
++	struct Busy {bool& value;bool previous;Busy(bool& v):value(v),previous(v){value=true;}~Busy(){value=previous;}} busy(scratch_busy);
++	struct Release {Snapshot& batch;~Release(){for(auto& lease:batch.leases)lease.reset();}} release{batch};
++	batch.count=0;
++	{
++		Common::LockGuard lock(g_audioout2_state_mutex);
++		auto* context=audioout2_find_context_locked(ctx);
++		if(!context)return;
++		context->object_mix.clear();
++		for(const auto& state:g_audioout2_ports){
++			if(!state.used||state.context!=ctx||state.pcm_data.empty())continue;
++			if(audioout2_port_type_is_object(state.port_type)){
++				audioout2_mix_object(*context,state);
++			}else if(state.audio_handle>0&&batch.count<AudioInternal::OUT_PORTS_MAX){
++				auto i=batch.count++;batch.pcm[i].assign(state.pcm_data.begin(),state.pcm_data.end());
++				batch.gains[i]=state.gains;
++				batch.leases[i]=audioout2_leases().Acquire(state.audio_handle,AudioInternal::AudioOutClose);
++				batch.params[i]={state.audio_handle,batch.pcm[i].data(),batch.gains[i].data()};
++			}
++		}
++		if(!context->object_mix.empty()&&context->object_audio_handle>0&&batch.count<AudioInternal::OUT_PORTS_MAX){
++			auto i=batch.count++;auto bytes=context->object_mix.size()*sizeof(float);
++			batch.pcm[i].resize(bytes);std::memcpy(batch.pcm[i].data(),context->object_mix.data(),bytes);
++			batch.leases[i]=audioout2_leases().Acquire(context->object_audio_handle,AudioInternal::AudioOutClose);
++			batch.params[i]={context->object_audio_handle,batch.pcm[i].data(),nullptr};
++		}
++	}
++	if(batch.count)AudioInternal::AudioOutOutputs(batch.params.data(),batch.count,blocking);
+ }
+ static void audioout2_close_audio_handle(int audio_handle) {
+-	if (audio_handle > 0) {
+-		AudioInternal::AudioOutClose(audio_handle);
+-	}
++	audioout2_leases().Retire(audio_handle,AudioInternal::AudioOutClose);
+ }
+ 
+ int KYTY_SYSV_ABI AudioOut2Initialize() {
+@@ -599,6 +630,11 @@
+ 				audioout2_queue_context_audio(ctx, blocking != 0);
+ 				return OK;
+ 			}
++		} else {
++			// ContextDestroy may run during the unlocked grain sleep. There is
++			// no queue or device clock to wait for once its context is gone.
++			g_audioout2_state_mutex.Unlock();
++			return AUDIO_OUT2_ERROR_INVALID_PARAM;
+ 		}
+ 		g_audioout2_state_mutex.Unlock();
+ 
