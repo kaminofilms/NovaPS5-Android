@@ -34,7 +34,7 @@ class FrameHints {
 public:
  FrameHints()=default;~FrameHints(){close();}FrameHints(const FrameHints&)=delete;FrameHints& operator=(const FrameHints&)=delete;
  void Begin(){if(!Enabled())return;if(NovaRuntime::background.load(std::memory_order_relaxed)){Cancel();return;}if(start==Clock::time_point{})start=Clock::now();}
- void End(){if(!Enabled())return;if(NovaRuntime::background.load(std::memory_order_relaxed)){Cancel();return;}auto now=Clock::now();if(start==Clock::time_point{})return;auto duration=std::chrono::duration_cast<std::chrono::nanoseconds>(now-start).count();start={};if(duration<=0||duration>1000000000LL)return;int cap=NovaRuntime::OutputCap(60);int64_t budget=1000000000LL/(cap>0?cap:60);ensure(now,budget);if(session&&APerformanceHint_reportActualWorkDuration(session,duration)!=0)close();}
+ void End(){if(!Enabled())return;if(NovaRuntime::background.load(std::memory_order_relaxed)){Cancel();return;}auto now=Clock::now();if(start==Clock::time_point{})return;auto duration=std::chrono::duration_cast<std::chrono::nanoseconds>(now-start).count();start={};if(duration<=0||duration>1000000000LL)return;int desired=60;if(const char* value=std::getenv("NOVA_FPS_CAP")){char* end=nullptr;long parsed=std::strtol(value,&end,10);if(end!=value&&*end==0&&parsed>0&&parsed<=240)desired=int(parsed);}int cap=NovaRuntime::OutputCap(desired);int64_t budget=1000000000LL/(cap>0?cap:60);ensure(now,budget);if(session&&APerformanceHint_reportActualWorkDuration(session,duration)!=0)close();}
  void Cancel(){start={};close();}
 };
 inline FrameHints& Current(){static thread_local FrameHints hints;return hints;}
