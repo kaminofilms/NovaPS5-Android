@@ -37,8 +37,11 @@ public:
  void End(){if(!Enabled())return;if(NovaRuntime::background.load(std::memory_order_relaxed)){Cancel();return;}auto now=Clock::now();if(start==Clock::time_point{})return;auto duration=std::chrono::duration_cast<std::chrono::nanoseconds>(now-start).count();start={};if(duration<=0||duration>1000000000LL)return;int desired=60;if(const char* value=std::getenv("NOVA_FPS_CAP")){char* end=nullptr;long parsed=std::strtol(value,&end,10);if(end!=value&&*end==0&&parsed>0&&parsed<=240)desired=int(parsed);}int cap=NovaRuntime::OutputCap(desired);int64_t budget=1000000000LL/(cap>0?cap:60);ensure(now,budget);if(session&&APerformanceHint_reportActualWorkDuration(session,duration)!=0)close();}
  void Cancel(){start={};close();}
 };
+// Execute's initial guest thread does not pass through RunThread. Keep its
+// registration in TLS so native pthread_exit also runs its cleanup.
+inline void RegisterMainGuest(){static thread_local CriticalGuest main("SDLThread");}
 inline FrameHints& Current(){static thread_local FrameHints hints;return hints;}
 }
 #else
-namespace NovaPower {struct CriticalGuest {explicit CriticalGuest(std::string_view){}};struct FrameHints {void Begin(){}void End(){}void Cancel(){}};inline FrameHints& Current(){static thread_local FrameHints h;return h;}}
+namespace NovaPower {inline void RegisterMainGuest(){}struct CriticalGuest {explicit CriticalGuest(std::string_view){}};struct FrameHints {void Begin(){}void End(){}void Cancel(){}};inline FrameHints& Current(){static thread_local FrameHints h;return h;}}
 #endif
