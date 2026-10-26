@@ -43,10 +43,22 @@ caller zero, deduplication, more than eight callers, overflow timing retention,
 clock rollback, report reset, disabled capture, enabled simulated guest capture,
 and unchanged return values. Leak detection is disabled for the restricted host.
 
-The test uses a simulated NovaFEX capture function, not a live guest. This checkpoint
-has not been recompiled with the Android NDK after cleanup, fully linked, run with
-live FEX/CRI audio, or measured on Adreno. Earlier 0987 ARM64 checks do not certify
-this new header. Full overlay-chain recovery/application remains a validation gate.
+The test uses a simulated NovaFEX capture function, not a live guest.
+
+Follow-up validation on October 26, 2026: recovered the 0967 corresponding-source
+archive, restored all current helper files, and applied every overlay from 0968
+through 0988 successfully in build order. All six candidate host suites, the 0987
+lifecycle test, the 0988 accounting test, and the real ContextPush body with
+attribution enabled pass together.
+
+Restored Android NDK r29 and compiled all twelve selected production translation
+units to ARM64 objects with Clang 21, API 33 and the production bionic forced include.
+This includes the complete libAudio2.cpp with the new attribution header and the
+real NovaFEX declaration. The actual Android power API link probe passes with
+--no-undefined. Check outputs are in android-check-0988 in the current workspace.
+
+This is object-level validation. The full Android core link, live FEX/CRI audio,
+Adreno execution and device game_fps validation remain open. No APK was built.
 
 ## Remaining gates
 
