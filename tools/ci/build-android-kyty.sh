@@ -417,9 +417,11 @@ if [[ "${NOVA_VALIDATE_COMPLETION_CANDIDATES:-0}" == "1" ]]; then
     python3 "$repo/tools/ci/patch-0986-main-power.py" "$work/kyty"
     python3 "$repo/tools/ci/patch-0987-flip-lifecycle.py" "$work/kyty"
     python3 "$repo/tools/ci/patch-0988-cri-attribution.py" "$work/kyty"
+    python3 "$repo/tools/ci/patch-0989-flip-registration-count.py" "$work/kyty"
     python3 "$repo/tests/test_completion_candidates.py" "$work/kyty"
     python3 "$repo/tests/test_0987_flip_lifecycle.py" "$work/kyty"
     python3 "$repo/tests/test_0988_cri_attribution.py" "$work/kyty"
+    python3 "$repo/tests/test_0989_flip_registration_count.py" "$work/kyty"
     NOVA_CRI_ATTRIBUTION=1 python3 "$repo/tests/test_context_push.py" "$work/kyty"
 fi
 python3 "$repo/tests/test_0968_guest_fibers.py" "$work/kyty"
@@ -475,5 +477,6 @@ ls -la "$out/lib"
 # Publish the exact patched renderer and its source dependencies alongside the APK.
 mkdir -p "$out/source"
 tar --exclude='.git' -czf "$out/source/Kyty-Android-corresponding-source.tar.gz" -C "$work" kyty adrenotools
+
 
 
