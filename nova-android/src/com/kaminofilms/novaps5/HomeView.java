@@ -1,10 +1,13 @@
 package com.kaminofilms.novaps5;
 import android.graphics.*;
+import android.animation.ValueAnimator;
+import android.view.animation.DecelerateInterpolator;
 import android.view.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 final class HomeView extends View {
     final MainActivity app;final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);final ArrayList<Hit> hits=new ArrayList<>();
+    Bitmap previousHero; float transition=1f; ValueAnimator selectionAnimation;
     int selected=0;float scale=1,ox=0,oy=0,downX,downY;boolean library=false;
     static final class Hit{final RectF rect;final Runnable action;Hit(RectF r,Runnable a){rect=r;action=a;}}
     HomeView(MainActivity a){super(a);app=a;setFocusable(true);setContentDescription("NovaPs5 game library. Select a game to launch it.");}
@@ -18,7 +21,11 @@ final class HomeView extends View {
         float safeL=0,safeR=0,safeT=0,safeB=0;WindowInsets in=getRootWindowInsets();if(in!=null&&in.getDisplayCutout()!=null){DisplayCutout cut=in.getDisplayCutout();safeL=cut.getSafeInsetLeft();safeR=cut.getSafeInsetRight();safeT=cut.getSafeInsetTop();safeB=cut.getSafeInsetBottom();}
         scale=Math.min((width-safeL-safeR)/1280f,(height-safeT-safeB)/720f);ox=safeL+(width-safeL-safeR-1280*scale)/2;oy=safeT+(height-safeT-safeB-720*scale)/2;ArrayList<GameStore.Entry> games=app.store.snapshot();selected=Math.min(selected,games.size());GameStore.Entry chosen=selected>0?games.get(selected-1):null;
         // The selected game's background fills the whole screen (edge to edge, like the PS5 home screen).
-        if(chosen!=null&&chosen.hero!=null){image(c,chosen.hero,new RectF(0,0,width,height));paint.setShader(new LinearGradient(0,0,width*0.85f,0,new int[]{0xd8080d20,0x90080d20,0x10080d20},null,Shader.TileMode.CLAMP));c.drawRect(0,0,width,height,paint);paint.setShader(new LinearGradient(0,height*0.45f,0,height,new int[]{0x00080d20,0xf0080d20},null,Shader.TileMode.CLAMP));c.drawRect(0,0,width,height,paint);paint.setShader(null);}
+        if(chosen!=null&&chosen.hero!=null){
+            RectF screen=new RectF(0,0,width,height);
+            if(previousHero!=null&&transition<1f)image(c,previousHero,screen);
+            int fade=c.saveLayerAlpha(screen,Math.round(255*transition));
+            image(c,chosen.hero,screen);c.restoreToCount(fade);paint.setShader(new LinearGradient(0,0,width*0.85f,0,new int[]{0xd8080d20,0x90080d20,0x10080d20},null,Shader.TileMode.CLAMP));c.drawRect(0,0,width,height,paint);paint.setShader(new LinearGradient(0,height*0.45f,0,height,new int[]{0x00080d20,0xf0080d20},null,Shader.TileMode.CLAMP));c.drawRect(0,0,width,height,paint);paint.setShader(null);}
         c.save();c.translate(ox,oy);c.scale(scale,scale);hits.clear();
         if(chosen!=null&&chosen.hero!=null){}
         else{paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(2);for(int i=0;i<6;i++){paint.setColor(0x157599ee);c.drawOval(new RectF(675-i*72,80+i*36,1245+i*92,625+i*20),paint);}paint.setStyle(Paint.Style.FILL);paint.setShader(new RadialGradient(1020,320,270,new int[]{0x555070ca,0x006476ff},null,Shader.TileMode.CLAMP));c.drawCircle(1020,320,270,paint);paint.setShader(null);}
@@ -27,7 +34,7 @@ final class HomeView extends View {
         int first=Math.max(0,selected-6),end=Math.min(games.size()+1,first+8);float rowY=104;
         for(int i=first;i<end;i++){float x=60+(i-first)*105;RectF r=new RectF(x,rowY,x+84,rowY+84);if(i==selected){box(c,new RectF(x-6,rowY-6,x+90,rowY+90),0x90eff5ff,22);box(c,new RectF(x-3,rowY-3,x+87,rowY+87),0xff111c34,19);}box(c,r,i==0?0xff173d73:0xff182640,16);
             if(i==0){text(c,"N",x+24,rowY+55,44,Color.WHITE,true);}else{GameStore.Entry e=games.get(i-1);if(e.cover!=null){c.save();Path clip=new Path();clip.addRoundRect(r,16,16,Path.Direction.CW);c.clipPath(clip);image(c,e.cover,r);c.restore();}else text(c,"PS5",x+15,rowY+49,21,0xffa9caff,true);}
-            final int index=i;hit(new RectF(x-3,rowY-3,x+87,rowY+87),()->{selected=index;invalidate();});}
+            final int index=i;hit(new RectF(x-3,rowY-3,x+87,rowY+87),()->{select(index);});}
         RectF add=new RectF(946,103,1030,187);box(c,add,0x22d0e4ff,16);text(c,"+",970,159,42,Color.WHITE,false);hit(add,()->app.addGame());
         text(c,chosen==null?"Core diagnostics":chosen.name,60,229,20,0xffc3cfe1,false);
         if(!library){
@@ -44,7 +51,27 @@ final class HomeView extends View {
         button(c,"Session log",854,599,166,false,()->app.diagnostics());button(c,"Settings",1037,599,148,false,()->app.settings());
         c.restore();
     }
-    void move(int direction){selected=Math.max(0,Math.min(app.store.snapshot().size(),selected+direction));invalidate();}
+    void select(int index){
+        ArrayList<GameStore.Entry> games=app.store.snapshot();
+        index=Math.max(0,Math.min(games.size(),index));
+        if(index==selected)return;
+        if(selectionAnimation!=null)selectionAnimation.cancel();
+        previousHero=selected>0&&selected<=games.size()?games.get(selected-1).hero:null;
+        selected=index;
+        boolean reduceMotion=!ValueAnimator.areAnimatorsEnabled();
+        if(reduceMotion){transition=1f;previousHero=null;invalidate();return;}
+        transition=0f;
+        selectionAnimation=ValueAnimator.ofFloat(0f,1f);
+        selectionAnimation.setDuration(240);
+        selectionAnimation.setInterpolator(new DecelerateInterpolator());
+        selectionAnimation.addUpdateListener(a->{transition=(float)a.getAnimatedValue();if(transition>=1f)previousHero=null;invalidate();});
+        selectionAnimation.start();
+    }
+    @Override protected void onDetachedFromWindow(){
+        if(selectionAnimation!=null)selectionAnimation.cancel();
+        previousHero=null;super.onDetachedFromWindow();
+    }
+    void move(int direction){select(selected+direction);}
     void activate(){ArrayList<GameStore.Entry> games=app.store.snapshot();if(selected==0)app.diagnostics();else if(selected<=games.size())app.entry(games.get(selected-1));}
     @Override public boolean onTouchEvent(MotionEvent e){float x=(e.getX()-ox)/scale,y=(e.getY()-oy)/scale;if(e.getAction()==MotionEvent.ACTION_DOWN){downX=x;downY=y;return true;}if(e.getAction()==MotionEvent.ACTION_UP){if(Math.abs(x-downX)>50&&downY<250){move(x<downX?1:-1);return true;}if(Math.abs(x-downX)<24&&Math.abs(y-downY)<24){for(int i=hits.size()-1;i>=0;i--)if(hits.get(i).rect.contains(x,y)){performClick();hits.get(i).action.run();return true;}}return true;}return true;}
     @Override public boolean performClick(){super.performClick();return true;}
