@@ -415,7 +415,9 @@ if [[ "${NOVA_VALIDATE_COMPLETION_CANDIDATES:-0}" == "1" ]]; then
     python3 "$repo/tools/ci/patch-0984-audio-context.py" "$work/kyty"
     python3 "$repo/tools/ci/patch-0985-flip-state-report.py" "$work/kyty"
     python3 "$repo/tools/ci/patch-0986-main-power.py" "$work/kyty"
+    python3 "$repo/tools/ci/patch-0987-flip-lifecycle.py" "$work/kyty"
     python3 "$repo/tests/test_completion_candidates.py" "$work/kyty"
+    python3 "$repo/tests/test_0987_flip_lifecycle.py" "$work/kyty"
 fi
 python3 "$repo/tests/test_0968_guest_fibers.py" "$work/kyty"
 CXX=clang++ python3 "$repo/tests/test_0968_guest_fibers.py" "$work/kyty"
