@@ -29,8 +29,9 @@ assert "kind == VideoOutEventKind::Flip" in trigger_body
 assert "flip_registration_ok.fetch_add" in trigger_body
 assert "flip_registration_badf.fetch_add" in trigger_body
 assert "flip_registration_enoent.fetch_add" in trigger_body
-assert "active_flip_registrations.fetch_add" in source
-assert "active_flip_registrations.fetch_sub" in source
+assert "active_flip_registrations.fetch_add" not in source
+assert "active_flip_registrations.fetch_sub" not in source
+assert source.count("active_flip_registrations.store") >= 4
 assert "active_flip_registrations.store(0" in source
 
 assert source.count("request->ready_tick = Common::Timer::QueryPerformanceCounter()") == 1
@@ -44,3 +45,4 @@ assert "r.events     = cfg.events;" in source
 assert "const auto& events = *r.events;" in source
 
 print("PASS 0987 flip lifecycle diagnostics preserve real completion/event semantics")
+
