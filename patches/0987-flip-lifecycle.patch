@@ -1,6 +1,6 @@
 --- a/src/graphics/presentation/videoOut.cpp
 +++ b/src/graphics/presentation/videoOut.cpp
-@@ -104,6 +104,11 @@
+@@ -104,6 +104,12 @@
  	VideoOutEventQueues pre_vblank;
  	VideoOutEventQueues vblank;
  	VideoOutEventQueues output_mode;
@@ -8,11 +8,12 @@
 +	std::atomic<uint64_t> flip_registration_ok {0};
 +	std::atomic<uint64_t> flip_registration_badf {0};
 +	std::atomic<uint64_t> flip_registration_enoent {0};
++	std::atomic<uint32_t> active_flip_registrations {0};
 +	std::atomic<uint64_t> last_flip_publish_tick {0};
  };
  
  struct VideoOutBufferAttribute2 {
-@@ -217,22 +222,50 @@
+@@ -217,22 +223,51 @@
  	}
  	// Nova: freeze report of pending flips.
  	void NovaReport() {
@@ -52,7 +53,7 @@
 +					    return other.group == r.group;
 +				    }));
 +				const auto& events = *r.events;
-+				std::fprintf(stderr, "NOVA_VIDEO:   request %llu index=%d state=%d state_name=%s source=%d group=%llu owner=%d generation=%llu prepared=%d age_ms=%llu recording_age_ms=%llu ready_age_ms=%llu presenting_age_ms=%llu due_retries=%u gpu_blockers=%u cpu_blockers=%u flip_publish_calls=%llu flip_reg_ok=%llu flip_reg_badf=%llu flip_reg_enoent=%llu flip_publish_age_ms=%llu\n",
++				std::fprintf(stderr, "NOVA_VIDEO:   request %llu index=%d state=%d state_name=%s source=%d group=%llu owner=%d generation=%llu prepared=%d age_ms=%llu recording_age_ms=%llu ready_age_ms=%llu presenting_age_ms=%llu due_retries=%u gpu_blockers=%u cpu_blockers=%u active_flip_regs=%u flip_publish_calls=%llu flip_reg_ok=%llu flip_reg_badf=%llu flip_reg_enoent=%llu flip_publish_age_ms=%llu\n",
  				             static_cast<unsigned long long>(r.id), r.index, static_cast<int>(r.state),state<4?names[state]:"Invalid",static_cast<int>(r.source),
 -				             r.cfg != nullptr ? static_cast<int>(r.cfg->flip_status.flipPendingNum) : -1,
 -				             r.cfg != nullptr ? static_cast<int>(r.cfg->flip_status.gcQueueNum) : -1,
@@ -61,6 +62,7 @@
 +				             static_cast<unsigned long long>(r.generation),r.frame!=nullptr,
 +				             age_ms(r.reserved_tick), age_ms(r.recording_tick), age_ms(r.ready_tick),
 +				             age_ms(r.presenting_tick), r.due_retries, gpu_blockers, cpu_blockers,
++				             events.active_flip_registrations.load(std::memory_order_relaxed),
 +				             static_cast<unsigned long long>(events.flip_publish_calls.load(std::memory_order_relaxed)),
 +				             static_cast<unsigned long long>(events.flip_registration_ok.load(std::memory_order_relaxed)),
 +				             static_cast<unsigned long long>(events.flip_registration_badf.load(std::memory_order_relaxed)),
@@ -69,7 +71,7 @@
  			}
  		}
  	}
-@@ -258,6 +291,7 @@
+@@ -258,6 +293,7 @@
  		uint64_t                    group;
  		VideoOutConfig*             cfg;
  		VideoOutConfig*             master;
@@ -77,7 +79,7 @@
  		uint64_t                    generation;
  		int                         index;
  		int64_t                     flip_arg;
-@@ -266,6 +300,11 @@
+@@ -266,6 +302,11 @@
  		RequestState                state;
  		Graphics::Presenter::Frame* frame;
  		bool                        premultiplied_alpha;
@@ -89,7 +91,7 @@
  	};
  
  	Graphics::Presenter& m_presenter;
-@@ -278,6 +317,12 @@
+@@ -278,6 +319,12 @@
  	std::list<Request>   m_cancelled_requests;
  	bool                 m_processing      = false;
  	uint64_t             m_next_request_id = 1;
@@ -102,7 +104,15 @@
  };
  
  struct VideoOutDriver::Impl {
-@@ -411,6 +456,11 @@
+@@ -406,11 +453,19 @@
+ 	    });
+ 	if (entry != queues.end()) {
+ 		queues.erase(entry);
++		if (registration->kind == VideoOutEventKind::Flip) {
++			state->active_flip_registrations.fetch_sub(1, std::memory_order_relaxed);
++		}
+ 	}
+ }
  
  static void TriggerVideoOutEvents(VideoOutConfig& video_out, VideoOutEventKind kind,
                                    void* trigger_data) {
@@ -114,7 +124,7 @@
  	VideoOutEventQueues queues;
  	{
  		Common::LockGuard lock(video_out.events->mutex);
-@@ -423,6 +473,13 @@
+@@ -423,6 +478,13 @@
  		const auto result =
  		    EventQueue::KernelTriggerEvent(registration->handle, VideoOutEventId(kind),
  		                                   EventQueue::KERNEL_EVFILT_VIDEO_OUT, trigger_data);
@@ -128,7 +138,24 @@
  		EXIT_NOT_IMPLEMENTED(result != OK && result != LibKernel::KERNEL_ERROR_EBADF &&
  		                     result != LibKernel::KERNEL_ERROR_ENOENT);
  	}
-@@ -982,12 +1039,14 @@
+@@ -507,6 +569,8 @@
+ 		if (added != queues.end()) {
+ 			queues.erase(added);
+ 		}
++	} else if (result == OK && add_queue && kind == VideoOutEventKind::Flip) {
++		event_state->active_flip_registrations.fetch_add(1, std::memory_order_relaxed);
+ 	}
+ 	return result == LibKernel::KERNEL_ERROR_EBADF ? VIDEO_OUT_ERROR_INVALID_EVENT_QUEUE : result;
+ }
+@@ -753,6 +817,7 @@
+ 		}
+ 		{
+ 			Common::LockGuard event_lock(config.events->mutex);
++			config.events->active_flip_registrations.store(0, std::memory_order_relaxed);
+ 			flip_events        = std::move(config.events->flip);
+ 			pre_vblank_events  = std::move(config.events->pre_vblank);
+ 			vblank_events      = std::move(config.events->vblank);
+@@ -982,12 +1047,14 @@
  	r.group      = cfg.master == nullptr ? r.id : 0;
  	r.cfg        = &cfg;
  	r.master     = cfg.master;
@@ -143,7 +170,7 @@
  	if (cfg.slave_count != 0) {
  		for (auto* queue: {&m_requests, &m_cpu_requests}) {
  			for (auto& slave: *queue) {
-@@ -1080,6 +1139,7 @@
+@@ -1080,6 +1147,7 @@
  					EXIT("cannot prepare video-out request id=%" PRIu64 "\n", request_id);
  				}
  				cancelled->state = RequestState::Recording;
@@ -151,7 +178,7 @@
  				return;
  			}
  			request = m_requests.insert(m_requests.end(), *pending);
-@@ -1089,6 +1149,7 @@
+@@ -1089,6 +1157,7 @@
  			EXIT("cannot prepare video-out request id=%" PRIu64 "\n", request_id);
  		}
  		request->state = RequestState::Recording;
@@ -159,7 +186,7 @@
  		cfg            = request->cfg;
  		generation     = request->generation;
  		index          = request->index;
-@@ -1182,6 +1243,7 @@
+@@ -1182,6 +1251,7 @@
  			EXIT("completed GPU flip has no prepared recording, id=%" PRIu64 "\n", request_id);
  		}
  		request->state = RequestState::Ready;
@@ -167,7 +194,7 @@
  		m_submit_cond_var.Signal();
  		m_mutex.Unlock();
  		return;
-@@ -1231,13 +1293,18 @@
+@@ -1231,13 +1301,18 @@
  	KYTY_PROFILER_BLOCK("FlipQueue::Flip");
  
  	m_mutex.Lock();
@@ -186,7 +213,7 @@
  		m_mutex.Unlock();
  		return false;
  	}
-@@ -1247,6 +1314,7 @@
+@@ -1247,6 +1322,7 @@
  	    std::any_of(m_requests.begin(), m_requests.end(), [group](const auto& r) {
  		    return r.group == group && r.state != RequestState::Ready;
  	    })) {
@@ -194,7 +221,7 @@
  		m_mutex.Unlock();
  		return false;
  	}
-@@ -1256,6 +1324,7 @@
+@@ -1256,6 +1332,7 @@
  		if (request.group == group) {
  			EXIT_IF(count == requests.size());
  			request.state = RequestState::Presenting;
@@ -202,7 +229,7 @@
  			requests[count++] = request;
  		}
  	}
-@@ -1288,13 +1357,19 @@
+@@ -1288,13 +1365,19 @@
  	}
      for(size_t i=0;i<count;i++)requests[i].cfg->mutex.Lock();
  	m_mutex.Lock();
@@ -223,7 +250,7 @@
  			continue;
  		}
          auto& r=*it;
-@@ -1313,6 +1388,9 @@
+@@ -1313,6 +1396,9 @@
  		it = m_requests.erase(it);
  	}
  	m_processing = false;
