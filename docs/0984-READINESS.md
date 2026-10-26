@@ -40,7 +40,7 @@ Use either that complete diff or the numbered build overlays, not both.
 
 ## Actual validation
 
-- All 0968–0984 overlays applied together, in build order, to a fresh 0967
+- All 0968–0986 overlays applied together, in build order, to a fresh 0967
   corresponding-source checkpoint; each script's compatibility anchors passed.
 - Five ASan/UBSan suites passed: worker topology; actual ADPF header against a
   simulated service; binding cache with 10,000 randomized overlapping push
@@ -113,3 +113,9 @@ are under /workspace/novaps5-toolchain/vulkan-host. Select lvp_icd.json explicit
 and set that directory's usr/lib/x86_64-linux-gnu in LD_LIBRARY_PATH; the system
 loader alone has no ICD. Actual check outputs remain in active-source/android-check.
 These paths are setup notes, not portable release requirements.
+
+IMPORTANT RECOVERY LIMIT: active-source/repo is the recovered 0967 source
+package with selected current native overlays/checks, not a complete checkout of
+the latest application. Never package an APK directly from that recovery tree.
+Refresh the current branch including Welcome Hub, settings, app version and
+fixed signing assets before any eventual full build. No APK was built here.
