@@ -36,6 +36,10 @@ target_sources(nova_anyps5_agc PRIVATE
     "${ANYPS5_SOURCE_DIR}/core/libs/prx/libc/src/GuestWriteWatch.cpp"
     "${ANYPS5_SOURCE_DIR}/core/libs/prx/libc/src/FailureReport.cpp")
 target_sources(nova_anyps5_agc PRIVATE host_services.cpp video_platform.cpp memory_registry.cpp)
+# Kernel timed waits and GPU-completion sleep wakeups (Recorder, EntryPoints and VideoOut use them).
+target_sources(nova_anyps5_agc PRIVATE
+    "${ANYPS5_SOURCE_DIR}/core/libs/prx/libkernel/Time/TimedWait.cpp"
+    "${ANYPS5_SOURCE_DIR}/core/libs/prx/libkernel/Time/SleepWake.cpp")
 add_library(nova_anyps5_renderer SHARED renderer_entry.cpp)
 target_link_libraries(nova_anyps5_renderer PRIVATE
     "-Wl,--whole-archive" nova_anyps5_video nova_anyps5_agc_api nova_anyps5_agc "-Wl,--no-whole-archive" z)

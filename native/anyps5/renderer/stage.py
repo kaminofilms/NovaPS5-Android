@@ -201,9 +201,7 @@ for banned in ['SDL', 'hdrProbe', 'padInput', 'mouseInput', 'keyboardInput', 'im
         raise SystemExit(f'NOVA_ANYPS5_STAGE: {banned} remains in staged VideoOutDriver.cpp')
 p.write_text(s)
 video_cmake = '''add_library(nova_anyps5_video STATIC
-    Unimplemented.cpp src/Event.cpp src/Buffer.cpp src/Output.cpp src/VideoOutDriver.cpp
-    "${ANYPS5_SOURCE_DIR}/core/libs/prx/libkernel/Time/TimedWait.cpp"
-    "${ANYPS5_SOURCE_DIR}/core/libs/prx/libkernel/Time/SleepWake.cpp")
+    Unimplemented.cpp src/Event.cpp src/Buffer.cpp src/Output.cpp src/VideoOutDriver.cpp)
 target_include_directories(nova_anyps5_video PUBLIC "${NOVA_ANYPS5_STAGED_ROOT}/core/libs" "${ANYPS5_SOURCE_DIR}/core/libs" "${NOVA_ANYPS5_RENDERER_ADAPTER_DIR}")
 target_link_libraries(nova_anyps5_video PUBLIC nova_anyps5_agc)
 target_compile_definitions(nova_anyps5_video PRIVATE APS5_ENABLE_TIMING_LOG=0 APS5_ENABLE_TRACY=0)
