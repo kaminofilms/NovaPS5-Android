@@ -11,3 +11,9 @@ Host checks passed in this run: six completion candidate suites (worker policy, 
 Unresolved: writable GPU resource ownership and safe DMA scheduling; real image feedback hazards; on-device binding-cache correctness/performance; exact flip/EOP freeze cause; live translated CRI hotspot attribution; Android ADPF/worker lifecycle and sustained thermals. ADPF/worker policies remain opt-in. No 30/60 FPS claim; no forced frame generation or FSR. The owner will supply device results.
 
 This file records authorization and pre-package status, not a completed deliverable. Append final verification and artifact hashes only after the corresponding checks pass.
+
+## Local package verification completed
+
+The fresh Kyty, NovaFEX and AnyPS5 builds all exited successfully. APK NovaPS5-0.9.90-test1.apk, versionName 0.9.90-test1, versionCode 990, SHA-256 c885bdd8a73a9bc477b74786fa41de5b638611caf41e0777d21460db6beb87d7.
+
+verify_native_apk.py: ALL PASS (original package, fixed certificate, ARM64 only, required native/JNI exports, 16 KB ELF alignment, packaged DT_NEEDED providers, no glibc). Additional strong-import/provider audit against the packaged libraries and Android API-33 stubs: all 11 libraries PASS, including no missing __hash_memory. ZIP CRC test: PASS, 24 entries. zipalign -c -P 16 4: exit 0. Bundled Turnip metadata/checksum/ELF validation: PASS. No device/game_fps test has occurred. This remains an experimental test APK with the unresolved items above.
