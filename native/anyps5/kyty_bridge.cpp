@@ -118,6 +118,14 @@ void NoteUnmapped(std::uint64_t address, const char* where) {
         std::fprintf(stderr, "NOVA_ANYPS5: 0x%016llx is beyond the last %s mapping; reported as unmapped\n", static_cast<unsigned long long>(address), where);
 }
 bool Query(std::uint64_t address, MemoryRun* run) {
+    // Android heap pointers carry a top-byte tag (TBI/MTE, e.g. 0xb4...). Mappings are untagged:
+    // look up the untagged address and report the run with the caller's tag restored.
+    if (const std::uint64_t tag = address & 0xff00000000000000ull) {
+        if (!Query(address & ~0xff00000000000000ull, run)) return false;
+        run->begin |= tag;
+        run->end |= tag;
+        return true;
+    }
     Memory::VirtualQueryInfo info{};
     if (Memory::NovaAnyQuery(address, &info)) {
         if (info.start > address) *run = {address, info.start, false, false};
@@ -139,6 +147,7 @@ bool Query(std::uint64_t address, MemoryRun* run) {
         return true;
     }
     if (address < (std::uint64_t{1} << 39)) { NoteUnmapped(address, "host"); *run = {address, std::uint64_t{1} << 39, false, false}; return true; }
+    NoteUnmapped(address, "queryable");
     return false;
 }
 struct EventState { ::KernelEqueueEvent event; };
