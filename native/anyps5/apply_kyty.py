@@ -112,6 +112,11 @@ assert s.count(anchor) == 1
 s = s.replace(anchor, helpers + '\n' + anchor)
 p.write_text(s)
 p, s = original('src/kernel/memoryAddressSpace.inc')
+# Guest VA slots exist only in [2^39, 2^47). Android tagged heap pointers (0xb4...) are host
+# addresses: without this bound each such call tried (and failed) to allocate a 1 GiB slot window.
+anchor = '\tif (vaddr < (uint64_t {1} << 39) || !NovaFex::GuestVAEnabled()) {'
+assert s.count(anchor) == 1, 'memoryAddressSpace.inc NovaHostVA anchor'
+s = s.replace(anchor, '\tif (vaddr < (uint64_t {1} << 39) || vaddr >= (uint64_t {1} << 47) || !NovaFex::GuestVAEnabled()) {')
 anchor = '\tbool ZeroRange(uint64_t backing_offset, uint64_t size) {'
 method = r'''
     bool NovaAnySharedBacking(uint64_t address, size_t bytes, int* file, uint64_t* offset) {

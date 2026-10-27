@@ -291,8 +291,12 @@ void Initialize() {
     ConfigureHostServices({Copy, Compare, Translate, Query,
         [](std::int64_t queue) -> std::shared_ptr<void> { return Queue::KernelPinEqueue(queue); },
         AddEvent, Queue::KernelDeleteEvent, Queue::KernelTriggerEvent, Map,
-        Memory::NovaAnySharedBacking,
-        [](std::uintptr_t address, const void* data, std::size_t bytes) { return Memory::TryWriteBacking(address, data, bytes); },
+        // Android heap pointers (top-byte tagged, at or above 2^47) are host memory, never Kyty guest
+        // memory: report "no guest backing" instead of letting Kyty treat them as guest VA slots.
+        [](std::uintptr_t address, std::size_t bytes, int* file, std::uint64_t* offset) {
+            return address < (std::uint64_t{1} << 47) && Memory::NovaAnySharedBacking(address, bytes, file, offset);
+        },
+        [](std::uintptr_t address, const void* data, std::size_t bytes) { return address < (std::uint64_t{1} << 47) && Memory::TryWriteBacking(address, data, bytes); },
         [](std::uint64_t address, std::size_t bytes) { return Libs::Graphics::Gen5Driver::NovaAnyPS5DriverMemory(address, bytes); }});
     ConfigureVideoPlatform({Window, RefreshRate, Presented,
         [](int) { running.store(false, std::memory_order_release); }, Attribute3,
