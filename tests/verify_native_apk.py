@@ -84,7 +84,8 @@ with tempfile.TemporaryDirectory() as tmp, zipfile.ZipFile(a.apk) as z:
         aligns = [int(m, 16) for m in re.findall(r'^\s+LOAD\s+.*\s(0x[0-9a-f]+)$', segments, re.M)]
         check(f'{path.name} 16 KB page aligned', bool(aligns) and min(aligns) >= 0x4000, str(aligns))
     any_exports = exports.get('libnova_anyps5_renderer.so', set())
-    check('complete AnyPS5 graphics and VideoOut exports', len([s for s in any_exports if s.startswith(('sceAgc', 'sceVideoOut')) and '_nid_' not in s]) == len([l for l in (pathlib.Path(__file__).resolve().parent.parent/'native/anyps5/anyps5_exports.inc').read_text().splitlines() if l.startswith('{')]))
+    manifest = [l.split('"')[1] for l in (pathlib.Path(__file__).resolve().parent.parent/'native/anyps5/anyps5_exports.inc').read_text().splitlines() if l.startswith('{')]
+    check('complete AnyPS5 graphics and VideoOut exports', bool(manifest) and set(manifest) <= any_exports, f'missing {sorted(set(manifest) - any_exports)[:8]}')
     check('AnyPS5 compiler internals hidden', not any(s.startswith(('_ZN7glslang', '_ZN8spvtools')) for s in any_exports))
     check('libmain exports the FPS counter entry',
           'Java_com_kaminofilms_novaps5_NovaPad_nativeFrames' in exports.get('libmain.so', set()))
