@@ -42,6 +42,15 @@ old = """    mapped = mmap(reinterpret_cast<void*>(DriverMemoryAddress), DriverM
 assert s.count(old) == 1, 'Lifecycle.cpp driver memory mmap moved'
 s = '#include "host_services.hpp"\n' + s.replace(old, """    mapped = NovaAnyPS5::Services().driverMemory(DriverMemoryAddress, DriverMemoryBytes);
     if (mapped == nullptr) throw std::runtime_error("Nova could not map the AGC driver memory at its fixed guest address");""")
+# driverMemory maps AND registers the block (Nova publishes every kernel mapping to the
+# renderer's allocation registry), so upstream's own registration would overlap it.
+old = """#ifndef _WIN32
+    GuestWriteWatch::GuestWriteWatchRegister_nid_postfix(mapped, DriverMemoryBytes);
+#endif
+    GuestAllocations::Mutation mutation;
+    mutation.Add(mapped, DriverMemoryBytes, true, true, true);"""
+assert s.count(old) == 1, 'Lifecycle.cpp driver memory registration moved'
+s = s.replace(old, '    // Registered by Nova when driverMemory mapped it.')
 p.write_text(s)
 # Upstream screenshots are a desktop hotkey feature that writes PNGs through SDL paths.
 # Nova never requests them; keep the request/take state and refuse the PNG write explicitly.

@@ -82,9 +82,9 @@ void Configure() {
         [](std::int64_t, std::uintptr_t, std::int16_t, void*) -> int { throw std::runtime_error("fixture does not create event queues"); },
         Map, [](std::uintptr_t, std::size_t, int*, std::uint64_t*) { return false; },
         [](std::uintptr_t, const void*, std::size_t) { return false; },
-        // Host tests have no Kyty reservation: exactly upstream's unregistered fixed mapping.
+        // Same contract as Nova: map at the fixed address and register the allocation.
         [](std::uint64_t address, std::size_t bytes) -> void* {
-            void* mapped = mmap(reinterpret_cast<void*>(address), bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
+            void* mapped = Map(reinterpret_cast<void*>(address), bytes, 3, 0x1000 | 0x10, -1, 0);
             return mapped == MAP_FAILED ? nullptr : mapped;
         }});
     void* library = dlopen("libvulkan.so.1", RTLD_NOW | RTLD_LOCAL);
