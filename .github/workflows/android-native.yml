@@ -181,7 +181,8 @@ jobs:
           set -o pipefail
           export ANDROID_NDK=$ANDROID_NDK_LATEST_HOME
           export NOVA_VALIDATE_COMPLETION_CANDIDATES=1 NOVA_BUILD_JOBS=4
-          bash tools/ci/build-android-kyty.sh "$PWD" "$PWD/work" "$PWD/dist/kyty" "$PWD/dist/novafex" "$PWD/dist/ffmpeg" 2>&1 | tail -200
+          mkdir -p dist/kyty/logs
+          bash tools/ci/build-android-kyty.sh "$PWD" "$PWD/work" "$PWD/dist/kyty" "$PWD/dist/novafex" "$PWD/dist/ffmpeg" 2>&1 | tee dist/kyty/logs/kyty-step.txt | tail -200
       - uses: actions/cache/save@v4
         if: always()
         with:
