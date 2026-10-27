@@ -11,6 +11,7 @@ std::atomic<MappingSnapshot> takeSnapshot{nullptr};
 std::atomic<bool> ready{false};
 std::vector<Mapping> tracked;
 thread_local std::uint32_t mutationDepth = 0;
+thread_local void* activeMutation = nullptr;
 }
 void ConfigureMemoryRegistry(MappingSnapshot snapshot) {
     if (!snapshot) throw std::invalid_argument("Null native guest memory registry snapshot");
@@ -25,18 +26,23 @@ void* BeginMemoryChange() {
     void* mutation = nullptr;
     try {
         mutation = GuestAllocations::GuestAllocationsBegin_nid_postfix();
-        for (const auto& range : tracked)
-            GuestAllocations::GuestAllocationsRequireUnpinned_nid_postfix(mutation, reinterpret_cast<void*>(range.address), range.bytes);
     } catch (...) {
-        if (mutation) GuestAllocations::GuestAllocationsEnd_nid_postfix(mutation);
         --mutationDepth;
         throw;
     }
+    activeMutation = mutation;
     return mutation;
+}
+// Previously every Kyty memory call (even a pure reservation) waited for GPU work on every tracked
+// range. Only ranges whose host mapping or protection actually changes need that wait.
+void PrepareRangeChange(std::uint64_t address, std::uint64_t bytes) {
+    if (!activeMutation || !bytes) return;
+    GuestAllocations::GuestAllocationsRequireUnpinned_nid_postfix(activeMutation, reinterpret_cast<void*>(address), static_cast<std::size_t>(bytes));
 }
 void EndMemoryChange(void* mutation) {
     if (!mutationDepth) throw std::logic_error("Native guest memory mutation depth underflow");
     if (--mutationDepth) return;
+    activeMutation = nullptr;
     try {
         auto next = takeSnapshot.load(std::memory_order_acquire)();
         std::sort(next.begin(), next.end(), [](const auto& a, const auto& b) { return a.address < b.address; });
@@ -46,12 +52,24 @@ void EndMemoryChange(void* mutation) {
                 throw std::runtime_error("Invalid native guest memory mapping snapshot");
             end = item.address + item.bytes;
         }
-        for (const auto& old : tracked)
-            if (std::find(next.begin(), next.end(), old) == next.end())
-                GuestAllocations::GuestAllocationsRemove_nid_postfix(mutation, reinterpret_cast<void*>(old.address));
-        for (const auto& item : next)
-            if (std::find(tracked.begin(), tracked.end(), item) == tracked.end())
-                GuestAllocations::GuestAllocationsAdd_nid_postfix(mutation, reinterpret_cast<void*>(item.address), item.bytes, item.readable, item.writable, item.gpu);
+        // Both lists are sorted by address and non-overlapping: one linear merge instead of O(n^2).
+        // Removals are applied before additions, as before, so a replaced range never overlaps.
+        std::vector<const Mapping*> added;
+        std::size_t i = 0, j = 0;
+        while (i < tracked.size() || j < next.size()) {
+            if (j == next.size() || (i < tracked.size() && tracked[i].address < next[j].address)) {
+                GuestAllocations::GuestAllocationsRemove_nid_postfix(mutation, reinterpret_cast<void*>(tracked[i++].address));
+            } else if (i == tracked.size() || next[j].address < tracked[i].address) {
+                added.push_back(&next[j++]);
+            } else if (tracked[i] == next[j]) {
+                ++i; ++j;
+            } else {
+                GuestAllocations::GuestAllocationsRemove_nid_postfix(mutation, reinterpret_cast<void*>(tracked[i++].address));
+                added.push_back(&next[j++]);
+            }
+        }
+        for (const auto* item : added)
+            GuestAllocations::GuestAllocationsAdd_nid_postfix(mutation, reinterpret_cast<void*>(item->address), item->bytes, item->readable, item->writable, item->gpu);
         tracked = std::move(next);
     } catch (...) {
         GuestAllocations::GuestAllocationsEnd_nid_postfix(mutation);

@@ -38,6 +38,9 @@ int main() {
     assert(SelectSurfaceTransform(caps)==caps.currentTransform);
     caps.supportedTransforms=VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     assert(SelectSurfaceTransform(caps)==VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR);
+    caps.supportedTransforms=VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR|VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR;
+    caps.currentTransform=VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR;
+    assert(SelectSurfaceTransform(caps)==VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR); // Android landscape: compositor rotates
     caps.supportedTransforms=0;
     rejects([&]{SelectSurfaceTransform(caps);});
     std::puts("NOVA_SURFACE_TEST: RGBA/BGRA, SDR/HDR transitions, undefined/invalid formats, alpha and transforms PASS");

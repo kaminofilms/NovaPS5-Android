@@ -117,6 +117,16 @@ p, s = original('src/kernel/memoryAddressSpace.inc')
 anchor = '\tif (vaddr < (uint64_t {1} << 39) || !NovaFex::GuestVAEnabled()) {'
 assert s.count(anchor) == 1, 'memoryAddressSpace.inc NovaHostVA anchor'
 s = s.replace(anchor, '\tif (vaddr < (uint64_t {1} << 39) || vaddr >= (uint64_t {1} << 47) || !NovaFex::GuestVAEnabled()) {')
+# Wait for GPU leases only on the range whose host mapping/protection changes.
+for unit in ['bool ProtectUnit(uint64_t vaddr, uint64_t size, VirtualMemory::Mode mode) {',
+             'bool UnmapBackingUnit(uint64_t vaddr, uint64_t size) {',
+             'bool ReleaseFreeUnit(uint64_t vaddr, uint64_t size) {',
+             'bool ReleaseCommittedUnit(uint64_t vaddr, uint64_t size) {']:
+    assert s.count('\t' + unit + '\n\t\tNOVA_HOST_VA(vaddr, size);') == 1, unit
+    s = s.replace('\t' + unit + '\n\t\tNOVA_HOST_VA(vaddr, size);', '\t' + unit + '\n\t\tNovaAnyPS5::PrepareRangeChange(vaddr, size);\n\t\tNOVA_HOST_VA(vaddr, size);')
+map_unit = '\t                    GuestBackingStore::FailureReason* failure_reason) {\n\t\tNOVA_HOST_VA(vaddr, size);'
+assert s.count(map_unit) == 1, 'MapBackingUnit'
+s = s.replace(map_unit, '\t                    GuestBackingStore::FailureReason* failure_reason) {\n\t\tNovaAnyPS5::PrepareRangeChange(vaddr, size);\n\t\tNOVA_HOST_VA(vaddr, size);')
 anchor = '\tbool ZeroRange(uint64_t backing_offset, uint64_t size) {'
 method = r'''
     bool NovaAnySharedBacking(uint64_t address, size_t bytes, int* file, uint64_t* offset) {
