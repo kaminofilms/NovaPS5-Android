@@ -18,7 +18,7 @@ if [[ -z "$host_glslang" ]]; then
 fi
 cmake -S "$repo/native/anyps5" -B "$work/build-anyps5-android" -G Ninja \
     -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
-    -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-29 -DANDROID_STL=c++_shared \
+    -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-${ANDROID_API:-33} -DANDROID_STL=c++_shared \
     -DANYPS5_SOURCE_DIR="$source_dir" -DNOVA_ANYPS5_BUILD_AGC=ON -DBUILD_TESTING=OFF \
     -DNOVA_ANYPS5_HOST_GLSLANG="$host_glslang"
 cmake --build "$work/build-anyps5-android" --target nova_anyps5_renderer -j "${NOVA_BUILD_JOBS:-4}"
