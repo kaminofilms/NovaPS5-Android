@@ -1,0 +1,49 @@
+name: AnyPS5 Android renderer compile check
+# Compiles only libnova_anyps5_renderer.so with the Android NDK and records the full
+# compiler output in lab-logs. Diagnostic; produces no APK.
+on:
+  push:
+    branches: [wip/0992-anyps5-resync]
+    paths: ['native/anyps5/**', 'tools/ci/build-android-anyps5.sh', 'tools/ci/patch-0941-anyps5-presentation.py', '.github/workflows/anyps5-android-check.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: anyps5-android-check-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  compile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ninja-build python3 libvulkan-dev
+      - name: Compile AnyPS5 renderer for Android arm64
+        run: |
+          set -uo pipefail
+          mkdir -p out
+          export ANDROID_NDK=$ANDROID_NDK_LATEST_HOME
+          echo "NDK: $ANDROID_NDK" | tee out/ndk.txt
+          grep -m1 Pkg.Revision "$ANDROID_NDK/source.properties" | tee -a out/ndk.txt
+          # Same steps as tools/ci/build-android-anyps5.sh up to the renderer link (no Kyty staging).
+          sed -n '1,/^cmake --build .*nova_anyps5_renderer/p' tools/ci/build-android-anyps5.sh > /tmp/anyps5-compile.sh
+          sed -i 's/--target nova_anyps5_renderer -j "${NOVA_BUILD_JOBS:-4}"/--target nova_anyps5_renderer -j 4 -- -k 0/' /tmp/anyps5-compile.sh
+          bash /tmp/anyps5-compile.sh "$PWD" "$PWD/work" "$PWD/dist" > out/compile.txt 2>&1
+          echo "exit=$?" | tee -a out/compile.txt
+          grep -E "error:|undefined (reference|symbol)|FAILED:" out/compile.txt | sort -u | head -200 > out/errors.txt || true
+          tail -60 out/compile.txt
+          grep -q '^exit=0$' out/compile.txt
+      - name: Commit logs to lab-logs
+        if: always()
+        run: |
+          set -euo pipefail
+          dest="runs/anyps5-check-${GITHUB_RUN_ID}-${GITHUB_SHA::8}"
+          git init -q logs && cd logs
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q --depth 1 origin lab-logs; then git checkout -q -b lab-logs FETCH_HEAD; else git checkout -q --orphan lab-logs; fi
+          mkdir -p "$dest"; cp ../out/*.txt "$dest/" || true
+          echo "$dest anyps5-check" >> INDEX.txt
+          git add -A
+          git -c user.name=nova-lab -c user.email=nova-lab@users.noreply.github.com commit -qm "anyps5 check logs $dest"
+          for i in 1 2 3; do git push -q origin HEAD:lab-logs && break; git pull -q --rebase origin lab-logs; done
