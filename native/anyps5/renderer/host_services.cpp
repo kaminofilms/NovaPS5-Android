@@ -3,6 +3,8 @@
 #include "prx/libc/include/Shutdown.hpp"
 #include "prx/libkernel/Equeue/Equeue.hpp"
 #include <atomic>
+#include <cstdint>
+#include <cstdlib>
 #include <condition_variable>
 #include <thread>
 #include <cstring>
@@ -60,7 +62,10 @@ extern "C" void* mmap_nid_postfix(void* address, std::size_t bytes, int protecti
     try { return NovaAnyPS5::Services().map(address, bytes, protection, flags, file, offset); }
     catch (...) { std::terminate(); }
 }
+namespace { std::atomic<std::uint64_t> notImplementedCalls{0}; }
+extern "C" std::uint64_t NotImplementedCalls_nid_no_patch() { return notImplementedCalls.load(std::memory_order_relaxed); }
 extern "C" [[noreturn]] void NotImplemented_nid_no_patch(const char* function) {
+    notImplementedCalls.fetch_add(1, std::memory_order_relaxed);
     throw std::runtime_error(std::string("AnyPS5 unimplemented export: ") + (function ? function : "unknown"));
 }
 namespace GuestArena {
@@ -68,6 +73,17 @@ extern "C" void GuestArenaRange_nid_postfix(std::uintptr_t* base, std::size_t* b
     NovaAnyPS5::Services();
     *base = 0;
     *bytes = 0;
+}
+// Nova, not the AnyPS5 arena, owns guest memory (GuestArenaRange reports no arena). The
+// upstream arena invokes these hooks from its own host-read and protection paths, which do
+// not exist here, so registration is recorded but never invoked: the same behaviour as the
+// previous pin, which did not register them at all.
+namespace { std::atomic<void (*)(std::uintptr_t, std::size_t)> accessObserver{nullptr}, hostReadHook{nullptr}; }
+extern "C" void GuestArenaSetAccessObserver_nid_postfix(void (*callback)(std::uintptr_t, std::size_t)) {
+    accessObserver.store(callback, std::memory_order_release);
+}
+extern "C" void GuestArenaSetHostReadHook_nid_no_patch(void (*hook)(std::uintptr_t, std::size_t)) {
+    hostReadHook.store(hook, std::memory_order_release);
 }
 extern "C" bool GuestArenaSharedBacking_nid_postfix(std::uintptr_t address, std::size_t bytes, int* file, std::uint64_t* offset) {
     return NovaAnyPS5::Services().sharedBacking(address, bytes, file, offset);
@@ -81,6 +97,7 @@ std::stop_source shutdownSource;
 std::mutex shutdownMutex;
 std::vector<void (*)()> shutdownCallbacks;
 std::atomic<void (*)()> endFlush{nullptr};
+std::atomic<void (*)()> exitDrain{nullptr};
 bool shutdownStarted = false;
 bool shutdownFinished = false;
 std::thread::id shutdownThread;
@@ -94,6 +111,14 @@ extern "C" void LibcRegisterShutdown_nid_postfix(void (*callback)()) {
     std::lock_guard lock(shutdownMutex);
     if (!callback || shutdownStarted) throw std::logic_error("Invalid AnyPS5 shutdown callback registration");
     shutdownCallbacks.push_back(callback);
+}
+// Upstream runs the drain on _Exit (the AGC driver saves its pipeline cache there).
+// Nova runs it once at the start of runtime shutdown.
+extern "C" void LibcSetExitDrain_nid_no_patch(void (*drain)()) {
+    if (!drain) throw std::invalid_argument("Null AnyPS5 exit drain");
+    void (*expected)() = nullptr;
+    if (!exitDrain.compare_exchange_strong(expected, drain) && expected != drain)
+        throw std::logic_error("AnyPS5 exit drain already installed");
 }
 extern "C" void LibcSetEndFlush_nid_no_patch(void (*flush)()) {
     if (!flush) throw std::invalid_argument("Null AnyPS5 flush callback");
@@ -116,6 +141,8 @@ void ShutdownRuntime() {
     lock.unlock();
     LibcRequestShutdown_nid_postfix();
     std::exception_ptr failure;
+    try { if (auto drain = exitDrain.exchange(nullptr)) drain(); }
+    catch (...) { failure = std::current_exception(); }
     for (auto it = callbacks.rbegin(); it != callbacks.rend(); ++it) {
         try { (*it)(); } catch (...) { if (!failure) failure = std::current_exception(); }
     }
@@ -130,3 +157,25 @@ void ShutdownRuntime() {
 }
 }
 extern "C" void LibcRunShutdown_nid_postfix() { NovaAnyPS5::ShutdownRuntime(); }
+
+// Title metadata for upstream diagnostics (performance trace/overlay labels). Nova's launcher
+// exports the installed title ID; Nova has no param.json title or content version here.
+#include "prx/libkernel/AppMetadata/include/AppMetadata.hpp"
+namespace {
+const char* novaTitleId() {
+    const char* id = std::getenv("NOVA_CACHE_TITLE_ID");
+    return id && *id && std::strlen(id) < sizeof(AppTitleId::value) ? id : nullptr;
+}
+}
+extern "C" bool HasAppParamJson_nid_no_patch() { return novaTitleId() != nullptr; }
+extern "C" AppTitleId GetAppTitleId_nid_postfix() {
+    AppTitleId result{};
+    if (const char* id = novaTitleId()) std::memcpy(result.value, id, std::strlen(id));
+    return result;
+}
+extern "C" AppTitle GetAppTitle_nid_postfix() {
+    AppTitle result{};
+    if (const char* id = novaTitleId()) std::memcpy(result.value, id, std::strlen(id));
+    return result;
+}
+extern "C" AppContentVersion GetAppContentVersion_nid_no_patch() { return AppContentVersion{}; }

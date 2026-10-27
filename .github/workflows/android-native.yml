@@ -103,6 +103,37 @@ jobs:
         with:
           name: android-novafex-test
           path: 'dist/novafex/novafex-test*-android.txt'
+  anyps5-host:
+    # Nova's AnyPS5 adapter tests on the pinned upstream, with software Vulkan (lavapipe).
+    # Host results do not establish Adreno/Turnip behaviour; not an APK gate.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ninja-build clang python3 libvulkan-dev mesa-vulkan-drivers spirv-tools zlib1g-dev
+      - name: Build and run AnyPS5 adapter host tests
+        run: |
+          set -euo pipefail
+          mkdir -p dist/anyps5-host
+          commit=$(grep -oE 'checkout --detach [0-9a-f]{40}' tools/ci/build-android-anyps5.sh | awk '{print $3}')
+          git clone --filter=blob:none --no-checkout https://github.com/boykopovar/AnyPS5.git work/anyps5
+          git -C work/anyps5 checkout --detach "$commit"
+          python3 tools/ci/patch-0941-anyps5-presentation.py work/anyps5
+          git -C work/anyps5 submodule update --init --depth 1 3rdparty/SPIRV-Headers 3rdparty/SPIRV-Tools 3rdparty/glslang 3rdparty/Vulkan-Headers 3rdparty/zstd
+          NOVA_VULKAN_INCLUDE="$PWD/work/anyps5/3rdparty/Vulkan-Headers/include" python3 tests/test_anyps5_surface.py work/anyps5 | tee dist/anyps5-host/surface.txt
+          cmake -S work/anyps5/3rdparty/glslang -B work/glslang -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_OPT=OFF -DGLSLANG_TESTS=OFF -DENABLE_GLSLANG_BINARIES=ON
+          cmake --build work/glslang --target glslang-standalone -j 4
+          cmake -S native/anyps5 -B work/build-host -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+            -DANYPS5_SOURCE_DIR="$PWD/work/anyps5" -DNOVA_ANYPS5_BUILD_AGC=ON -DBUILD_TESTING=ON \
+            -DNOVA_ANYPS5_HOST_GLSLANG="$PWD/work/glslang/StandAlone/glslang"
+          cmake --build work/build-host -j 4 2>&1 | tail -40 | tee dist/anyps5-host/build.txt
+          (cd work/build-host && ctest --output-on-failure --timeout 120) 2>&1 | tee dist/anyps5-host/ctest.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: anyps5-host-tests
+          path: dist/anyps5-host
   ffmpeg:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -240,7 +271,7 @@ jobs:
             --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.92-test AnyPS5 update (CI ${GITHUB_SHA::7})" \
             --notes "Experimental test build. Contains the 0.9.90-test1 candidates (overlays 0969-0989, unchanged), AnyPS5 renderer updated to upstream eaf7ee8, and a per-game Advanced graphics option: GPU renderer = Kyty (default) or AnyPS5 (experimental). None of the six remaining performance tasks is completed by this build. No FPS result is claimed; device testing required. Fixed signing key and corresponding source included."
   logs:
-    needs: [novafex, novafex-test, ffmpeg, kyty, apk]
+    needs: [novafex, novafex-test, ffmpeg, kyty, apk, anyps5-host]
     if: always()
     runs-on: ubuntu-24.04
     steps:
@@ -256,7 +287,7 @@ jobs:
           if git fetch -q --depth 1 origin lab-logs; then git checkout -q -b lab-logs FETCH_HEAD; else git checkout -q --orphan lab-logs; fi
           mkdir -p "$dest"
           (cd ../out && find . -type f \( -name '*.txt' -o -name '*.json' -o -name '*.log' \) -size -20M -exec cp --parents {} "../logs/$dest/" \;) || true
-          printf '%s android novafex=%s test=%s ffmpeg=%s kyty=%s apk=%s\n' "$dest" "${{ needs.novafex.result }}" "${{ needs.novafex-test.result }}" "${{ needs.ffmpeg.result }}" "${{ needs.kyty.result }}" "${{ needs.apk.result }}" >> INDEX.txt
+          printf '%s android novafex=%s test=%s ffmpeg=%s kyty=%s apk=%s\n' "$dest" "${{ needs.novafex.result }}" "${{ needs.novafex-test.result }}" "${{ needs.ffmpeg.result }}" "${{ needs.kyty.result }}" "${{ needs.apk.result }} anyps5_host=${{ needs.anyps5-host.result }}" >> INDEX.txt
           git add -A
           git -c user.name=nova-lab -c user.email=nova-lab@users.noreply.github.com commit -qm "android logs $dest"
           for i in 1 2 3; do git push -q origin HEAD:lab-logs && break; git pull -q --rebase origin lab-logs; done

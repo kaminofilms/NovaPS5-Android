@@ -7,6 +7,8 @@ endif()
 option(ANYPS5_ENABLE_SPIRV_TOOLS "Build complete upstream optimizer" ON)
 add_library(nova_anyps5_host_headers INTERFACE)
 function(nova_add_anyps5_compiler)
+    # Upstream recompiler tests need AnyPS5's own test harness; Nova runs its own tests below.
+    set(BUILD_TESTING OFF)
     set(PROJECT_SOURCE_DIR "${ANYPS5_SOURCE_DIR}")
     set(ANYPS5_SPIRV_HEADERS_SOURCE_DIR "${ANYPS5_SOURCE_DIR}/3rdparty/SPIRV-Headers")
     set(ANYPS5_SPIRV_HEADERS_INCLUDE_DIR "${ANYPS5_SPIRV_HEADERS_SOURCE_DIR}/include")

@@ -11,6 +11,7 @@ execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/sta
 add_executable(glslang-standalone IMPORTED GLOBAL)
 set_target_properties(glslang-standalone PROPERTIES IMPORTED_LOCATION "${NOVA_ANYPS5_HOST_GLSLANG}")
 function(nova_add_agc)
+    set(BUILD_TESTING OFF)
     set(CMAKE_SOURCE_DIR "${ANYPS5_SOURCE_DIR}")
     add_subdirectory("${NOVA_ANYPS5_STAGED_ROOT}/core/libs/prx/libSceAgcDriver" agc)
 endfunction()
