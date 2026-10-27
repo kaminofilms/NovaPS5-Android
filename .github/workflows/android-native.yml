@@ -1,5 +1,5 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# NovaPS5 0.9.92-test / 992: 0.9.90 candidates (0969-0989) + AnyPS5 upstream eaf7ee8 + per-game GPU renderer selector.
+# NovaPS5 0.9.93-test / 993: 0.9.90 candidates (0969-0989) + AnyPS5 upstream eaf7ee8 + per-game GPU renderer selector.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
@@ -242,14 +242,14 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.92-test-android-arm64.apk" \
-            --version-name 0.9.92-test --version-code 992 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.93-test-android-arm64.apk" \
+            --version-name 0.9.93-test --version-code 993 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.92-test-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.92-test --version-code 992 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.93-test-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.93-test --version-code 993 | tee dist/apk/verify.txt
       - name: Verify compiled performance features
-        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.92-test-android-arm64.apk
+        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.93-test-android-arm64.apk
       - name: Verify packaged mesh driver
-        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.92-test-android-arm64.apk
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.93-test-android-arm64.apk
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -266,11 +266,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.9.92-test-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.9.92-test-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.9.92-test-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.92-test AnyPS5 update (CI ${GITHUB_SHA::7})" \
-            --notes "Experimental test build. Contains the 0.9.90-test1 candidates (overlays 0969-0989, unchanged), AnyPS5 renderer updated to upstream eaf7ee8, and a per-game Advanced graphics option: GPU renderer = Kyty (default) or AnyPS5 (experimental). None of the six remaining performance tasks is completed by this build. No FPS result is claimed; device testing required. Fixed signing key and corresponding source included."
+          tag="v0.9.93-test-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.93-test-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.93-test-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.93-test AnyPS5 update (CI ${GITHUB_SHA::7})" \
+            --notes "Experimental test build. Fixes the 0.9.92-test AnyPS5 startup crash (AGC driver memory, File exists). Contains the 0.9.90-test1 candidates (overlays 0969-0989, unchanged), AnyPS5 renderer updated to upstream eaf7ee8, and a per-game Advanced graphics option: GPU renderer = Kyty (default) or AnyPS5 (experimental). None of the six remaining performance tasks is completed by this build. No FPS result is claimed; device testing required. Fixed signing key and corresponding source included."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk, anyps5-host]
     if: always()
