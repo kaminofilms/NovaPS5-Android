@@ -112,6 +112,11 @@ int Compare(const void* left, const void* right, std::size_t bytes) {
     }
     return 0;
 }
+void NoteUnmapped(std::uint64_t address, const char* where) {
+    static std::atomic<int> reported{0};
+    if (reported.fetch_add(1, std::memory_order_relaxed) < 16)
+        std::fprintf(stderr, "NOVA_ANYPS5: 0x%016llx is beyond the last %s mapping; reported as unmapped\n", static_cast<unsigned long long>(address), where);
+}
 bool Query(std::uint64_t address, MemoryRun* run) {
     Memory::VirtualQueryInfo info{};
     if (Memory::NovaAnyQuery(address, &info)) {
@@ -119,7 +124,9 @@ bool Query(std::uint64_t address, MemoryRun* run) {
         else *run = {info.start, info.end, info.is_committed && (info.protection & 0x37) != 0, info.is_committed && (info.protection & 0x22) != 0};
         return true;
     }
-    if (Guest(address)) return false;
+    // No Kyty range at or after a guest address: the rest of the guest space is unmapped.
+    // Upstream walks holes as inaccessible runs, so answer that instead of failing the query.
+    if (Guest(address)) { NoteUnmapped(address, "guest"); *run = {address, std::uint64_t{1} << 47, false, false}; return true; }
     std::ifstream maps("/proc/self/maps");
     std::string line;
     while (std::getline(maps, line)) {
@@ -131,6 +138,7 @@ bool Query(std::uint64_t address, MemoryRun* run) {
         else *run = {begin, end, access[0] == 'r', access[1] == 'w'};
         return true;
     }
+    if (address < (std::uint64_t{1} << 39)) { NoteUnmapped(address, "host"); *run = {address, std::uint64_t{1} << 39, false, false}; return true; }
     return false;
 }
 struct EventState { ::KernelEqueueEvent event; };
@@ -254,6 +262,7 @@ std::vector<Mapping> MappingSnapshotNow() {
     return result;
 }
 void Initialize() {
+    setenv("APS5_TRACE_UNREADABLE", "1", 0);
     if (!std::getenv("ANYPS5_SHADER_CACHE_DIR")) {
         if (const char* work = std::getenv("NOVA_WORKDIR")) {
             const auto cache = (std::filesystem::path(work) / "cache" / "anyps5").string();
