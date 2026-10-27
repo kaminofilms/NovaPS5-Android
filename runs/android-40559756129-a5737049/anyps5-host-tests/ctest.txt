@@ -1,0 +1,25 @@
+Test project /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/build-host
+      Start  1: anyps5_real_compute
+ 1/10 Test  #1: anyps5_real_compute ..............   Passed    0.00 sec
+      Start  2: anyps5_Float16Conversion
+ 2/10 Test  #2: anyps5_Float16Conversion .........   Passed    0.01 sec
+      Start  3: anyps5_Spirv13Image
+ 3/10 Test  #3: anyps5_Spirv13Image ..............   Passed    0.05 sec
+      Start  4: anyps5_PositionInvariance
+ 4/10 Test  #4: anyps5_PositionInvariance ........   Passed    0.01 sec
+      Start  5: anyps5_memory_registry
+ 5/10 Test  #5: anyps5_memory_registry ...........   Passed    0.05 sec
+      Start  6: anyps5_guest_memory
+ 6/10 Test  #6: anyps5_guest_memory ..............   Passed    0.02 sec
+      Start  7: anyps5_gpu_BufferFormat
+ 7/10 Test  #7: anyps5_gpu_BufferFormat ..........   Passed    5.20 sec
+      Start  8: anyps5_gpu_BufferAtomics
+ 8/10 Test  #8: anyps5_gpu_BufferAtomics .........   Passed    0.47 sec
+      Start  9: anyps5_gpu_ZeroPositionVertex
+ 9/10 Test  #9: anyps5_gpu_ZeroPositionVertex ....   Passed    0.21 sec
+      Start 10: anyps5_runtime_queues
+10/10 Test #10: anyps5_runtime_queues ............   Passed    0.02 sec
+
+100% tests passed, 0 tests failed out of 10
+
+Total Test time (real) =   6.15 sec
