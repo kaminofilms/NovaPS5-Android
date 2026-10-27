@@ -267,3 +267,4 @@ runs/android-40568156343-37ff4ca8 android novafex=success test=success ffmpeg=su
 runs/anyps5-check-40589817795-ab048d8c anyps5-check
 runs/android-40589820609-ab048d8c android novafex=success test=success ffmpeg=success kyty=success apk=success anyps5_host=success
 runs/anyps5-check-40601079218-ae3a0695 anyps5-check
+runs/android-40601083998-ae3a0695 android novafex=success test=success ffmpeg=success kyty=success apk=success anyps5_host=success
