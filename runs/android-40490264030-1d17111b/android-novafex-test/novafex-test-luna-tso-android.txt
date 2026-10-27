@@ -1,0 +1,17 @@
+NOVA_FEX: seccomp denied syscall 275 -> ENOSYS
+NOVAFEX_TEST: seccomp SIGSYS -> ENOSYS     PASS 
+NOVA_FEX: host AVX=1 SVE256=0 AFP=0 RCPC=1
+NOVAFEX_TEST: init                         PASS 
+NOVA_LUNA_PROFILE: rejected code/class/layout signature at base=0xffd7d9600000
+NOVAFEX_TEST: Luna wrong signature rejected PASS 
+NOVA_LUNA_PROFILE: armed SaveGameInstanceData ctor=0xffd7da52fca3 dtor=0xffd7da53b5c4 base=0xffd7d9600000
+NOVAFEX_TEST: Luna valid profile accepted  PASS 
+NOVAFEX_TEST: Luna no speculative object   PASS 
+NOVA_LUNA_OBJECT: registered type=SaveGameInstanceData object=0xffffe2c46640 vtable=0xffd7e05114f0 fields=+0x38/+0x40
+NOVAFEX_TEST: Luna automatic typed registration PASS 
+NOVAFEX_TEST: Luna original SIMD initializer PASS 
+NOVAFEX_TEST: Luna original vtable store   PASS 
+NOVAFEX_TEST: Luna respects scalar TSO scope PASS 
+NOVA_LUNA_OBJECT: retired object=0xffffe2c46640
+NOVAFEX_TEST: Luna automatic object retirement PASS 
+NOVAFEX_TEST: Luna retired object excluded PASS 
