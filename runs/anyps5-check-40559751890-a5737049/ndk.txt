@@ -1,0 +1,2 @@
+NDK: /usr/local/lib/android/sdk/ndk/30.0.16248370
+Pkg.Revision = 30.0.16248370
