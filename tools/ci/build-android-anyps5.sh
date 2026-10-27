@@ -6,10 +6,10 @@ source_dir="$work/anyps5"
 if [[ ! -d "$source_dir/.git" ]]; then
     git clone --no-checkout https://github.com/boykopovar/AnyPS5.git "$source_dir"
 fi
-git -C "$source_dir" checkout --detach 9caecfd2d5a822be9daf84c69c7c33c7fafe52b9
+git -C "$source_dir" checkout --detach eaf7ee878b1ee6c857740a01ebc069ed67959849
 python3 "$repo/tools/ci/patch-0941-anyps5-presentation.py" "$source_dir"
 python3 "$repo/tests/test_anyps5_surface.py" "$source_dir"
-git -C "$source_dir" submodule update --init --depth 1 3rdparty/SPIRV-Headers 3rdparty/SPIRV-Tools 3rdparty/glslang 3rdparty/Vulkan-Headers
+git -C "$source_dir" submodule update --init --depth 1 3rdparty/SPIRV-Headers 3rdparty/SPIRV-Tools 3rdparty/glslang 3rdparty/Vulkan-Headers 3rdparty/zstd
 host_glslang=${NOVA_ANYPS5_HOST_GLSLANG:-}
 if [[ -z "$host_glslang" ]]; then
     cmake -S "$source_dir/3rdparty/glslang" -B "$work/anyps5-host-glslang" -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_OPT=OFF -DGLSLANG_TESTS=OFF -DENABLE_GLSLANG_BINARIES=ON

@@ -1,10 +1,10 @@
 name: Nova PS5 Android-native (no DroidDeck)
-# NovaPS5 0.9.71 / 125: independent pacing and Android thermal workload controls.
+# NovaPS5 0.9.92-test / 992: 0.9.90 candidates (0969-0989) + AnyPS5 upstream eaf7ee8 + per-game GPU renderer selector.
 # Kyty and the embedded FEXCore built with the Android NDK; Kyty runs inside the app (SDL3 Android
 # backend, Vulkan on the Android surface, AAudio). Logs go to lab-logs (runs/android-*).
 on:
   push:
-    branches: [work/0971-timing-thermal-pkg, fix/0968-guest-fibers, fix/0966-pacing-audio, update/0965-kyty-dpp, work/novaps5-runtime-timing, fix/novaps5-0941-anyps5-presentation, android-native, feature/guest-va, feature/anyps5-android-gpu, fix/0923-arm64-ld1-boot, fix/0924-native-guest-hotpaths, fix/0925-agc-commandbuffer-hostviews, fix/0926-shader-cache-persistence, fix/0927-gpu-host-memory, fix/0929-renderer-performance, fix/0931-luna-super-meat-boy, fix/novaps5-0936-luna-watchpoint]
+    branches: [fix/wonder-native60-no-apk, work/0971-timing-thermal-pkg, fix/0968-guest-fibers, fix/0966-pacing-audio, update/0965-kyty-dpp, work/novaps5-runtime-timing, fix/novaps5-0941-anyps5-presentation, android-native, feature/guest-va, feature/anyps5-android-gpu, fix/0923-arm64-ld1-boot, fix/0924-native-guest-hotpaths, fix/0925-agc-commandbuffer-hostviews, fix/0926-shader-cache-persistence, fix/0927-gpu-host-memory, fix/0929-renderer-performance, fix/0931-luna-super-meat-boy, fix/novaps5-0936-luna-watchpoint]
   workflow_dispatch:
 permissions:
   contents: write
@@ -149,6 +149,7 @@ jobs:
         run: |
           set -o pipefail
           export ANDROID_NDK=$ANDROID_NDK_LATEST_HOME
+          export NOVA_VALIDATE_COMPLETION_CANDIDATES=1 NOVA_BUILD_JOBS=4
           bash tools/ci/build-android-kyty.sh "$PWD" "$PWD/work" "$PWD/dist/kyty" "$PWD/dist/novafex" "$PWD/dist/ffmpeg" 2>&1 | tail -200
       - uses: actions/cache/save@v4
         if: always()
@@ -209,14 +210,14 @@ jobs:
         run: |
           set -euo pipefail
           python3 build-native-apk.py --sdk "$ANDROID_HOME" --libs dist/kyty/lib --sdl-java dist/kyty/sdl-java --assets dist/assets \
-            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.71-android-arm64.apk" \
-            --version-name 0.9.71-android --version-code 125 2>&1 | tee dist/apk-build.txt
+            --keystore tools/ci/novaps5-ci-test.keystore --output "dist/apk/NovaPS5-0.9.92-test-android-arm64.apk" \
+            --version-name 0.9.92-test --version-code 992 2>&1 | tee dist/apk-build.txt
       - name: Verify the APK
-        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.71-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.71-android --version-code 125 | tee dist/apk/verify.txt
+        run: set -o pipefail; python3 tests/verify_native_apk.py dist/apk/NovaPS5-0.9.92-test-android-arm64.apk --sdk "$ANDROID_HOME" --version-name 0.9.92-test --version-code 992 | tee dist/apk/verify.txt
       - name: Verify compiled performance features
-        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.71-android-arm64.apk
+        run: python3 tests/verify_performance_features.py dist/apk/NovaPS5-0.9.92-test-android-arm64.apk
       - name: Verify packaged mesh driver
-        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.71-android-arm64.apk
+        run: python3 tests/verify_mesh_driver.py dist/apk/NovaPS5-0.9.92-test-android-arm64.apk
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -233,11 +234,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v0.9.71-android-${GITHUB_SHA::7}"
-          cd dist/apk && sha256sum NovaPS5-0.9.71-android-arm64.apk > SHA256SUMS.txt
-          gh release create "$tag" NovaPS5-0.9.71-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.71 timing and thermal controls (CI ${GITHUB_SHA::7})" \
-            --notes "Independent vblank pacing, missed-deadline handling, separate real/output FPS counters, clock/startup diagnostics, Android-managed GPU power and Automatic/Cooler/Performance workload controls. Preserves 0.9.70 UI and installer. Rebuilds NovaFEX and requires ARM64 bridge tests plus full native linking and APK verification. Device FPS, heat reduction and Hellblade/Wolverine boot remain unverified. Fixed signing key and corresponding source included."
+          tag="v0.9.92-test-${GITHUB_SHA::7}"
+          cd dist/apk && sha256sum NovaPS5-0.9.92-test-android-arm64.apk > SHA256SUMS.txt
+          gh release create "$tag" NovaPS5-0.9.92-test-android-arm64.apk SHA256SUMS.txt verify.txt *-source.tar.gz --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Nova PS5 0.9.92-test AnyPS5 update (CI ${GITHUB_SHA::7})" \
+            --notes "Experimental test build. Contains the 0.9.90-test1 candidates (overlays 0969-0989, unchanged), AnyPS5 renderer updated to upstream eaf7ee8, and a per-game Advanced graphics option: GPU renderer = Kyty (default) or AnyPS5 (experimental). None of the six remaining performance tasks is completed by this build. No FPS result is claimed; device testing required. Fixed signing key and corresponding source included."
   logs:
     needs: [novafex, novafex-test, ffmpeg, kyty, apk]
     if: always()

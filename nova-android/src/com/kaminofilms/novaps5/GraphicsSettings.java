@@ -14,6 +14,8 @@ final class GraphicsSettings {
     static final String[] READBACK_MODES = {"off", "relaxed", "precise"};
     static final String[] VIDEO_OUT = {"1080p display (faster, recommended)", "4K display (game may render 4K)"};
     static final int[] SCALE_PCT = {100,75,67,50,33,25};
+    // 0.9.92: GPU renderer per game. Kyty stays the default; AnyPS5 is experimental.
+    static final String[] BACKEND = {"Kyty (default, most tested)", "AnyPS5 (experimental)"};
     static int surfacePermille(SharedPreferences p, String title, boolean unreal) {
         int selected=value(p,title,"render_height_v70",0);
         int[] targets={1000,1000,666,500,333};
@@ -80,6 +82,8 @@ final class GraphicsSettings {
         LinearLayout box = new LinearLayout(a); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(32, 16, 32, 16);
         TextView note = new TextView(a);
         note.setText("Leave these at their defaults unless a game has a problem. Changes apply on next launch."); box.addView(note);
+        Spinner backend = choice(a, box, "GPU renderer", BACKEND, value(p,title,"gpu_backend_v92",0));
+        box.addView(GraphicsPanel.text(a,"AnyPS5 uses its own shader compiler and GPU driver. It is experimental on Android: if a game fails to start or draws incorrectly, switch back to Kyty.",13,0xffafbdd3));
         Spinner mode = choice(a, box, "Presentation", MODES, value(p,title,"present",0));
         Spinner cap = choice(a, box, "Presentation FPS cap", CAPS, value(p,title,"cap",0));
         Switch cache = toggle(a, box, "Disk shader cache (recommended)", value(p,title,"cache",1)!=0);
@@ -121,6 +125,7 @@ final class GraphicsSettings {
 
 
                 e.putInt(key(title,"video_out_v63"),video.getSelectedItemPosition());
+                e.putInt(key(title,"gpu_backend_v92"),backend.getSelectedItemPosition());
                 e.putInt(key(title,"tu_debug_v57"),turnip.getSelectedItemPosition());
                 e.putInt(key(title,"fg_v58"),framegen.getSelectedItemPosition());
 
@@ -132,7 +137,7 @@ final class GraphicsSettings {
             dialog.dismiss();
         });
         reset.setOnClickListener(v->{
-                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","render_height_v70","rescale_v64","raster_scale_v54","sync_v56","readback_v56","fault_window_v56","video_out_v56","video_out_v63","async_v56","tu_debug_v57","fg_v58","fg_flow_v58","fg_perf_v58","gpu_turbo_v62","vrs_v62","real_gpu_time_v62"})e.remove(key(title,n)); e.apply();
+                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","render_height_v70","rescale_v64","raster_scale_v54","sync_v56","readback_v56","fault_window_v56","video_out_v56","video_out_v63","async_v56","tu_debug_v57","fg_v58","fg_flow_v58","fg_perf_v58","gpu_turbo_v62","vrs_v62","real_gpu_time_v62","gpu_backend_v92"})e.remove(key(title,n)); e.apply();
             dialog.dismiss();
         });
         dialog.show();
@@ -141,6 +146,8 @@ final class GraphicsSettings {
     static void apply(Context c, String title) throws android.system.ErrnoException {
         SharedPreferences p=c.getSharedPreferences("graphics",0);
         migrateDeadCellsCap(p,title);
+        int backend=value(p,title,"gpu_backend_v92",0); if(backend<0||backend>=BACKEND.length)backend=0;
+        Os.setenv("NOVA_GPU_BACKEND",backend==1?"anyps5":"kyty",true);
         Os.setenv("NOVA_AUDIO_PROFILE","PPSA27841".equals(title)?"1":"0",true);
         Os.setenv("NOVA_STABLE_DEPTH","PPSA27841".equals(title)?"1":"0",true);
         int mode=value(p,title,"present",0); if(mode<0||mode>2)mode=0;
@@ -210,7 +217,7 @@ final class GraphicsSettings {
         Os.setenv("NOVA_GPU_ORDERED_WAITS","1",true);
         if(cap>0&&cap<limits.length)Os.setenv("NOVA_FPS_CAP",Integer.toString(limits[cap]),true);
         else Os.unsetenv("NOVA_FPS_CAP");
-        BootLog.write(c,"Graphics profile "+title+": present="+mode+" cap="+cap+" shader_cache="+cache+" pipeline_libraries="+gpl+" sync="+(sync==0?"fast":"accurate")+" readback="+READBACK_MODES[readback]+" fault_window="+window+" scale="+SCALE_PCT[ri]+"% video="+(vo==1?"4k":"1080p")+" async_shaders="+async+" safe_profile="+safe+" tu_debug="+(tu==0?"off":TURNIP_FLAGS[tu])+" gpu_turbo="+turbo+" vrs="+(vrs?"2x2":"off")+" real_gpu_time="+realTime+" framegen="+(fg==0?"off":(fg+1)+"x flow="+FLOW_VALUES[flow]+(fgPerf?" performance":" quality")));
+        BootLog.write(c,"Graphics profile "+title+": backend="+(backend==1?"anyps5":"kyty")+" present="+mode+" cap="+cap+" shader_cache="+cache+" pipeline_libraries="+gpl+" sync="+(sync==0?"fast":"accurate")+" readback="+READBACK_MODES[readback]+" fault_window="+window+" scale="+SCALE_PCT[ri]+"% video="+(vo==1?"4k":"1080p")+" async_shaders="+async+" safe_profile="+safe+" tu_debug="+(tu==0?"off":TURNIP_FLAGS[tu])+" gpu_turbo="+turbo+" vrs="+(vrs?"2x2":"off")+" real_gpu_time="+realTime+" framegen="+(fg==0?"off":(fg+1)+"x flow="+FLOW_VALUES[flow]+(fgPerf?" performance":" quality")));
     }
 }
 

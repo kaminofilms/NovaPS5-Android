@@ -32,6 +32,20 @@ s = s.replace('    return pthread_setaffinity_np(pthread_self(), sizeof(set), &s
 p.write_text(s)
 
 
+# Upstream screenshots are a desktop hotkey feature that writes PNGs through SDL paths.
+# Nova never requests them; keep the request/take state and refuse the PNG write explicitly.
+p = root / 'Execution/src/Screenshot.cpp'
+assert p.is_file(), 'upstream Screenshot.cpp moved'
+p.write_text(r"""#include "prx/libSceAgcDriver/Execution/include/Screenshot.hpp"
+#include <atomic>
+#include <stdexcept>
+namespace { std::atomic<bool> requested{false}; }
+void AgcDriver::Screenshot::Request() { requested.store(true); }
+bool AgcDriver::Screenshot::Take() { return requested.exchange(false); }
+std::filesystem::path AgcDriver::Screenshot::Write(std::string_view, std::uint32_t, std::uint32_t, std::span<const std::byte>) {
+    throw std::runtime_error("Screenshot: PNG capture is not available in Nova Android");
+}
+""")
 p = root / 'Graphics/src/GuestBufferMemory.cpp'
 s = p.read_text()
 s = '#include "platform_memory.hpp"\n' + s.replace('memfd_create(', 'NovaAnyPS5::CreateMemoryFile(')
@@ -127,21 +141,33 @@ video_relative = pathlib.Path('core/libs/prx/libSceVideoOut')
 shutil.copytree(source / video_relative, stage / video_relative, dirs_exist_ok=True)
 video = stage / video_relative
 (video / 'include/DisplayWindow.hpp').write_text('#pragma once\n#include "native_display.hpp"\n')
+def edit(text, old, new, count=1):
+    found = text.count(old)
+    if found != count:
+        raise SystemExit(f'NOVA_ANYPS5_STAGE: expected {count} of {old[:70]!r}, found {found}')
+    return text.replace(old, new)
+def cut(text, start_marker, end_marker, replacement=''):
+    if text.count(start_marker) != 1:
+        raise SystemExit(f'NOVA_ANYPS5_STAGE: expected one start {start_marker[:70]!r}')
+    start = text.index(start_marker)
+    end = text.index(end_marker, start)
+    return text[:start] + replacement + text[end:]
 p = video / 'include/VideoOutDriver.hpp'
-s = p.read_text().replace('    HostHdrProbe hdrProbe;', '    void* attachedWindow = nullptr;').replace('#include "SDL.h"', '').replace('#include "prx/libSceVideoOut/include/HostHdrProbe.hpp"', '').replace('    HostHdrProbe hdrProbe;', '')
+s = p.read_text()
+s = edit(s, '    HostHdrProbe hdrProbe;', '    void* attachedWindow = nullptr;')
+s = edit(s, '#include "SDL.h"', '')
+s = edit(s, '#include "prx/libSceVideoOut/include/HostHdrProbe.hpp"', '')
 p.write_text(s)
 p = video / 'src/VideoOutDriver.cpp'
 s = p.read_text()
 for include in ['SDL.h', 'SDL_vulkan.h', 'prx/libSceVideoOut/include/PadInput.hpp', 'prx/libSceVideoOut/include/MouseInput.hpp', 'prx/libSceVideoOut/include/KeyboardInput.hpp', 'prx/libSceVideoOut/include/ImeTextInput.hpp', 'prx/libScePad/include/PadState.hpp']:
-    s = s.replace('#include "' + include + '"', '')
+    s = edit(s, '#include "' + include + '"\n', '')
 s = '#include "video_platform.hpp"\n' + s
-start = s.index('std::vector<const char*> windowExtensions(')
-end = s.index('void checkConfig(', start)
-s = s[:start] + s[end:]
-start = s.index('    SDL_SetHint(SDL_HINT_WINDOWS_DPI_AWARENESS,')
-end = s.index('    try {\n        AgcDriverWaitIdle_nid_postfix();', start)
-s = s[:start] + s[end:]
-s = s.replace('        SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER);', '').replace('    SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER);', '')
+# Nova owns the Android surface: SDL window/instance helpers are not built.
+s = cut(s, 'std::vector<const char*> windowExtensions(', 'void checkConfig(')
+s = cut(s, '    OnMainThread([] {\n        SDL_SetHint(SDL_HINT_WINDOWS_DPI_AWARENESS', '    try {\n        AgcDriverWaitIdle_nid_postfix();')
+s = edit(s, '        OnMainThread([] { SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER); });\n', '')
+s = edit(s, '    OnMainThread([] { SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER); });\n', '')
 start = s.index('void VideoOutDriver::updateDisplayRefreshRate() {')
 end = s.index('\n}\n', start) + 3
 s = s[:start] + '''void VideoOutDriver::updateDisplayRefreshRate() {
@@ -150,24 +176,34 @@ s = s[:start] + '''void VideoOutDriver::updateDisplayRefreshRate() {
     displayRefreshRate.store(rate);
 }
 ''' + s[end:]
-s = s.replace('    hdrProbe.Poll(window.Handle());', '').replace('        hdrProbe.Poll(window.Handle());', '').replace('        hdrProbe.Release();', '').replace('    hdrProbe.Release();', '')
-s = s.replace('        const auto extensions = windowExtensions(window.Handle());\n        const AgcDriver::PresentationWindow target{window.Handle(), extensions, &createWindowSurface, &windowDrawableSize, req.width, req.height, req.timing};', '        auto target = NovaAnyPS5::Video().window();\n        target.width = req.width;\n        target.height = req.height;\n        target.timing = req.timing;\n        if (attachedWindow != target.context) {\n            if (attachedWindow) AgcDriverReleaseWindow_nid_postfix(attachedWindow);\n            AgcDriverAttachWindow_nid_postfix(target);\n            attachedWindow = target.context;\n        }')
-s = s.replace('        window.UpdateTitle();', '')
-s = s.replace('        const auto extensions = windowExtensions(window.Handle());\n        AgcDriverAttachWindow_nid_postfix({window.Handle(), extensions, &createWindowSurface, &windowDrawableSize, VIDEO_OUT_DEFAULT_WIDTH, VIDEO_OUT_DEFAULT_HEIGHT, nullptr});', '        const auto target = NovaAnyPS5::Video().window();\n        AgcDriverAttachWindow_nid_postfix(target);\n        attachedWindow = target.context;')
-s = s.replace('        PadInput padInput;\n        MouseInput mouseInput;\n        KeyboardInput keyboardInput;\n        ImeTextInput imeTextInput;', '')
-start = s.index('            SDL_Event event;')
-end = s.index('            if (current) {', start)
-s = s[:start] + '            updateDisplayRefreshRate();\n            pollHostHdr();\n' + s[end:]
-start = s.index('                int windowWidth = 0;')
-end = s.index('                const auto finished = ', start)
-s = s[:start] + s[end:]
-s = s.replace('    req.terminal = true;\n    req.cfg->vblankCond.notify_all();', '    req.terminal = true;\n    NovaAnyPS5::Video().framePresented();\n    req.cfg->vblankCond.notify_all();')
+s = edit(s, '        hdrProbe.Poll(window.Handle());\n', '')
+s = edit(s, '    hdrProbe.Poll(window.Handle());\n', '')
+s = edit(s, '        hdrProbe.Release();\n', '')
+s = edit(s, '    hdrProbe.Release();\n', '')
+s = edit(s, '        const auto extensions = windowExtensions(window.Handle());\n        const AgcDriver::PresentationWindow target{window.Handle(), extensions, &createWindowSurface, &windowDrawableSize, req.width, req.height, req.timing};',
+         '        auto target = NovaAnyPS5::Video().window();\n        target.width = req.width;\n        target.height = req.height;\n        target.timing = req.timing;\n        if (attachedWindow != target.context) {\n            if (attachedWindow) AgcDriverReleaseWindow_nid_postfix(attachedWindow);\n            AgcDriverAttachWindow_nid_postfix(target);\n            attachedWindow = target.context;\n        }')
+s = edit(s, '        const auto extensions = windowExtensions(window.Handle());\n        AgcDriverAttachWindow_nid_postfix({window.Handle(), extensions, &createWindowSurface, &windowDrawableSize, VIDEO_OUT_DEFAULT_WIDTH, VIDEO_OUT_DEFAULT_HEIGHT, nullptr});',
+         '        const auto target = NovaAnyPS5::Video().window();\n        AgcDriverAttachWindow_nid_postfix(target);\n        attachedWindow = target.context;')
+s = edit(s, '        OnMainThread([&] { window.UpdateTitle(); });\n', '')
+# Input comes from Nova's Android controls, not SDL host devices.
+s = edit(s, '    std::optional<PadInput> padInput;\n    std::optional<MouseInput> mouseInput;\n    std::optional<KeyboardInput> keyboardInput;\n    std::optional<ImeTextInput> imeTextInput;\n', '')
+s = edit(s, '        OnMainThread([&] {\n            padInput.emplace();\n            mouseInput.emplace();\n            keyboardInput.emplace();\n            imeTextInput.emplace();\n        });\n', '')
+s = cut(s, '            const bool quit = OnMainThread([&] {\n                SDL_Event event;', '            pollHostHdr();', '            updateDisplayRefreshRate();\n')
+s = edit(s, '            OnMainThread([&] { mouseInput->UpdateCapture(!padInput->MouseModeEnabled()); });\n', '')
+s = cut(s, '                int windowWidth = 0;', '                const auto finished = ')
+s = edit(s, '    OnMainThread([&] {\n        padInput.reset();\n        mouseInput.reset();\n        keyboardInput.reset();\n        imeTextInput.reset();\n        window.Destroy();\n    });', '    window.Destroy();')
+s = edit(s, '    req.terminal = true;\n    req.cfg->vblankCond.notify_all();', '    req.terminal = true;\n    NovaAnyPS5::Video().framePresented();\n    req.cfg->vblankCond.notify_all();')
+if s.count('sceKernelGetProcessTime()') == 0:
+    raise SystemExit('NOVA_ANYPS5_STAGE: process time calls moved')
 s = s.replace('sceKernelGetProcessTime()', 'NovaAnyPS5::Video().processTime()').replace('sceKernelGetProcessTimeCounter()', 'NovaAnyPS5::Video().processTimeCounter()')
-assert 'SDL_' not in s
+for banned in ['SDL', 'hdrProbe', 'padInput', 'mouseInput', 'keyboardInput', 'imeTextInput', 'windowExtensions', 'UpdateTitle']:
+    if banned in s:
+        raise SystemExit(f'NOVA_ANYPS5_STAGE: {banned} remains in staged VideoOutDriver.cpp')
 p.write_text(s)
 video_cmake = '''add_library(nova_anyps5_video STATIC
     Unimplemented.cpp src/Event.cpp src/Buffer.cpp src/Output.cpp src/VideoOutDriver.cpp
-    "${ANYPS5_SOURCE_DIR}/core/libs/prx/libkernel/Time/TimedWait.cpp")
+    "${ANYPS5_SOURCE_DIR}/core/libs/prx/libkernel/Time/TimedWait.cpp"
+    "${ANYPS5_SOURCE_DIR}/core/libs/prx/libkernel/Time/SleepWake.cpp")
 target_include_directories(nova_anyps5_video PUBLIC "${NOVA_ANYPS5_STAGED_ROOT}/core/libs" "${ANYPS5_SOURCE_DIR}/core/libs" "${NOVA_ANYPS5_RENDERER_ADAPTER_DIR}")
 target_link_libraries(nova_anyps5_video PUBLIC nova_anyps5_agc)
 target_compile_definitions(nova_anyps5_video PRIVATE APS5_ENABLE_TIMING_LOG=0 APS5_ENABLE_TRACY=0)
