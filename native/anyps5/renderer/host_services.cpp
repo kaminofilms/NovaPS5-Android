@@ -21,7 +21,7 @@ HostServices configured{};
 void ConfigureHostServices(const HostServices& services) {
     if (!services.copy || !services.compare || !services.translate || !services.query ||
         !services.pinQueue || !services.addEvent || !services.deleteEvent || !services.triggerEvent ||
-        !services.map || !services.sharedBacking || !services.writeBacking)
+        !services.map || !services.sharedBacking || !services.writeBacking || !services.driverMemory)
         throw std::invalid_argument("AnyPS5 host services are incomplete");
     std::lock_guard lock(configureMutex);
     if (installed.load(std::memory_order_acquire)) throw std::logic_error("AnyPS5 host services are already installed");

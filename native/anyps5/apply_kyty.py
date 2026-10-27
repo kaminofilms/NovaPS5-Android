@@ -23,6 +23,36 @@ def change(relative, anchor, replacement):
 p, s = original('src/libs/agc.cpp')
 s = s.replace('void Initialize() {', 'void Initialize() {\n    if (NovaAnyPS5::Enabled()) { NovaAnyPS5::Initialize(); return; }', 1)
 s = s.replace('void Shutdown() {', 'void Shutdown() {\n    if (NovaAnyPS5::Enabled()) { NovaAnyPS5::Shutdown(); return; }', 1)
+# AnyPS5's AGC driver owns the PS5 driver DMEM block at 0x0fe0000000. That address lies in
+# Kyty's reserved guest system region, so it must be allocated and mapped through Kyty's
+# kernel memory (as Gen5Driver::Initialize does), which also publishes it to the renderer.
+anchor = 'static void ReleaseDmem() {'
+assert s.count(anchor) == 1, 'agc.cpp ReleaseDmem anchor'
+s = s.replace(anchor, r'''void* NovaAnyPS5DriverMemory(uint64_t requested_address, size_t requested_size) {
+	std::scoped_lock lock {g_driver_dmem.mutex};
+	if (requested_address != DriverDmemBase || requested_size != DriverDmemSize) {
+		return nullptr;
+	}
+	if (g_driver_dmem.physical_offset >= 0) {
+		return nullptr; // One owner per process: never hand the block out twice.
+	}
+	int64_t physical_offset = -1;
+	if (LibKernel::Memory::KernelAllocateDirectMemory(0, LibKernel::Memory::KernelGetDirectMemorySize(),
+	        DriverDmemSize, DriverDmemSize, 12, &physical_offset) != OK) {
+		return nullptr;
+	}
+	void* address = reinterpret_cast<void*>(DriverDmemBase);
+	if (LibKernel::Memory::KernelMapNamedDirectMemory(&address, DriverDmemSize, 0x33, 0, physical_offset,
+	        DriverDmemSize, "SceAgcDriver") != OK || reinterpret_cast<uint64_t>(address) != DriverDmemBase) {
+		EXIT_IF(LibKernel::Memory::KernelCheckedReleaseDirectMemory(physical_offset, DriverDmemSize) != OK);
+		return nullptr;
+	}
+	std::memset(address, 0, DriverDmemSize);
+	g_driver_dmem.physical_offset = physical_offset;
+	return address;
+}
+
+''' + anchor, 1)
 p.write_text('#include "kyty_bridge.hpp"\n' + s)
 change('src/graphics/presentation/window/window.cpp', 'void WindowRun() {', 'void WindowRun() {\n    if (NovaAnyPS5::Enabled()) { NovaAnyPS5::RunWindow(); return; }')
 change('src/libs/libAgcDriver.cpp', 'LIB_DEFINE(InitAgcDriver_1) {\n\tLibGen5::InitAgcDriver_1(s);', 'LIB_DEFINE(InitAgcDriver_1) {\n    if (NovaAnyPS5::Enabled()) { NovaAnyPS5::RegisterGraphicsExports(s); return; }\n\tLibGen5::InitAgcDriver_1(s);')

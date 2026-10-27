@@ -38,6 +38,10 @@
 #include <sstream>
 #include <stdexcept>
 #include <sys/mman.h>
+namespace Libs::Graphics::Gen5Driver {
+// Defined in Kyty agc.cpp by apply_kyty.py: PS5 driver DMEM through Kyty kernel memory.
+void* NovaAnyPS5DriverMemory(uint64_t address, size_t size);
+}
 #include <thread>
 #include <unistd.h>
 #include <vector>
@@ -270,7 +274,8 @@ void Initialize() {
         [](std::int64_t queue) -> std::shared_ptr<void> { return Queue::KernelPinEqueue(queue); },
         AddEvent, Queue::KernelDeleteEvent, Queue::KernelTriggerEvent, Map,
         Memory::NovaAnySharedBacking,
-        [](std::uintptr_t address, const void* data, std::size_t bytes) { return Memory::TryWriteBacking(address, data, bytes); }});
+        [](std::uintptr_t address, const void* data, std::size_t bytes) { return Memory::TryWriteBacking(address, data, bytes); },
+        [](std::uint64_t address, std::size_t bytes) { return Libs::Graphics::Gen5Driver::NovaAnyPS5DriverMemory(address, bytes); }});
     ConfigureVideoPlatform({Window, RefreshRate, Presented,
         [](int) { running.store(false, std::memory_order_release); }, Attribute3,
         Libs::LibKernel::KernelGetProcessTime, Libs::LibKernel::KernelGetProcessTimeCounter});

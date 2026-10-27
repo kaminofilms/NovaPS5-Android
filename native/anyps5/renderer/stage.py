@@ -32,6 +32,17 @@ s = s.replace('    return pthread_setaffinity_np(pthread_self(), sizeof(set), &s
 p.write_text(s)
 
 
+# The PS5 AGC driver block lives at a fixed guest address inside Kyty's reserved system
+# region; Nova maps it through Kyty's kernel memory (registered with the renderer) instead
+# of a raw MAP_FIXED_NOREPLACE mmap, which collides with that reservation (EEXIST).
+p = root / 'Execution/src/Driver/Lifecycle.cpp'
+s = p.read_text()
+old = """    mapped = mmap(reinterpret_cast<void*>(DriverMemoryAddress), DriverMemoryBytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
+    if (mapped == MAP_FAILED) throw std::system_error(errno, std::generic_category(), "map the AGC driver memory");"""
+assert s.count(old) == 1, 'Lifecycle.cpp driver memory mmap moved'
+s = '#include "host_services.hpp"\n' + s.replace(old, """    mapped = NovaAnyPS5::Services().driverMemory(DriverMemoryAddress, DriverMemoryBytes);
+    if (mapped == nullptr) throw std::runtime_error("Nova could not map the AGC driver memory at its fixed guest address");""")
+p.write_text(s)
 # Upstream screenshots are a desktop hotkey feature that writes PNGs through SDL paths.
 # Nova never requests them; keep the request/take state and refuse the PNG write explicitly.
 p = root / 'Execution/src/Screenshot.cpp'

@@ -22,6 +22,8 @@ struct HostServices {
     void* (*map)(void*, std::size_t, int, int, int, std::int64_t) noexcept;
     bool (*sharedBacking)(std::uintptr_t, std::size_t, int*, std::uint64_t*);
     bool (*writeBacking)(std::uintptr_t, const void*, std::size_t);
+    // Maps the PS5 AGC driver block at its fixed guest address through Nova's kernel memory.
+    void* (*driverMemory)(std::uint64_t, std::size_t);
 };
 void ConfigureHostServices(const HostServices& services);
 const HostServices& Services();
