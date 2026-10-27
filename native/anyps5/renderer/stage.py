@@ -52,6 +52,30 @@ old = """#ifndef _WIN32
 assert s.count(old) == 1, 'Lifecycle.cpp driver memory registration moved'
 s = s.replace(old, '    // Registered by Nova when driverMemory mapped it.')
 p.write_text(s)
+# Android: with an IDENTITY preTransform on a rotated panel the compositor rotates the image and
+# vkQueuePresentKHR reports VK_SUBOPTIMAL_KHR every frame. Upstream recreated the swapchain (after a
+# full device wait) on every SUBOPTIMAL. Keep it; only OUT_OF_DATE (or a size change) recreates.
+p = root / 'Execution/src/VulkanDevice.cpp'
+s = p.read_text()
+old = """    if (presented == VK_ERROR_OUT_OF_DATE_KHR || presented == VK_SUBOPTIMAL_KHR) state->extent = {0, 0};
+    else check(presented, "vkQueuePresentKHR");"""
+assert s.count(old) == 1, 'VulkanDevice.cpp present result handling moved'
+s = s.replace(old, """    if (presented == VK_ERROR_OUT_OF_DATE_KHR) state->extent = {0, 0};
+    else if (presented != VK_SUBOPTIMAL_KHR) check(presented, "vkQueuePresentKHR");""")
+p.write_text(s)
+# Fill the whole Android surface like Nova's Kyty presenter; NOVA_ANYPS5_ASPECT=fit keeps aspect.
+p = root / 'Execution/src/AspectFit.cpp'
+s = p.read_text()
+old = """AspectFitRect ComputeContainRect_nid_postfix(std::uint32_t sourceWidth, std::uint32_t sourceHeight, std::uint32_t destinationWidth, std::uint32_t destinationHeight) {
+"""
+assert s.count(old) == 1, 'AspectFit.cpp ComputeContainRect moved'
+s = '#include <cstdlib>\n#include <cstring>\n' + s.replace(old, old + """    static const bool keepAspect = [] { const char* mode = std::getenv("NOVA_ANYPS5_ASPECT"); return mode && std::strcmp(mode, "fit") == 0; }();
+    if (!keepAspect) {
+        require(sourceWidth != 0 && sourceHeight != 0 && destinationWidth != 0 && destinationHeight != 0, "extent must be non-zero");
+        return AspectFitRect{0, 0, destinationWidth, destinationHeight};
+    }
+""")
+p.write_text(s)
 # Upstream screenshots are a desktop hotkey feature that writes PNGs through SDL paths.
 # Nova never requests them; keep the request/take state and refuse the PNG write explicitly.
 p = root / 'Execution/src/Screenshot.cpp'
@@ -157,6 +181,14 @@ target_compile_definitions(nova_anyps5_agc_api PRIVATE APS5_AGC_CREATE_LOG=0 APS
 set_target_properties(nova_anyps5_agc_api PROPERTIES POSITION_INDEPENDENT_CODE ON)
 """
 (api / 'CMakeLists.txt').write_text(api_cmake)
+# Fused shader code is addressed by 48-bit GPU program registers: allocate it untagged on Android.
+p = api / 'Misc/src/ShaderFusion.cpp'
+s = p.read_text()
+for old, new in [('    std::vector<std::uint8_t> storage;\n', '    std::vector<std::uint8_t, NovaAnyPS5::UntaggedAllocator<std::uint8_t>> storage;\n'),
+                 ('FusedProgram program{std::vector<std::uint8_t>(layout.totalBytes + FusedCodeAlignment - 1), nullptr};', 'FusedProgram program{std::vector<std::uint8_t, NovaAnyPS5::UntaggedAllocator<std::uint8_t>>(layout.totalBytes + FusedCodeAlignment - 1), nullptr};')]:
+    assert s.count(old) == 1, 'ShaderFusion.cpp: ' + old[:40]
+    s = s.replace(old, new)
+p.write_text('#include "untagged_allocator.hpp"\n' + s)
 video_relative = pathlib.Path('core/libs/prx/libSceVideoOut')
 shutil.copytree(source / video_relative, stage / video_relative, dirs_exist_ok=True)
 video = stage / video_relative
