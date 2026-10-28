@@ -152,7 +152,7 @@ final class GraphicsSettings {
         // 0.9.106: submission call sites for the CPU/GPU overlap investigation (tasks 1-4).
         Os.setenv("NOVA_SUBMIT_REASONS","PPSA27841".equals(title)?"1":"0",true);
         // 0.9.107: sampled per-draw GPU timing (1 s of every 10 s) to find what costs the frame.
-        Os.setenv("NOVA_GPU_DRAW_PROFILE","PPSA27841".equals(title)?"1":"0",true);
+        Os.setenv("NOVA_GPU_DRAW_PROFILE",("PPSA27841".equals(title)||"PPSA36257".equals(title))?"1":"0",true);
         Os.setenv("NOVA_STABLE_DEPTH","PPSA27841".equals(title)?"1":"0",true);
         int mode=value(p,title,"present",0); if(mode<0||mode>2)mode=0;
         int cap=value(p,title,"cap",0); int[] limits={-1,30,40,60,90,120,0};
@@ -216,6 +216,8 @@ final class GraphicsSettings {
         Os.setenv("NOVA_AUDIO_LOW_LATENCY","0",true);
         Os.setenv("SDL_ANDROID_LOW_LATENCY_AUDIO","0",true);
         Os.setenv("NOVA_FAULT_WINDOW_KB",window?"64":"0",true);
+        // 0.9.108: write-fault readbacks also fetch the GPU-written neighbourhood (same switch turns it off).
+        Os.setenv("NOVA_FAULT_COALESCE_KB",window?"256":"0",true);
         // Accurate mode keeps the 0.9.52 GPU-label and ordered-wait paths.
         Os.setenv("NOVA_GPU_LABELS","1",true);
         Os.setenv("NOVA_GPU_ORDERED_WAITS","1",true);

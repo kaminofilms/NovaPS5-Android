@@ -431,6 +431,8 @@ python3 "$repo/tests/test_0990_audio_queue_poll.py" "$work/kyty"
 python3 "$repo/tools/ci/patch-0991-cpu-wait-sites.py" "$work/kyty"
 # Which GPU work costs the frame: sampled per-draw/dispatch timestamps by pipeline.
 python3 "$repo/tools/ci/patch-0992-gpu-draw-profile.py" "$work/kyty"
+# Task 1: one readback wait per GPU-written run instead of per 4 KiB page.
+python3 "$repo/tools/ci/patch-0993-fault-coalesce.py" "$work/kyty"
 VK_HDR="$work/kyty/3rdparty/Vulkan-Headers/include"; c++ -std=c++20 -O1 -I"$VK_HDR" "$repo/tests/test_gpu_profile.cpp" -o "$work/test-gpu-profile" && "$work/test-gpu-profile"
 python3 "$repo/tests/test_0968_guest_fibers.py" "$work/kyty"
 CXX=clang++ python3 "$repo/tests/test_0968_guest_fibers.py" "$work/kyty"
