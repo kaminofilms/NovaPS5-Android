@@ -7,8 +7,15 @@
 #include <atomic>
 #include <mutex>
 #include <stdexcept>
+#if defined(__ANDROID__)
+extern "C" bool NovaAnyPS5WriteWatchFault(std::uintptr_t address);
+extern "C" void NovaAnyPS5WriteWatchMarkWritten(std::uintptr_t address, std::size_t bytes);
+#endif
 namespace NovaAnyPS5 {
 namespace {
+// Set once the first guest range is registered with an available watch. Until then the fault
+// and host-write hooks do nothing (and never construct the watch inside a signal handler).
+std::atomic<bool> watchActive{false};
 std::atomic<MappingSnapshot> takeSnapshot{nullptr};
 std::atomic<bool> ready{false};
 std::vector<Mapping> tracked;
@@ -29,6 +36,7 @@ void watch(const Mapping& item) {
     }();
     if (!available) return;
     GuestWriteWatch::GuestWriteWatchRegister_nid_postfix(reinterpret_cast<const void*>(item.address), item.bytes);
+    watchActive.store(true, std::memory_order_release);
     ++watchedRanges;
     watchedBytes += item.bytes;
     if ((watchedRanges & (watchedRanges - 1)) == 0)
@@ -108,5 +116,23 @@ void EndMemoryChange(void* mutation) {
         throw;
     }
     GuestAllocations::GuestAllocationsEnd_nid_postfix(mutation);
+}
+bool WriteWatchFault(std::uint64_t address) {
+#if defined(__ANDROID__)
+    if (!watchActive.load(std::memory_order_acquire) || address >= IdentityGuestLimit) return false;
+    return NovaAnyPS5WriteWatchFault(static_cast<std::uintptr_t>(address));
+#else
+    (void)address;
+    return false;
+#endif
+}
+void WriteWatchHostWrite(std::uint64_t address, std::uint64_t bytes) {
+#if defined(__ANDROID__)
+    if (!watchActive.load(std::memory_order_acquire) || bytes == 0 || address >= IdentityGuestLimit) return;
+    NovaAnyPS5WriteWatchMarkWritten(static_cast<std::uintptr_t>(address), static_cast<std::size_t>(std::min(bytes, IdentityGuestLimit - address)));
+#else
+    (void)address;
+    (void)bytes;
+#endif
 }
 }

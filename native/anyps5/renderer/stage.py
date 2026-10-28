@@ -103,6 +103,77 @@ s = s.replace(old, """        uffdio_api api{};
         }
         if ((api.features & UFFD_FEATURE_WP_ASYNC) == 0 || (api.features & UFFD_FEATURE_WP_UNPOPULATED) == 0) return unavailable("asynchronous userfaultfd write protection");
         std::fprintf(stderr, "[memory] write watch: userfaultfd asynchronous write protection active (shmem %s)\\n", (api.features & UFFD_FEATURE_WP_HUGETLBFS_SHMEM) ? "yes" : "no");""")
+# Android: userfaultfd write protection is not available to apps. Build the upstream page-protection
+# backend (the macOS one) for Android, fed by Kyty's existing fault handler instead of its own.
+s = s.replace('defined(__linux__) && defined(PAGEMAP_SCAN) && defined(UFFD_FEATURE_WP_ASYNC)',
+              'defined(__linux__) && !defined(__ANDROID__) && defined(PAGEMAP_SCAN) && defined(UFFD_FEATURE_WP_ASYNC)')
+old = '|| defined(__APPLE__)\n#define APS5_GUEST_WRITE_WATCH 1'
+assert s.count(old) == 1, 'GuestWriteWatch.cpp APS5_GUEST_WRITE_WATCH guard moved'
+s = s.replace(old, '|| defined(__APPLE__) || defined(__ANDROID__)\n#define APS5_GUEST_WRITE_WATCH 1')
+s = s.replace('#if defined(__linux__)\n#include <cerrno>', '#if defined(__ANDROID__)\n#include <atomic>\n#include <pthread.h>\n#endif\n#if defined(__linux__)\n#include <cerrno>', 1)
+apple_start = s.index('#elif defined(__APPLE__)\nclass Watch {')
+apple_end = s.index('const bool g_opened = (Watch::Get(), true);', apple_start)
+android = s[apple_start + len('#elif defined(__APPLE__)\n'):apple_end]
+def cut(text, start, end, replacement):
+    assert text.count(start) == 1, 'android watch: ' + start[:50]
+    a = text.index(start); b = text.index(end, a)
+    return text[:a] + replacement + text[b:]
+android = cut(android, '        for (auto cursor = begin; cursor < end;) {', '        forEachPage(begin, end, [&](std::uintptr_t page, std::uint8_t& state) {',
+              '        // Nova registers readable and writable guest mappings only.\n'
+              '        for (std::size_t index = 0; index < pages.size(); ++index) {\n'
+              '            pages[index] = Written | Fresh | PROT_READ | PROT_WRITE;\n'
+              '            queried[index] = true;\n'
+              '        }\n')
+assert android.count('            pthread_mutexattr_setpolicy_np(&attributes, PTHREAD_MUTEX_POLICY_FIRSTFIT_NP);\n') == 1
+android = android.replace('            pthread_mutexattr_setpolicy_np(&attributes, PTHREAD_MUTEX_POLICY_FIRSTFIT_NP);\n', '')
+android = cut(android, '    Watch() {', '    bool record(std::uintptr_t address) {',
+              '    Watch() {\n'
+              '        if (std::getenv("APS5_NO_WRITE_WATCH") != nullptr) return;\n'
+              '        // The Kyty process-wide fault handler offers access violations to Memory::HandleGpuFault,\n'
+              '        // which forwards them here (NovaAnyPS5::WriteWatchFault); no handler of our own.\n'
+              '        _available = true;\n'
+              '        std::fprintf(stderr, "[memory] write watch: Nova page-protection tracking active (page %zu bytes)\\n", static_cast<std::size_t>(_page));\n'
+              '    }\n\n'
+              'public:\n'
+              '    // A write fault inside a watched, armed page: record it and let the write proceed.\n'
+              '    bool Fault(std::uintptr_t address) {\n'
+              '        if (!_available) return false;\n'
+              '        return record(address);\n'
+              '    }\n'
+              '    // Kyty calls Memory::InvalidateMemory before its own host code (file reads, memcpy)\n'
+              '    // writes guest memory. Unprotect and mark those pages written first, so a kernel\n'
+              '    // read() into them does not fail with EFAULT. Same order Kyty uses for its GPU tracking.\n'
+              '    void MarkWritten(std::uintptr_t begin, std::uintptr_t end) {\n'
+              '        if (!_available || end <= begin) return;\n'
+              '        begin = pageStart(begin);\n'
+              '        end = pageEnd(end);\n'
+              '        if (end <= begin) return;\n'
+              '        const Lock lock(_lock);\n'
+              '        forEachPage(begin, end, [&](std::uintptr_t page, std::uint8_t& state) {\n'
+              '            if ((state & Protected) != 0) ::mprotect(reinterpret_cast<void*>(page), _page, state & ProtectionMask);\n'
+              '            state = static_cast<std::uint8_t>((state & (ProtectionMask | Fresh)) | Written);\n'
+              '        });\n'
+              '    }\n\n'
+              'private:\n')
+for member in ['    struct sigaction _previousBus {};\n', '    struct sigaction _previousSegv {};\n']:
+    assert android.count(member) == 1, member
+    android = android.replace(member, '')
+s = s[:apple_start] + '#elif defined(__ANDROID__)\n' + android + '#endif\n#if defined(__APPLE__)\n' + s[apple_start + len('#elif defined(__APPLE__)\n'):]
+# Public API tail: the macOS branches serve Android too.
+tail = s.index('bool GuestWriteWatchAvailable_nid_postfix() {')
+head, rest = s[:tail], s[tail:]
+rest = rest.replace('#if defined(__APPLE__)\n', '#if defined(__APPLE__) || defined(__ANDROID__)\n').replace('#elif defined(__APPLE__)\n', '#elif defined(__APPLE__) || defined(__ANDROID__)\n')
+rest += r"""
+#if defined(__ANDROID__)
+extern "C" bool NovaAnyPS5WriteWatchFault(std::uintptr_t address) {
+    return GuestWriteWatch::Watch::Get().Fault(address);
+}
+extern "C" void NovaAnyPS5WriteWatchMarkWritten(std::uintptr_t address, std::size_t bytes) {
+    if (bytes != 0 && address + bytes > address) GuestWriteWatch::Watch::Get().MarkWritten(address, address + bytes);
+}
+#endif
+"""
+s = head + rest
 old = 'const bool g_opened = (Watch::Get(), true);\n'
 assert s.count(old) >= 1, 'GuestWriteWatch.cpp eager open moved'  # Linux and macOS blocks each have one
 s = s.replace(old, '// Nova: opened on first use, after the game log captures stderr.\n')

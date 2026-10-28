@@ -110,6 +110,16 @@ bool NovaAnySharedBacking(uint64_t address, size_t bytes, int* file, uint64_t* o
 '''
 assert s.count(anchor) == 1
 s = s.replace(anchor, helpers + '\n' + anchor)
+# Android write watch for the AnyPS5 backend, on Kyty's own hooks (no second signal handler):
+# Kyty's process-wide handler already offers every access violation to HandleGpuFault, and Kyty
+# calls InvalidateMemory before its host code writes guest memory. Kyty's renderer is not
+# installed in AnyPS5 mode (g_gpu_resources == nullptr), so those hooks forward to the watch.
+anchor = '\tif (g_gpu_resources == nullptr) {\n\t\treturn false;\n\t}\n#if defined(KYTY_NOVA_FEX)'
+assert s.count(anchor) == 1, 'memory.cpp HandleGpuFault anchor'
+s = s.replace(anchor, '\tif (g_gpu_resources == nullptr) {\n\t\treturn access == Graphics::PageFaultAccess::Write && NovaAnyPS5::WriteWatchFault(fault_vaddr);\n\t}\n#if defined(KYTY_NOVA_FEX)')
+anchor = 'void InvalidateMemory(uint64_t vaddr, uint64_t size) {\n\tif (size == 0 || g_gpu_resources == nullptr) {\n\t\treturn;\n\t}'
+assert s.count(anchor) == 1, 'memory.cpp InvalidateMemory anchor'
+s = s.replace(anchor, 'void InvalidateMemory(uint64_t vaddr, uint64_t size) {\n\tif (size == 0) {\n\t\treturn;\n\t}\n\tif (g_gpu_resources == nullptr) {\n\t\tNovaAnyPS5::WriteWatchHostWrite(vaddr, size);\n\t\treturn;\n\t}')
 p.write_text(s)
 p, s = original('src/kernel/memoryAddressSpace.inc')
 # Guest VA slots exist only in [2^39, 2^47). Android tagged heap pointers (0xb4...) are host
@@ -174,3 +184,9 @@ endif()
 '''
 p.write_text(s)
 print('Staged native AnyPS5 graphics, VideoOut, NovaFEX exports and memory integration')
+
+p, s = original('src/loader/runtimeLinker.cpp')
+anchor = '\t\t\tcase CoreAccess::Unknown: return false;'
+assert s.count(anchor) == 1, 'runtimeLinker.cpp Unknown access anchor'
+s = s.replace(anchor, '\t\t\tcase CoreAccess::Unknown: return NovaAnyPS5::WriteWatchFault(info->access_violation_vaddr);')
+p.write_text('#include "memory_mutation.hpp"\n' + s)
