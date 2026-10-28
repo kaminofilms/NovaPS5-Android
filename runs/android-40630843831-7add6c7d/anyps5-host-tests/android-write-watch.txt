@@ -1,0 +1,2 @@
+[memory] write watch: Nova page-protection tracking active (page 4096 bytes)
+android write watch: all checks passed
