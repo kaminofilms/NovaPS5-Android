@@ -149,6 +149,8 @@ final class GraphicsSettings {
         int backend=value(p,title,"gpu_backend_v92",0); if(backend<0||backend>=BACKEND.length)backend=0;
         Os.setenv("NOVA_GPU_BACKEND",backend==1?"anyps5":"kyty",true);
         Os.setenv("NOVA_AUDIO_PROFILE","PPSA27841".equals(title)?"1":"0",true);
+        // 0.9.106: submission call sites for the CPU/GPU overlap investigation (tasks 1-4).
+        Os.setenv("NOVA_SUBMIT_REASONS","PPSA27841".equals(title)?"1":"0",true);
         Os.setenv("NOVA_STABLE_DEPTH","PPSA27841".equals(title)?"1":"0",true);
         int mode=value(p,title,"present",0); if(mode<0||mode>2)mode=0;
         int cap=value(p,title,"cap",0); int[] limits={-1,30,40,60,90,120,0};

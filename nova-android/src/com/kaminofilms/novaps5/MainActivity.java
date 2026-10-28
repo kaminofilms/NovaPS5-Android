@@ -293,9 +293,10 @@ public final class MainActivity extends Activity {
         if (!file.isFile()) return "(none)";
         StringBuilder out = new StringBuilder();
         int count = 0, errorLines = 0, waits = 0, gpuLines = 0;
+        java.util.ArrayDeque<String> recent = new java.util.ArrayDeque<>();
         try (java.io.BufferedReader in = new java.io.BufferedReader(new java.io.InputStreamReader(new java.io.FileInputStream(file), StandardCharsets.UTF_8))) {
             String line;
-            while ((line = in.readLine()) != null && count < 600) {
+            while ((line = in.readLine()) != null) {
                 boolean keep = errorLines > 0;
                 if (keep) errorLines--;
                 if (line.startsWith("Title ID") || line.startsWith("NOVA_RESOLUTION") || line.startsWith("NOVA_BDA") || line.startsWith("NOVA_DEADCELLS") || line.startsWith("NOVA_WAIT") || line.startsWith("NOVA_GPU") || line.startsWith("NOVA_AUDIO")
@@ -307,12 +308,35 @@ public final class MainActivity extends Activity {
                         || (line.startsWith("[gpu]") && ++gpuLines <= 40)) keep = true;
                 if (line.startsWith("--- Error ---")) { keep = true; errorLines = 2; }
                 if (keep && line.startsWith("NOVA_WAIT") && ++waits > 30) keep = false;
-                if (keep) { out.append(line).append('\n'); count++; }
+                if (keep && count < 600) { out.append(line).append('\n'); count++; }
+                else if (perfLine(line)) { recent.addLast(line); if (recent.size() > 400) recent.removeFirst(); }
             }
         } catch (Exception x) {
             return "(unreadable: " + x + ")";
         }
+        if (!recent.isEmpty()) {
+            out.append("\nRecent performance lines (last ").append(recent.size()).append("):\n");
+            for (String l : recent) out.append(l).append('\n');
+        }
         return out.length() == 0 ? "(none)" : out.toString();
+    }
+
+    /** Periodic CPU/GPU timing lines: only the most recent ones are kept (see keyLines). */
+    static boolean perfLine(String line) {
+        if (line.startsWith("NOVA_RENDER_COST")) {
+            // Keep scopes that took real time (inclusive_ms >= 20) and every readback summary.
+            if (line.contains("readback_caller=")) return true;
+            int i = line.indexOf("inclusive_ms=");
+            if (i < 0) return false;
+            int j = line.indexOf(' ', i);
+            try { return Double.parseDouble(line.substring(i + 13, j < 0 ? line.length() : j)) >= 20.0; } catch (Exception x) { return false; }
+        }
+        return line.startsWith("NOVA_CPU_WAIT") || line.startsWith("NOVA_SUBMIT_REASON") || line.startsWith("NOVA_PASS_BREAK")
+                || line.startsWith("NOVA_THREAD_CPU") || line.startsWith("NOVA_PROCESS_CPU") || line.startsWith("NOVA_FEX: heartbeat")
+                || line.startsWith("NOVA_GPU_TIME") || line.startsWith("NOVA_DEFERRED_WRITE_FAULTS") || line.startsWith("NOVA_FAULT_LOOP")
+                || line.startsWith("NOVA_IMAGE_BARRIERS") || line.startsWith("NOVA_TRANSITIONS") || line.startsWith("NOVA_PASS_MERGE")
+                || line.startsWith("NOVA_GPU_WAIT") || line.startsWith("NOVA_DEPTH_STABLE") || line.startsWith("NOVA_PIPELINE_TIME")
+                || line.startsWith("NOVA_SHADER_TIME");
     }
 
     static String tail(File file, int limit) {
