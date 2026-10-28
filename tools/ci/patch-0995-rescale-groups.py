@@ -36,7 +36,8 @@ rd = root / 'renderDraw.cpp'
 
 edit(ih, '\tvoid NovaNative(const char* reason);\n', '''	void NovaNative(const char* reason);
 	// Nova 0995: render-pass-group scaling state (see tools/ci/patch-0995-rescale-groups.py).
-	bool     NovaCanScale(uint32_t permille) const;
+	bool     NovaCanScale(uint32_t permille) const { return NovaScaleBlocker(permille) == nullptr; }
+	const char* NovaScaleBlocker(uint32_t permille) const;
 	bool     NovaScaleDown(uint32_t permille);
 	bool     nova_hard_native     = false;
 	uint32_t nova_soft_demotions  = 0;
@@ -62,16 +63,25 @@ edit(im, 'void Image::NovaNative(const char* reason) {\n\tif (!NovaScaled()) ret
 ''')
 
 helpers = r'''
-bool Image::NovaCanScale(uint32_t permille) const {
-	if (permille >= 1000 || nova_hard_native || nova_soft_demotions >= 3 || depth_id) return false;
-	if (m_scheduler.CurrentTick() < nova_block_until) return false;
-	if (info.type != Prospero::ImageType::kColor2D || info.IsBlock()) return false;
+const char* Image::NovaScaleBlocker(uint32_t permille) const {
+	if (permille >= 1000) return "no-scale-wanted";
+	if (nova_hard_native) return "hard-native";
+	if (nova_soft_demotions >= 3) return "demoted-3x";
+	if (depth_id) return "depth-association";
+	if (m_scheduler.CurrentTick() < nova_block_until) return "backoff";
+	if (info.type != Prospero::ImageType::kColor2D) return "image-type";
+	if (info.IsBlock()) return "block-format";
+	if (info.resources.layers != 1) return "layers";
+	if (info.resources.levels != 1) return "mip-levels";
+	if (info.samples != 1) return "msaa";
 	const NovaRescale::Candidate candidate {info.extent.width, info.extent.height, info.extent.depth,
 	    info.resources.layers, info.resources.levels, info.samples, true, false, false, false};
-	if (!NovaRescale::Eligible(candidate, permille)) return false;
+	if (!NovaRescale::Eligible(candidate, permille)) return "size";
 	const auto features = m_graphics.GetFormatProperties(backing.format).optimalTilingFeatures;
-	const auto required = vk::FormatFeatureFlagBits::eBlitSrc | vk::FormatFeatureFlagBits::eBlitDst;
-	return (features & required) == required && backing.layers == 1 && backing.mip_levels == 1;
+	if (!(features & vk::FormatFeatureFlagBits::eBlitSrc)) return "format-no-blit-src";
+	if (!(features & vk::FormatFeatureFlagBits::eBlitDst)) return "format-no-blit-dst";
+	if (backing.layers != 1 || backing.mip_levels != 1) return "backing-layers-or-mips";
+	return nullptr;
 }
 
 bool Image::NovaScaleDown(uint32_t permille) {
@@ -223,19 +233,49 @@ old = '''		bool native = false;
 '''
 new = old + '''		// Nova 0995: when the whole pass can share one scale, scale its native targets
 		// (colour and depth) instead of demoting the scaled ones.
+		// Why passes do not scale, reported every 5 s (NOVA_RESCALE_GROUP).
+		struct GroupStats {
+			std::map<std::string, uint64_t> reasons;
+			uint64_t passes = 0, grouped = 0;
+			std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+		};
+		static GroupStats group_stats;
+		const auto note_reason = [&](const std::string& why) { ++group_stats.reasons[why]; };
+		++group_stats.passes;
+		if (native) note_reason("shader-side-effects");
 		if (!native && count != 0) {
 			const uint32_t wanted = NovaRescale::PermilleFor(targets[0]->info.extent.height);
 			bool group = wanted < 1000;
+			if (!group) note_reason("first-target-not-taller-than-target-height");
 			for (uint32_t i = 0; group && i < count; i++) {
 				const auto& t = *targets[i];
-				if (t.info.extent.width != targets[0]->info.extent.width || t.info.extent.height != targets[0]->info.extent.height) group = false;
-				else if (t.NovaScaled() ? t.nova_permille != wanted : !t.NovaCanScale(wanted)) group = false;
+				const bool depth = i + 1 == count && state.depth_info.image_id;
+				if (t.info.extent.width != targets[0]->info.extent.width || t.info.extent.height != targets[0]->info.extent.height) {
+					group = false; note_reason("attachment-sizes-differ");
+				} else if (t.NovaScaled() ? t.nova_permille != wanted : !t.NovaCanScale(wanted)) {
+					group = false;
+					const char* why = t.NovaScaled() ? "different-scale" : t.NovaScaleBlocker(wanted);
+					note_reason(std::string(depth ? "depth:" : "color:") + why +
+					            (why && std::string_view(why).starts_with("format") ? "(vkformat " + std::to_string(int(t.backing.format)) + ")" : ""));
+				}
 			}
+			if (group) ++group_stats.grouped;
 			if (group) {
 				bool ready = true;
 				for (uint32_t i = 0; i < count; i++) if (!targets[i]->NovaScaled() && ++targets[i]->nova_eligible_passes < 2) ready = false;
 				for (uint32_t i = 0; ready && i < count; i++) if (!targets[i]->NovaScaled()) (void)targets[i]->NovaScaleDown(wanted);
 			}
+		}
+		if (const auto now = std::chrono::steady_clock::now(); now - group_stats.start >= std::chrono::seconds(5)) {
+			std::string line;
+			std::vector<std::pair<uint64_t, std::string>> top;
+			for (const auto& [why, n]: group_stats.reasons) top.emplace_back(n, why);
+			std::sort(top.rbegin(), top.rend());
+			for (size_t k = 0; k < top.size() && k < 8; ++k) line += " " + top[k].second + "=" + std::to_string(top[k].first);
+			std::fprintf(stderr, "NOVA_RESCALE_GROUP: passes=%llu groupable=%llu%s\\n", (unsigned long long)group_stats.passes,
+			             (unsigned long long)group_stats.grouped, line.c_str());
+			group_stats = {};
+			group_stats.start = now;
 		}
 '''
 edit(rd, old, new)
@@ -243,5 +283,9 @@ edit(rd, old, new)
 for path, s in changes.items():
     if path == im and '#include <string_view>' not in s:
         s = '#include <string_view>\n' + s
+    if path == rd:
+        for header in ('#include <map>', '#include <string>', '#include <string_view>', '#include <chrono>', '#include <algorithm>', '#include <vector>'):
+            if header not in s:
+                s = header + '\n' + s
     path.write_text(s)
 print('0995: render-pass-group scaling (depth with colour, scale-down of native targets, staged full uploads)')
