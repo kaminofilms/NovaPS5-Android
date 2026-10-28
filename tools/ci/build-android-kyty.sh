@@ -433,6 +433,9 @@ python3 "$repo/tools/ci/patch-0991-cpu-wait-sites.py" "$work/kyty"
 python3 "$repo/tools/ci/patch-0992-gpu-draw-profile.py" "$work/kyty"
 # Task 1: one readback wait per GPU-written run instead of per 4 KiB page.
 python3 "$repo/tools/ci/patch-0993-fault-coalesce.py" "$work/kyty"
+# Render resolution as an absolute height (4K-rendering games).
+python3 "$repo/tools/ci/patch-0994-rescale-target-height.py" "$work/kyty"
+c++ -std=c++20 -I"$work/kyty/src" "$repo/tests/test_0994_rescale_target.cpp" -o "$work/test-0994" && "$work/test-0994"
 VK_HDR="$work/kyty/3rdparty/Vulkan-Headers/include"; c++ -std=c++20 -O1 -I"$VK_HDR" "$repo/tests/test_gpu_profile.cpp" -o "$work/test-gpu-profile" && "$work/test-gpu-profile"
 python3 "$repo/tests/test_0968_guest_fibers.py" "$work/kyty"
 CXX=clang++ python3 "$repo/tests/test_0968_guest_fibers.py" "$work/kyty"

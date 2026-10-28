@@ -157,11 +157,15 @@ final class GraphicsSettings {
         int mode=value(p,title,"present",0); if(mode<0||mode>2)mode=0;
         int cap=value(p,title,"cap",0); int[] limits={-1,30,40,60,90,120,0};
         int ri=value(p,title,"raster_scale_v54",0); if(ri<0||ri>=SCALE_PCT.length)ri=0;
-        int surface=surfacePermille(p,title,"1".equals(Os.getenv("NOVA_GAME_UNREAL")));
-        Os.setenv("NOVA_RESCALE_PERMILLE",Integer.toString(surface),true);
+        // 0.9.109: "Render resolution" is an absolute height. Taller render targets are scaled to it
+        // (a 4K-rendering game set to 1080p renders 1920x1080); smaller targets stay native.
+        int rh=value(p,title,"render_height_v70",0); int[] heights={0,1080,720,540,360};
+        int targetHeight=rh>=0&&rh<heights.length?heights[rh]:0;
+        Os.setenv("NOVA_RESCALE_PERMILLE","1000",true);
+        Os.setenv("NOVA_RESCALE_TARGET_HEIGHT",Integer.toString(targetHeight),true);
         // Surface and compatibility scaling must never multiply each other.
         ri=0;
-        BootLog.write(c,"Resolution scale: "+surface+" permille (native fallbacks for unsupported uses)");
+        BootLog.write(c,"Render resolution: "+(targetHeight==0?"native":targetHeight+"p target height")+" (native fallbacks for unsupported uses)");
         Os.setenv("NOVA_UNITY_RESOLUTION","0",true);
         Os.setenv("NOVA_INTERNAL_RESOLUTION","0",true);
         Os.setenv("NOVA_RASTER_SCALE_PCT",Integer.toString(SCALE_PCT[ri]),true);

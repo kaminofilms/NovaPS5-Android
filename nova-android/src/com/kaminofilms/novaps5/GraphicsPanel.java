@@ -82,7 +82,7 @@ final class GraphicsPanel {
         Setting fg=new Setting(a,settings,"Frame generation",dll?"Adds frames for smoother motion.":"Requires your Lossless Scaling DLL in Settings.",FRAMES,GraphicsSettings.value(p,title,"fg_v58",0));
         Setting power=new Setting(a,settings,"Power & heat","Automatic adapts. Cooler limits extra frames. Performance keeps your choices until hot.",ThermalController.MODES,GraphicsSettings.value(p,title,"power_mode_v71",0));
         Setting limit=new Setting(a,settings,"FPS limit","Limits output frames.",LIMITS,GraphicsSettings.value(p,title,"cap",0));
-        TextView note=text(a,"Changes apply when you restart the game. Resolution targets use a 1080p base; supported game passes may vary.",12,MUTED);settings.addView(note);gap(a,settings,12);
+        TextView note=text(a,"Changes apply when you restart the game. Render resolution is the height the game\u2019s main passes are drawn at (4K games too); some passes stay native.",12,MUTED);settings.addView(note);gap(a,settings,12);
         Button advanced=action(a,"Advanced options  ›");settings.addView(advanced,new LinearLayout.LayoutParams(-1,dp(a,48)));
         gap(a,box,12);LinearLayout footer=new LinearLayout(a);footer.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);box.addView(footer);
         Button reset=action(a,title.isEmpty()?"Reset":"Use defaults"),cancel=action(a,"Cancel"),save=action(a,"Save");
