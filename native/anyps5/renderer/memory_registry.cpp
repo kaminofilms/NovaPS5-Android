@@ -1,6 +1,7 @@
 #include "memory_registry.hpp"
 #include "../memory_mutation.hpp"
 #include "prx/libc/include/GuestAllocations.hpp"
+#include "prx/libc/include/GuestWriteWatch.hpp"
 #include <algorithm>
 #include <atomic>
 #include <mutex>
@@ -12,6 +13,17 @@ std::atomic<bool> ready{false};
 std::vector<Mapping> tracked;
 thread_local std::uint32_t mutationDepth = 0;
 thread_local void* activeMutation = nullptr;
+// AnyPS5 re-copies guest heaps it cannot write-watch on every address-based build. Register Nova's
+// writable guest mappings so only pages the guest wrote are refreshed. Guest addresses at or above
+// 2^39 are translated to other host addresses and are left to the copy path.
+constexpr std::uint64_t IdentityGuestLimit = std::uint64_t{1} << 39;
+bool watchable(const Mapping& item) { return item.writable && item.readable && item.address + item.bytes <= IdentityGuestLimit; }
+void watch(const Mapping& item) {
+    if (watchable(item)) GuestWriteWatch::GuestWriteWatchRegister_nid_postfix(reinterpret_cast<const void*>(item.address), item.bytes);
+}
+void unwatch(const Mapping& item) {
+    if (watchable(item)) GuestWriteWatch::GuestWriteWatchUnregister_nid_postfix(reinterpret_cast<const void*>(item.address), item.bytes);
+}
 }
 void ConfigureMemoryRegistry(MappingSnapshot snapshot) {
     if (!snapshot) throw std::invalid_argument("Null native guest memory registry snapshot");
@@ -58,18 +70,22 @@ void EndMemoryChange(void* mutation) {
         std::size_t i = 0, j = 0;
         while (i < tracked.size() || j < next.size()) {
             if (j == next.size() || (i < tracked.size() && tracked[i].address < next[j].address)) {
+                unwatch(tracked[i]);
                 GuestAllocations::GuestAllocationsRemove_nid_postfix(mutation, reinterpret_cast<void*>(tracked[i++].address));
             } else if (i == tracked.size() || next[j].address < tracked[i].address) {
                 added.push_back(&next[j++]);
             } else if (tracked[i] == next[j]) {
                 ++i; ++j;
             } else {
+                unwatch(tracked[i]);
                 GuestAllocations::GuestAllocationsRemove_nid_postfix(mutation, reinterpret_cast<void*>(tracked[i++].address));
                 added.push_back(&next[j++]);
             }
         }
-        for (const auto* item : added)
+        for (const auto* item : added) {
             GuestAllocations::GuestAllocationsAdd_nid_postfix(mutation, reinterpret_cast<void*>(item->address), item->bytes, item->readable, item->writable, item->gpu);
+            watch(*item);
+        }
         tracked = std::move(next);
     } catch (...) {
         GuestAllocations::GuestAllocationsEnd_nid_postfix(mutation);

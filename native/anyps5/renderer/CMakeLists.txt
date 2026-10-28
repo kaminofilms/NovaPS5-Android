@@ -33,7 +33,7 @@ target_sources(nova_anyps5_agc PRIVATE selected_vulkan_loader.cpp)
 target_compile_definitions(nova_anyps5_agc PRIVATE APS5_ENABLE_TIMING_LOG=0 APS5_ENABLE_TRACY=0)
 target_sources(nova_anyps5_agc PRIVATE
     "${ANYPS5_SOURCE_DIR}/core/libs/prx/libc/src/GuestAllocations.cpp"
-    "${ANYPS5_SOURCE_DIR}/core/libs/prx/libc/src/GuestWriteWatch.cpp"
+    "${NOVA_ANYPS5_STAGED_ROOT}/core/libs/prx/libc/src/GuestWriteWatch.cpp"
     "${ANYPS5_SOURCE_DIR}/core/libs/prx/libc/src/FailureReport.cpp")
 target_sources(nova_anyps5_agc PRIVATE host_services.cpp video_platform.cpp memory_registry.cpp)
 # Kernel timed waits and GPU-completion sleep wakeups (Recorder, EntryPoints and VideoOut use them).

@@ -76,6 +76,34 @@ s = '#include <cstdlib>\n#include <cstring>\n' + s.replace(old, old + """    sta
     }
 """)
 p.write_text(s)
+# Nova backs guest memory with a shared memfd. Asynchronous userfaultfd write protection covers
+# shmem only with UFFD_FEATURE_WP_HUGETLBFS_SHMEM; request it when the kernel offers it and keep the
+# upstream feature set otherwise (unchanged behaviour on kernels without it).
+p = stage / 'core/libs/prx/libc/src/GuestWriteWatch.cpp'
+p.parent.mkdir(parents=True, exist_ok=True)
+s = (source / 'core/libs/prx/libc/src/GuestWriteWatch.cpp').read_text()
+old = """        uffdio_api api{};
+        api.api = UFFD_API;
+        api.features = UFFD_FEATURE_WP_ASYNC | UFFD_FEATURE_WP_UNPOPULATED;
+        if (ioctl(_uffd, UFFDIO_API, &api) != 0 || (api.features & UFFD_FEATURE_WP_ASYNC) == 0 || (api.features & UFFD_FEATURE_WP_UNPOPULATED) == 0) return unavailable("asynchronous userfaultfd write protection");"""
+assert s.count(old) == 1, 'GuestWriteWatch.cpp UFFDIO_API block moved'
+s = s.replace(old, """        uffdio_api api{};
+        api.api = UFFD_API;
+        api.features = UFFD_FEATURE_WP_ASYNC | UFFD_FEATURE_WP_UNPOPULATED | UFFD_FEATURE_WP_HUGETLBFS_SHMEM;
+        if (ioctl(_uffd, UFFDIO_API, &api) != 0) {
+            // The API handshake is one-shot per descriptor: reopen without the shmem feature.
+            close(_uffd);
+            _uffd = static_cast<int>(syscall(SYS_userfaultfd, O_CLOEXEC | O_NONBLOCK | UFFD_USER_MODE_ONLY));
+            if (_uffd < 0) _uffd = static_cast<int>(syscall(SYS_userfaultfd, O_CLOEXEC | O_NONBLOCK));
+            if (_uffd < 0) return unavailable("userfaultfd");
+            api = {};
+            api.api = UFFD_API;
+            api.features = UFFD_FEATURE_WP_ASYNC | UFFD_FEATURE_WP_UNPOPULATED;
+            if (ioctl(_uffd, UFFDIO_API, &api) != 0) return unavailable("asynchronous userfaultfd write protection");
+        }
+        if ((api.features & UFFD_FEATURE_WP_ASYNC) == 0 || (api.features & UFFD_FEATURE_WP_UNPOPULATED) == 0) return unavailable("asynchronous userfaultfd write protection");
+        std::fprintf(stderr, "[memory] write watch: userfaultfd asynchronous write protection active (shmem %s)\\n", (api.features & UFFD_FEATURE_WP_HUGETLBFS_SHMEM) ? "yes" : "no");""")
+p.write_text(s)
 # Upstream screenshots are a desktop hotkey feature that writes PNGs through SDL paths.
 # Nova never requests them; keep the request/take state and refuse the PNG write explicitly.
 p = root / 'Execution/src/Screenshot.cpp'
