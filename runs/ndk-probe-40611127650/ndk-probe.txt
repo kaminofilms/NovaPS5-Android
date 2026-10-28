@@ -1,0 +1,10 @@
+NDK Pkg.Revision = 30.0.16248370
+PAGEMAP_SCAN: /usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/linux/fs.h 
+pm_scan_arg: /usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/linux/fs.h 
+PAGE_IS_WRITTEN: /usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/linux/fs.h 
+UFFD_FEATURE_WP_ASYNC: /usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/linux/userfaultfd.h 
+UFFD_FEATURE_WP_UNPOPULATED: /usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/linux/userfaultfd.h 
+UFFD_USER_MODE_ONLY: /usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/linux/userfaultfd.h 
+UFFDIO_WRITEPROTECT: /usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/linux/userfaultfd.h 
+UFFD_FEATURE_WP_HUGETLBFS_SHMEM: /usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/linux/userfaultfd.h 
+7:#define LINUX_VERSION_CODE 398080
