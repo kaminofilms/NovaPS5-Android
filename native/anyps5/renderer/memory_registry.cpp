@@ -1,3 +1,4 @@
+#include <cstdio>
 #include "memory_registry.hpp"
 #include "../memory_mutation.hpp"
 #include "prx/libc/include/GuestAllocations.hpp"
@@ -18,8 +19,23 @@ thread_local void* activeMutation = nullptr;
 // 2^39 are translated to other host addresses and are left to the copy path.
 constexpr std::uint64_t IdentityGuestLimit = std::uint64_t{1} << 39;
 bool watchable(const Mapping& item) { return item.writable && item.readable && item.address + item.bytes <= IdentityGuestLimit; }
+std::uint64_t watchedRanges = 0, watchedBytes = 0;
 void watch(const Mapping& item) {
-    if (watchable(item)) GuestWriteWatch::GuestWriteWatchRegister_nid_postfix(reinterpret_cast<const void*>(item.address), item.bytes);
+    if (!watchable(item)) return;
+    static const bool available = [] {
+        const bool on = GuestWriteWatch::GuestWriteWatchAvailable_nid_postfix();
+        std::fprintf(stderr, "NOVA_ANYPS5: guest write watch %s\n", on ? "available: guest heaps are registered" : "UNAVAILABLE: guest heaps are copied on every address-based build");
+        return on;
+    }();
+    if (!available) return;
+    GuestWriteWatch::GuestWriteWatchRegister_nid_postfix(reinterpret_cast<const void*>(item.address), item.bytes);
+    ++watchedRanges;
+    watchedBytes += item.bytes;
+    if ((watchedRanges & (watchedRanges - 1)) == 0)
+        std::fprintf(stderr, "NOVA_ANYPS5: write watch registered %llu guest ranges (%llu MiB); last 0x%llx+0x%llx covered=%d\n",
+            static_cast<unsigned long long>(watchedRanges), static_cast<unsigned long long>(watchedBytes >> 20),
+            static_cast<unsigned long long>(item.address), static_cast<unsigned long long>(item.bytes),
+            GuestWriteWatch::GuestWriteWatchCovers_nid_postfix(static_cast<std::uintptr_t>(item.address), item.bytes) ? 1 : 0);
 }
 void unwatch(const Mapping& item) {
     if (watchable(item)) GuestWriteWatch::GuestWriteWatchUnregister_nid_postfix(reinterpret_cast<const void*>(item.address), item.bytes);

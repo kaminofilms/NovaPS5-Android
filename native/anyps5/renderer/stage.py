@@ -103,6 +103,9 @@ s = s.replace(old, """        uffdio_api api{};
         }
         if ((api.features & UFFD_FEATURE_WP_ASYNC) == 0 || (api.features & UFFD_FEATURE_WP_UNPOPULATED) == 0) return unavailable("asynchronous userfaultfd write protection");
         std::fprintf(stderr, "[memory] write watch: userfaultfd asynchronous write protection active (shmem %s)\\n", (api.features & UFFD_FEATURE_WP_HUGETLBFS_SHMEM) ? "yes" : "no");""")
+old = 'const bool g_opened = (Watch::Get(), true);\n'
+assert s.count(old) >= 1, 'GuestWriteWatch.cpp eager open moved'  # Linux and macOS blocks each have one
+s = s.replace(old, '// Nova: opened on first use, after the game log captures stderr.\n')
 p.write_text(s)
 # Upstream screenshots are a desktop hotkey feature that writes PNGs through SDL paths.
 # Nova never requests them; keep the request/take state and refuse the PNG write explicitly.
