@@ -1,0 +1,37 @@
+name: NDK header probe
+# Diagnostic: which Linux uAPI features the runner's Android NDK sysroot exposes. No build.
+on:
+  push:
+    branches: [wip/0992-anyps5-resync]
+    paths: ['.github/workflows/ndk-probe.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Probe sysroot headers
+        run: |
+          set -uo pipefail
+          NDK=$ANDROID_NDK_LATEST_HOME
+          inc="$NDK/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include"
+          mkdir -p out
+          { echo "NDK $(grep Pkg.Revision $NDK/source.properties)"
+            for sym in PAGEMAP_SCAN pm_scan_arg PAGE_IS_WRITTEN UFFD_FEATURE_WP_ASYNC UFFD_FEATURE_WP_UNPOPULATED UFFD_USER_MODE_ONLY UFFDIO_WRITEPROTECT UFFD_FEATURE_WP_HUGETLBFS_SHMEM; do
+              printf '%s: ' "$sym"; grep -rln "$sym" "$inc/linux" 2>/dev/null | head -2 | tr '\n' ' '; echo
+            done
+            grep -n "LINUX_VERSION_CODE" "$inc/linux/version.h"; } | tee out/ndk-probe.txt
+      - name: Commit probe to lab-logs
+        if: always()
+        run: |
+          set -euo pipefail
+          dest="runs/ndk-probe-${GITHUB_RUN_ID}"
+          git init -q logs && cd logs
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q --depth 1 origin lab-logs; then git checkout -q -b lab-logs FETCH_HEAD; else git checkout -q --orphan lab-logs; fi
+          mkdir -p "$dest"; cp ../out/*.txt "$dest/"
+          echo "$dest ndk-probe" >> INDEX.txt
+          git add -A; git -c user.name=nova-lab -c user.email=nova-lab@users.noreply.github.com commit -qm "ndk probe $dest"
+          for i in 1 2 3; do git push -q origin HEAD:lab-logs && break; git pull -q --rebase origin lab-logs; done
