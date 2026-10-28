@@ -1,0 +1,40 @@
+      |                              ^
+5 warnings generated.
+[1020/1033] Building CXX object CMakeFiles/nova_anyps5_runtime_queues_test.dir/tests/runtime_queues.cpp.o
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/native/anyps5/tests/runtime_queues.cpp:4:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/anyps5/core/libs/prx/libc/include/Shutdown.hpp:10:28: warning: 'LibcShutdownToken_nid_postfix' has C-linkage specified, but returns user-defined type 'std::stop_token' which is incompatible with C [-Wreturn-type-c-linkage]
+   10 | extern "C" std::stop_token LibcShutdownToken_nid_postfix();
+      |                            ^
+1 warning generated.
+[1021/1033] Linking CXX static library renderer/video/libnova_anyps5_video.a
+[1022/1033] Linking CXX static library renderer/agc_api/libnova_anyps5_agc_api.a
+[1023/1033] Linking CXX executable nova_anyps5_compiler_test
+[1024/1033] Linking CXX executable nova_anyps5_memory_registry_test
+[1025/1033] Linking CXX executable nova_anyps5_guest_memory_test
+[1026/1033] Linking CXX executable nova_anyps5_PositionInvariance
+[1027/1033] Linking CXX executable nova_anyps5_gpu_BufferAtomics
+[1028/1033] Linking CXX executable nova_anyps5_gpu_BufferFormat
+[1029/1033] Linking CXX executable nova_anyps5_runtime_queues_test
+[1030/1033] Building CXX object CMakeFiles/nova_anyps5_gpu_ZeroPositionVertex.dir/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/anyps5/core/libs/prx/libSceAgcDriver/tests/execution/ZeroPositionVertex.cpp.o
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/anyps5/core/libs/prx/libSceAgcDriver/tests/execution/ZeroPositionVertex.cpp:1:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/build-host/renderer/source/core/libs/prx/libSceAgcDriver/Execution/include/VulkanDevice.hpp:9:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/build-host/renderer/source/core/libs/prx/libSceAgcDriver/Execution/include/Recipe.hpp:6:
+In file included from /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/build-host/renderer/source/core/libs/prx/libSceAgcDriver/Graphics/include/GuestBufferMemory.hpp:6:
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/anyps5/core/libs/prx/libc/include/GuestAllocations.hpp:67:7: warning: 'GuestAllocationsFind_nid_postfix' has C-linkage specified, but returns user-defined type 'Range' which is incompatible with C [-Wreturn-type-c-linkage]
+   67 | Range GuestAllocationsFind_nid_postfix(void* mutation, const void* pointer);
+      |       ^
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/anyps5/core/libs/prx/libc/include/GuestAllocations.hpp:71:7: warning: 'GuestAllocationsAcquire_nid_postfix' has C-linkage specified, but returns user-defined type 'Lease' which is incompatible with C [-Wreturn-type-c-linkage]
+   71 | Lease GuestAllocationsAcquire_nid_postfix();
+      |       ^
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/anyps5/core/libs/prx/libc/include/GuestAllocations.hpp:72:7: warning: 'GuestAllocationsAcquireMapped_nid_no_patch' has C-linkage specified, but returns user-defined type 'Lease' which is incompatible with C [-Wreturn-type-c-linkage]
+   72 | Lease GuestAllocationsAcquireMapped_nid_no_patch(const Mapped& mapped);
+      |       ^
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/anyps5/core/libs/prx/libc/include/GuestAllocations.hpp:73:7: warning: 'GuestAllocationsAcquireAll_nid_postfix' has C-linkage specified, but returns user-defined type 'Lease' which is incompatible with C [-Wreturn-type-c-linkage]
+   73 | Lease GuestAllocationsAcquireAll_nid_postfix();
+      |       ^
+/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/anyps5/core/libs/prx/libc/include/GuestAllocations.hpp:74:30: warning: 'GuestAllocationsLookup_nid_postfix' has C-linkage specified, but returns user-defined type 'std::shared_ptr<const Range>' which is incompatible with C [-Wreturn-type-c-linkage]
+   74 | std::shared_ptr<const Range> GuestAllocationsLookup_nid_postfix(std::uintptr_t address, bool next);
+      |                              ^
+5 warnings generated.
+[1031/1033] Linking CXX shared library renderer/libnova_anyps5_renderer.so
+[1032/1033] Linking CXX executable nova_anyps5_gpu_ZeroPositionVertex
