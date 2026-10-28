@@ -1,0 +1,83 @@
+NOVA_LSFG: framegen instance uses the caller driver
+-- The C compiler identification is Clang 21.0.0
+-- The CXX compiler identification is Clang 21.0.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/bin/clang - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/local/lib/android/sdk/ndk/30.0.16248370/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- VERSION file: /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/lsfg-vk-android/thirdparty/pe-parse/pe-parser-library/../VERSION
+volk: using Vulkan_INCLUDE_DIRS from FindVulkan module
+-- Configuring done (0.5s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/runner/work/NovaPS5-Android/NovaPS5-Android/work/novalsfg-build
+[1/60] Building CXX object dxbc/CMakeFiles/dxbc.dir/src/dxbc/dxbc_chunk_shex.cpp.o
+[2/60] Building C object volk/CMakeFiles/volk.dir/volk.c.o
+[3/60] Building CXX object dxbc/CMakeFiles/dxbc.dir/src/dxbc/dxbc_analysis.cpp.o
+[4/60] Building CXX object dxbc/CMakeFiles/dxbc.dir/src/dxbc/dxbc_chunk_isgn.cpp.o
+[5/60] Building CXX object dxbc/CMakeFiles/dxbc.dir/src/dxbc/dxbc_common.cpp.o
+[6/60] Building CXX object dxbc/CMakeFiles/dxbc.dir/src/dxbc/dxbc_defs.cpp.o
+[7/60] Building CXX object dxbc/CMakeFiles/dxbc.dir/src/dxbc/dxbc_decoder.cpp.o
+[8/60] Building CXX object dxbc/CMakeFiles/dxbc.dir/src/dxbc/dxbc_header.cpp.o
+[9/60] Building CXX object dxbc/CMakeFiles/dxbc.dir/src/dxbc/dxbc_names.cpp.o
+[10/60] Building CXX object dxbc/CMakeFiles/dxbc.dir/src/dxbc/dxbc_module.cpp.o
+[11/60] Building CXX object dxbc/CMakeFiles/dxbc.dir/src/dxbc/dxbc_reader.cpp.o
+[12/60] Building CXX object dxbc/CMakeFiles/dxbc.dir/src/dxbc/dxbc_util.cpp.o
+[13/60] Building CXX object dxbc/CMakeFiles/dxbc.dir/src/spirv/spirv_code_buffer.cpp.o
+[14/60] Building CXX object dxbc/CMakeFiles/dxbc.dir/src/util/util_log.cpp.o
+[15/60] Building CXX object dxbc/CMakeFiles/dxbc.dir/src/util/util_string.cpp.o
+[16/60] Building CXX object dxbc/CMakeFiles/dxbc.dir/src/dxbc/dxbc_compiler.cpp.o
+[17/60] Building CXX object pe-parse/CMakeFiles/pe-parse.dir/src/buffer.cpp.o
+[18/60] Building CXX object dxbc/CMakeFiles/dxbc.dir/src/spirv/spirv_module.cpp.o
+[19/60] Linking C static library volk/libvolk.a
+[20/60] Building CXX object pe-parse/CMakeFiles/pe-parse.dir/src/unicode_codecvt.cpp.o
+[21/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/src/core/buffer.cpp.o
+[22/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/src/common/utils.cpp.o
+[23/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/src/core/commandbuffer.cpp.o
+[24/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/src/core/commandpool.cpp.o
+[25/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/src/core/descriptorpool.cpp.o
+[26/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/src/common/exception.cpp.o
+[27/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/src/core/descriptorset.cpp.o
+[28/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/src/core/fence.cpp.o
+[29/60] Building CXX object pe-parse/CMakeFiles/pe-parse.dir/src/parse.cpp.o
+[30/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/src/core/device.cpp.o
+[31/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/src/core/image.cpp.o
+[32/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/src/core/instance.cpp.o
+[33/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/src/core/sampler.cpp.o
+[34/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/src/core/pipeline.cpp.o
+[35/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/src/core/semaphore.cpp.o
+[36/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/src/core/shadermodule.cpp.o
+[37/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/src/pool/resourcepool.cpp.o
+[38/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/src/pool/shaderpool.cpp.o
+[39/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/v3.1_src/shaders/alpha.cpp.o
+[40/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/v3.1_src/lsfg.cpp.o
+[41/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/v3.1_src/shaders/beta.cpp.o
+[42/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/v3.1_src/context.cpp.o
+[43/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/v3.1_src/shaders/delta.cpp.o
+[44/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/v3.1_src/shaders/gamma.cpp.o
+[45/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/v3.1_src/shaders/generate.cpp.o
+[46/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/v3.1_src/shaders/mipmaps.cpp.o
+[47/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/v3.1p_src/shaders/alpha.cpp.o
+[48/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/v3.1p_src/shaders/beta.cpp.o
+[49/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/v3.1p_src/lsfg.cpp.o
+[50/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/v3.1p_src/context.cpp.o
+[51/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/v3.1p_src/shaders/delta.cpp.o
+[52/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/v3.1p_src/shaders/generate.cpp.o
+[53/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/v3.1p_src/shaders/gamma.cpp.o
+[54/60] Linking CXX static library dxbc/libdxbc.a
+[55/60] Linking CXX static library pe-parse/libpe-parse.a
+[56/60] Building CXX object framegen/CMakeFiles/lsfg-vk-framegen.dir/v3.1p_src/shaders/mipmaps.cpp.o
+[57/60] Linking CXX static library framegen/liblsfg-vk-framegen.a
+[58/60] Building CXX object CMakeFiles/novalsfg.dir/home/runner/work/NovaPS5-Android/NovaPS5-Android/work/lsfg-vk-android/src/extract/trans.cpp.o
+[59/60] Building CXX object CMakeFiles/novalsfg.dir/novalsfg.cpp.o
+[60/60] Linking CXX shared library libnovalsfg.so
+NOVA_LSFG: built 18M libnovalsfg.so
+000000000005b35c T nova_lsfg_create
+000000000005b8b8 T nova_lsfg_destroy
+000000000005a7b8 T nova_lsfg_init
+000000000005b660 T nova_lsfg_present
