@@ -435,6 +435,8 @@ python3 "$repo/tools/ci/patch-0992-gpu-draw-profile.py" "$work/kyty"
 python3 "$repo/tools/ci/patch-0993-fault-coalesce.py" "$work/kyty"
 # Render resolution as an absolute height (4K-rendering games).
 python3 "$repo/tools/ci/patch-0994-rescale-target-height.py" "$work/kyty"
+# Scale depth with colour per render pass; scale images that started native.
+python3 "$repo/tools/ci/patch-0995-rescale-groups.py" "$work/kyty"
 c++ -std=c++20 -I"$work/kyty/src" "$repo/tests/test_0994_rescale_target.cpp" -o "$work/test-0994" && "$work/test-0994"
 VK_HDR="$work/kyty/3rdparty/Vulkan-Headers/include"; c++ -std=c++20 -O1 -I"$VK_HDR" "$repo/tests/test_gpu_profile.cpp" -o "$work/test-gpu-profile" && "$work/test-gpu-profile"
 python3 "$repo/tests/test_0968_guest_fibers.py" "$work/kyty"
