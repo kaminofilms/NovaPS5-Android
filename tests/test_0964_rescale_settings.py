@@ -81,9 +81,9 @@ public class RescaleTest {
   p.edit().putInt("PPSA04703:render_height_v70",3).putInt("PPSA04703:raster_scale_v54",5).apply();
   Os.setenv("NOVA_GAME_UNREAL","0",true);GraphicsSettings.apply(c,"PPSA04703");
   eq(Os.getenv("NOVA_STABLE_DEPTH"),"0");
-  eq(Os.getenv("NOVA_RESCALE_PERMILLE"),"500");eq(Os.getenv("NOVA_RASTER_SCALE_PCT"),"100");
+  eq(Os.getenv("NOVA_RESCALE_PERMILLE"),"1000");eq(Os.getenv("NOVA_RESCALE_TARGET_HEIGHT"),"540");eq(Os.getenv("NOVA_RASTER_SCALE_PCT"),"100");
   p.edit().putInt("PPSA04703:render_height_v70",1).apply();GraphicsSettings.apply(c,"PPSA04703");
-  eq(Os.getenv("NOVA_RESCALE_PERMILLE"),"1000");
+  eq(Os.getenv("NOVA_RESCALE_PERMILLE"),"1000");eq(Os.getenv("NOVA_RESCALE_TARGET_HEIGHT"),"1080");
   p.edit().putInt("PPSA27841:sync_v56",1).putInt("PPSA27841:readback_v56",2).apply();
   p.edit().putInt("PPSA27841:cap",1).putInt("PPSA27841:present",1).putInt("PPSA27841:gpu_turbo_v62",1).apply();GraphicsSettings.apply(c,"PPSA27841");
   eq(Os.getenv("NOVA_FPS_CAP"),"30");eq(Os.getenv("NOVA_PRESENT_MODE"),"fifo");
