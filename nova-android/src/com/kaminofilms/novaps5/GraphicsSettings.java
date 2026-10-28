@@ -137,7 +137,7 @@ final class GraphicsSettings {
             dialog.dismiss();
         });
         reset.setOnClickListener(v->{
-                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","render_height_v70","rescale_v64","raster_scale_v54","sync_v56","readback_v56","fault_window_v56","video_out_v56","video_out_v63","async_v56","tu_debug_v57","fg_v58","fg_flow_v58","fg_perf_v58","gpu_turbo_v62","vrs_v62","real_gpu_time_v62","gpu_backend_v92"})e.remove(key(title,n)); e.apply();
+                SharedPreferences.Editor e=p.edit(); for(String n:new String[]{"present","cap","cache","gpl","render_height_v70","present_filter_v111","rescale_v64","raster_scale_v54","sync_v56","readback_v56","fault_window_v56","video_out_v56","video_out_v63","async_v56","tu_debug_v57","fg_v58","fg_flow_v58","fg_perf_v58","gpu_turbo_v62","vrs_v62","real_gpu_time_v62","gpu_backend_v92"})e.remove(key(title,n)); e.apply();
             dialog.dismiss();
         });
         dialog.show();
@@ -163,6 +163,8 @@ final class GraphicsSettings {
         int targetHeight=rh>=0&&rh<heights.length?heights[rh]:0;
         Os.setenv("NOVA_RESCALE_PERMILLE","1000",true);
         Os.setenv("NOVA_RESCALE_TARGET_HEIGHT",Integer.toString(targetHeight),true);
+        int pf=value(p,title,"present_filter_v111",0);
+        Os.setenv("NOVA_PRESENT_FILTER",pf==1?"bicubic":pf==2?"sharp":"bilinear",true);
         // Surface and compatibility scaling must never multiply each other.
         ri=0;
         BootLog.write(c,"Render resolution: "+(targetHeight==0?"native":targetHeight+"p target height")+" (native fallbacks for unsupported uses)");

@@ -236,7 +236,7 @@ new = old + '''		// Nova 0995: when the whole pass can share one scale, scale it
 		// Why passes do not scale, reported every 5 s (NOVA_RESCALE_GROUP).
 		struct GroupStats {
 			std::map<std::string, uint64_t> reasons;
-			uint64_t passes = 0, grouped = 0;
+			uint64_t passes = 0, grouped = 0, scaled_passes = 0;
 			std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
 		};
 		static GroupStats group_stats;
@@ -266,14 +266,19 @@ new = old + '''		// Nova 0995: when the whole pass can share one scale, scale it
 				for (uint32_t i = 0; ready && i < count; i++) if (!targets[i]->NovaScaled()) (void)targets[i]->NovaScaleDown(wanted);
 			}
 		}
+		{
+			bool all_scaled = count != 0;
+			for (uint32_t i = 0; i < count; i++) if (!targets[i]->NovaScaled()) all_scaled = false;
+			if (all_scaled) ++group_stats.scaled_passes;
+		}
 		if (const auto now = std::chrono::steady_clock::now(); now - group_stats.start >= std::chrono::seconds(5)) {
 			std::string line;
 			std::vector<std::pair<uint64_t, std::string>> top;
 			for (const auto& [why, n]: group_stats.reasons) top.emplace_back(n, why);
 			std::sort(top.rbegin(), top.rend());
 			for (size_t k = 0; k < top.size() && k < 8; ++k) line += " " + top[k].second + "=" + std::to_string(top[k].first);
-			std::fprintf(stderr, "NOVA_RESCALE_GROUP: passes=%llu groupable=%llu%s\\n", (unsigned long long)group_stats.passes,
-			             (unsigned long long)group_stats.grouped, line.c_str());
+			std::fprintf(stderr, "NOVA_RESCALE_GROUP: passes=%llu groupable=%llu scaled_passes=%llu%s\\n", (unsigned long long)group_stats.passes,
+			             (unsigned long long)group_stats.grouped, (unsigned long long)group_stats.scaled_passes, line.c_str());
 			group_stats = {};
 			group_stats.start = now;
 		}

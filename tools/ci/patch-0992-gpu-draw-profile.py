@@ -52,7 +52,9 @@ once(rd, '\tif (mesh_active) {\n\t\tvk_buffer.drawMeshTasksEXT(mesh_groups, draw
      '\t{\n'
      f'\t\tNovaGpuProfile::Scope nova_gpu_profile({P}(vk_buffer),\n'
      '\t\t    {NovaGpuProfile::Kind::Draw, reinterpret_cast<uint64_t>(static_cast<VkPipeline>(pipeline.pipeline)),\n'
-     '\t\t     rendering.width, rendering.height, rendering.num_color_attachments, draw.index_count, draw.instance_count});\n'
+     '\t\t     rendering.nova_backing_scaled ? uint32_t(rendering.width * rendering.nova_scale_x + 0.5f) : rendering.width,\n'
+     '\t\t     rendering.nova_backing_scaled ? uint32_t(rendering.height * rendering.nova_scale_y + 0.5f) : rendering.height,\n'
+     '\t\t     rendering.num_color_attachments, draw.index_count, draw.instance_count});\n'
      '\t\tif (mesh_active) {\n\t\t\tvk_buffer.drawMeshTasksEXT(mesh_groups, draw.instance_count, 1);\n\t\t} else {\n\t\t\tEmitDrawPrimitives(ucfg, vk_buffer, draw, emit);\n\t\t}\n'
      '\t}\n')
 # Guest compute.

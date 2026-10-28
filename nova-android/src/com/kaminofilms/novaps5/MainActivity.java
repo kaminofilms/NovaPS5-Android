@@ -304,7 +304,7 @@ public final class MainActivity extends Activity {
                         || line.startsWith("Unresolved import") || line.contains("AAudio") || line.contains("AAUDIO")
                         || (line.startsWith("NOVA_MEMORY") && (line.contains("fail") || line.contains("BEYOND") || line.contains("fit")))
                         || (line.startsWith("NOVA_ANDROID") && !line.contains("touch"))
-                        || line.startsWith("NOVA_ANYPS5") || line.startsWith("[memory]") || line.startsWith("NOVA_PACING") || line.startsWith("libc++abi")
+                        || line.startsWith("NOVA_ANYPS5") || line.startsWith("NOVA_PRESENT_FILTER") || line.startsWith("[memory]") || line.startsWith("NOVA_PACING") || line.startsWith("libc++abi")
                         || (line.startsWith("[gpu]") && ++gpuLines <= 40)) keep = true;
                 if (line.startsWith("--- Error ---")) { keep = true; errorLines = 2; }
                 if (keep && line.startsWith("NOVA_WAIT") && ++waits > 30) keep = false;
