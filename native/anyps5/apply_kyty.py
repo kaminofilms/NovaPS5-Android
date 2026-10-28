@@ -76,8 +76,12 @@ assert s.count(anchor) == 1
 s = s.replace(anchor, '\tstd::vector<Range> NovaAnySnapshot() { Common::LockGuard lock(m_mutex); return m_ranges; }\n\n' + anchor)
 anchor = 'void SetFlexibleMemorySize(uint64_t size) {'
 helpers = r'''
+// No g_memory_operation_mutex here: these are called by AnyPS5 renderer threads that may hold a
+// GPU lease, while a guest thread holds that mutex across PrepareRangeChange waiting for the same
+// lease to drop (lock-order deadlock, 0.9.103 Wonder Boy: 60 s pin wait then abort). Each lookup
+// takes the structure's own lock (VirtualRanges/GuestAddressSpace m_mutex), which no change holds
+// while it waits; a range still leased cannot be changed until the reader drops the lease.
 bool NovaAnyQuery(uint64_t address, VirtualQueryInfo* output) {
-    std::lock_guard<std::recursive_mutex> lock(g_memory_operation_mutex);
     VirtualRanges::Range range{};
     if (!g_virtual_ranges || !g_virtual_ranges->Query(address, 1, &range)) return false;
     *output = {};
@@ -90,7 +94,6 @@ bool NovaAnyQuery(uint64_t address, VirtualQueryInfo* output) {
     return true;
 }
 std::vector<VirtualQueryInfo> NovaAnySnapshot() {
-    std::lock_guard<std::recursive_mutex> lock(g_memory_operation_mutex);
     std::vector<VirtualQueryInfo> result;
     for (const auto& range : g_virtual_ranges->NovaAnySnapshot()) {
         if (!IsCommittedRangeType(range.type)) continue;
@@ -104,7 +107,6 @@ std::vector<VirtualQueryInfo> NovaAnySnapshot() {
     return result;
 }
 bool NovaAnySharedBacking(uint64_t address, size_t bytes, int* file, uint64_t* offset) {
-    std::lock_guard<std::recursive_mutex> lock(g_memory_operation_mutex);
     return g_guest_address_space->NovaAnySharedBacking(address, bytes, file, offset);
 }
 '''

@@ -292,7 +292,7 @@ public final class MainActivity extends Activity {
     static String keyLines(File file) {
         if (!file.isFile()) return "(none)";
         StringBuilder out = new StringBuilder();
-        int count = 0, errorLines = 0, waits = 0;
+        int count = 0, errorLines = 0, waits = 0, gpuLines = 0;
         try (java.io.BufferedReader in = new java.io.BufferedReader(new java.io.InputStreamReader(new java.io.FileInputStream(file), StandardCharsets.UTF_8))) {
             String line;
             while ((line = in.readLine()) != null && count < 600) {
@@ -302,7 +302,9 @@ public final class MainActivity extends Activity {
                         || line.startsWith("NOVA_AAUDIO") || line.startsWith("NOVA_FAULT") || line.startsWith("NOVA_ABORT") || line.startsWith("NOVA_MEMTRACE") || line.startsWith("NOVA_FREEZE: no frame")
                         || line.startsWith("Unresolved import") || line.contains("AAudio") || line.contains("AAUDIO")
                         || (line.startsWith("NOVA_MEMORY") && (line.contains("fail") || line.contains("BEYOND") || line.contains("fit")))
-                        || (line.startsWith("NOVA_ANDROID") && !line.contains("touch"))) keep = true;
+                        || (line.startsWith("NOVA_ANDROID") && !line.contains("touch"))
+                        || line.startsWith("NOVA_ANYPS5") || line.startsWith("[memory]") || line.startsWith("NOVA_PACING") || line.startsWith("libc++abi")
+                        || (line.startsWith("[gpu]") && ++gpuLines <= 40)) keep = true;
                 if (line.startsWith("--- Error ---")) { keep = true; errorLines = 2; }
                 if (keep && line.startsWith("NOVA_WAIT") && ++waits > 30) keep = false;
                 if (keep) { out.append(line).append('\n'); count++; }
