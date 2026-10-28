@@ -151,6 +151,8 @@ final class GraphicsSettings {
         Os.setenv("NOVA_AUDIO_PROFILE","PPSA27841".equals(title)?"1":"0",true);
         // 0.9.106: submission call sites for the CPU/GPU overlap investigation (tasks 1-4).
         Os.setenv("NOVA_SUBMIT_REASONS","PPSA27841".equals(title)?"1":"0",true);
+        // 0.9.107: sampled per-draw GPU timing (1 s of every 10 s) to find what costs the frame.
+        Os.setenv("NOVA_GPU_DRAW_PROFILE","PPSA27841".equals(title)?"1":"0",true);
         Os.setenv("NOVA_STABLE_DEPTH","PPSA27841".equals(title)?"1":"0",true);
         int mode=value(p,title,"present",0); if(mode<0||mode>2)mode=0;
         int cap=value(p,title,"cap",0); int[] limits={-1,30,40,60,90,120,0};

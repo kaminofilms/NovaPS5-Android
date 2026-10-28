@@ -331,7 +331,7 @@ public final class MainActivity extends Activity {
             int j = line.indexOf(' ', i);
             try { return Double.parseDouble(line.substring(i + 13, j < 0 ? line.length() : j)) >= 20.0; } catch (Exception x) { return false; }
         }
-        return line.startsWith("NOVA_CPU_WAIT") || line.startsWith("NOVA_SUBMIT_REASON") || line.startsWith("NOVA_PASS_BREAK")
+        return line.startsWith("NOVA_GPU_DRAW") || line.startsWith("NOVA_CPU_WAIT") || line.startsWith("NOVA_SUBMIT_REASON") || line.startsWith("NOVA_PASS_BREAK")
                 || line.startsWith("NOVA_THREAD_CPU") || line.startsWith("NOVA_PROCESS_CPU") || line.startsWith("NOVA_FEX: heartbeat")
                 || line.startsWith("NOVA_GPU_TIME") || line.startsWith("NOVA_DEFERRED_WRITE_FAULTS") || line.startsWith("NOVA_FAULT_LOOP")
                 || line.startsWith("NOVA_IMAGE_BARRIERS") || line.startsWith("NOVA_TRANSITIONS") || line.startsWith("NOVA_PASS_MERGE")

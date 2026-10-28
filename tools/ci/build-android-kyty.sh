@@ -429,6 +429,9 @@ python3 "$repo/tools/ci/patch-0990-audio-queue-poll.py" "$work/kyty"
 python3 "$repo/tests/test_0990_audio_queue_poll.py" "$work/kyty"
 # Tasks 1-4 measurement: blocking CPU-for-GPU waits by call site.
 python3 "$repo/tools/ci/patch-0991-cpu-wait-sites.py" "$work/kyty"
+# Which GPU work costs the frame: sampled per-draw/dispatch timestamps by pipeline.
+python3 "$repo/tools/ci/patch-0992-gpu-draw-profile.py" "$work/kyty"
+VK_HDR="$work/kyty/3rdparty/Vulkan-Headers/include"; c++ -std=c++20 -O1 -I"$VK_HDR" "$repo/tests/test_gpu_profile.cpp" -o "$work/test-gpu-profile" && "$work/test-gpu-profile"
 python3 "$repo/tests/test_0968_guest_fibers.py" "$work/kyty"
 CXX=clang++ python3 "$repo/tests/test_0968_guest_fibers.py" "$work/kyty"
 bash "$repo/tools/ci/build-android-anyps5.sh" "$repo" "$work" "$out"
