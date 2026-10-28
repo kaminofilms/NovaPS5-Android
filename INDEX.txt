@@ -274,3 +274,4 @@ runs/ndk-probe-40611127650 ndk-probe
 runs/anyps5-check-40611402466-057fdfd1 anyps5-check
 runs/android-40611406312-057fdfd1 android novafex=success test=success ffmpeg=success kyty=success apk=success anyps5_host=success
 runs/anyps5-check-40618697132-b0bd24b6 anyps5-check
+runs/android-40618699294-b0bd24b6 android novafex=success test=success ffmpeg=success kyty=cancelled apk=cancelled anyps5_host=success
