@@ -76,10 +76,37 @@ void* Translate(std::uint64_t address, std::size_t bytes, std::size_t* available
     }
     return reinterpret_cast<void*>(address);
 }
+// Renderer-to-Kyty memory traffic, reported every 5 s (NOVA_ANYPS5_IO) so device logs show where the
+// AnyPS5 worker's time goes: bulk guest copies, GPU write-backs into guest backing, memory queries,
+// and write-watch faults / host-write notifications.
+struct IoCounters {
+    std::atomic<std::uint64_t> copies{0}, copyBytes{0}, writeBacks{0}, writeBackBytes{0}, queries{0};
+    std::atomic<std::int64_t> nextReport{0};
+    std::uint64_t last[9]{};
+} io;
+void ReportIo() {
+    const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    auto due = io.nextReport.load(std::memory_order_relaxed);
+    if (now < due || !io.nextReport.compare_exchange_strong(due, now + 5000, std::memory_order_relaxed)) return;
+    if (due == 0) return;  // first call only arms the timer
+    WriteWatchCounters watch{};
+    WriteWatchStats(&watch);
+    const std::uint64_t value[9] = {io.copies.load(), io.copyBytes.load(), io.writeBacks.load(), io.writeBackBytes.load(), io.queries.load(),
+        watch.faults, watch.claimed, watch.hostWrites, watch.hostBytes};
+    std::uint64_t d[9];
+    for (int i = 0; i < 9; ++i) { d[i] = value[i] - io.last[i]; io.last[i] = value[i]; }
+    std::fprintf(stderr, "NOVA_ANYPS5_IO: 5s copies=%llu (%llu MiB) writebacks=%llu (%llu MiB) queries=%llu watch_faults=%llu claimed=%llu host_writes=%llu (%llu MiB)\n",
+        (unsigned long long)d[0], (unsigned long long)(d[1] >> 20), (unsigned long long)d[2], (unsigned long long)(d[3] >> 20), (unsigned long long)d[4],
+        (unsigned long long)d[5], (unsigned long long)d[6], (unsigned long long)d[7], (unsigned long long)(d[8] >> 20));
+}
 void Copy(void* destination, const void* source, std::size_t bytes) {
     auto to = reinterpret_cast<std::uint64_t>(destination);
     auto from = reinterpret_cast<std::uint64_t>(source);
-    std::array<std::byte, 16384> scratch{};
+    io.copies.fetch_add(1, std::memory_order_relaxed);
+    io.copyBytes.fetch_add(bytes, std::memory_order_relaxed);
+    ReportIo();
+    // 1 MiB per backing lookup instead of 16 KiB: each lookup takes the backing store's lock twice.
+    thread_local std::vector<std::byte> scratch(std::size_t{1} << 20);
     while (bytes) {
         std::size_t fromBytes = 0, toBytes = 0;
         void* toHost = Translate(to, bytes, &toBytes);
@@ -126,6 +153,7 @@ bool Query(std::uint64_t address, MemoryRun* run) {
         run->end |= tag;
         return true;
     }
+    io.queries.fetch_add(1, std::memory_order_relaxed);
     Memory::VirtualQueryInfo info{};
     if (Memory::NovaAnyQuery(address, &info)) {
         if (info.start > address) *run = {address, info.start, false, false};
@@ -296,7 +324,12 @@ void Initialize() {
         [](std::uintptr_t address, std::size_t bytes, int* file, std::uint64_t* offset) {
             return address < (std::uint64_t{1} << 47) && Memory::NovaAnySharedBacking(address, bytes, file, offset);
         },
-        [](std::uintptr_t address, const void* data, std::size_t bytes) { return address < (std::uint64_t{1} << 47) && Memory::TryWriteBacking(address, data, bytes); },
+        [](std::uintptr_t address, const void* data, std::size_t bytes) {
+            io.writeBacks.fetch_add(1, std::memory_order_relaxed);
+            io.writeBackBytes.fetch_add(bytes, std::memory_order_relaxed);
+            ReportIo();
+            return address < (std::uint64_t{1} << 47) && Memory::TryWriteBacking(address, data, bytes);
+        },
         [](std::uint64_t address, std::size_t bytes) { return Libs::Graphics::Gen5Driver::NovaAnyPS5DriverMemory(address, bytes); }});
     ConfigureVideoPlatform({Window, RefreshRate, Presented,
         [](int) { running.store(false, std::memory_order_release); }, Attribute3,

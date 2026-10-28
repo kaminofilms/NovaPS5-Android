@@ -16,6 +16,7 @@ namespace {
 // Set once the first guest range is registered with an available watch. Until then the fault
 // and host-write hooks do nothing (and never construct the watch inside a signal handler).
 std::atomic<bool> watchActive{false};
+std::atomic<std::uint64_t> watchFaults{0}, watchClaimed{0}, watchHostWrites{0}, watchHostBytes{0};
 std::atomic<MappingSnapshot> takeSnapshot{nullptr};
 std::atomic<bool> ready{false};
 std::vector<Mapping> tracked;
@@ -120,7 +121,10 @@ void EndMemoryChange(void* mutation) {
 bool WriteWatchFault(std::uint64_t address) {
 #if defined(__ANDROID__)
     if (!watchActive.load(std::memory_order_acquire) || address >= IdentityGuestLimit) return false;
-    return NovaAnyPS5WriteWatchFault(static_cast<std::uintptr_t>(address));
+    watchFaults.fetch_add(1, std::memory_order_relaxed);
+    const bool claimed = NovaAnyPS5WriteWatchFault(static_cast<std::uintptr_t>(address));
+    if (claimed) watchClaimed.fetch_add(1, std::memory_order_relaxed);
+    return claimed;
 #else
     (void)address;
     return false;
@@ -129,10 +133,18 @@ bool WriteWatchFault(std::uint64_t address) {
 void WriteWatchHostWrite(std::uint64_t address, std::uint64_t bytes) {
 #if defined(__ANDROID__)
     if (!watchActive.load(std::memory_order_acquire) || bytes == 0 || address >= IdentityGuestLimit) return;
+    watchHostWrites.fetch_add(1, std::memory_order_relaxed);
+    watchHostBytes.fetch_add(bytes, std::memory_order_relaxed);
     NovaAnyPS5WriteWatchMarkWritten(static_cast<std::uintptr_t>(address), static_cast<std::size_t>(std::min(bytes, IdentityGuestLimit - address)));
 #else
     (void)address;
     (void)bytes;
 #endif
+}
+void WriteWatchStats(WriteWatchCounters* out) {
+    out->faults = watchFaults.load(std::memory_order_relaxed);
+    out->claimed = watchClaimed.load(std::memory_order_relaxed);
+    out->hostWrites = watchHostWrites.load(std::memory_order_relaxed);
+    out->hostBytes = watchHostBytes.load(std::memory_order_relaxed);
 }
 }

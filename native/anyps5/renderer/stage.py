@@ -178,6 +178,27 @@ old = 'const bool g_opened = (Watch::Get(), true);\n'
 assert s.count(old) >= 1, 'GuestWriteWatch.cpp eager open moved'  # Linux and macOS blocks each have one
 s = s.replace(old, '// Nova: opened on first use, after the game log captures stderr.\n')
 p.write_text(s)
+# Android SELinux denies untrusted apps /proc/self/pagemap. The heap mirror only uses it to skip
+# never-populated pages; without it every page of the mapping is a candidate (what upstream does
+# on Windows): same result, more pages compared.
+p = root / 'Graphics/src/ResidentMirror.cpp'
+s = p.read_text()
+old = '''    const int file = open("/proc/self/pagemap", O_RDONLY | O_CLOEXEC);
+    Require(file >= 0, "cannot open /proc/self/pagemap for a heap mirror's pages");'''
+assert s.count(old) == 1, 'ResidentMirror.cpp pagemap open moved'
+s = s.replace(old, '''    const int file = open("/proc/self/pagemap", O_RDONLY | O_CLOEXEC);
+    if (file < 0) {
+        static bool reported = false;
+        if (!reported) {
+            reported = true;
+            std::fprintf(stderr, "[gpu] heap mirror: /proc/self/pagemap unavailable (errno %d); scanning whole mappings\\n", errno);
+        }
+        if (!maybe.empty() && maybe.back().end == mapping.begin && maybe.back().readable == mapping.readable) maybe.back().end = mapping.end;
+        else maybe.push_back({mapping.begin, mapping.end, mapping.readable});
+        return;
+    }''')
+if '#include <cstdio>' not in s: s = '#include <cstdio>\n' + s
+p.write_text(s)
 # Upstream screenshots are a desktop hotkey feature that writes PNGs through SDL paths.
 # Nova never requests them; keep the request/take state and refuse the PNG write explicitly.
 p = root / 'Execution/src/Screenshot.cpp'

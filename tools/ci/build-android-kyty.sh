@@ -424,6 +424,9 @@ if [[ "${NOVA_VALIDATE_COMPLETION_CANDIDATES:-0}" == "1" ]]; then
     python3 "$repo/tests/test_0989_flip_registration_count.py" "$work/kyty"
     NOVA_CRI_ATTRIBUTION=1 python3 "$repo/tests/test_context_push.py" "$work/kyty"
 fi
+# Task 5: CRI audio thread spinning on AudioOut2ContextGetQueueLevel.
+python3 "$repo/tools/ci/patch-0990-audio-queue-poll.py" "$work/kyty"
+python3 "$repo/tests/test_0990_audio_queue_poll.py" "$work/kyty"
 python3 "$repo/tests/test_0968_guest_fibers.py" "$work/kyty"
 CXX=clang++ python3 "$repo/tests/test_0968_guest_fibers.py" "$work/kyty"
 bash "$repo/tools/ci/build-android-anyps5.sh" "$repo" "$work" "$out"

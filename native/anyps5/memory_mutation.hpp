@@ -12,6 +12,8 @@ void PrepareRangeChange(std::uint64_t address, std::uint64_t bytes);
 // Kyty's own host code writes guest memory. Both return immediately until the watch is active.
 bool WriteWatchFault(std::uint64_t address);
 void WriteWatchHostWrite(std::uint64_t address, std::uint64_t bytes);
+struct WriteWatchCounters { std::uint64_t faults, claimed, hostWrites, hostBytes; };
+void WriteWatchStats(WriteWatchCounters* out);
 class MemoryChange {
 public:
     MemoryChange() : active(MemoryHooksReady()), mutation(active ? BeginMemoryChange() : nullptr) {}

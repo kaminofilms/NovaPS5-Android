@@ -27,6 +27,9 @@ python3 "$repo/native/anyps5/renderer/export_manifest.py" "$tc/llvm-nm" "$work/b
 python3 "$repo/native/anyps5/apply_kyty.py" "$work/kyty" "$source_dir" "$work/build-anyps5-android"
 mkdir -p "$out/lib" "$out/source"
 cp "$work/build-anyps5-android/renderer/libnova_anyps5_renderer.so" "$out/lib/"
+# Unstripped copy (symbol table) for symbolizing device stacks; published with the release.
+mkdir -p "$out/symbols"
+gzip -9 -c "$work/build-anyps5-android/renderer/libnova_anyps5_renderer.so" > "$out/symbols/libnova_anyps5_renderer-symbols.so.gz"
 cp "$NDK/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so" "$out/lib/"
 "$tc/llvm-strip" --strip-unneeded "$out/lib/libnova_anyps5_renderer.so"
 tar --exclude=.git -czf "$out/source/AnyPS5-Android-corresponding-source.tar.gz" -C "$work" anyps5 -C "$repo" native/anyps5
