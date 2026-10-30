@@ -46,6 +46,7 @@ package+'/GraphicsPanel.java':'''package com.kaminofilms.novaps5;import android.
  public Builder setNeutralButton(String s,DialogInterface.OnClickListener l){return this;}
  public Builder setNegativeButton(String s,DialogInterface.OnClickListener l){return this;}public AlertDialog show(){return new AlertDialog();}}}
 ''',
+'android/os/Environment.java':'package android.os; public class Environment {public static String DIRECTORY_DOWNLOADS="Download";public static boolean isExternalStorageManager(){return false;}public static java.io.File getExternalStoragePublicDirectory(String t){return new java.io.File(t);}}',
 'android/system/ErrnoException.java':'package android.system; public class ErrnoException extends Exception {}',
 'android/system/Os.java':'''package android.system;import java.util.*;public class Os {static Map<String,String> env=new HashMap<>();
  public static void setenv(String k,String v,boolean o)throws ErrnoException{env.put(k,v);}
