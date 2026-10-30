@@ -19,7 +19,7 @@ final class GameStore {
     final ArrayList<Entry> entries=new ArrayList<>();
     GameStore(Context c){context=c;load();}
     synchronized ArrayList<Entry> snapshot(){return new ArrayList<>(entries);}
-    synchronized void addAll(List<Entry> found)throws JSONException {HashSet<String> h=hidden();for(Entry e:found){File g=pathOf(e.uri);if(g!=null)h.remove(g.getPath());}context.getSharedPreferences("nova",0).edit().putString("hidden",new JSONArray(h).toString()).apply();for(Entry e:found){boolean exists=false;for(Entry old:entries)if(old.uri.equals(e.uri)){exists=true;break;}if(!exists)entries.add(e);}save();}
+    synchronized void addAll(List<Entry> found)throws JSONException {HashSet<String> h=hidden();for(Entry e:found){File g=pathOf(e.uri);if(g!=null)h.remove(g.getPath());}context.getSharedPreferences("nova",0).edit().putString("hidden",new JSONArray(h).toString()).apply();for(Entry e:found)hideMedia(context,pathOf(e.uri));for(Entry e:found){boolean exists=false;for(Entry old:entries)if(old.uri.equals(e.uri)){exists=true;break;}if(!exists)entries.add(e);}save();}
     synchronized void remove(Entry e)throws JSONException {entries.remove(e);save();File g=pathOf(e.uri);if(g!=null){JSONArray h=new JSONArray(context.getSharedPreferences("nova",0).getString("hidden","[]"));h.put(g.getPath());context.getSharedPreferences("nova",0).edit().putString("hidden",h.toString()).apply();}}
     synchronized HashSet<String> hidden(){HashSet<String> h=new HashSet<>();try{JSONArray a=new JSONArray(context.getSharedPreferences("nova",0).getString("hidden","[]"));for(int i=0;i<a.length();i++)h.add(a.getString(i));}catch(JSONException ignored){}return h;}
     void load(){try{JSONArray a=new JSONArray(context.getSharedPreferences("nova",0).getString("games","[]"));for(int i=0;i<a.length();i++){JSONObject o=a.getJSONObject(i);Entry e=new Entry();e.name=o.optString("name","Game");e.id=o.optString("id","Unknown title");e.uri=o.optString("uri");e.eboot=o.optString("eboot");e.icon=o.optString("icon");e.background=o.optString("background");e.version=o.optString("version");entries.add(e);}}catch(JSONException ignored){}}
@@ -84,7 +84,7 @@ final class GameStore {
     File pathOf(String uri){try{Uri u=Uri.parse(uri);if(!STORAGE_AUTHORITY.equals(u.getAuthority()))return null;
         String doc=DocumentsContract.isTreeUri(u)&&!uri.contains("/document/")?DocumentsContract.getTreeDocumentId(u):DocumentsContract.getDocumentId(u);
         return VolumePaths.resolve(volumes(context),doc);}catch(Exception x){return null;}}
-    synchronized void addRoot(File root){if(root==null)return;try{JSONArray a=new JSONArray(context.getSharedPreferences("nova",0).getString("roots","[]"));for(int i=0;i<a.length();i++)if(root.getPath().equals(a.optString(i)))return;a.put(root.getPath());context.getSharedPreferences("nova",0).edit().putString("roots",a.toString()).apply();}catch(JSONException ignored){}}
+    synchronized void addRoot(File root){if(root==null)return;hideMedia(context,root);try{JSONArray a=new JSONArray(context.getSharedPreferences("nova",0).getString("roots","[]"));for(int i=0;i<a.length();i++)if(root.getPath().equals(a.optString(i)))return;a.put(root.getPath());context.getSharedPreferences("nova",0).edit().putString("roots",a.toString()).apply();}catch(JSONException ignored){}}
     synchronized LinkedHashSet<File> roots(){LinkedHashSet<File> r=new LinkedHashSet<>();
         try{JSONArray a=new JSONArray(context.getSharedPreferences("nova",0).getString("roots","[]"));for(int i=0;i<a.length();i++)r.add(new File(a.getString(i)));}catch(JSONException ignored){}
         for(Entry e:entries){File g=pathOf(e.uri);if(g!=null&&g.getParentFile()!=null&&!g.getParentFile().equals(base()))r.add(g.getParentFile());}
@@ -101,11 +101,19 @@ final class GameStore {
             out.add(e);return;}
         for(File f:files)if(f.isDirectory()&&!f.getName().startsWith(".")&&!"sce_sys".equalsIgnoreCase(f.getName()))fileScan(f,depth+1,out,visited);
     }
+    /** Keeps game art and textures (icon0/pic1, asset PNGs) out of the phone's photo gallery: a .nomedia
+     *  marker in each library/game folder, then a rescan so already-indexed pictures are dropped. */
+    static void hideMedia(Context c,File dir){
+        if(dir==null||!dir.isDirectory())return;File marker=new File(dir,".nomedia");if(marker.exists())return;
+        try{if(marker.createNewFile())android.media.MediaScannerConnection.scanFile(c,new String[]{dir.getPath()},null,null);}catch(IOException|SecurityException ignored){}
+    }
     /** Adds games that appeared in the library folders and drops ones whose folder is gone. True if anything changed. */
     boolean refresh(){
         if(!android.os.Environment.isExternalStorageManager())return false;
         ArrayList<Entry> found=new ArrayList<>();int[] visited={0};
-        for(File root:roots())if(root.isDirectory())fileScan(root,0,found,visited);
+        for(File root:roots())if(root.isDirectory()){hideMedia(context,root);fileScan(root,0,found,visited);}
+        for(Entry e:snapshot())hideMedia(context,pathOf(e.uri));
+        for(Entry e:found)hideMedia(context,pathOf(e.uri));
         boolean changed=false;
         synchronized(this){
             HashSet<String> have=hidden();

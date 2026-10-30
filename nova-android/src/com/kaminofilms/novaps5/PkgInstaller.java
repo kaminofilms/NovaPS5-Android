@@ -17,6 +17,7 @@ final class PkgInstaller {
         File storage = context.getExternalFilesDir("games");
         if (storage == null || (!storage.isDirectory() && !storage.mkdirs()))
             throw new IOException("Game installation storage is unavailable");
+        GameStore.hideMedia(context, storage);
         String id = UUID.randomUUID().toString();
         File staging = new File(storage, ".install-" + id);
         File installed = new File(storage, "pkg-" + id);
