@@ -8,7 +8,9 @@ slow, so boot crawled at ~25 lookups a second with the CPU idle. /app0 is the ga
 package, so its directory listings cannot change while it runs: each directory is listed once
 (names keyed exactly and by ASCII lower case) and later lookups are answered from that listing.
 Paths with "." or ".." components, unlistable directories and other mounts use the original
-uncached resolver. NOVA_APP0_DIR_CACHE=0 disables the cache.
+uncached resolver. A path absent from a cached listing is answered ENOENT by stat/open without
+the native lookup (still ~55 ms per miss on the SD card in 0.9.114); guest unlink/rename/mkdir/rmdir
+or a writing open under /app0 marks the listings stale. NOVA_APP0_DIR_CACHE=0 disables the cache.
 
 Wolverine (PPSA03671) stops at "indirect image table ... has incompatible candidates". The message
 now names the property that differs (numeric class, dimension, mip count, conversion format or
@@ -27,6 +29,25 @@ def once(path, old, new):
         raise SystemExit(f'1000: {path.name} anchor changed ({text[path].count(old)}): {old[:60]!r}; no source written')
     text[path] = text[path].replace(old, new, 1)
 
+once(fs, '''#if KYTY_PLATFORM != KYTY_PLATFORM_WINDOWS
+// Resolve guest paths case-insensitively on case-sensitive hosts.''', '''// Nova 1000: set by ResolvePath when an /app0 path is known (from a cached listing) not to exist,
+// so stat/open answer ENOENT without a slow native lookup on the SD card. Guest writes under /app0
+// mark the listings stale.
+static thread_local bool g_nova_app0_missing = false;
+static std::atomic<bool> g_nova_dir_cache_dirty {false};
+static void NovaApp0Changed(const char* path) {
+	if (path != nullptr && std::string_view(path).starts_with("/app0")) g_nova_dir_cache_dirty = true;
+}
+// Marks /app0 listings stale when a mutating call returns (after the change happened).
+struct NovaApp0WriteGuard {
+	std::string path;
+	bool        active = true;
+	~NovaApp0WriteGuard() {
+		if (active) NovaApp0Changed(path.c_str());
+	}
+};
+#if KYTY_PLATFORM != KYTY_PLATFORM_WINDOWS
+// Resolve guest paths case-insensitively on case-sensitive hosts.''')
 once(fs, '''#else
 static bool HasWindowsForbiddenFilenameCharacter(''', '''// Nova 1000: /app0 is a read-only game package, so each directory is listed once.
 struct NovaDirListing {
@@ -65,6 +86,7 @@ static std::filesystem::path NovaResolveReadOnly(const std::filesystem::path& ba
 		return !(value && value[0] == '0');
 	}();
 	if (!enabled) return ResolvePathIgnoringCase(base / relative);
+	if (g_nova_dir_cache_dirty.exchange(false)) g_nova_dir_cache.clear();
 	for (const auto& component: relative) {
 		if (component == "." || component == "..") return ResolvePathIgnoringCase(base / relative);
 	}
@@ -88,6 +110,7 @@ static std::filesystem::path NovaResolveReadOnly(const std::filesystem::path& ba
 			matched = false;
 		}
 	}
+	g_nova_app0_missing = !matched;
 	return resolved;
 }
 #else
@@ -98,7 +121,35 @@ once(fs, '''		return ResolvePathIgnoringCase(p.dir / native_rel_path);
 		return ResolvePathIgnoringCase(p.dir / native_rel_path);
 #endif
 	}''')
-for header in ('#include <unordered_map>', '#include <unordered_set>'):
+once(fs, '''std::filesystem::path MountPoints::ResolvePath(const std::string& mounted_name) {
+	Common::LockGuard lock(m_mutex);
+''', '''std::filesystem::path MountPoints::ResolvePath(const std::string& mounted_name) {
+	Common::LockGuard lock(m_mutex);
+	g_nova_app0_missing = false;
+''')
+once(fs, '''    if (real_file_name.empty()) return KERNEL_ERROR_ENOENT;
+    if (!Common::IsArchivePath(real_file_name)) {
+        FileStat result{};''', '''    if (real_file_name.empty()) return KERNEL_ERROR_ENOENT;
+    if (g_nova_app0_missing) return KERNEL_ERROR_ENOENT;  // Nova 1000: absent from the read-only listing
+    if (!Common::IsArchivePath(real_file_name)) {
+        FileStat result{};''')
+once(fs, '''	file->real_name = g_mount_points->ResolvePath(file->name);
+	if (file->real_name.empty()) {
+		g_files->DeleteDescriptor(descriptor);
+		return KERNEL_ERROR_ENOENT;
+	}
+''', '''	NovaApp0WriteGuard nova_app0_write {file->name, creat || trunc || rw_mode != Common::File::Mode::Read};
+	file->real_name = g_mount_points->ResolvePath(file->name);
+	if (file->real_name.empty() || (g_nova_app0_missing && !creat)) {
+		g_files->DeleteDescriptor(descriptor);
+		return KERNEL_ERROR_ENOENT;
+	}
+''')
+for name, args in (('KernelUnlink', 'const char* path'), ('KernelMkdir', 'const char* path, uint16_t mode'), ('KernelRmdir', 'const char* path')):
+    once(fs, f'int KYTY_SYSV_ABI {name}({args}) {{\n', f'int KYTY_SYSV_ABI {name}({args}) {{\n\tNovaApp0WriteGuard nova_app0_write {{path ? path : ""}};\n')
+once(fs, 'int KYTY_SYSV_ABI KernelRename(const char* from, const char* to) {\n',
+     'int KYTY_SYSV_ABI KernelRename(const char* from, const char* to) {\n\tNovaApp0WriteGuard nova_app0_from {from ? from : ""}, nova_app0_to {to ? to : ""};\n')
+for header in ('#include <unordered_map>', '#include <unordered_set>', '#include <string_view>'):
     if header not in text[fs]:
         text[fs] = text[fs].replace('#include <filesystem>\n', '#include <filesystem>\n' + header + '\n', 1)
 

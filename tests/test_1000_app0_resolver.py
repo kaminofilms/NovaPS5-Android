@@ -5,7 +5,7 @@ paths through a file and '..' paths, and keeps a directory listing once taken.""
 from pathlib import Path
 import subprocess, sys, tempfile
 s = (Path(sys.argv[1]) / 'src/kernel/fileSystem.cpp').read_text()
-body = s[s.index('// Resolve guest paths case-insensitively on case-sensitive hosts.'):s.index('#else\nstatic bool HasWindowsForbiddenFilenameCharacter(')]
+body = s[s.index('// Nova 1000: set by ResolvePath'):s.index('#else\nstatic bool HasWindowsForbiddenFilenameCharacter(')]
 HEAD = r'''#include <filesystem>
 #include <string>
 #include <unordered_map>
@@ -23,18 +23,26 @@ MAIN = r'''int main(){
  auto ok=[&](const char* rel, fs::path want){ auto got=NovaResolveReadOnly(r,rel); auto ref=ResolvePathIgnoringCase(r/rel); assert(got==want); assert(got==ref); };
  ok("hellbladegame/config/defaultgame.ini", r/"HellbladeGame/Config/DefaultGame.ini");
  ok("Exact.txt", r/"Exact.txt");
- ok("hellbladegame/config/missing.ini", r/"HellbladeGame/Config/missing.ini");
+ ok("hellbladegame/config/missing.ini", r/"HellbladeGame/Config/missing.ini"); assert(NovaResolveReadOnly(r,"hellbladegame/config/missing.ini")==r/"HellbladeGame/Config/missing.ini" && g_nova_app0_missing);
+ ok("hellbladegame", r/"HellbladeGame"); assert(NovaResolveReadOnly(r,"hellbladegame")==r/"HellbladeGame" && !g_nova_app0_missing);
  ok("nothere/a/b.ini", r/"nothere/a/b.ini");
  ok("exact.txt/below", r/"Exact.txt/below");
  assert(NovaResolveReadOnly(r,"hellbladegame/../Exact.txt")==ResolvePathIgnoringCase(r/"hellbladegame/../Exact.txt"));
  // Listing is cached: a file added afterwards to a listed directory is not seen (read-only /app0 contract).
  std::ofstream(r/"HellbladeGame/Config/Late.ini")<<"z";
  assert(NovaResolveReadOnly(r,"hellbladegame/config/late.ini")==r/"HellbladeGame/Config/late.ini");
+ assert(g_nova_app0_missing);
+ // A guest write under /app0 marks listings stale; the next lookup re-lists and finds the file.
+ { NovaApp0WriteGuard guard {"/app0/hellbladegame/config/Late.ini"}; }
+ assert(NovaResolveReadOnly(r,"hellbladegame/config/late.ini")==r/"HellbladeGame/Config/Late.ini");
+ assert(!g_nova_app0_missing);
+ { NovaApp0WriteGuard guard {"/data/save.bin"}; }
+ assert(!g_nova_dir_cache_dirty);
  std::puts("PASS app0 cached resolver matches the uncached resolver for hits, misses, files-as-dirs and ..");
 }
 '''
 with tempfile.TemporaryDirectory() as d:
     src = Path(d) / 't.cpp'
-    src.write_text(HEAD + body + MAIN)
+    src.write_text('#define KYTY_PLATFORM 1\n#define KYTY_PLATFORM_WINDOWS 2\n#include <atomic>\n#include <string_view>\n' + HEAD + body + '#endif\n' + MAIN)
     subprocess.run(['c++', '-std=c++20', '-Wall', str(src), '-o', str(Path(d) / 't')], check=True)
     subprocess.run([str(Path(d) / 't')], check=True)
