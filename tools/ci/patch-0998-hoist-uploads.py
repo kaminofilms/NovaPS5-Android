@@ -114,20 +114,32 @@ once('b', '''	if (source) {
 		}();
 		vk::CommandBuffer native = nullptr;
 		const auto nova_span = NovaRender::UploadDestinationRange(copies, buffer.Size());
-		if (nova_hoist && buffer.nova_main_write_tick != m_scheduler.CurrentTick() &&
-		    !m_scheduler.NovaCpuWritten(buffer.CpuAddress() + nova_span.offset, nova_span.size)) {
+		// Why an upload stays in order (reported so the next step targets the real cause).
+		const bool nova_written = buffer.nova_main_write_tick == m_scheduler.CurrentTick();
+		const bool nova_cpu = !nova_written &&
+		    m_scheduler.NovaCpuWritten(buffer.CpuAddress() + nova_span.offset, nova_span.size);
+		if (nova_hoist && !nova_written && !nova_cpu) {
 			native = m_scheduler.NovaPreCommand();
 		}
 		struct HoistStats {
-			uint64_t hoisted = 0, in_order = 0;
+			uint64_t hoisted = 0, in_order = 0, buffer_written = 0, cpu_written = 0, bytes_in_order = 0;
 			std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
 		};
 		static HoistStats hoist_stats;
-		(native ? hoist_stats.hoisted : hoist_stats.in_order)++;
+		if (native) {
+			hoist_stats.hoisted++;
+		} else {
+			hoist_stats.in_order++;
+			hoist_stats.buffer_written += nova_written;
+			hoist_stats.cpu_written += nova_cpu;
+			hoist_stats.bytes_in_order += total_size;
+		}
 		if (const auto now = std::chrono::steady_clock::now(); now - hoist_stats.start >= std::chrono::seconds(5)) {
-			std::fprintf(stderr, "NOVA_HOIST_UPLOADS: window_ms=%.0f hoisted=%llu in_order=%llu\\n",
+			std::fprintf(stderr, "NOVA_HOIST_UPLOADS: window_ms=%.0f hoisted=%llu in_order=%llu (buffer_written_this_cb=%llu cpu_written_this_cb=%llu in_order_kib=%llu)\\n",
 			             std::chrono::duration<double, std::milli>(now - hoist_stats.start).count(),
-			             (unsigned long long)hoist_stats.hoisted, (unsigned long long)hoist_stats.in_order);
+			             (unsigned long long)hoist_stats.hoisted, (unsigned long long)hoist_stats.in_order,
+			             (unsigned long long)hoist_stats.buffer_written, (unsigned long long)hoist_stats.cpu_written,
+			             (unsigned long long)(hoist_stats.bytes_in_order / 1024));
 			hoist_stats = {};
 			hoist_stats.start = now;
 		}

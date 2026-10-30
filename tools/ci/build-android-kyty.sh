@@ -443,8 +443,11 @@ python3 "$repo/tools/ci/patch-0996-early-submit.py" "$work/kyty"
 python3 "$repo/tools/ci/patch-0997-present-filter.py" "$work/kyty"
 # Task 1: record order-safe buffer uploads ahead of the command buffer (no render-pass break).
 python3 "$repo/tools/ci/patch-0998-hoist-uploads.py" "$work/kyty"
+# Tasks 1-4 measurement: what the slowest pipelines' translated shaders contain.
+python3 "$repo/tools/ci/patch-0999-shader-report.py" "$work/kyty"
 c++ -std=c++20 -I"$work/kyty/src" "$repo/tests/test_0994_rescale_target.cpp" -o "$work/test-0994" && "$work/test-0994"
 VK_HDR="$work/kyty/3rdparty/Vulkan-Headers/include"; c++ -std=c++20 -O1 -I"$VK_HDR" "$repo/tests/test_gpu_profile.cpp" -o "$work/test-gpu-profile" && "$work/test-gpu-profile"
+c++ -std=c++20 -O1 -I"$VK_HDR" "$repo/tests/test_0999_spirv_summary.cpp" -o "$work/test-0999" && "$work/test-0999"
 python3 "$repo/tests/test_0968_guest_fibers.py" "$work/kyty"
 CXX=clang++ python3 "$repo/tests/test_0968_guest_fibers.py" "$work/kyty"
 bash "$repo/tools/ci/build-android-anyps5.sh" "$repo" "$work" "$out"

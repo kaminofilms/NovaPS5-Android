@@ -153,6 +153,13 @@ final class GraphicsSettings {
         Os.setenv("NOVA_SUBMIT_REASONS","PPSA27841".equals(title)?"1":"0",true);
         // 0.9.107: sampled per-draw GPU timing (1 s of every 10 s) to find what costs the frame.
         Os.setenv("NOVA_GPU_DRAW_PROFILE",("PPSA27841".equals(title)||"PPSA36257".equals(title))?"1":"0",true);
+        // 0.9.114: the slowest pipelines' translated shaders are saved to Download/NovaPS5-shaders.
+        String shaderDir="";
+        if(("PPSA27841".equals(title)||"PPSA36257".equals(title))&&android.os.Environment.isExternalStorageManager()){
+            java.io.File d=new java.io.File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS),"NovaPS5-shaders");
+            if(d.isDirectory()||d.mkdirs())shaderDir=d.getPath();
+        }
+        Os.setenv("NOVA_SHADER_EXPORT_DIR",shaderDir,true);
         Os.setenv("NOVA_STABLE_DEPTH","PPSA27841".equals(title)?"1":"0",true);
         int mode=value(p,title,"present",0); if(mode<0||mode>2)mode=0;
         int cap=value(p,title,"cap",0); int[] limits={-1,30,40,60,90,120,0};

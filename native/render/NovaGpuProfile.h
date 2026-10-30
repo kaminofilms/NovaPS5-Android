@@ -23,6 +23,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <mutex>
+#include <string>
 #include <unordered_map>
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -57,6 +58,156 @@ inline bool Enabled() {
 	}();
 	return enabled;
 }
+
+// Nova 0999: what the slowest pipelines' translated shaders contain. Each SPIR-V module created
+// while profiling is summarized (instruction mix, memory accesses by kind, loops); pipelines map
+// to their modules, and the report prints a NOVA_GPU_SHADER line under each top pipeline. With
+// NOVA_SHADER_EXPORT_DIR set, the top pipelines' SPIR-V is also written there once per shader.
+struct ShaderSummary {
+	std::string           stage;
+	uint64_t              hash = 0;
+	uint32_t              words = 0, instructions = 0, functions = 0, calls = 0, loops = 0, branches = 0;
+	uint32_t              samples = 0, fetches = 0, gathers = 0, image_reads = 0, image_writes = 0;
+	uint32_t              loads_bda = 0, loads_ssbo = 0, loads_ubo = 0, loads_push = 0, loads_local = 0, loads_other = 0;
+	uint32_t              stores_bda = 0, stores_ssbo = 0, atomics = 0, discards = 0, ptr_converts = 0;
+	std::vector<uint32_t> spirv;  // kept only while under the export budget
+};
+
+inline ShaderSummary SummarizeSpirv(const uint32_t* words, size_t count) {
+	ShaderSummary s;
+	s.words = static_cast<uint32_t>(count);
+	if (count < 5 || words[0] != 0x07230203u) return s;
+	std::unordered_map<uint32_t, uint32_t> pointer_class;  // pointer type id -> storage class
+	std::unordered_map<uint32_t, uint32_t> value_type;     // pointer value id -> its type id
+	auto storage = [&](uint32_t pointer) -> int64_t {
+		const auto type = value_type.find(pointer);
+		if (type == value_type.end()) return -1;
+		const auto cls = pointer_class.find(type->second);
+		return cls == pointer_class.end() ? -1 : int64_t(cls->second);
+	};
+	for (size_t i = 5; i < count;) {
+		const uint32_t length = words[i] >> 16u, op = words[i] & 0xffffu;
+		if (length == 0 || i + length > count) break;
+		const uint32_t* w = words + i;
+		++s.instructions;
+		switch (op) {
+			case 32: if (length >= 4) pointer_class[w[1]] = w[2]; break;                       // OpTypePointer
+			case 39: if (length >= 4) pointer_class[w[1]] = w[2]; break;                       // OpTypeForwardPointer
+			case 59: if (length >= 4) value_type[w[2]] = w[1]; break;                          // OpVariable
+			case 65: case 66: case 67: case 70:                                                // OpAccessChain variants
+				if (length >= 4) value_type[w[2]] = w[1];
+				break;
+			case 120: if (length >= 4) value_type[w[2]] = w[1]; ++s.ptr_converts; break;       // OpConvertUToPtr
+			case 124: if (length >= 4) value_type[w[2]] = w[1]; break;                         // OpBitcast (may yield a pointer)
+			case 54: ++s.functions; break;                                                     // OpFunction
+			case 57: ++s.calls; break;                                                         // OpFunctionCall
+			case 246: ++s.loops; break;                                                        // OpLoopMerge
+			case 250: ++s.branches; break;                                                     // OpBranchConditional
+			case 87: case 88: case 89: case 90: case 91: case 92: case 93: case 94: ++s.samples; break;
+			case 95: ++s.fetches; break;
+			case 96: case 97: ++s.gathers; break;
+			case 98: ++s.image_reads; break;
+			case 99: ++s.image_writes; break;
+			case 252: case 5380: ++s.discards; break;                                          // OpKill / demote
+			case 61:                                                                           // OpLoad
+				if (length >= 4) {
+					value_type[w[2]] = w[1];  // a loaded value may itself be a pointer
+					switch (storage(w[3])) {
+						case 5349: ++s.loads_bda; break;   // PhysicalStorageBuffer
+						case 12: ++s.loads_ssbo; break;    // StorageBuffer
+						case 2: ++s.loads_ubo; break;      // Uniform
+						case 9: ++s.loads_push; break;     // PushConstant
+						case 6: case 7: ++s.loads_local; break;
+						default: ++s.loads_other; break;
+					}
+				}
+				break;
+			case 62:                                                                           // OpStore
+				if (length >= 3) {
+					const auto cls = storage(w[1]);
+					if (cls == 5349) ++s.stores_bda; else if (cls == 12) ++s.stores_ssbo;
+				}
+				break;
+			default:
+				if (op >= 227 && op <= 242) ++s.atomics;                                        // OpAtomic*
+				break;
+		}
+		i += length;
+	}
+	return s;
+}
+
+class Shaders {
+public:
+	static Shaders& Get() { static Shaders shaders; return shaders; }
+
+	void NoteModule(uint64_t module, const char* stage, uint64_t hash, const uint32_t* words, size_t count) {
+		if (!Enabled() || module == 0) return;
+		auto summary  = SummarizeSpirv(words, count);
+		summary.stage = stage ? stage : "?";
+		summary.hash  = hash;
+		std::lock_guard lock(m_mutex);
+		if (m_kept_bytes + count * 4 <= kKeepBytes) {
+			summary.spirv.assign(words, words + count);
+			m_kept_bytes += count * 4;
+		}
+		m_modules[module] = std::move(summary);
+	}
+	void NotePipeline(uint64_t pipeline, const uint64_t* modules, size_t count) {
+		if (!Enabled() || pipeline == 0) return;
+		std::lock_guard lock(m_mutex);
+		m_pipelines[pipeline].assign(modules, modules + count);
+	}
+	// One line per module of the pipeline; exports SPIR-V once per shader for the top ranks.
+	void Report(size_t rank, uint64_t pipeline, bool export_spirv) {
+		std::lock_guard lock(m_mutex);
+		const auto found = m_pipelines.find(pipeline);
+		if (found == m_pipelines.end()) {
+			if (pipeline != 0) std::fprintf(stderr, "NOVA_GPU_SHADER: rank=%zu pipeline=0x%llx modules=unknown\n", rank, (unsigned long long)pipeline);
+			return;
+		}
+		for (const auto module: found->second) {
+			const auto it = m_modules.find(module);
+			if (it == m_modules.end()) continue;
+			const auto& s = it->second;
+			std::fprintf(stderr,
+			             "NOVA_GPU_SHADER: rank=%zu pipeline=0x%llx stage=%s hash=%016llx words=%u instrs=%u funcs=%u calls=%u loops=%u branches=%u "
+			             "samples=%u fetches=%u gathers=%u image_reads=%u image_writes=%u loads(bda=%u ssbo=%u ubo=%u push=%u local=%u other=%u) "
+			             "stores(bda=%u ssbo=%u) atomics=%u discards=%u ptr_converts=%u\n",
+			             rank, (unsigned long long)pipeline, s.stage.c_str(), (unsigned long long)s.hash, s.words, s.instructions, s.functions,
+			             s.calls, s.loops, s.branches, s.samples, s.fetches, s.gathers, s.image_reads, s.image_writes, s.loads_bda, s.loads_ssbo,
+			             s.loads_ubo, s.loads_push, s.loads_local, s.loads_other, s.stores_bda, s.stores_ssbo, s.atomics, s.discards, s.ptr_converts);
+			if (export_spirv) Export(s);
+		}
+	}
+
+private:
+	static constexpr size_t kKeepBytes = size_t {48} << 20;
+
+	void Export(const ShaderSummary& s) {
+		static const char* dir = std::getenv("NOVA_SHADER_EXPORT_DIR");
+		if (dir == nullptr || dir[0] == 0 || s.spirv.empty()) return;
+		const std::string key = s.stage + std::to_string(s.hash) + "_" + std::to_string(s.words);
+		if (!m_exported.emplace(key, true).second) return;
+		const char* title = std::getenv("NOVA_CACHE_TITLE_ID");
+		char path[512];
+		std::snprintf(path, sizeof(path), "%s/%s_%s_%016llx_%u.spv", dir, title ? title : "game", s.stage.c_str(),
+		              (unsigned long long)s.hash, s.words);
+		if (FILE* file = std::fopen(path, "wb")) {
+			const bool ok = std::fwrite(s.spirv.data(), 4, s.spirv.size(), file) == s.spirv.size();
+			std::fclose(file);
+			std::fprintf(stderr, "NOVA_GPU_SHADER_EXPORT: %s %s\n", ok ? "wrote" : "short write", path);
+		} else {
+			std::fprintf(stderr, "NOVA_GPU_SHADER_EXPORT: cannot open %s\n", path);
+		}
+	}
+
+	std::mutex                                           m_mutex;
+	std::unordered_map<uint64_t, ShaderSummary>          m_modules;
+	std::unordered_map<uint64_t, std::vector<uint64_t>>  m_pipelines;
+	std::unordered_map<std::string, bool>                m_exported;
+	size_t                                               m_kept_bytes = 0;
+};
 
 class Profiler {
 public:
@@ -203,6 +354,7 @@ private:
 			             double(stat.ticks) * m_ns_per_tick / 1e6, double(stat.ticks) * m_ns_per_tick / 1e3 / double(stat.calls),
 			             double(stat.max_ticks) * m_ns_per_tick / 1e3, stat.last.width, stat.last.height, stat.last.targets,
 			             stat.last.count, stat.last.instances);
+			if (rank < 6) Shaders::Get().Report(rank + 1, key.pipeline, rank < 4);
 		}
 		m_stats.clear();
 		m_sampled = m_unready = m_measured_ticks = 0;
