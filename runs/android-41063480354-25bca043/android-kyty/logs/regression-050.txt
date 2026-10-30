@@ -1,0 +1,650 @@
+RASTER_STARTUP: production Image::Transit, inactive/active scheduler, native/all scales, empty transitions and preflush ordering PASS
+RASTER_STARTUP: production Image::Transit, inactive/active scheduler, native/all scales, empty transitions and preflush ordering PASS
+Dead Cells: GPU label recording, coherent CPU fault publication and cooperative PM4 waits; timestamps/unsupported labels retain real drain
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: unrelated-title fallback PASS
+NOVA_EOP_READ_TEST: unrelated-title fallback PASS
+NOVA_LABEL_PUBLISH_TEST: exact bytes, latest real tick, publications, unknown/texture fallback, mutation rejection, multiple pages and bounds PASS
+NOVA_LABEL_PUBLISH_TEST: unrelated-title fallback PASS
+NOVA_LABEL_PUBLISH_TEST: exact bytes, latest real tick, publications, unknown/texture fallback, mutation rejection, multiple pages and bounds PASS
+NOVA_LABEL_PUBLISH_TEST: unrelated-title fallback PASS
+NOVA_LABEL_PUBLISH_TEST: unrelated-title fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+WAIT_REG_MEM: PASS (unsatisfied waits remain suspended; no timeout success)
+SPIR-V Vulkan 1.1 fence module validation: PASS
+DEAD_CELLS_REGRESSION: production GPU completion, coherent fault/read routing, cooperative queue progress and per-title fallback PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: unrelated-title fallback PASS
+NOVA_EOP_READ_TEST: unrelated-title fallback PASS
+NOVA_LABEL_PUBLISH_TEST: exact bytes, latest real tick, publications, unknown/texture fallback, mutation rejection, multiple pages and bounds PASS
+NOVA_LABEL_PUBLISH_TEST: unrelated-title fallback PASS
+NOVA_LABEL_PUBLISH_TEST: exact bytes, latest real tick, publications, unknown/texture fallback, mutation rejection, multiple pages and bounds PASS
+NOVA_LABEL_PUBLISH_TEST: unrelated-title fallback PASS
+NOVA_LABEL_PUBLISH_TEST: unrelated-title fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+WAIT_REG_MEM: PASS (unsatisfied waits remain suspended; no timeout success)
+SPIR-V Vulkan 1.1 fence module validation: PASS
+DEAD_CELLS_REGRESSION: production GPU completion, coherent fault/read routing, cooperative queue progress and per-title fallback PASS
+NOVA_DEADCELLS: GPU-recorded completion labels; real timeline/readback; eager constant-label drains disabled; cap=unset present=default
+NOVA_GPU_LABEL_VULKAN: 512 production staged 32/64-bit label writes, overwrite ordering, readback, invalid/texture fallback; zero synchronization validation errors PASS
+NOVA_LABEL_POLL_VULKAN: production poll, real queue submission/timeline/buffer write, prior publication gate PASS
+NOVA_GPU_LABELS: GPU completion labels + coherent readback + cooperative PM4 waits for all titles; opt-out NOVA_GPU_LABELS=0
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: unrelated-title fallback PASS
+NOVA_EOP_READ_TEST: unrelated-title fallback PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: unrelated-title fallback PASS
+NOVA_EOP_READ_TEST: unrelated-title fallback PASS
+NOVA_LABEL_PUBLISH_TEST: exact bytes, latest real tick, publications, unknown/texture fallback, mutation rejection, multiple pages and bounds PASS
+NOVA_LABEL_PUBLISH_TEST: exact bytes, latest real tick, publications, unknown/texture fallback, mutation rejection, multiple pages and bounds PASS
+NOVA_LABEL_PUBLISH_TEST: exact bytes, latest real tick, publications, unknown/texture fallback, mutation rejection, multiple pages and bounds PASS
+NOVA_LABEL_PUBLISH_TEST: exact bytes, latest real tick, publications, unknown/texture fallback, mutation rejection, multiple pages and bounds PASS
+NOVA_LABEL_PUBLISH_TEST: exact bytes, latest real tick, publications, unknown/texture fallback, mutation rejection, multiple pages and bounds PASS
+NOVA_LABEL_PUBLISH_TEST: unrelated-title fallback PASS
+NOVA_LABEL_PUBLISH_TEST: unrelated-title fallback PASS
+NOVA_LABEL_PUBLISH_TEST: exact bytes, latest real tick, publications, unknown/texture fallback, mutation rejection, multiple pages and bounds PASS
+NOVA_LABEL_PUBLISH_TEST: unrelated-title fallback PASS
+NOVA_LABEL_PUBLISH_TEST: unrelated-title fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+WAIT_REG_MEM: PASS (unsatisfied waits remain suspended; no timeout success)
+SPIR-V Vulkan 1.1 fence module validation: PASS
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+WAIT_REG_MEM: PASS (unsatisfied waits remain suspended; no timeout success)
+SPIR-V Vulkan 1.1 fence module validation: PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_GPU_LABELS_REGRESSION: all-title GPU completion labels, coherent reads, cooperative waits, PM4 fetch and opt-out fallback PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_GPU_LABELS_PROFILE: PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: unrelated-title fallback PASS
+NOVA_EOP_READ_TEST: unrelated-title fallback PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: production lookup/kernel routing, real-tick/publication gates, immutable bytes, partial overlaps, CPU/GPU invalidation, texture/overflow fallback and repeated polls PASS
+NOVA_EOP_READ_TEST: unrelated-title fallback PASS
+NOVA_EOP_READ_TEST: unrelated-title fallback PASS
+NOVA_LABEL_PUBLISH_TEST: exact bytes, latest real tick, publications, unknown/texture fallback, mutation rejection, multiple pages and bounds PASS
+NOVA_LABEL_PUBLISH_TEST: exact bytes, latest real tick, publications, unknown/texture fallback, mutation rejection, multiple pages and bounds PASS
+NOVA_LABEL_PUBLISH_TEST: exact bytes, latest real tick, publications, unknown/texture fallback, mutation rejection, multiple pages and bounds PASS
+NOVA_LABEL_PUBLISH_TEST: exact bytes, latest real tick, publications, unknown/texture fallback, mutation rejection, multiple pages and bounds PASS
+NOVA_LABEL_PUBLISH_TEST: exact bytes, latest real tick, publications, unknown/texture fallback, mutation rejection, multiple pages and bounds PASS
+NOVA_LABEL_PUBLISH_TEST: unrelated-title fallback PASS
+NOVA_LABEL_PUBLISH_TEST: unrelated-title fallback PASS
+NOVA_LABEL_PUBLISH_TEST: exact bytes, latest real tick, publications, unknown/texture fallback, mutation rejection, multiple pages and bounds PASS
+NOVA_LABEL_PUBLISH_TEST: unrelated-title fallback PASS
+NOVA_LABEL_PUBLISH_TEST: unrelated-title fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_COOPERATIVE_LABEL_TEST: submit once, no host wait, independent queue progress, publication ordering, exact predicates, overwrite/invalidation/fallback PASS
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+WAIT_REG_MEM: PASS (unsatisfied waits remain suspended; no timeout success)
+SPIR-V Vulkan 1.1 fence module validation: PASS
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+WAIT_REG_MEM: PASS (unsatisfied waits remain suspended; no timeout success)
+SPIR-V Vulkan 1.1 fence module validation: PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_PM4_FETCH_TEST: protected alias, adjacent labels without waits, real dirty command synchronization, retry/refetch, NOP/max/cross-slot packets, bounds and profile isolation PASS
+NOVA_GPU_LABELS_REGRESSION: all-title GPU completion labels, coherent reads, cooperative waits, PM4 fetch and opt-out fallback PASS
+NOVA_GPU_LABELS: GPU-recorded completion labels for PPSA27841; real timeline/readback; constant-label drains disabled (NOVA_GPU_LABELS=0 restores)
+NOVA_GPU_LABEL_VULKAN: 512 production staged 32/64-bit label writes, overwrite ordering, readback, invalid/texture fallback; zero synchronization validation errors PASS
+NOVA_LABEL_POLL_VULKAN: production poll, real queue submission/timeline/buffer write, prior publication gate PASS
+NOVA_ORDERED_WAIT: known queued labels satisfy PM4 waits through GPU order; CPU readers/IRQs unchanged; opt-out NOVA_GPU_ORDERED_WAITS=0
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_REGRESSION: PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_REGRESSION: PASS
+NOVA_SYNC: fast labels (IRQ on real completion), relaxed readbacks, 64 KiB write-fault window; per-game opt-outs
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC: labels=fast readback=relaxed fault_window=64KB (Graphics > GPU sync = Accurate restores completion-ordered labels)
+NOVA_SYNC: labels=fast readback=relaxed fault_window=64KB (Graphics > GPU sync = Accurate restores completion-ordered labels)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+NOVA_SYNC_EOP: fast labels visible at packet time, no drain/submit, IRQ after real completion, immediate timestamps, unsupported/null rejection PASS
+NOVA_SYNC_EOP: accurate mode unchanged PASS
+NOVA_SYNC: labels=fast readback=relaxed fault_window=64KB (Graphics > GPU sync = Accurate restores completion-ordered labels)
+NOVA_SYNC: labels=fast readback=relaxed fault_window=64KB (Graphics > GPU sync = Accurate restores completion-ordered labels)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+NOVA_SYNC_EOP: fast labels visible at packet time, no drain/submit, IRQ after real completion, immediate timestamps, unsupported/null rejection PASS
+NOVA_SYNC_EOP: accurate mode unchanged PASS
+NOVA_SYNC: labels=fast readback=relaxed fault_window=64KB (Graphics > GPU sync = Accurate restores completion-ordered labels)
+NOVA_SYNC: labels=fast readback=relaxed fault_window=64KB (Graphics > GPU sync = Accurate restores completion-ordered labels)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+NOVA_SYNC_EOP: fast labels visible at packet time, no drain/submit, IRQ after real completion, immediate timestamps, unsupported/null rejection PASS
+NOVA_SYNC_EOP: accurate mode unchanged PASS
+NOVA_SYNC: labels=fast readback=relaxed fault_window=64KB (Graphics > GPU sync = Accurate restores completion-ordered labels)
+NOVA_SYNC: labels=fast readback=relaxed fault_window=64KB (Graphics > GPU sync = Accurate restores completion-ordered labels)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+NOVA_SYNC_EOP: fast labels visible at packet time, no drain/submit, IRQ after real completion, immediate timestamps, unsupported/null rejection PASS
+NOVA_SYNC_EOP: accurate mode unchanged PASS
+NOVA_SYNC: labels=fast readback=relaxed fault_window=64KB (Graphics > GPU sync = Accurate restores completion-ordered labels)
+NOVA_SYNC: labels=fast readback=relaxed fault_window=64KB (Graphics > GPU sync = Accurate restores completion-ordered labels)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+NOVA_SYNC_EOP: fast labels visible at packet time, no drain/submit, IRQ after real completion, immediate timestamps, unsupported/null rejection PASS
+NOVA_SYNC_EOP: accurate mode unchanged PASS
+NOVA_SYNC_READBACK: relaxed skips read protection only; write protection intact PASS
+NOVA_SYNC_READBACK: precise read protection unchanged PASS
+NOVA_SYNC_READBACK: precise read protection unchanged PASS
+NOVA_SYNC_WINDOW: aligned window, GPU-dirty pages untouched, contiguous runs, BDA sync, invalid sizes ignored PASS
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+WAIT_REG_MEM: PASS (unsatisfied waits remain suspended; no timeout success)
+SPIR-V Vulkan 1.1 fence module validation: PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_REGRESSION: PASS
+NOVA_SYNC_REGRESSION: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC_MODES: PASS
+NOVA_SYNC: labels=fast readback=relaxed fault_window=64KB (Graphics > GPU sync = Accurate restores completion-ordered labels)
+NOVA_SYNC: labels=fast readback=relaxed fault_window=64KB (Graphics > GPU sync = Accurate restores completion-ordered labels)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+NOVA_SYNC_EOP: fast labels visible at packet time, no drain/submit, IRQ after real completion, immediate timestamps, unsupported/null rejection PASS
+NOVA_SYNC_EOP: accurate mode unchanged PASS
+NOVA_SYNC: labels=fast readback=relaxed fault_window=64KB (Graphics > GPU sync = Accurate restores completion-ordered labels)
+NOVA_SYNC: labels=fast readback=relaxed fault_window=64KB (Graphics > GPU sync = Accurate restores completion-ordered labels)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+NOVA_SYNC_EOP: fast labels visible at packet time, no drain/submit, IRQ after real completion, immediate timestamps, unsupported/null rejection PASS
+NOVA_SYNC_EOP: accurate mode unchanged PASS
+NOVA_SYNC: labels=fast readback=relaxed fault_window=64KB (Graphics > GPU sync = Accurate restores completion-ordered labels)
+NOVA_SYNC: labels=fast readback=relaxed fault_window=64KB (Graphics > GPU sync = Accurate restores completion-ordered labels)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+NOVA_SYNC_EOP: fast labels visible at packet time, no drain/submit, IRQ after real completion, immediate timestamps, unsupported/null rejection PASS
+NOVA_SYNC_EOP: accurate mode unchanged PASS
+NOVA_SYNC: labels=fast readback=relaxed fault_window=64KB (Graphics > GPU sync = Accurate restores completion-ordered labels)
+NOVA_SYNC: labels=fast readback=relaxed fault_window=64KB (Graphics > GPU sync = Accurate restores completion-ordered labels)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+NOVA_SYNC_EOP: fast labels visible at packet time, no drain/submit, IRQ after real completion, immediate timestamps, unsupported/null rejection PASS
+NOVA_SYNC_EOP: accurate mode unchanged PASS
+NOVA_SYNC: labels=fast readback=relaxed fault_window=64KB (Graphics > GPU sync = Accurate restores completion-ordered labels)
+NOVA_SYNC: labels=fast readback=relaxed fault_window=64KB (Graphics > GPU sync = Accurate restores completion-ordered labels)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+NOVA_SYNC_EOP: fast labels visible at packet time, no drain/submit, IRQ after real completion, immediate timestamps, unsupported/null rejection PASS
+NOVA_SYNC_EOP: accurate mode unchanged PASS
+NOVA_SYNC_READBACK: relaxed skips read protection only; write protection intact PASS
+NOVA_SYNC_READBACK: precise read protection unchanged PASS
+NOVA_SYNC_READBACK: precise read protection unchanged PASS
+NOVA_SYNC_WINDOW: aligned window, GPU-dirty pages untouched, contiguous runs, BDA sync, invalid sizes ignored PASS
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+NOVA_EOP_UNSUPPORTED: policy=0x0 dest=0x0 type=0x3f action=0x0 index=0x0 source=0x2 interrupt=0x0 context=0x0 value=0x1
+GPU completion: PASS (GPU-before-store 32/64-bit labels, IRQ after store, no-IRQ progress, completion timestamp, unsupported-event rejection)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+SPIR-V store completion: PASS (device memory fence, acquire/release buffer and image visibility, no control barrier)
+WAIT_REG_MEM: PASS (unsatisfied waits remain suspended; no timeout success)
+SPIR-V Vulkan 1.1 fence module validation: PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_TEST: satisfied known labels continue without submit/wait/publication; unsatisfied, texture, clean, invalidated, unknown and opt-out keep suspend/coherent reads PASS
+NOVA_ORDERED_WAIT_REGRESSION: PASS
+NOVA_SYNC_REGRESSION: PASS
+NOVA_0954: idle submit, periodic submit, readback off, 80 ms audio queue, per-title internal resolution
+NOVA_0954_PERIODIC: PASS
+NOVA_0954_PERIODIC: PASS
+NOVA_0954_PERIODIC: PASS
+NOVA_0954_PERIODIC: PASS
+NOVA_0954_PERIODIC: PASS
+NOVA_0954_READBACK: PASS
+NOVA_0954_READBACK: PASS
+NOVA_0954_READBACK: PASS
+NOVA_0954_READBACK: PASS
+NOVA_0954_READBACK: PASS
+NOVA_0954_AUDIO: PASS
+NOVA_0954_AUDIO: PASS
+NOVA_0954_AUDIO: PASS
+NOVA_0954_AUDIO: PASS
+NOVA_0954_RASTER: PASS
+NOVA_0954_RASTER: PASS
+NOVA_0954_RASTER: PASS
+NOVA_0954_RASTER: PASS
+NOVA_0954_RASTER: PASS
+NOVA_0954_RASTER: PASS
+NOVA_0954_REGRESSION: PASS
+NOVA_0954_PERIODIC: PASS
+NOVA_0954_PERIODIC: PASS
+NOVA_0954_PERIODIC: PASS
+NOVA_0954_PERIODIC: PASS
+NOVA_0954_PERIODIC: PASS
+NOVA_0954_READBACK: PASS
+NOVA_0954_READBACK: PASS
+NOVA_0954_READBACK: PASS
+NOVA_0954_READBACK: PASS
+NOVA_0954_READBACK: PASS
+NOVA_0954_AUDIO: PASS
+NOVA_0954_AUDIO: PASS
+NOVA_0954_AUDIO: PASS
+NOVA_0954_AUDIO: PASS
+NOVA_0954_RASTER: PASS
+NOVA_0954_RASTER: PASS
+NOVA_0954_RASTER: PASS
+NOVA_0954_RASTER: PASS
+NOVA_0954_RASTER: PASS
+NOVA_0954_RASTER: PASS
+NOVA_0954_REGRESSION: PASS
+NOVA_0955: 1080p display report, direct PM4 wait reads with readbacks off, readback telemetry for all titles
+NOVA_VIDEO_OUT: reporting 1080p display (Graphics > Console video output)
+NOVA_0955: PASS
+NOVA_VIDEO_OUT: reporting 1080p display (Graphics > Console video output)
+NOVA_0955: PASS
+NOVA_VIDEO_OUT: reporting 4K display (Graphics > Console video output)
+NOVA_0955: PASS
+NOVA_VIDEO_OUT: reporting 1080p display (Graphics > Console video output)
+NOVA_0955: PASS
+NOVA_VIDEO_OUT: reporting 1080p display (Graphics > Console video output)
+NOVA_0955: PASS
+NOVA_VIDEO_OUT: reporting 1080p display (Graphics > Console video output)
+NOVA_0955: PASS
+NOVA_0955_REGRESSION: PASS
+NOVA_VIDEO_OUT: reporting 1080p display (Graphics > Console video output)
+NOVA_0955: PASS
+NOVA_VIDEO_OUT: reporting 1080p display (Graphics > Console video output)
+NOVA_0955: PASS
+NOVA_VIDEO_OUT: reporting 4K display (Graphics > Console video output)
+NOVA_0955: PASS
+NOVA_VIDEO_OUT: reporting 1080p display (Graphics > Console video output)
+NOVA_0955: PASS
+NOVA_VIDEO_OUT: reporting 1080p display (Graphics > Console video output)
+NOVA_0955: PASS
+NOVA_VIDEO_OUT: reporting 1080p display (Graphics > Console video output)
+NOVA_0955: PASS
+NOVA_0955_REGRESSION: PASS
+NOVA_0956_READBACK: default readback mode is relaxed; off is opt-in
+NOVA_0956_ASYNC: background graphics pipeline compilation; side-effect-free draws skip while compiling
+NOVA_0956_RASTER: cleared attachments skip the native-to-proxy copy
+NOVA_0956_WORKER: PASS
+NOVA_0956_SWITCHES: PASS
+NOVA_0956_SWITCHES: PASS
+NOVA_0956_SWITCHES: PASS
+NOVA_0956_SWITCHES: PASS
+NOVA_0956_SWITCHES: PASS
+NOVA_0956_SWITCHES: PASS
+NOVA_0956_SWITCHES: PASS
+NOVA_0956_SWITCHES: PASS
+NOVA_0956_RASTER: PASS
+NOVA_0956_WORKER: PASS
+NOVA_0956_REGRESSION: PASS
+NOVA_0956_WORKER: PASS
+NOVA_0956_SWITCHES: PASS
+NOVA_0956_SWITCHES: PASS
+NOVA_0956_SWITCHES: PASS
+NOVA_0956_SWITCHES: PASS
+NOVA_0956_SWITCHES: PASS
+NOVA_0956_SWITCHES: PASS
+NOVA_0956_SWITCHES: PASS
+NOVA_0956_SWITCHES: PASS
+NOVA_0956_RASTER: PASS
+NOVA_0956_REGRESSION: PASS
+NOVA_0957: WAIT_REG_MEM give-up restored (Dead Cells default; NOVA_GPU_WAIT_GIVEUP)
+NOVA_0957_EXIT: guest exit() reports code, caller, stack modules/texts, recent host calls, memory trace
+NOVA_0957_EXIT_REPORT: PASS
+NOVA_0957_DWF: deferred CPU write faults next to GPU-written bytes (Ever Forward default)
+NOVA_0957_DWF_UPLOAD: PASS
+NOVA_0957_DWF_MERGE: PASS
+NOVA_0957_DWF_SWITCH: PASS
+NOVA_0957_DWF_SWITCH: PASS
+NOVA_0957_DWF_SWITCH: PASS
+NOVA_0957_DWF_SWITCH: PASS
+NOVA_0957_DWF_SWITCH: PASS
+NOVA_0957_DWF_REGRESSION: PASS
+NOVA_0957_DWF_UPLOAD: PASS
+NOVA_0957_DWF_MERGE: PASS
+NOVA_0957_DWF_SWITCH: PASS
+NOVA_0957_DWF_SWITCH: PASS
+NOVA_0957_DWF_SWITCH: PASS
+NOVA_0957_DWF_SWITCH: PASS
+NOVA_0957_DWF_SWITCH: PASS
+NOVA_0957_DWF_REGRESSION: PASS
+NOVA_GPU_WAIT: gave up on 0x00007fff02999160 after 2001 ms, continuing (0.9.10 behaviour)
+NOVA_GPU_WAIT: gave up on 0x00007fff02999160 after 101 ms, continuing (0.9.10 behaviour)
+NOVA_GPU_WAIT: gave up on 0x00007fff02999164 after 2500 ms, continuing (0.9.10 behaviour)
+NOVA_0957_WAIT: PASS
+NOVA_0957_WAIT: PASS
+NOVA_0957_WAIT: PASS
+NOVA_0957_WAIT: PASS
+NOVA_0957_WAIT: PASS
+NOVA_GPU_WAIT: gave up on 0x00007fffd213ad80 after 2001 ms, continuing (0.9.10 behaviour)
+NOVA_GPU_WAIT: gave up on 0x00007fffd213ad80 after 101 ms, continuing (0.9.10 behaviour)
+NOVA_GPU_WAIT: gave up on 0x00007fffd213ad84 after 2500 ms, continuing (0.9.10 behaviour)
+NOVA_0957_WAIT: PASS
+NOVA_0957_REGRESSION: PASS
+NOVA_GPU_WAIT: gave up on 0x00007faf73c00030 after 2001 ms, continuing (0.9.10 behaviour)
+NOVA_GPU_WAIT: gave up on 0x00007faf73c00030 after 101 ms, continuing (0.9.10 behaviour)
+NOVA_GPU_WAIT: gave up on 0x00007faf73c00040 after 2500 ms, continuing (0.9.10 behaviour)
+NOVA_0957_WAIT: PASS
+NOVA_0957_WAIT: PASS
+NOVA_0957_WAIT: PASS
+NOVA_0957_WAIT: PASS
+NOVA_0957_WAIT: PASS
+NOVA_GPU_WAIT: gave up on 0x00007f11fb600030 after 2001 ms, continuing (0.9.10 behaviour)
+NOVA_GPU_WAIT: gave up on 0x00007f11fb600030 after 101 ms, continuing (0.9.10 behaviour)
+NOVA_GPU_WAIT: gave up on 0x00007f11fb600040 after 2500 ms, continuing (0.9.10 behaviour)
+NOVA_0957_WAIT: PASS
+NOVA_0957_REGRESSION: PASS
+NOVA_0958_PUTS: guest puts() echoed to stderr
+NOVA_0958_FRAMEGEN: Lossless Scaling frame generation in the presenter (NOVA_FRAMEGEN / NOVA_LSFG_DLL)
+NOVA_0958_FRAMEGEN: PASS
+NOVA_0960_GPU_DIAG: NOVA_GPU_TIME (command-buffer timestamps) and NOVA_PASS_BREAK (pass end sites)
+NOVA_0960_GPU_DIAG: PASS
+NOVA_0961_PASS_MERGE: redundant global barriers kept inside the pass; write-fault downloads at pass end (NOVA_PASS_MERGE=0 restores)
+NOVA_0961_UE_CMDLINE: empty /app0/ue4commandline.txt (uecommandline.txt) when the dump has none
+NOVA_0961_PASS_MERGE: PASS
+NOVA_0962_GPU_BOOST: GPU turbo (NOVA_GPU_TURBO) and 2x2 variable-rate shading (NOVA_VRS=2)
+NOVA_0962_GPU_BOOST: real GPU timestamps (NOVA_REAL_GPU_TIME=1)
+NOVA_0962_GPU_BOOST: PASS
+NOVA_0963: event loop polls with short sleeps; read-to-read image barriers skipped (NOVA_IMAGE_BARRIER_MERGE=0 restores)
+NOVA_0963: PASS
+NOVA_0963_DCC: colour-metadata constant fills written on the CPU (NOVA_DCC_FILL_ABSORB=0 restores)
+NOVA_0963_DCC: PASS
+NOVA_0964: NOVA_TRANSITIONS histogram
+NOVA_RESCALE: allocation and native-consumer promotion installed
+Nova rescale: extent/policy, distinct SPIR-V specialization identities, integration checks passed
+Nova rescale: extent/policy, distinct SPIR-V specialization identities, integration checks passed
+Nova rescale settings: production Java compilation, inheritance, current v70 inheritance, legacy turbo rejection, explicit caps and Unreal detection passed
