@@ -292,3 +292,4 @@ runs/android-40790016045-3eefeae4 android novafex=success test=success ffmpeg=su
 runs/android-41061760434-992f9d71 android novafex=success test=success ffmpeg=failure kyty=skipped apk=skipped anyps5_host=success
 runs/android-41063480354-25bca043 android novafex=success test=success ffmpeg=success kyty=success apk=success anyps5_host=success
 runs/android-41076700947-22ea2744 android novafex=success test=success ffmpeg=success kyty=failure apk=skipped anyps5_host=success
+runs/android-41079062122-d2076585 android novafex=success test=success ffmpeg=success kyty=cancelled apk=cancelled anyps5_host=success
